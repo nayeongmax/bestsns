@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile } from '../types';
@@ -53,28 +52,23 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
 
     try {
-      // 1. 슈파베이스 이메일 로그인을 위해 아이디로 이메일 찾기 (간소화된 데모 로직)
-      // 실제 서비스 시에는 이메일을 직접 입력받거나, 엣지 펑션으로 ID-Email 매핑 테이블 조회 필요
-      const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
-      const localUser = members.find((m: any) => m.id === loginId);
-      
-      const targetEmail = localUser ? localUser.email : `${loginId}@thebestsns.user`;
-
-      // 2. Supabase Auth 로그인 수행
+      // 1. Supabase Auth 로그인 수행
+      // 팁: 현재 구조상 이메일 대신 아이디 기반 로그인을 원하신다면 
+      // 가입 시 설정한 가짜 이메일 형식을 사용하거나, 이메일 입력을 권장합니다.
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: targetEmail,
+        email: formData.email || `${loginId}@thebestsns.user`, 
         password: loginPw,
       });
 
       if (error) throw error;
 
-      // 3. 성공 시 프로필 데이터 구성
-      const profile: UserProfile = localUser || {
+      // 2. 성공 시 프로필 데이터 구성 (DB에서 불러오는 로직으로 확장 가능)
+      const profile: UserProfile = {
         id: loginId,
         nickname: data.user.user_metadata.nickname || loginId,
         profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${loginId}`,
         role: 'user',
-        email: data.user.email,
+        email: data.user.email || '',
         points: 0,
         joinDate: new Date().toISOString().split('T')[0],
         coupons: []
@@ -97,7 +91,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     
     setLoading(true);
     try {
-      // 1. Supabase 회원가입 (메타데이터 포함)
+      // 1. Supabase Auth 회원가입 (메타데이터 포함)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.pw,
@@ -112,7 +106,25 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
       if (authError) throw authError;
 
-      // 2. 가입 즉시 사이트 멤버 데이터 구성 (어드민 연동용)
+      // 2. 가입 성공 시, SQL Editor로 만든 'profiles' 테이블에 데이터 입력
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: formData.id,
+            nickname: formData.name || `유저_${formData.id}`,
+            role: 'user',
+            points: 0,
+            join_date: new Date().toISOString().split('T')[0],
+            raw_json: { email: formData.email, phone: formData.phone }
+          }
+        ]);
+
+      if (dbError) {
+        console.error('DB 저장 에러:', dbError);
+        // DB 저장이 실패해도 Auth는 성공했을 수 있으므로 로그만 찍습니다.
+      }
+
       const newUser: UserProfile = {
         id: formData.id,
         nickname: formData.name || `유저_${formData.id}`,
@@ -125,7 +137,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
         coupons: []
       };
 
-      // 3. App.tsx 상태 업데이트를 통해 어드민 패널에 즉시 반영
       onLoginSuccess(newUser);
       alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
       navigate('/sns');
@@ -138,23 +149,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
   const handleFindId = async () => {
     if (!formData.email) return alert('가입하신 이메일을 입력해주세요.');
-    setLoading(true);
-    try {
-      // 이메일로 로컬 멤버 리스트 검색 (데모 서버리스 환경)
-      const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
-      const found = members.find((m: any) => m.email === formData.email);
-      
-      if (found) {
-        alert(`찾으시는 회원님의 아이디는 [ ${found.id} ] 입니다.`);
-        setMode('LOGIN');
-      } else {
-        alert('해당 이메일로 등록된 정보가 없습니다.');
-      }
-    } catch (err) {
-      alert('오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    alert('아이디 찾기 기능은 준비 중입니다. 관리자에게 문의하세요.');
   };
 
   const handleResetPw = async () => {
@@ -177,9 +172,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   return (
     <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white rounded-[48px] shadow-2xl border border-gray-100 overflow-hidden relative">
-        {/* 모드 전환 탭 */}
         <div className="flex border-b border-gray-50">
-          <button onClick={() => { setMode('LOGIN'); }} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>LOG IN</button>
+          <button onClick={() => setMode('LOGIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>LOG IN</button>
           <button onClick={() => setMode('JOIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>SIGN UP</button>
         </div>
 
