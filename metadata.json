@@ -1,0 +1,8 @@
+{
+  "name": "THEBESTSNS - All-in-One SMM Platform",
+  "description": "A comprehensive SMM platform featuring SNS activation, channel sales, community boards, AI marketing consulting, and peer-to-peer e-book trading.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

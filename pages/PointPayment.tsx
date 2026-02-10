@@ -1,0 +1,257 @@
+
+import React, { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { UserProfile, Coupon, NotificationType, EbookProduct } from '../types';
+
+declare const window: any;
+
+interface Props {
+  user: UserProfile;
+  ebooks: EbookProduct[];
+  members: UserProfile[];
+  onUpdateUser: (updated: UserProfile) => void;
+  addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+}
+
+const PointPayment: React.FC<Props> = ({ user, ebooks, members, onUpdateUser, addNotif }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const productInfo = location.state?.product;
+  const initialAmount = location.state?.amount || 0; 
+  const isProductPayment = !!productInfo;
+
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'toss'>('card');
+  const [amount, setAmount] = useState<number>(initialAmount); 
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+
+  // 유효한 쿠폰만 필터링 (사용하지 않음 + 유효기간 내)
+  const availableCoupons = useMemo(() => {
+    const now = new Date().toISOString().split('T')[0];
+    return (user.coupons || []).filter(c => c.status === 'available' && c.expiry >= now);
+  }, [user.coupons]);
+
+  const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
+  const finalPayAmount = Math.max(0, amount - discountAmount);
+
+  // 금액 선택 프리셋
+  const amountPresets = [10000, 30000, 50000, 100000, 300000, 500000];
+
+  // 금액 누적 합산 함수
+  const handleAddAmount = (val: number) => {
+    setAmount(prev => prev + val);
+  };
+
+  const handleCharge = async () => {
+    if (amount <= 0) return alert('결제할 금액을 선택하거나 입력해주세요.');
+    if (isProcessing) return;
+
+    const { PortOne } = window;
+    if (!PortOne) return alert('결제 모듈이 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
+
+    setIsProcessing(true);
+    try {
+      // 포트원 V2 결제 요청 파라미터
+      const paymentData: any = {
+        storeId: "store-77114631", // 실제 상점 ID
+        channelKey: "channel-key-8be52e64-59e5-4b03-9118-e320f7895e6a", // 채널 키
+        paymentId: `PAY_${Date.now()}_${user.id.slice(0, 4)}`,
+        orderName: isProductPayment 
+          ? `[상품구매] ${productInfo.title}` 
+          : `[포인트충전] ${amount.toLocaleString()}원`,
+        totalAmount: finalPayAmount,
+        currency: "CURRENCY_KRW",
+        payMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
+        customer: {
+          fullName: user.nickname,
+          phoneNumber: "01000000000",
+          email: "user@thebestsns.com",
+        },
+      };
+
+      // 간편결제(토스)일 경우 추가 설정
+      if (paymentMethod === 'toss') {
+        paymentData.easyPay = {
+          provider: "TOSSPAY"
+        };
+      }
+
+      const response = await PortOne.requestPayment(paymentData);
+
+      // 결제 성공 시 (response.code가 없으면 성공으로 간주하는 V2 방식)
+      if (!response.code) {
+        if (isProductPayment) {
+          addNotif(user.id, 'payment', '💳 상품 결제 완료', `[${productInfo.title}] 상품의 결제가 완료되었습니다. 마이페이지에서 확인하세요.`);
+          // 판매자에게도 알림
+          const targetProduct = ebooks.find(e => e.id === productInfo.id);
+          if (targetProduct) {
+            addNotif(targetProduct.authorId, 'ebook', '💰 상품 판매 알림', `축하합니다! 회원님의 [${targetProduct.title}] 상품이 판매되었습니다.`);
+          }
+        } else {
+          // 포인트 충전 처리
+          const nextPoints = (user.points || 0) + amount;
+          onUpdateUser({ ...user, points: nextPoints });
+          addNotif(user.id, 'payment', '💰 포인트 충전 완료', `${amount.toLocaleString()}P 충전이 완료되었습니다. 현재 잔액: ${nextPoints.toLocaleString()}P`);
+        }
+        alert('결제가 정상적으로 완료되었습니다.');
+        navigate('/mypage');
+      } else {
+        // 결제 실패 또는 취소
+        alert(`결제가 취소되었습니다: ${response.message || '사용자 취소'}`);
+      }
+    } catch (e: any) {
+      alert(`시스템 오류: ${e.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto pb-32 px-4 animate-in fade-in duration-500">
+      <button onClick={() => navigate(-1)} className="mb-8 flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 group">
+        <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        뒤로가기
+      </button>
+
+      <div className="flex flex-col lg:flex-row gap-10 items-stretch">
+        <div className="flex-1 space-y-10 w-full flex flex-col">
+          <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">
+            {isProductPayment ? '상품 안전 결제' : '포인트 충전'}
+          </h2>
+          <div className="flex-1 bg-white p-8 md:p-12 rounded-[48px] border border-gray-100 shadow-sm space-y-12">
+            <div className="space-y-6">
+              <label className="text-[12px] font-black text-gray-400 uppercase italic px-1">01. 결제 수단 선택</label>
+              <div className="grid grid-cols-3 gap-4">
+                {['card', 'transfer', 'toss'].map((m) => (
+                  <button key={m} onClick={() => setPaymentMethod(m as any)} className={`py-6 rounded-[24px] font-black transition-all border-4 ${paymentMethod === m ? 'bg-gray-900 text-white border-gray-900 shadow-xl' : 'bg-gray-50 text-gray-400 border-transparent hover:border-gray-100'}`}>
+                    {m === 'card' ? '신용카드' : m === 'transfer' ? '계좌이체' : '토스페이'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <label className="text-[12px] font-black text-gray-400 uppercase italic px-1">
+                {isProductPayment ? '02. 결제 상품 확인' : '02. 충전 금액 합산 (클릭 시 합산됩니다)'}
+              </label>
+              {isProductPayment && (
+                <div className="bg-blue-50 p-6 rounded-[32px] mb-4 border border-blue-100">
+                  <p className="text-xl font-black text-gray-900">{productInfo.title}</p>
+                </div>
+              )}
+              
+              {!isProductPayment && (
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
+                  {amountPresets.map(preset => (
+                    <button 
+                      key={preset}
+                      onClick={() => handleAddAmount(preset)}
+                      className="group py-3 rounded-xl text-[11px] font-black transition-all border-2 bg-white text-gray-400 border-gray-100 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50/50 shadow-sm active:scale-95"
+                    >
+                      +{preset >= 10000 ? `${preset/10000}만` : preset.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="relative group">
+                <input 
+                  type="text" 
+                  value={`${amount.toLocaleString()}원`} 
+                  readOnly 
+                  className="w-full p-8 bg-gray-50 rounded-[32px] font-black text-4xl text-gray-800 shadow-inner text-right pr-20 focus:outline-none" 
+                />
+                {amount > 0 && (
+                  <button 
+                    onClick={() => setAmount(0)}
+                    title="금액 초기화"
+                    className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-gray-200 hover:bg-red-500 hover:text-white rounded-full flex items-center justify-center font-black text-2xl transition-all shadow-sm active:scale-90"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {!isProductPayment && amount > 0 && (
+                <p className="text-[11px] text-gray-400 italic px-4 text-right">※ 위 버튼을 누르면 금액이 계속 더해집니다. 잘못 누른 경우 X를 눌러 초기화하세요.</p>
+              )}
+            </div>
+
+            <div className="space-y-6 pt-6 border-t border-gray-50">
+              <label className="text-[12px] font-black text-gray-400 uppercase italic px-1">03. 혜택 적용</label>
+              <div onClick={() => setIsModalOpen(true)} className="w-full p-8 bg-[#f8fbff] border-2 border-dashed border-blue-200 rounded-[32px] flex items-center justify-between cursor-pointer group">
+                <div className="flex items-center gap-6"><div className="text-2xl">🎫</div><div><p className="text-sm font-black text-gray-900 italic">{appliedCoupon ? appliedCoupon.title : '사용 가능한 쿠폰을 선택하세요'}</p></div></div>
+                <span className="text-xs font-black text-blue-500 uppercase italic underline group-hover:text-blue-700">변경하기 ↺</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full lg:w-[400px] flex flex-col pt-[72px]">
+          <div className="flex-1 bg-white p-10 rounded-[48px] shadow-2xl space-y-12 lg:sticky lg:top-24 border border-gray-50">
+            <h3 className="text-xl font-black italic uppercase border-b pb-6">결제 요약</h3>
+            <div className="space-y-8 flex-1">
+              <div className="flex justify-between items-center text-[15px] font-bold">
+                <span className="text-gray-400 italic">주문 금액</span>
+                <span className="text-gray-900 font-black">{amount.toLocaleString()} {isProductPayment ? '원' : 'P'}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between items-center text-[15px] font-bold">
+                  <span className="text-red-400 italic">쿠폰 할인</span>
+                  <span className="text-red-500 font-black">-{appliedCoupon.discount.toLocaleString()} 원</span>
+                </div>
+              )}
+              <div className="pt-8 border-t space-y-3">
+                <span className="text-[11px] font-black text-blue-400 uppercase italic block text-center">실제 결제 금액 (VAT포함)</span>
+                <p className="text-5xl font-black text-gray-900 text-center italic tracking-tighter">{finalPayAmount.toLocaleString()}원</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleCharge} 
+              disabled={amount <= 0 || isProcessing} 
+              className={`w-full py-8 rounded-[32px] font-black text-2xl transition-all shadow-2xl italic uppercase ${amount > 0 && !isProcessing ? 'bg-blue-600 text-white hover:bg-black scale-[1.02]' : 'bg-gray-100 text-gray-300 cursor-not-allowed'}`}
+            >
+              {isProcessing ? '처리 중...' : '안전 결제하기 🚀'}
+            </button>
+            <div className="pt-4 text-center">
+              <p className="text-[10px] text-gray-400 font-bold leading-relaxed">
+                안전결제 이용 시 상점 정책에 따라<br/>보안 결제 및 에스크로 보호가 적용됩니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
+          <div className="bg-white w-full max-w-lg rounded-[60px] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden border-4 border-blue-50">
+            <div className="p-10 border-b flex justify-between items-center bg-gray-50/50">
+               <h3 className="text-2xl font-black italic tracking-tighter uppercase underline decoration-blue-500">쿠폰 선택</h3>
+               <button onClick={() => setIsModalOpen(false)} className="text-gray-300 hover:text-gray-900 font-black text-3xl">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8 space-y-4 no-scrollbar">
+              {availableCoupons.length === 0 ? (<p className="text-center py-10 text-gray-400 font-black italic">사용 가능한 쿠폰이 없습니다.</p>) : availableCoupons.map((cp) => (
+                <div key={cp.id} onClick={() => { setAppliedCoupon(cp); setIsModalOpen(false); }} className={`bg-white rounded-[32px] p-8 border-4 cursor-pointer flex items-center gap-8 transition-all ${appliedCoupon?.id === cp.id ? 'border-blue-600 bg-blue-50/20' : 'border-gray-50 hover:border-blue-100'}`}>
+                  <div className="w-24 h-24 rounded-2xl bg-blue-50 flex flex-col items-center justify-center font-black text-blue-600 italic text-xl shadow-inner border border-blue-100">
+                    <span>{cp.discountLabel}</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black italic">{cp.title}</h4>
+                    <p className="text-gray-400 text-[12px] italic mt-2">만료일: {cp.expiry}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {appliedCoupon && (
+              <div className="p-6 bg-gray-50 border-t border-gray-100">
+                <button onClick={() => { setAppliedCoupon(null); setIsModalOpen(false); }} className="w-full py-4 bg-white border border-gray-200 text-gray-400 rounded-2xl font-black text-xs hover:text-red-500 transition-colors">쿠폰 적용 취소</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PointPayment;
