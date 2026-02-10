@@ -52,25 +52,56 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
 
     try {
-      // 1. Supabase Auth 로그인 수행
-      // 팁: 현재 구조상 이메일 대신 아이디 기반 로그인을 원하신다면 
-      // 가입 시 설정한 가짜 이메일 형식을 사용하거나, 이메일 입력을 권장합니다.
+      // 1. 아이디로 이메일 조회: localStorage → Supabase profiles 순서로 탐색
+      let targetEmail = formData.email || '';
+
+      if (!targetEmail) {
+        // localStorage에서 먼저 조회
+        const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
+        const localUser = members.find((m: any) => m.id === loginId);
+
+        if (localUser?.email) {
+          targetEmail = localUser.email;
+        } else {
+          // Supabase profiles 테이블에서 조회
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('raw_json')
+            .eq('id', loginId)
+            .single();
+
+          if (profileData?.raw_json?.email) {
+            targetEmail = profileData.raw_json.email;
+          } else {
+            targetEmail = `${loginId}@thebestsns.user`;
+          }
+        }
+      }
+
+      // 2. Supabase Auth 로그인 수행
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email || `${loginId}@thebestsns.user`, 
+        email: targetEmail,
         password: loginPw,
       });
 
       if (error) throw error;
 
-      // 2. 성공 시 프로필 데이터 구성 (DB에서 불러오는 로직으로 확장 가능)
+      // 3. 프로필 데이터 구성 (profiles 테이블에서 추가 정보 로드)
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', loginId)
+        .single();
+
       const profile: UserProfile = {
         id: loginId,
-        nickname: data.user.user_metadata.nickname || loginId,
+        nickname: dbProfile?.nickname || data.user.user_metadata.nickname || loginId,
         profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${loginId}`,
-        role: 'user',
+        role: dbProfile?.role || 'user',
         email: data.user.email || '',
-        points: 0,
-        joinDate: new Date().toISOString().split('T')[0],
+        phone: dbProfile?.raw_json?.phone || '',
+        points: dbProfile?.points || 0,
+        joinDate: dbProfile?.join_date || new Date().toISOString().split('T')[0],
         coupons: []
       };
 
@@ -149,17 +180,69 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
   const handleFindId = async () => {
     if (!formData.email) return alert('가입하신 이메일을 입력해주세요.');
-    alert('아이디 찾기 기능은 준비 중입니다. 관리자에게 문의하세요.');
+    setLoading(true);
+    try {
+      // localStorage에서 이메일로 검색
+      const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
+      const found = members.find((m: any) => m.email === formData.email);
+
+      if (found) {
+        alert(`찾으시는 회원님의 아이디는 [ ${found.id} ] 입니다.`);
+        setMode('LOGIN');
+        return;
+      }
+
+      // Supabase profiles 테이블에서 검색
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, raw_json')
+        .limit(100);
+
+      const dbFound = profiles?.find((p: any) => p.raw_json?.email === formData.email);
+
+      if (dbFound) {
+        alert(`찾으시는 회원님의 아이디는 [ ${dbFound.id} ] 입니다.`);
+        setMode('LOGIN');
+      } else {
+        alert('해당 이메일로 등록된 정보가 없습니다.');
+      }
+    } catch (err) {
+      alert('오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResetPw = async () => {
     if (!formData.email) return alert('비밀번호를 재설정할 이메일을 입력해주세요.');
     setLoading(true);
     try {
+      // Supabase 이메일 재설정 시도
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
         redirectTo: `${window.location.origin}/#/login`,
       });
-      if (error) throw error;
+
+      if (error) {
+        // Supabase 이메일 서비스 미설정 시 localStorage 기반 임시 재설정
+        const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
+        const found = members.find((m: any) => m.email === formData.email);
+
+        if (found) {
+          const newPw = prompt(`[${found.id}] 계정의 새 비밀번호를 입력하세요:`);
+          if (newPw && newPw.length >= 6) {
+            found.password = newPw;
+            localStorage.setItem('site_members_v2', JSON.stringify(members));
+            alert('비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해주세요.');
+            setMode('LOGIN');
+          } else if (newPw) {
+            alert('비밀번호는 6자 이상이어야 합니다.');
+          }
+        } else {
+          alert('해당 이메일로 등록된 정보가 없습니다.');
+        }
+        return;
+      }
+
       alert('입력하신 이메일로 비밀번호 재설정 안내 메일을 발송했습니다.');
       setMode('LOGIN');
     } catch (err: any) {
