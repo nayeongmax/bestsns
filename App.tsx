@@ -1,7 +1,5 @@
-// App.tsx 상단
-import { supabase } from './supabase'; // 파일이 같은 폴더에 있을 때
-// 만약 supabase.ts가 한 단계 상위 폴더에 있다면 아래처럼 써야 합니다.
-// import { supabase } from '../supabase';
+// App.tsx 최상단
+import { supabase } from './supabase.ts'; // 뒤에 .ts를 명시적으로 붙여보세요.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
