@@ -1,16 +1,12 @@
+import { createClient } from '@supabase/supabase-js'
 
-import { createClient } from '@supabase/supabase-js';
+// process.env 대신 import.meta.env를 써야 합니다.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Access variables via process.env (mapped in vite.config.ts) to avoid import.meta issues
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
-
-// 설정값이 누락되었을 경우를 대비한 안전 장치
+// 열쇠가 비어있으면 브라우저 콘솔에 경고를 띄우게 설정 (사장님 확인용)
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("⚠️ Supabase 설정이 감지되지 않았습니다. Netlify 환경 변수(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)를 설정해 주세요.");
+  console.error("🚨 슈파베이스 열쇠가 비어있습니다! 네트리파이 설정을 확인하세요.");
 }
 
-const finalUrl = supabaseUrl || 'https://placeholder.supabase.co';
-const finalKey = supabaseAnonKey || 'placeholder-key';
-
-export const supabase = createClient(finalUrl, finalKey);
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '')
