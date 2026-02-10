@@ -1,6 +1,9 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+// 최상단에 supabase 연결 코드를 추가합니다. (빌드 에러 방지용)
+import { supabase } from './supabase';
+
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
@@ -139,17 +142,14 @@ const App: React.FC = () => {
     });
   }, [user, addNotif]);
 
-  // 로그인/회원가입 성공 시 호출
   const handleLoginSuccess = (userData: UserProfile) => {
     const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
     let targetProfile: UserProfile;
     
     if (existingMember) {
-      // 기존 유저 정보 업데이트
       targetProfile = { ...existingMember, ...userData };
       setMembers(prev => prev.map(m => m.id === targetProfile.id ? targetProfile : m));
     } else {
-      // 신규 유저 생성 및 어드민 리스트 즉시 반영
       const isAdmin = userData.id.toLowerCase() === 'admin';
       targetProfile = { 
         ...userData, 
@@ -160,7 +160,7 @@ const App: React.FC = () => {
         joinDate: new Date().toISOString().split('T')[0], 
         coupons: [] 
       };
-      setMembers(prev => [targetProfile, ...prev]); // 리스트 상단에 추가
+      setMembers(prev => [targetProfile, ...prev]);
     }
     setUser(targetProfile);
   };
