@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-// 최상단에 supabase 연결 코드를 추가합니다. (빌드 에러 방지용)
+// 최상단에 supabase 연결 코드를 추가합니다.
 import { supabase } from './supabase';
 
 import { 
@@ -58,12 +58,7 @@ const App: React.FC = () => {
   const [smmProviders, setSmmProviders] = useState<SMMProvider[]>(() => JSON.parse(localStorage.getItem('site_smm_providers_v2') || '[]'));
   const [smmProducts, setSmmProducts] = useState<SMMProduct[]>(() => JSON.parse(localStorage.getItem('site_smm_products_v2') || '[]'));
 
-  const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => {
-    const saved = localStorage.getItem('store_orders_v2');
-    if (saved) return JSON.parse(saved);
-    return [];
-  });
-
+  const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => JSON.parse(localStorage.getItem('store_orders_v2') || '[]'));
   const [channelOrders, setChannelOrders] = useState<ChannelOrder[]>(() => JSON.parse(localStorage.getItem('channel_orders_v2') || '[]'));
   const [ebooks, setEbooks] = useState<EbookProduct[]>(() => JSON.parse(localStorage.getItem('site_ebooks_v2') || '[]'));
   const [channels, setChannels] = useState<ChannelProduct[]>(() => JSON.parse(localStorage.getItem('site_channels_v2') || '[]'));
@@ -72,6 +67,7 @@ const App: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>(() => JSON.parse(localStorage.getItem('site_notices_v2') || '[]'));
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
 
+  // 로컬 저장소 동기화
   useEffect(() => { localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members]);
   useEffect(() => { localStorage.setItem('user_profile_v2', JSON.stringify(user)); }, [user]);
   useEffect(() => { localStorage.setItem('site_notifications_v2', JSON.stringify(notifications)); }, [notifications]);
@@ -97,16 +93,6 @@ const App: React.FC = () => {
       }
     });
   }, []);
-
-  useEffect(() => {
-    const handleSync = (e: any) => {
-      if (e.detail) {
-        handleGlobalUserUpdate(e.detail);
-      }
-    };
-    window.addEventListener('site-user-update', handleSync);
-    return () => window.removeEventListener('site-user-update', handleSync);
-  }, [handleGlobalUserUpdate]);
 
   const addNotif = useCallback((userId: string, type: NotificationType, title: string, message: string, reason?: string) => {
     const newNotif: SiteNotification = {
@@ -142,7 +128,9 @@ const App: React.FC = () => {
     });
   }, [user, addNotif]);
 
+  // 회원가입 및 로그인 성공 시 처리 로직
   const handleLoginSuccess = (userData: UserProfile) => {
+    // 1. 이미 존재하는 회원인지 확인
     const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
     let targetProfile: UserProfile;
     
@@ -150,6 +138,7 @@ const App: React.FC = () => {
       targetProfile = { ...existingMember, ...userData };
       setMembers(prev => prev.map(m => m.id === targetProfile.id ? targetProfile : m));
     } else {
+      // 2. 신규 회원이면 기본값 설정
       const isAdmin = userData.id.toLowerCase() === 'admin';
       targetProfile = { 
         ...userData, 
@@ -162,6 +151,8 @@ const App: React.FC = () => {
       };
       setMembers(prev => [targetProfile, ...prev]);
     }
+
+    // 3. 현재 로그인 세션 유지
     setUser(targetProfile);
   };
 
