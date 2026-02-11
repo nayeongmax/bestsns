@@ -4,7 +4,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 /**
  * Fixed: Imported missing NotificationType
  */
-import { UserProfile, EbookProduct, ChannelProduct, SMMOrder, Review, StoreOrder, NotificationType } from '../types';
+import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType } from '../types';
 import UserInfoSection from '../components/mypage/UserInfoSection';
 import BuyerDashboard from '../components/mypage/BuyerDashboard';
 import SellerDashboard from '../components/mypage/SellerDashboard';
@@ -16,6 +16,7 @@ interface Props {
   setEbooks: React.Dispatch<React.SetStateAction<EbookProduct[]>>;
   channels: ChannelProduct[];
   smmOrders: SMMOrder[];
+  channelOrders: ChannelOrder[];
   storeOrders: StoreOrder[];
   onAddReview: (review: Review) => void;
   onUpdateReview: (review: Review) => void;
@@ -32,7 +33,7 @@ type NicknameStatus = 'idle' | 'available' | 'unavailable';
 /**
  * Fixed: Added addNotif to component destructuring
  */
-const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, smmOrders, storeOrders, onAddReview, onUpdateReview, reviews, addNotif }) => {
+const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, onAddReview, onUpdateReview, reviews, addNotif }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -182,7 +183,7 @@ const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, 
             addNotif={addNotif}
           />
         )}
-        {activeMainTab === 'buyer' && <BuyerDashboard user={user} smmOrders={smmOrders} ebooks={ebooks} onAddReview={onAddReview} />}
+        {activeMainTab === 'buyer' && <BuyerDashboard user={user} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} ebooks={ebooks} onAddReview={onAddReview} />}
         {activeMainTab === 'seller' && (
           <SellerDashboard 
             user={user} 
