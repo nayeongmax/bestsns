@@ -158,86 +158,94 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   { label: '회원 구분', value: expertTypeInfo.label, icon: '👤' },
                   { label: '세금계산서', value: expertTypeInfo.tax, icon: '🧾' }
                 ].map((item, i) => (
-                  <div key={i} className="flex-1 min-w-[150px] bg-white rounded-[32px] py-10 px-8 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
+                  <div key={i} className="flex-1 min-w-[140px] bg-white rounded-[32px] py-10 px-6 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
                     <span className="text-3xl mb-4 group-hover:scale-110 transition-transform">{item.icon}</span>
                     <p className="text-[11px] font-black text-gray-400 mb-3 uppercase tracking-[0.3em] italic">{item.label}</p>
-                    <p className="text-2xl font-black text-gray-900 italic tracking-tighter text-center">{item.value}</p>
+                    <p className={`font-black text-gray-900 italic tracking-tighter text-center ${item.label === '회원 구분' ? 'text-lg whitespace-nowrap' : 'text-2xl'}`}>{item.value}</p>
                   </div>
                 ))}
              </div>
           </section>
 
-          {/* 콘텐츠 영역: 유형에 따른 순서 재배치 */}
-          <div className="space-y-20">
-            
-            {/* 1. 목차 (자료템플릿, 전자책 전용) */}
+          {/* 콘텐츠 영역: 유형에 따른 순서 재배치 (가독성 개선) */}
+          <div className="space-y-12">
+            {/* 섹션 공통: 제목 + 카드형 본문 */}
             {!isServiceType && ebook.index && (
-              <section className="space-y-10 scroll-mt-24">
-                <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                   <span className="w-2.5 h-10 bg-yellow-400 rounded-full shadow-lg shadow-yellow-100"></span> 목차
-                </h3>
-                <div className="text-xl text-gray-600 font-bold leading-[1.8] whitespace-pre-wrap bg-gray-50 p-12 rounded-[56px] border border-gray-100 shadow-inner">
+              <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
+                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                    <span className="w-1.5 h-8 bg-yellow-400 rounded-full shrink-0" aria-hidden></span>
+                    목차
+                  </h3>
+                </div>
+                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap">
                   {ebook.index}
                 </div>
               </section>
             )}
 
-            {/* 2. 서비스 상세설명 (공통) */}
-            <section className="space-y-10 scroll-mt-24">
-              <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                 <span className="w-2.5 h-10 bg-blue-600 rounded-full shadow-lg shadow-blue-100"></span> 서비스 상세설명
-              </h3>
-              <div className="text-xl text-gray-700 font-bold leading-[1.9] whitespace-pre-wrap px-6 border-l-4 border-gray-100">
+            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                  <span className="w-1.5 h-8 bg-blue-600 rounded-full shrink-0" aria-hidden></span>
+                  서비스 상세설명
+                </h3>
+              </div>
+              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap border-l-4 border-blue-100 ml-8 my-6">
                 {ebook.description || "상세 설명이 등록되지 않았습니다."}
               </div>
             </section>
 
-            {/* 3. 서비스 제공방법 및 절차 (마케팅, 강의, 컨설팅 전용) */}
             {isServiceType && ebook.serviceMethod && (
-              <section className="space-y-10 scroll-mt-24">
-                <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                    <span className="w-2.5 h-10 bg-orange-500 rounded-full shadow-lg shadow-orange-100"></span> 서비스 제공방법 및 절차
-                </h3>
-                <div className="text-xl text-gray-700 font-bold leading-[1.8] whitespace-pre-wrap px-6">
+              <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
+                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                    <span className="w-1.5 h-8 bg-orange-500 rounded-full shrink-0" aria-hidden></span>
+                    서비스 제공방법 및 절차
+                  </h3>
+                </div>
+                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap">
                   {ebook.serviceMethod}
                 </div>
               </section>
             )}
 
-            {/* 4. 상세이미지 (공통) */}
             {ebook.attachedImages && ebook.attachedImages.length > 0 && (
-              <section className="space-y-10 pt-8">
-                <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                    <span className="w-2.5 h-10 bg-indigo-500 rounded-full shadow-lg"></span> 상세이미지
-                </h3>
-                <div className="space-y-10">
+              <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
+                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                    <span className="w-1.5 h-8 bg-indigo-500 rounded-full shrink-0" aria-hidden></span>
+                    상세이미지
+                  </h3>
+                </div>
+                <div className="p-8 space-y-6">
                   {ebook.attachedImages.map((img, i) => (
-                    <img key={i} src={img} className="w-full rounded-[60px] shadow-2xl border border-gray-100 hover:scale-[1.01] transition-transform duration-700" alt={`상세 이미지 ${i}`} />
+                    <img key={i} src={img} className="w-full rounded-2xl shadow-md border border-gray-100" alt={`상세 이미지 ${i + 1}`} />
                   ))}
                 </div>
               </section>
             )}
 
-            {/* 5. 자주 묻는 질문 (공통) */}
-            <section className="space-y-10 scroll-mt-24">
-              <h3 className="text-3xl font-black text-gray-900 italic tracking-tighter flex items-center gap-4">
-                <span className="w-2.5 h-10 bg-yellow-400 rounded-full shadow-lg shadow-yellow-100"></span> 자주 묻는 질문
-              </h3>
-              <div className="space-y-4">
+            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                  <span className="w-1.5 h-8 bg-amber-400 rounded-full shrink-0" aria-hidden></span>
+                  자주 묻는 질문
+                </h3>
+              </div>
+              <div className="p-6 space-y-3">
                 {faqs.map((faq, idx) => (
-                  <div key={idx} className="border border-gray-100 rounded-[40px] overflow-hidden bg-white shadow-sm transition-all hover:border-blue-200">
+                  <div key={idx} className="border border-gray-100 rounded-2xl overflow-hidden bg-gray-50/30 transition-all hover:border-gray-200">
                     <button 
                       onClick={() => setOpenFaqIdx(openFaqIdx === idx ? null : idx)}
-                      className="w-full p-10 flex justify-between items-center text-left hover:bg-gray-50/50 transition-colors"
+                      className="w-full px-6 py-5 flex justify-between items-center text-left"
                     >
-                      <span className="font-black text-gray-800 text-xl pr-12">Q. {faq.question}</span>
-                      <svg className={`w-6 h-6 text-gray-300 shrink-0 transition-transform ${openFaqIdx === idx ? 'rotate-180 text-blue-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"/></svg>
+                      <span className="font-bold text-gray-800 text-base pr-8">Q. {faq.question}</span>
+                      <svg className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${openFaqIdx === idx ? 'rotate-180 text-blue-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     {openFaqIdx === idx && (
-                      <div className="px-10 pb-10 pt-2 bg-gray-50/30 animate-in slide-in-from-top-2">
-                        <div className="bg-white p-10 rounded-[32px] border border-gray-100 shadow-inner">
-                          <p className="text-lg font-bold text-gray-500 leading-relaxed italic">A. {faq.answer}</p>
-                        </div>
+                      <div className="px-6 pb-6 pt-0 animate-in slide-in-from-top-2">
+                        <p className="text-[15px] text-gray-600 font-medium leading-relaxed pl-1">A. {faq.answer}</p>
                       </div>
                     )}
                   </div>
@@ -246,50 +254,51 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             </section>
 
             {/* 6. 만족도 리뷰 (공통) */}
-            <section ref={reviewRef} className="pt-24 border-t border-gray-100 space-y-16 scroll-mt-24">
-              <div className="flex justify-between items-end">
-                  <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                      <span className="w-2.5 h-10 bg-yellow-400 rounded-full shadow-lg"></span> 실제 구매 고객 만족도
+            <section ref={reviewRef} className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50 flex flex-wrap justify-between items-end gap-4">
+                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                      <span className="w-1.5 h-8 bg-yellow-400 rounded-full shrink-0" aria-hidden></span>
+                      실제 구매 고객 만족도
                   </h3>
-                  <div className="flex items-center gap-6 bg-gray-900 text-white px-10 py-6 rounded-[40px] shadow-2xl">
-                      <span className="text-5xl font-black text-yellow-400 italic tracking-tighter">{reviewStats.avg}</span>
-                      <div className="space-y-1">
-                        <div className="flex text-yellow-400">{Array.from({length: 5}).map((_, i) => (<svg key={i} className={`w-6 h-6 fill-current ${i < Math.round(Number(reviewStats.avg)) ? 'text-yellow-400' : 'text-gray-700'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>))}</div>
-                        <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest italic">{reviewStats.total} 검증된 리뷰</p>
+                  <div className="flex items-center gap-4 bg-gray-900 text-white px-6 py-4 rounded-2xl">
+                      <span className="text-4xl font-black text-yellow-400">{reviewStats.avg}</span>
+                      <div className="space-y-0.5">
+                        <div className="flex text-yellow-400">{Array.from({length: 5}).map((_, i) => (<svg key={i} className={`w-5 h-5 fill-current ${i < Math.round(Number(reviewStats.avg)) ? 'text-yellow-400' : 'text-gray-600'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>))}</div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{reviewStats.total}개 리뷰</p>
                       </div>
                   </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                   {filteredReviews.length === 0 ? (
-                      <div className="col-span-full py-40 text-center bg-gray-50 rounded-[64px] border-4 border-dashed border-gray-100">
-                          <p className="text-gray-300 font-black italic text-2xl uppercase tracking-widest">아직 작성된 리뷰가 없습니다</p>
+                      <div className="col-span-full py-16 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                          <p className="text-gray-400 font-bold">아직 작성된 리뷰가 없습니다</p>
                       </div>
                   ) : filteredReviews.map((rev) => (
-                      <div key={rev.id} className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                        <div className="bg-white p-10 rounded-[56px] border border-gray-100 shadow-sm transition-all hover:border-orange-200 group relative">
-                            <div className="flex justify-between items-start mb-8">
-                               <div className="flex items-center gap-6">
-                                  <div className="w-20 h-20 rounded-[28px] overflow-hidden border-4 border-white shadow-xl bg-gray-50 shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rev.userId}`} alt="p" className="w-full h-full object-cover" /></div>
+                      <div key={rev.id} className="space-y-4">
+                        <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                            <div className="flex justify-between items-start gap-4 mb-4">
+                               <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-200 shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rev.userId}`} alt="" className="w-full h-full object-cover" /></div>
                                   <div>
-                                     <div className="flex items-center gap-2 mb-2"><span className="font-black text-gray-900 text-xl">@{rev.author}</span><span className="text-[10px] font-black bg-blue-500 text-white px-3 py-1 rounded-full italic uppercase tracking-tighter">실제 구매자</span></div>
-                                     <div className="flex text-yellow-400">{Array.from({length: 5}).map((_, j) => (<svg key={j} className={`w-4 h-4 fill-current ${j < rev.rating ? 'text-yellow-400' : 'text-gray-200'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>))}</div>
+                                     <div className="flex items-center gap-2 flex-wrap"><span className="font-bold text-gray-900">@{rev.author}</span><span className="text-[10px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded">구매자</span></div>
+                                     <div className="flex text-yellow-400 mt-1">{Array.from({length: 5}).map((_, j) => (<svg key={j} className={`w-4 h-4 fill-current ${j < rev.rating ? 'text-yellow-400' : 'text-gray-200'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>))}</div>
                                   </div>
                                </div>
-                               <span className="text-[11px] font-black text-gray-300 italic uppercase bg-gray-50 px-3 py-1 rounded-full">{rev.date}</span>
+                               <span className="text-[11px] font-medium text-gray-400 shrink-0">{rev.date}</span>
                             </div>
-                            <p className="text-xl font-bold text-gray-600 leading-relaxed italic group-hover:text-gray-900 transition-colors">"{rev.content}"</p>
+                            <p className="text-[15px] text-gray-700 font-medium leading-relaxed">"{rev.content}"</p>
                         </div>
                         {rev.reply && (
-                          <div className="ml-16 bg-blue-50/50 p-10 rounded-[50px] border border-blue-100 shadow-inner relative animate-in slide-in-from-left-4">
-                             <div className="flex items-center gap-4 mb-6">
-                                <img src={displayProfileImg} className="w-12 h-12 rounded-[20px] border-4 border-white shadow-xl" alt="expert" />
+                          <div className="ml-6 pl-6 border-l-2 border-blue-200 bg-blue-50/30 py-4 rounded-r-2xl">
+                             <div className="flex items-center gap-3 mb-2">
+                                <img src={displayProfileImg} className="w-10 h-10 rounded-lg border-2 border-white" alt="" />
                                 <div>
-                                  <p className="text-lg font-black text-blue-900 italic tracking-tight">{displayAuthor} <span className="text-[10px] bg-blue-600 text-white px-3 py-1 rounded-full italic ml-2 uppercase shadow-sm">전문가</span></p>
-                                  <p className="text-[11px] text-blue-300 font-bold italic uppercase">{rev.replyDate}</p>
+                                  <p className="text-sm font-bold text-blue-900">{displayAuthor} <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded">전문가</span></p>
+                                  <p className="text-[11px] text-blue-500">{rev.replyDate}</p>
                                 </div>
                              </div>
-                             <p className="text-lg font-black text-blue-800 leading-relaxed italic">"{rev.reply}"</p>
+                             <p className="text-[15px] font-medium text-blue-900/90 leading-relaxed">"{rev.reply}"</p>
                           </div>
                         )}
                       </div>
@@ -298,39 +307,42 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             </section>
 
             {/* 7. 취소 및 환불 규정 (공통) */}
-            <section className="space-y-8 scroll-mt-24 pt-16">
-              <h3 className="text-2xl font-black text-gray-900 italic tracking-tighter flex items-center gap-3">
-                <span className="w-1.5 h-8 bg-rose-500 rounded-full shadow-lg"></span> 취소 및 환불 규정
-              </h3>
+            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                  <span className="w-1.5 h-8 bg-rose-500 rounded-full shrink-0" aria-hidden></span>
+                  취소 및 환불 규정
+                </h3>
+              </div>
               {isServiceType ? (
-                <div className="text-[14px] text-gray-600 font-bold space-y-8 leading-relaxed bg-slate-50 p-10 rounded-[48px] border border-gray-100">
+                <div className="p-8 text-[15px] text-gray-600 font-medium space-y-6 leading-relaxed">
                   <div className="space-y-2">
-                    <p className="font-black text-gray-900 text-[16px] mb-4 uppercase italic">기본 정책</p>
+                    <p className="font-bold text-gray-900 text-base mb-2">기본 정책</p>
                     <p>1. 용역 제공이 개시되기 전: 취소 및 환불 가능</p>
                     <p>2. 용역 제공이 개시된 후</p>
                     <p className="pl-4">• 가분적 용역: 제공이 개시되지 않은 범위에 대한 취소 및 환불 가능</p>
                     <p className="pl-4">• 불가분적 용역: 취소 및 환불 불가</p>
                     <p>3. 제공된 용역이 구매 확정된 경우: 거래 금액을 정산 받은 전문가와 직접 취소 및 환불 협의</p>
                   </div>
-                  <div className="space-y-2 pt-6 border-t border-gray-200">
-                    <p className="font-black text-gray-900 text-[16px] mb-4 uppercase italic">참고 사항</p>
+                  <div className="space-y-2 pt-4 border-t border-gray-100">
+                    <p className="font-bold text-gray-900 text-base mb-2">참고 사항</p>
                     <p>• 전문가가 제시한 취소 조건이 기본 규정보다 의뢰인에게 유리한 경우 해당 기준을 따릅니다.</p>
                     <p>• 전문가가 별도로 명시한 사전 준비 사항(상담, 출장, 예약 등)과 이에 대한 취소 조건이 있는 경우 해당 기준을 따릅니다.</p>
                   </div>
                 </div>
               ) : (
-                <div className="text-[14px] text-gray-600 font-bold space-y-8 leading-relaxed bg-slate-50 p-10 rounded-[48px] border border-gray-100">
+                <div className="p-8 text-[15px] text-gray-600 font-medium space-y-6 leading-relaxed">
                   <div className="space-y-2">
-                    <p className="font-black text-gray-900 text-[16px] mb-4 uppercase italic">기본 정책</p>
+                    <p className="font-bold text-gray-900 text-base mb-2">기본 정책</p>
                     <p>1. 디지털 콘텐츠 제공이 개시되기 전: 취소 및 환불 가능</p>
                     <p>2. 디지털 콘텐츠 제공이 개시된 후</p>
                     <p className="pl-4">• 가분적 콘텐츠: 개시되지 않은 범위에 대한 취소 및 환불 가능</p>
                     <p className="pl-4">• 불가분적 콘텐츠: 취소 및 환불 불가</p>
                     <p>3. 제공된 콘텐츠가 구매 확정된 경우: 거래 금액을 정산 받은 전문가와 직접 취소 및 환불 협의</p>
                   </div>
-                  <div className="space-y-2 pt-6 border-t border-gray-200">
-                    <p className="font-black text-gray-900 text-[16px] mb-4 uppercase italic">주의 사항</p>
-                    <p className="text-red-500">• 디지털 콘텐츠의 특성상 다운로드 이후에는 원칙적으로 환불이 불가능하오니 신중한 구매 부탁드립니다.</p>
+                  <div className="space-y-2 pt-4 border-t border-gray-100">
+                    <p className="font-bold text-gray-900 text-base mb-2">주의 사항</p>
+                    <p className="text-rose-600">• 디지털 콘텐츠의 특성상 다운로드 이후에는 원칙적으로 환불이 불가능하오니 신중한 구매 부탁드립니다.</p>
                     <p>• 콘텐츠를 공급받은 날부터 3개월 이내 또는 그 사실을 안 날 또는 알 수 있었던 날부터 30일 이내에 취소 및 환불이 가능합니다.</p>
                   </div>
                 </div>
@@ -338,33 +350,36 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             </section>
 
             {/* 8. 상품 정보 안내 (공통) */}
-            <section className="space-y-8 scroll-mt-24 pt-16">
-              <h3 className="text-2xl font-black text-gray-900 italic tracking-tighter flex items-center gap-3">
-                <span className="w-1.5 h-8 bg-green-500 rounded-full shadow-lg"></span> 상품 정보 안내
-              </h3>
-              <div className="border border-gray-200 rounded-[40px] overflow-hidden shadow-sm">
-                 <table className="w-full text-sm text-left border-collapse">
-                    <tbody className="divide-y divide-gray-200">
+            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                  <span className="w-1.5 h-8 bg-green-500 rounded-full shrink-0" aria-hidden></span>
+                  상품 정보 안내
+                </h3>
+              </div>
+              <div className="px-2 pb-2">
+                 <table className="w-full text-[15px] text-left border-collapse">
+                    <tbody className="divide-y divide-gray-100">
                        <tr className="flex flex-col md:table-row">
-                          <td className="md:w-1/4 bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">공급자</td>
-                          <td className="px-8 py-6 font-bold text-gray-900 border-b md:border-b-0">{displayAuthor}</td>
-                          <td className="md:w-1/4 bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">이용기간</td>
-                          <td className="px-8 py-6 font-bold text-gray-900">상품 상세 참조</td>
+                          <td className="md:w-1/4 bg-gray-50/80 px-6 py-4 font-bold text-gray-600 text-[13px] uppercase tracking-wide">공급자</td>
+                          <td className="px-6 py-4 font-medium text-gray-900 border-b md:border-b-0">{displayAuthor}</td>
+                          <td className="md:w-1/4 bg-gray-50/80 px-6 py-4 font-bold text-gray-600 text-[13px] uppercase tracking-wide">이용기간</td>
+                          <td className="px-6 py-4 font-medium text-gray-900">상품 상세 참조</td>
                        </tr>
                        <tr className="flex flex-col md:table-row">
-                          <td className="bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">제공방식</td>
-                          <td className="px-8 py-6 font-bold text-gray-900 border-b md:border-b-0">
+                          <td className="bg-gray-50/80 px-6 py-4 font-bold text-gray-600 text-[13px] uppercase tracking-wide">제공방식</td>
+                          <td className="px-6 py-4 font-medium text-gray-900 border-b md:border-b-0">
                              <p className="mb-1">파일형태: 마이페이지 자동 발송</p>
                              <p>용역형태: 전문가 개별 협의</p>
                           </td>
-                          <td className="bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">시스템사양</td>
-                          <td className="px-8 py-6 font-bold text-gray-900">파일 호환 가능 환경</td>
+                          <td className="bg-gray-50/80 px-6 py-4 font-bold text-gray-600 text-[13px] uppercase tracking-wide">시스템사양</td>
+                          <td className="px-6 py-4 font-medium text-gray-900">파일 호환 가능 환경</td>
                        </tr>
                        <tr className="flex flex-col md:table-row">
-                          <td className="bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">고객센터</td>
-                          <td className="px-8 py-6 font-bold text-gray-900" colSpan={3}>
-                             <p className="font-black">THEBESTSNS 고객센터</p>
-                             <p className="text-[12px] text-gray-400 mt-1">상담 시간: 평일 10:00 - 18:00 (점심시간 제외)</p>
+                          <td className="bg-gray-50/80 px-6 py-4 font-bold text-gray-600 text-[13px] uppercase tracking-wide">고객센터</td>
+                          <td className="px-6 py-4 font-medium text-gray-900" colSpan={3}>
+                             <p className="font-bold">THEBESTSNS 고객센터</p>
+                             <p className="text-[13px] text-gray-500 mt-1">상담 시간: 평일 10:00 - 18:00 (점심시간 제외)</p>
                           </td>
                        </tr>
                     </tbody>
