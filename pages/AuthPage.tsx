@@ -234,7 +234,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('Invalid login credentials')) {
-        alert('아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다.\n\n• 비밀번호 재설정하셨다면 아래 "이메일로 로그인"을 사용해 보세요.\n• Supabase 대시보드 [Authentication → Users]에 해당 이메일로 가입된 계정이 있는지 확인해 보세요.');
+        alert('아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다.\n\n비밀번호 재설정하셨다면 아래 "이메일로 로그인"을 사용해 주세요.');
       } else {
         alert(`로그인 실패: ${msg}`);
       }
