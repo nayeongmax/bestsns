@@ -177,7 +177,7 @@ const App: React.FC = () => {
             <Route path="/board/write" element={user ? <FreeBoardWrite user={user} posts={posts} setPosts={setPosts} /> : <Navigate to="/login" />} />
             <Route path="/revenue" element={user ? <RevenueManagement /> : <Navigate to="/login" />} />
             <Route path="/profit-mgmt" element={user ? <ProfitManagement user={user} storeOrders={storeOrders} /> : <Navigate to="/login" />} />
-            <Route path="/chat" element={user ? <ChatPage user={user} addNotif={addNotif} /> : <Navigate to="/login" />} />
+            <Route path="/chat" element={user ? <ChatPage user={user} members={members} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/mypage" element={user ? <MyPage user={user} onUpdate={handleGlobalUserUpdate} ebooks={ebooks} setEbooks={setEbooks} channels={channels} smmOrders={smmOrders} storeOrders={storeOrders} onAddReview={(r)=>setReviews(p=>[r,...p])} onUpdateReview={(r)=>setReviews(p=>p.map(i=>i.id===r.id?r:i))} reviews={reviews} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <NotificationsPage notifications={notifications} setNotifications={setNotifications} user={user} /> : <Navigate to="/login" />} />
             <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} channels={channels} ebooks={ebooks} />} />
