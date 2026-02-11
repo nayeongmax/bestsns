@@ -1,12 +1,14 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { UserProfile, SMMOrder, EbookProduct, Review } from '../../types';
+import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '../../types';
 
 interface Props {
   user: UserProfile;
   smmOrders: SMMOrder[];
-  ebooks: EbookProduct[]; 
+  channelOrders: ChannelOrder[];
+  storeOrders: StoreOrder[];
+  ebooks: EbookProduct[];
   onAddReview: (review: Review) => void;
 }
 
@@ -31,7 +33,7 @@ interface OrderItem {
   downloadUrl?: string; 
 }
 
-const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, ebooks, onAddReview }) => {
+const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, ebooks, onAddReview }) => {
   const [activeTab, setActiveTab] = useState<BuyerSubTab>('sns');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -63,7 +65,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, ebooks, onAddReview 
     localStorage.setItem('download_start_times_v1', JSON.stringify(downloadStarts));
   }, [confirmedList, reviewedList, downloadStarts]);
 
-  // 데이터 통합
+  // 데이터 통합 (실제 주문만 표시)
   const buyerOrders: OrderItem[] = useMemo(() => {
     const snsItems: OrderItem[] = smmOrders
       .filter(o => o.userId === user.id)
@@ -74,19 +76,24 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, ebooks, onAddReview 
         status: o.status, link: o.link, initialCount: o.initialCount, remains: o.remains
       }));
 
-    const channelItems: OrderItem[] = [
-      { id: 'CH_102', type: 'channel', orderTime: '2026.02.18 10:20', productName: '경제 전문 유튜브 채널 5만', thumbnail: 'https://picsum.photos/seed/ch1/200/200', productId: 'c1', sellerName: '프로매니저', price: 4500000, quantity: 1, totalPrice: 4500000, status: '작업완료' }
-    ];
+    const channelItems: OrderItem[] = channelOrders
+      .filter(o => o.userId === user.id)
+      .map(o => ({
+        id: o.id, type: 'channel', orderTime: o.orderTime, productName: o.productName,
+        thumbnail: '', productId: o.productId, sellerName: o.platform || '채널',
+        price: o.price, quantity: 1, totalPrice: o.price, status: o.status
+      }));
 
-    const storeItems: OrderItem[] = [
-      { 
-        id: 'ST_505', type: 'store', orderTime: '2026.02.12 15:45', productName: '인스타 릴스 떡상 가이드 PDF', thumbnail: 'https://picsum.photos/seed/st1/200/200', productId: 'eb1', sellerName: '마케터킴', price: 50000, quantity: 1, totalPrice: 50000, status: '구매확정', storeType: 'ebook',
-        downloadUrl: 'data:application/pdf;base64,JVBERi0xLjQKJ...' 
-      }
-    ];
+    const storeItems: OrderItem[] = storeOrders
+      .filter(o => o.userId === user.id)
+      .map(o => ({
+        id: o.id, type: 'store', orderTime: o.orderTime, productName: o.productName,
+        thumbnail: '', productId: o.productId, sellerName: o.sellerNickname || '',
+        price: o.price, quantity: 1, totalPrice: o.price, status: o.status, storeType: o.storeType
+      }));
 
     return [...snsItems, ...channelItems, ...storeItems].filter(o => o.type === activeTab);
-  }, [smmOrders, user.id, activeTab]);
+  }, [smmOrders, channelOrders, storeOrders, user.id, activeTab]);
 
   const handleConfirmOrder = (order: OrderItem, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
