@@ -119,6 +119,18 @@ const App: React.FC = () => {
     });
   }, []);
 
+  // 로그인한 사용자: profiles(회원 목록)에서 판매자 승인 상태 동기화 → 승인 즉시 판매자 워크스페이스 해제
+  useEffect(() => {
+    if (!user || !members.length) return;
+    const same = members.find(m => m.id === user.id);
+    if (!same || (same.sellerStatus === user.sellerStatus && !same.sellerApplication && !user.sellerApplication)) return;
+    setUser(prev => prev ? {
+      ...prev,
+      sellerStatus: same.sellerStatus ?? prev.sellerStatus,
+      sellerApplication: same.sellerApplication ?? prev.sellerApplication
+    } : null);
+  }, [members]);
+
   // 로컬 저장소 동기화 (members는 profiles 로드 후 덮어쓰므로, 캐시용으로만 저장)
   useEffect(() => { if (membersLoaded) localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members, membersLoaded]);
   useEffect(() => { localStorage.setItem('user_profile_v2', JSON.stringify(user)); }, [user]);
@@ -219,6 +231,16 @@ const App: React.FC = () => {
       setMembers(list);
     });
   }, []);
+
+  // 로그인한 사용자 프로필만 Supabase에서 다시 불러오기 (승인 직후 새로고침 없이 판매자 워크스페이스 해제용)
+  const refetchCurrentUserProfile = useCallback(() => {
+    if (!user?.id) return;
+    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle().then(({ data, error }) => {
+      if (error || !data) return;
+      const row = profileRowToUserProfile(data as Record<string, unknown>);
+      setUser(prev => prev ? { ...prev, sellerStatus: row.sellerStatus ?? prev.sellerStatus, sellerApplication: row.sellerApplication ?? prev.sellerApplication } : null);
+    });
+  }, [user?.id]);
 
   // 회원가입 및 로그인 성공 시: profiles 동기화 후 회원 목록은 profiles 기준으로 유지
   const handleLoginSuccess = useCallback((userData: UserProfile) => {
