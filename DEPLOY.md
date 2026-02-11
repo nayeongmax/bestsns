@@ -15,10 +15,16 @@
 Supabase 키는 [Supabase 대시보드](https://supabase.com/dashboard) → 프로젝트 선택 → Settings → API 에서 확인할 수 있습니다.  
 **anon key는 공개되어도 되는 키이지만, 서버용 secret key는 절대 프론트엔드나 Git에 넣지 마세요.**
 
-### 채팅 기능 (회원 간 문의) 사용 시
+### 회원 프로필 테이블 (로그인·Table Editor 목록용)
 
-채팅은 Supabase에 저장되어 **사이트에 접속한 모든 회원끼리** 대화할 수 있습니다.  
-Supabase 대시보드 → **SQL Editor** → New query → 프로젝트 루트의 **`supabase-chat-setup.sql`** 내용을 붙여넣고 **Run**으로 테이블을 한 번 생성해 주세요.
+다른 기기에서 로그인할 수 있도록 하려면 **profiles** 테이블이 필요합니다.  
+Supabase **SQL Editor** → New query → **`supabase-profiles-setup.sql`** 내용을 붙여넣고 **Run**으로 실행하세요.  
+회원가입·로그인 시 여기에 자동으로 반영되어 Table Editor에서 회원 목록을 볼 수 있습니다.
+
+### 채팅 기능 (문의하기) 사용 시
+
+채팅은 **N잡 스토어·채널 상품의 "문의하기"**로만 시작할 수 있습니다. (전체 회원 목록 노출 없음)  
+Supabase **SQL Editor** → **`supabase-chat-setup.sql`** 실행으로 `chat_messages` 테이블을 생성하세요.
 
 ---
 
