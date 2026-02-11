@@ -1,432 +1,255 @@
 
-import React, { useState, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { EbookProduct, UserProfile, WishlistItem, StoreType } from '../types';
+import { EBOOK_CATEGORIES, MARKETING_CATEGORIES } from '../constants';
 
 interface Props {
   ebooks: EbookProduct[];
+  setEbooks: React.Dispatch<React.SetStateAction<EbookProduct[]>>;
+  user: UserProfile;
   wishlist: WishlistItem[];
   onToggleWishlist: (item: WishlistItem) => void;
-  user: UserProfile;
-  reviews: Review[];
-  storeOrders: StoreOrder[];
-  members: UserProfile[];
 }
 
-const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user, reviews, storeOrders, members }) => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [activeTierIdx, setSelectedTierIdx] = useState(0);
-  const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
+type StoreTypeFilter = StoreType | 'all';
+
+const STORE_TABS: { id: StoreTypeFilter; label: string; icon: string; color: string }[] = [
+  { id: 'all', label: '전체', icon: '📂', color: 'gray' },
+  { id: 'marketing', label: '마케팅', icon: '📢', color: 'rose' },
+  { id: 'lecture', label: '강의', icon: '🎓', color: 'blue' },
+  { id: 'consulting', label: '컨설팅', icon: '🤝', color: 'green' },
+  { id: 'template', label: '자료·템플릿', icon: '📁', color: 'purple' },
+  { id: 'ebook', label: '전자책', icon: '📖', color: 'orange' },
+];
+
+const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onToggleWishlist }) => {
+  const [activeStoreType, setActiveStoreType] = useState<StoreTypeFilter>('all');
+  const [activeCategory, setActiveCategory] = useState('전체');
+  const [activeSubCategory, setActiveSubCategory] = useState('전체');
+  const [searchQuery, setSearchQuery] = useState('');
   
-  const reviewRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  const ebook = ebooks.find(e => e.id === id);
+  const safeEbooks = Array.isArray(ebooks) ? ebooks : [];
+  const filteredEbooks = useMemo(() => {
+    return safeEbooks.filter(e => {
+      if (!e || typeof e !== 'object') return false;
+      const matchType = activeStoreType === 'all' || (e.storeType || 'ebook') === activeStoreType;
+      const matchCategory = activeCategory === '전체' || (e.category || '') === activeCategory;
+      const matchSubCategory = activeSubCategory === '전체' || (e.subCategory || '') === activeSubCategory;
+      const title = (e.title ?? '').toString();
+      const author = (e.author ?? '').toString();
+      const matchSearch = !searchQuery.trim() || title.toLowerCase().includes(searchQuery.toLowerCase()) || author.toLowerCase().includes(searchQuery.toLowerCase());
+      const isApproved = e.status === 'approved';
+      return matchType && matchCategory && matchSubCategory && matchSearch && isApproved;
+    });
+  }, [safeEbooks, activeStoreType, activeCategory, activeSubCategory, searchQuery]);
 
-  // --- 실시간 데이터 연동 로직 ---
-  const expertProfile = useMemo(() => {
-    if (!ebook) return null;
-    if (ebook.authorId === user.id) return user;
-    return members.find(m => m.id === ebook.authorId) || null;
-  }, [ebook, user, members]);
+  const isWishlisted = (id: string) => wishlist.some(w => w.data.id === id);
 
-  const expertProductIds = useMemo(() => {
-    if (!ebook) return [];
-    return ebooks.filter(e => e.authorId === ebook.authorId).map(e => e.id);
-  }, [ebooks, ebook]);
-
-  const totalTransactions = useMemo(() => {
-    if (!ebook) return 0;
-    return storeOrders.filter(o => o.sellerNickname === ebook.author && o.status === '구매확정').length;
-  }, [storeOrders, ebook]);
-
-  const expertAvgRating = useMemo(() => {
-    const expertReviews = reviews.filter(r => expertProductIds.includes(r.productId));
-    if (expertReviews.length === 0) return "0.0";
-    const sum = expertReviews.reduce((acc, r) => acc + r.rating, 0);
-    return (sum / expertReviews.length).toFixed(1);
-  }, [reviews, expertProductIds]);
-
-  const expertTypeInfo = useMemo(() => {
-    const app = expertProfile?.sellerApplication;
-    if (app?.businessInfo && app?.businessInfo.registrationNo) {
-      return { label: '사업판매자', tax: '발행 가능' };
-    }
-    return { label: '개인판매자', tax: '발행 불가' };
-  }, [expertProfile]);
-
-  const filteredReviews = useMemo(() => {
-    return reviews.filter(r => r.productId === id);
-  }, [reviews, id]);
-
-  const reviewStats = useMemo(() => {
-    const total = filteredReviews.length;
-    const sum = filteredReviews.reduce((acc, r) => acc + r.rating, 0);
-    const avg = total > 0 ? (sum / total).toFixed(1) : "0.0";
-    return { total, avg, sum };
-  }, [filteredReviews]);
-
-  if (!ebook) {
-    return <div className="text-center py-20 font-black">상품을 찾을 수 없습니다.</div>;
-  }
-
-  const isMine = ebook.authorId === user.id;
-
-  const typeInfo: Record<StoreType, { label: string; color: string }> = {
-    'lecture': { label: '강의', color: 'bg-blue-600' },
-    'consulting': { label: '컨설팅', color: 'bg-green-600' },
-    'template': { label: '자료·템플릿', color: 'bg-purple-600' },
-    'ebook': { label: '전자책', color: 'bg-gray-900' },
-    'marketing': { label: '마케팅', color: 'bg-rose-500' },
-  };
-
-  const currentStoreType = ebook.storeType || 'ebook';
-  const { label: typeLabel, color: typeColor } = typeInfo[currentStoreType];
-
-  const displayAuthor = isMine ? user.nickname : ebook.author;
-  const displayProfileImg = isMine ? user.profileImage : `https://api.dicebear.com/7.x/avataaars/svg?seed=${ebook.author}`;
-
-  const tiers = ebook.tiers || [{ name: 'LITE', price: ebook.price, description: "기본 서비스 제공", pageCount: 1 }];
-
-  const faqs = ebook.faqs || [
-    { question: "구매 후 언제 받아볼 수 있나요?", answer: "결제 완료 즉시 시스템을 통해 안내 받으실 수 있습니다." },
-    { question: "환불이 가능한가요?", answer: "서비스 제공 및 다운로드 이후에는 환불이 불가능하오니 신중한 구매 부탁드립니다." }
-  ];
-
-  const scrollToReviews = () => reviewRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-  const handleBuyNow = () => {
-    const selectedTier = tiers[activeTierIdx];
-    if (window.confirm(`${ebook.title} (${selectedTier.name}) 상품을 구매하시겠습니까?`)) {
-      navigate('/payment/point', { 
-        state: { amount: selectedTier.price, product: { title: `${ebook.title} [${selectedTier.name}]`, id: ebook.id } } 
-      });
+  const handleRegisterClick = () => {
+    if (user.role === 'admin' || user.sellerStatus === 'approved') {
+      const typeForRegister = activeStoreType === 'all' ? 'marketing' : activeStoreType;
+      navigate('/ebooks/register', { state: { selectedStoreType: typeForRegister } });
+    } else {
+      alert('판매자 등록 후 판매가능합니다.\n빠르게 승인해드릴테니 수익화해보세요!');
+      navigate('/mypage', { state: { activeTab: 'seller' } });
     }
   };
-
-  const isServiceType = ['marketing', 'lecture', 'consulting'].includes(currentStoreType);
 
   return (
-    <div className="max-w-[1400px] mx-auto pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
-      <button onClick={() => navigate(-1)} className="mb-8 flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 transition-colors group">
-        <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-        뒤로가기
-      </button>
-
-      <div className="flex flex-col lg:flex-row gap-16 items-start">
-        {/* 메인 콘텐츠 영역 */}
-        <div className="flex-1 space-y-16">
-          {/* 상단 타이틀 */}
-          <section>
-            <div className="flex gap-2 mb-6">
-               <span className={`${typeColor} text-white text-[11px] font-black px-4 py-1.5 rounded-full shadow-sm uppercase italic tracking-widest`}>{typeLabel}</span>
-               <span className="bg-[#e8f5e9] text-[#2e7d32] text-[11px] font-black px-4 py-1.5 rounded-full shadow-sm border border-green-100 uppercase italic tracking-widest">오리지널</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-8 leading-[1.1] italic tracking-tighter">{ebook.title}</h1>
-            <div className="flex items-center gap-6">
-               <div className="flex items-center gap-2 bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100">
-                  <div className="flex text-yellow-400">
-                    {Array.from({length: 5}).map((_, i) => (
-                      <svg key={i} className={`w-6 h-6 fill-current ${i < Math.round(Number(reviewStats.avg)) ? 'text-yellow-400' : 'text-gray-200'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                    ))}
-                  </div>
-                  <span className="text-2xl font-black text-gray-900 leading-none">{reviewStats.avg}</span>
-               </div>
-               <span onClick={scrollToReviews} className="text-[15px] font-bold text-gray-400 underline underline-offset-4 cursor-pointer hover:text-blue-500 italic">({reviewStats.total}개의 검증된 리뷰 보기)</span>
-            </div>
-          </section>
-
-          {/* 전문가 요약 정보 (최상단 고정) */}
-          <section className="bg-white border border-gray-100 rounded-[56px] p-10 md:p-14 shadow-sm space-y-12">
-             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                <div className="flex items-center gap-8">
-                   <div className="relative">
-                      <img src={displayProfileImg} className="w-24 h-24 rounded-[32px] object-cover shadow-2xl border-4 border-white" alt="expert" />
-                      <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl shadow-lg border-4 border-white">✓</div>
-                   </div>
-                   <div className="space-y-1">
-                      <h4 className="font-black text-4xl text-gray-900 italic tracking-tighter">{displayAuthor}</h4>
-                      {/* Certified Premium Partner 문구 삭제 완료 */}
-                   </div>
-                </div>
-                <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="bg-gray-900 text-white px-12 py-5 rounded-[28px] font-black text-xl hover:bg-blue-600 transition-all shadow-xl italic tracking-widest uppercase active:scale-95">전문가 문의하기</button>
-             </div>
-             <div className="bg-gray-50/80 rounded-[40px] p-2 flex flex-wrap lg:flex-nowrap gap-2 shadow-inner border border-gray-100">
-                {[
-                  { label: '총 거래 건수', value: `${totalTransactions}건`, icon: '📊' },
-                  { label: '만족도 점수', value: expertAvgRating, icon: '⭐' },
-                  { label: '회원 구분', value: expertTypeInfo.label, icon: '👤' },
-                  { label: '세금계산서', value: expertTypeInfo.tax, icon: '🧾' }
-                ].map((item, i) => (
-                  <div key={i} className="flex-1 min-w-[150px] bg-white rounded-[32px] py-10 px-8 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
-                    <span className="text-3xl mb-4 group-hover:scale-110 transition-transform">{item.icon}</span>
-                    <p className="text-[11px] font-black text-gray-400 mb-3 uppercase tracking-[0.3em] italic">{item.label}</p>
-                    <p className="text-2xl font-black text-gray-900 italic tracking-tighter text-center">{item.value}</p>
-                  </div>
-                ))}
-             </div>
-          </section>
-
-          {/* 콘텐츠 영역: 유형에 따른 순서 재배치 */}
-          <div className="space-y-20">
-            
-            {/* 1. 목차 (자료템플릿, 전자책 전용) */}
-            {!isServiceType && ebook.index && (
-              <section className="space-y-10 scroll-mt-24">
-                <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                   <span className="w-2.5 h-10 bg-yellow-400 rounded-full shadow-lg shadow-yellow-100"></span> 목차
-                </h3>
-                <div className="text-xl text-gray-600 font-bold leading-[1.8] whitespace-pre-wrap bg-gray-50 p-12 rounded-[56px] border border-gray-100 shadow-inner">
-                  {ebook.index}
-                </div>
-              </section>
-            )}
-
-            {/* 2. 서비스 상세설명 (공통) */}
-            <section className="space-y-10 scroll-mt-24">
-              <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                 <span className="w-2.5 h-10 bg-blue-600 rounded-full shadow-lg shadow-blue-100"></span> 서비스 상세설명
-              </h3>
-              <div className="text-xl text-gray-700 font-bold leading-[1.9] whitespace-pre-wrap px-6 border-l-4 border-gray-100">
-                {ebook.description || "상세 설명이 등록되지 않았습니다."}
+    <div className="max-w-6xl mx-auto pb-20">
+      {/* 초거대 대분류 탭 섹션 - 6개 탭 한 줄 배치 */}
+      <div className="mb-12">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4">
+          {STORE_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveStoreType(tab.id);
+                setActiveCategory('전체');
+                setActiveSubCategory('전체');
+              }}
+              className={`relative flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-[24px] md:rounded-[32px] transition-all duration-300 border-2 overflow-hidden group ${
+                activeStoreType === tab.id
+                ? tab.id === 'all'
+                  ? 'bg-white border-gray-400 shadow-2xl shadow-gray-100 scale-[1.02]'
+                  : `bg-white border-${tab.color}-500 shadow-2xl shadow-${tab.color}-100 scale-[1.02]`
+                : 'bg-white border-transparent grayscale hover:grayscale-0 hover:border-gray-100 hover:bg-gray-50 opacity-60 hover:opacity-100'
+              }`}
+            >
+              <div className={`text-3xl md:text-4xl mb-3 transition-transform duration-500 ${activeStoreType === tab.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
+                {tab.icon}
               </div>
-            </section>
-
-            {/* 3. 서비스 제공방법 및 절차 (마케팅, 강의, 컨설팅 전용) */}
-            {isServiceType && ebook.serviceMethod && (
-              <section className="space-y-10 scroll-mt-24">
-                <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                    <span className="w-2.5 h-10 bg-orange-500 rounded-full shadow-lg shadow-orange-100"></span> 서비스 제공방법 및 절차
-                </h3>
-                <div className="text-xl text-gray-700 font-bold leading-[1.8] whitespace-pre-wrap px-6">
-                  {ebook.serviceMethod}
-                </div>
-              </section>
-            )}
-
-            {/* 4. 상세이미지 (공통) */}
-            {ebook.attachedImages && ebook.attachedImages.length > 0 && (
-              <section className="space-y-10 pt-8">
-                <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                    <span className="w-2.5 h-10 bg-indigo-500 rounded-full shadow-lg"></span> 상세이미지
-                </h3>
-                <div className="space-y-10">
-                  {ebook.attachedImages.map((img, i) => (
-                    <img key={i} src={img} className="w-full rounded-[60px] shadow-2xl border border-gray-100 hover:scale-[1.01] transition-transform duration-700" alt={`상세 이미지 ${i}`} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* 5. 자주 묻는 질문 (공통) */}
-            <section className="space-y-10 scroll-mt-24">
-              <h3 className="text-3xl font-black text-gray-900 italic tracking-tighter flex items-center gap-4">
-                <span className="w-2.5 h-10 bg-yellow-400 rounded-full shadow-lg shadow-yellow-100"></span> 자주 묻는 질문
-              </h3>
-              <div className="space-y-4">
-                {faqs.map((faq, idx) => (
-                  <div key={idx} className="border border-gray-100 rounded-[40px] overflow-hidden bg-white shadow-sm transition-all hover:border-blue-200">
-                    <button 
-                      onClick={() => setOpenFaqIdx(openFaqIdx === idx ? null : idx)}
-                      className="w-full p-10 flex justify-between items-center text-left hover:bg-gray-50/50 transition-colors"
-                    >
-                      <span className="font-black text-gray-800 text-xl pr-12">Q. {faq.question}</span>
-                      <svg className={`w-6 h-6 text-gray-300 shrink-0 transition-transform ${openFaqIdx === idx ? 'rotate-180 text-blue-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    {openFaqIdx === idx && (
-                      <div className="px-10 pb-10 pt-2 bg-gray-50/30 animate-in slide-in-from-top-2">
-                        <div className="bg-white p-10 rounded-[32px] border border-gray-100 shadow-inner">
-                          <p className="text-lg font-bold text-gray-500 leading-relaxed italic">A. {faq.answer}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* 6. 만족도 리뷰 (공통) */}
-            <section ref={reviewRef} className="pt-24 border-t border-gray-100 space-y-16 scroll-mt-24">
-              <div className="flex justify-between items-end">
-                  <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-                      <span className="w-2.5 h-10 bg-yellow-400 rounded-full shadow-lg"></span> 실제 구매 고객 만족도
-                  </h3>
-                  <div className="flex items-center gap-6 bg-gray-900 text-white px-10 py-6 rounded-[40px] shadow-2xl">
-                      <span className="text-5xl font-black text-yellow-400 italic tracking-tighter">{reviewStats.avg}</span>
-                      <div className="space-y-1">
-                        <div className="flex text-yellow-400">{Array.from({length: 5}).map((_, i) => (<svg key={i} className={`w-6 h-6 fill-current ${i < Math.round(Number(reviewStats.avg)) ? 'text-yellow-400' : 'text-gray-700'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>))}</div>
-                        <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest italic">{reviewStats.total} 검증된 리뷰</p>
-                      </div>
-                  </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  {filteredReviews.length === 0 ? (
-                      <div className="col-span-full py-40 text-center bg-gray-50 rounded-[64px] border-4 border-dashed border-gray-100">
-                          <p className="text-gray-300 font-black italic text-2xl uppercase tracking-widest">아직 작성된 리뷰가 없습니다</p>
-                      </div>
-                  ) : filteredReviews.map((rev) => (
-                      <div key={rev.id} className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                        <div className="bg-white p-10 rounded-[56px] border border-gray-100 shadow-sm transition-all hover:border-orange-200 group relative">
-                            <div className="flex justify-between items-start mb-8">
-                               <div className="flex items-center gap-6">
-                                  <div className="w-20 h-20 rounded-[28px] overflow-hidden border-4 border-white shadow-xl bg-gray-50 shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rev.userId}`} alt="p" className="w-full h-full object-cover" /></div>
-                                  <div>
-                                     <div className="flex items-center gap-2 mb-2"><span className="font-black text-gray-900 text-xl">@{rev.author}</span><span className="text-[10px] font-black bg-blue-500 text-white px-3 py-1 rounded-full italic uppercase tracking-tighter">실제 구매자</span></div>
-                                     <div className="flex text-yellow-400">{Array.from({length: 5}).map((_, j) => (<svg key={j} className={`w-4 h-4 fill-current ${j < rev.rating ? 'text-yellow-400' : 'text-gray-200'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>))}</div>
-                                  </div>
-                               </div>
-                               <span className="text-[11px] font-black text-gray-300 italic uppercase bg-gray-50 px-3 py-1 rounded-full">{rev.date}</span>
-                            </div>
-                            <p className="text-xl font-bold text-gray-600 leading-relaxed italic group-hover:text-gray-900 transition-colors">"{rev.content}"</p>
-                        </div>
-                        {rev.reply && (
-                          <div className="ml-16 bg-blue-50/50 p-10 rounded-[50px] border border-blue-100 shadow-inner relative animate-in slide-in-from-left-4">
-                             <div className="flex items-center gap-4 mb-6">
-                                <img src={displayProfileImg} className="w-12 h-12 rounded-[20px] border-4 border-white shadow-xl" alt="expert" />
-                                <div>
-                                  <p className="text-lg font-black text-blue-900 italic tracking-tight">{displayAuthor} <span className="text-[10px] bg-blue-600 text-white px-3 py-1 rounded-full italic ml-2 uppercase shadow-sm">전문가</span></p>
-                                  <p className="text-[11px] text-blue-300 font-bold italic uppercase">{rev.replyDate}</p>
-                                </div>
-                             </div>
-                             <p className="text-lg font-black text-blue-800 leading-relaxed italic">"{rev.reply}"</p>
-                          </div>
-                        )}
-                      </div>
-                  ))}
-              </div>
-            </section>
-
-            {/* 7. 취소 및 환불 규정 (공통) */}
-            <section className="space-y-8 scroll-mt-24 pt-16">
-              <h3 className="text-2xl font-black text-gray-900 italic tracking-tighter flex items-center gap-3">
-                <span className="w-1.5 h-8 bg-rose-500 rounded-full shadow-lg"></span> 취소 및 환불 규정
-              </h3>
-              {isServiceType ? (
-                <div className="text-[14px] text-gray-600 font-bold space-y-8 leading-relaxed bg-slate-50 p-10 rounded-[48px] border border-gray-100">
-                  <div className="space-y-2">
-                    <p className="font-black text-gray-900 text-[16px] mb-4 uppercase italic">기본 정책</p>
-                    <p>1. 용역 제공이 개시되기 전: 취소 및 환불 가능</p>
-                    <p>2. 용역 제공이 개시된 후</p>
-                    <p className="pl-4">• 가분적 용역: 제공이 개시되지 않은 범위에 대한 취소 및 환불 가능</p>
-                    <p className="pl-4">• 불가분적 용역: 취소 및 환불 불가</p>
-                    <p>3. 제공된 용역이 구매 확정된 경우: 거래 금액을 정산 받은 전문가와 직접 취소 및 환불 협의</p>
-                  </div>
-                  <div className="space-y-2 pt-6 border-t border-gray-200">
-                    <p className="font-black text-gray-900 text-[16px] mb-4 uppercase italic">참고 사항</p>
-                    <p>• 전문가가 제시한 취소 조건이 기본 규정보다 의뢰인에게 유리한 경우 해당 기준을 따릅니다.</p>
-                    <p>• 전문가가 별도로 명시한 사전 준비 사항(상담, 출장, 예약 등)과 이에 대한 취소 조건이 있는 경우 해당 기준을 따릅니다.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-[14px] text-gray-600 font-bold space-y-8 leading-relaxed bg-slate-50 p-10 rounded-[48px] border border-gray-100">
-                  <div className="space-y-2">
-                    <p className="font-black text-gray-900 text-[16px] mb-4 uppercase italic">기본 정책</p>
-                    <p>1. 디지털 콘텐츠 제공이 개시되기 전: 취소 및 환불 가능</p>
-                    <p>2. 디지털 콘텐츠 제공이 개시된 후</p>
-                    <p className="pl-4">• 가분적 콘텐츠: 개시되지 않은 범위에 대한 취소 및 환불 가능</p>
-                    <p className="pl-4">• 불가분적 콘텐츠: 취소 및 환불 불가</p>
-                    <p>3. 제공된 콘텐츠가 구매 확정된 경우: 거래 금액을 정산 받은 전문가와 직접 취소 및 환불 협의</p>
-                  </div>
-                  <div className="space-y-2 pt-6 border-t border-gray-200">
-                    <p className="font-black text-gray-900 text-[16px] mb-4 uppercase italic">주의 사항</p>
-                    <p className="text-red-500">• 디지털 콘텐츠의 특성상 다운로드 이후에는 원칙적으로 환불이 불가능하오니 신중한 구매 부탁드립니다.</p>
-                    <p>• 콘텐츠를 공급받은 날부터 3개월 이내 또는 그 사실을 안 날 또는 알 수 있었던 날부터 30일 이내에 취소 및 환불이 가능합니다.</p>
-                  </div>
-                </div>
+              <span className={`text-base md:text-lg font-black italic tracking-tighter ${activeStoreType === tab.id ? (tab.id === 'all' ? 'text-gray-700' : `text-${tab.color}-600`) : 'text-gray-400'}`}>
+                {tab.label}
+              </span>
+              {activeStoreType === tab.id && (
+                <div className={`absolute bottom-0 left-0 right-0 h-2 ${tab.id === 'all' ? 'bg-gray-400' : `bg-${tab.color}-500`}`}></div>
               )}
-            </section>
-
-            {/* 8. 상품 정보 안내 (공통) */}
-            <section className="space-y-8 scroll-mt-24 pt-16">
-              <h3 className="text-2xl font-black text-gray-900 italic tracking-tighter flex items-center gap-3">
-                <span className="w-1.5 h-8 bg-green-500 rounded-full shadow-lg"></span> 상품 정보 안내
-              </h3>
-              <div className="border border-gray-200 rounded-[40px] overflow-hidden shadow-sm">
-                 <table className="w-full text-sm text-left border-collapse">
-                    <tbody className="divide-y divide-gray-200">
-                       <tr className="flex flex-col md:table-row">
-                          <td className="md:w-1/4 bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">공급자</td>
-                          <td className="px-8 py-6 font-bold text-gray-900 border-b md:border-b-0">{displayAuthor}</td>
-                          <td className="md:w-1/4 bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">이용기간</td>
-                          <td className="px-8 py-6 font-bold text-gray-900">상품 상세 참조</td>
-                       </tr>
-                       <tr className="flex flex-col md:table-row">
-                          <td className="bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">제공방식</td>
-                          <td className="px-8 py-6 font-bold text-gray-900 border-b md:border-b-0">
-                             <p className="mb-1">파일형태: 마이페이지 자동 발송</p>
-                             <p>용역형태: 전문가 개별 협의</p>
-                          </td>
-                          <td className="bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">시스템사양</td>
-                          <td className="px-8 py-6 font-bold text-gray-900">파일 호환 가능 환경</td>
-                       </tr>
-                       <tr className="flex flex-col md:table-row">
-                          <td className="bg-gray-50 px-8 py-6 font-black text-gray-700 uppercase italic">고객센터</td>
-                          <td className="px-8 py-6 font-bold text-gray-900" colSpan={3}>
-                             <p className="font-black">THEBESTSNS 고객센터</p>
-                             <p className="text-[12px] text-gray-400 mt-1">상담 시간: 평일 10:00 - 18:00 (점심시간 제외)</p>
-                          </td>
-                       </tr>
-                    </tbody>
-                 </table>
-              </div>
-            </section>
-          </div>
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* 확장형 우측 주문 패널 (Sticky) */}
-        <div className="w-full lg:w-[450px] shrink-0 sticky top-24">
-          <div className="bg-white border border-gray-100 rounded-[64px] shadow-2xl overflow-hidden animate-in slide-in-from-right-4 duration-700">
-            <div className="aspect-video w-full overflow-hidden border-b border-gray-50 group relative">
-               <img src={ebook.thumbnail} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-[2000ms]" alt="t" />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-            </div>
-            <div className="flex border-b border-gray-100 bg-gray-50/80 p-2">
-              {tiers.map((tier, idx) => (
-                <button key={tier.name} onClick={() => setSelectedTierIdx(idx)} className={`flex-1 py-5 text-[12px] font-black tracking-[0.2em] rounded-[32px] transition-all ${activeTierIdx === idx ? 'bg-white text-gray-900 shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>
-                  {tier.name}
+      {/* 필터 바 */}
+      <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm mb-12 relative border border-gray-100 space-y-6">
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            {activeStoreType !== 'all' && (
+              <div className="flex-1 w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+                {activeStoreType === 'marketing' ? (
+                  Object.keys(MARKETING_CATEGORIES).map(cat => (
+                    <button 
+                      key={cat}
+                      onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
+                      className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
+                        activeCategory === cat 
+                        ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
+                        : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))
+                ) : (
+                  EBOOK_CATEGORIES.map(cat => (
+                    <button 
+                      key={cat} 
+                      onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
+                      className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
+                        activeCategory === cat 
+                        ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
+                        : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+            <button 
+              onClick={handleRegisterClick} 
+              className="w-full md:w-auto bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black text-[13px] flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95 shrink-0 whitespace-nowrap"
+            >
+              <span className="text-xl">+</span> {activeStoreType === 'all' ? '상품 등록' : STORE_TABS.find(t => t.id === activeStoreType)?.label + ' 등록'}
+            </button>
+          </div>
+
+          {activeStoreType === 'marketing' && (
+            <div className="flex items-center gap-2 pt-4 border-t border-gray-50 overflow-x-auto no-scrollbar">
+              {MARKETING_CATEGORIES[activeCategory as keyof typeof MARKETING_CATEGORIES]?.map(sub => (
+                <button 
+                  key={sub} 
+                  onClick={() => setActiveSubCategory(sub)}
+                  className={`px-6 py-2.5 rounded-2xl text-[12px] font-bold transition-all whitespace-nowrap shrink-0 ${
+                    activeSubCategory === sub 
+                    ? 'bg-gray-900 text-white shadow-lg' 
+                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  {sub}
                 </button>
               ))}
             </div>
-            <div className="p-12 space-y-12">
-              <div>
-                 <div className="flex items-baseline gap-3 mb-2">
-                    <span className="text-5xl font-black text-gray-900 tracking-tighter italic leading-none">₩{(tiers[activeTierIdx].price).toLocaleString()}</span>
-                    <span className="text-[12px] font-black text-gray-400 uppercase italic tracking-widest">(VAT 포함)</span>
-                 </div>
-                 <p className="text-blue-500 font-black text-xs italic uppercase tracking-[0.3em] mt-3">★ 한정 특가 최고의 혜택</p>
-              </div>
-              <div className="space-y-8">
-                 <h5 className="font-black text-[14px] text-gray-400 uppercase tracking-[0.3em] flex items-center gap-3 italic">
-                    <span className={`w-1.5 h-4 ${typeColor} rounded-full shadow-lg`}></span> 포함 서비스
-                 </h5>
-                 <ul className="space-y-5">
-                    {tiers[activeTierIdx].description.split('+').map((item, idx) => (
-                       <li key={idx} className="flex items-start gap-4 text-[16px] font-bold text-gray-700 leading-tight group">
-                          <span className="text-blue-500 text-xl group-hover:scale-125 transition-transform shrink-0">✔</span> 
-                          <span className="group-hover:text-blue-600 transition-colors">{item.trim()}</span>
-                       </li>
-                    ))}
-                 </ul>
-              </div>
-              <div className="flex justify-between items-center py-8 border-y border-gray-50">
-                 <span className="text-[14px] font-black text-gray-400 uppercase tracking-[0.3em] italic">
-                    {currentStoreType === 'ebook' || currentStoreType === 'template' ? '총 분량' : '작업 기간'}
-                 </span>
-                 <span className="text-2xl font-black text-gray-900 italic tracking-tighter">
-                   {tiers[activeTierIdx].pageCount}{currentStoreType === 'ebook' || currentStoreType === 'template' ? 'p' : '일'}
-                 </span>
-              </div>
-              <div className="space-y-4 pt-4">
-                <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="w-full py-6 bg-white border-4 border-gray-900 text-gray-900 rounded-[32px] font-black text-lg hover:bg-gray-50 transition-all shadow-xl italic uppercase tracking-widest active:scale-95">문의하기 ✉</button>
-                <button onClick={handleBuyNow} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 hover:shadow-blue-200 transition-all shadow-2xl uppercase italic tracking-[0.2em] active:scale-[0.98] animate-pulse`}>즉시 구매하기 🚀</button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
+
+        <div className="relative">
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={activeStoreType === 'all' ? '상품 제목이나 전문가를 검색해보세요' : `${STORE_TABS.find(t => t.id === activeStoreType)?.label} 제목이나 전문가를 검색해보세요`} 
+            className="w-full pl-12 md:pl-16 pr-6 py-4 md:py-5 bg-gray-50 rounded-[24px] md:rounded-[32px] border-none focus:ring-4 focus:ring-blue-50 text-base md:text-lg font-bold outline-none transition-all shadow-inner" 
+          />
+          <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-300 absolute left-6 md:left-8 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+      </div>
+
+      {/* 상품 리스트 그리드 복구: lg(4열) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
+        {filteredEbooks.length === 0 ? (
+          <div className="col-span-full py-40 text-center bg-white rounded-[60px] border border-dashed border-gray-100">
+            <span className="text-6xl mb-6 block grayscale">📭</span>
+            <p className="text-gray-300 font-black text-xl italic uppercase tracking-widest">No Products Found</p>
+          </div>
+        ) : (
+          filteredEbooks.map((ebook, idx) => (
+            <div key={ebook.id || `ebook-${idx}`} className="bg-white rounded-[24px] overflow-hidden shadow-sm group border border-gray-100 relative transition-all hover:-translate-y-1">
+              <Link 
+                to={ebook.isPaused ? '#' : `/ebooks/${ebook.id}`} 
+                onClick={(e) => ebook.isPaused && e.preventDefault()}
+                className={`block ${ebook.isPaused ? 'cursor-default' : ''}`}
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-gray-50">
+                  <img src={ebook.thumbnail || ''} alt="" className={`w-full h-full object-cover transition-transform duration-700 ${!ebook.isPaused && 'group-hover:scale-105'}`} />
+                  
+                  <div className="absolute top-4 left-4 flex flex-col gap-2">
+                    {ebook.isPrime && (
+                      <span className="bg-[#FFD600] text-gray-900 text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
+                        PRIME
+                      </span>
+                    )}
+                    {ebook.isHot && (
+                      <span className="bg-[#FF4D4D] text-white text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
+                        HOT
+                      </span>
+                    )}
+                    {ebook.isNew && (
+                      <span className="bg-[#3B82F6] text-white text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
+                        NEW
+                      </span>
+                    )}
+                  </div>
+
+                  {ebook.isPaused && (
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex items-center justify-center z-10">
+                      <span className="text-white text-sm font-black italic tracking-widest border-2 border-white px-3 py-0.5 rotate-[-12deg] shadow-2xl uppercase">PAUSED</span>
+                    </div>
+                  )}
+                </div>
+                <div className="p-5">
+                  <div className="flex gap-1 mb-2 min-w-0">
+                    <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{ebook.category}</span>
+                  </div>
+                  <h3 className={`font-black text-gray-900 mb-4 transition-colors line-clamp-1 text-[14px] italic tracking-tight truncate ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
+                    {ebook.title}
+                  </h3>
+                  <div className="flex justify-between items-end border-t border-gray-50 pt-3 gap-2 min-w-0">
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
+                      <span className="text-[11px] font-black text-gray-600 italic truncate">{ebook.author}</span>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest italic">Price</span>
+                      <span className="text-lg font-black text-gray-900 italic tracking-tighter whitespace-nowrap">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+              <button 
+                onClick={(e) => { e.preventDefault(); onToggleWishlist({ type: 'ebook', data: ebook }); }} 
+                className={`absolute top-3 right-3 p-1.5 rounded-full transition-all shadow-md active:scale-90 z-20 ${
+                  isWishlisted(ebook.id) 
+                  ? 'bg-red-500 text-white' 
+                  : 'bg-white/80 backdrop-blur-md text-gray-400 hover:text-red-500'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill={isWishlisted(ebook.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                </svg>
+              </button>
+            </div>
+          )
+        ))}
       </div>
     </div>
   );
 };
 
-export default EbookDetail;
+export default EbookSales;
