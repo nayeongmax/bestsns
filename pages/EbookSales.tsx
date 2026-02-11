@@ -12,7 +12,10 @@ interface Props {
   onToggleWishlist: (item: WishlistItem) => void;
 }
 
-const STORE_TABS: { id: StoreType; label: string; icon: string; color: string }[] = [
+type StoreTypeFilter = StoreType | 'all';
+
+const STORE_TABS: { id: StoreTypeFilter; label: string; icon: string; color: string }[] = [
+  { id: 'all', label: '전체', icon: '📂', color: 'gray' },
   { id: 'marketing', label: '마케팅', icon: '📢', color: 'rose' },
   { id: 'lecture', label: '강의', icon: '🎓', color: 'blue' },
   { id: 'consulting', label: '컨설팅', icon: '🤝', color: 'green' },
@@ -21,7 +24,7 @@ const STORE_TABS: { id: StoreType; label: string; icon: string; color: string }[
 ];
 
 const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onToggleWishlist }) => {
-  const [activeStoreType, setActiveStoreType] = useState<StoreType>('marketing');
+  const [activeStoreType, setActiveStoreType] = useState<StoreTypeFilter>('all');
   const [activeCategory, setActiveCategory] = useState('전체');
   const [activeSubCategory, setActiveSubCategory] = useState('전체');
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +33,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
 
   const filteredEbooks = useMemo(() => {
     return ebooks.filter(e => {
-      const matchType = (e.storeType || 'ebook') === activeStoreType;
+      const matchType = activeStoreType === 'all' || (e.storeType || 'ebook') === activeStoreType;
       const matchCategory = activeCategory === '전체' || e.category === activeCategory;
       const matchSubCategory = activeSubCategory === '전체' || e.subCategory === activeSubCategory;
       const matchSearch = e.title.toLowerCase().includes(searchQuery.toLowerCase()) || e.author.toLowerCase().includes(searchQuery.toLowerCase());
@@ -41,10 +44,10 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
 
   const isWishlisted = (id: string) => wishlist.some(w => w.data.id === id);
 
-  // 판매 등록 버튼 클릭 핸들러: 현재 선택된 카테고리를 state로 전달
   const handleRegisterClick = () => {
     if (user.role === 'admin' || user.sellerStatus === 'approved') {
-      navigate('/ebooks/register', { state: { selectedStoreType: activeStoreType } });
+      const typeForRegister = activeStoreType === 'all' ? 'marketing' : activeStoreType;
+      navigate('/ebooks/register', { state: { selectedStoreType: typeForRegister } });
     } else {
       alert('판매자 등록 후 판매가능합니다.\n빠르게 승인해드릴테니 수익화해보세요!');
       navigate('/mypage', { state: { activeTab: 'seller' } });
@@ -66,18 +69,20 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
               }}
               className={`relative flex flex-col items-center justify-center p-6 md:p-8 rounded-[32px] md:rounded-[40px] transition-all duration-300 border-2 overflow-hidden group ${
                 activeStoreType === tab.id
-                ? `bg-white border-${tab.color}-500 shadow-2xl shadow-${tab.color}-100 scale-[1.02]`
+                ? tab.id === 'all'
+                  ? 'bg-white border-gray-400 shadow-2xl shadow-gray-100 scale-[1.02]'
+                  : `bg-white border-${tab.color}-500 shadow-2xl shadow-${tab.color}-100 scale-[1.02]`
                 : 'bg-white border-transparent grayscale hover:grayscale-0 hover:border-gray-100 hover:bg-gray-50 opacity-60 hover:opacity-100'
               }`}
             >
               <div className={`text-3xl md:text-4xl mb-3 transition-transform duration-500 ${activeStoreType === tab.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
                 {tab.icon}
               </div>
-              <span className={`text-base md:text-lg font-black italic tracking-tighter ${activeStoreType === tab.id ? `text-${tab.color}-600` : 'text-gray-400'}`}>
+              <span className={`text-base md:text-lg font-black italic tracking-tighter ${activeStoreType === tab.id ? (tab.id === 'all' ? 'text-gray-700' : `text-${tab.color}-600`) : 'text-gray-400'}`}>
                 {tab.label}
               </span>
               {activeStoreType === tab.id && (
-                <div className={`absolute bottom-0 left-0 right-0 h-2 bg-${tab.color}-500`}></div>
+                <div className={`absolute bottom-0 left-0 right-0 h-2 ${tab.id === 'all' ? 'bg-gray-400' : `bg-${tab.color}-500`}`}></div>
               )}
             </button>
           ))}
@@ -88,42 +93,44 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
       <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm mb-12 relative border border-gray-100 space-y-6">
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="flex-1 w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
-              {activeStoreType === 'marketing' ? (
-                Object.keys(MARKETING_CATEGORIES).map(cat => (
-                  <button 
-                    key={cat}
-                    onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
-                    className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
-                      activeCategory === cat 
-                      ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
-                      : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))
-              ) : (
-                EBOOK_CATEGORIES.map(cat => (
-                  <button 
-                    key={cat} 
-                    onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
-                    className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
-                      activeCategory === cat 
-                      ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
-                      : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))
-              )}
-            </div>
+            {activeStoreType !== 'all' && (
+              <div className="flex-1 w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+                {activeStoreType === 'marketing' ? (
+                  Object.keys(MARKETING_CATEGORIES).map(cat => (
+                    <button 
+                      key={cat}
+                      onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
+                      className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
+                        activeCategory === cat 
+                        ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
+                        : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))
+                ) : (
+                  EBOOK_CATEGORIES.map(cat => (
+                    <button 
+                      key={cat} 
+                      onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
+                      className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
+                        activeCategory === cat 
+                        ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
+                        : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
             <button 
               onClick={handleRegisterClick} 
               className="w-full md:w-auto bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black text-[13px] flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95 shrink-0 whitespace-nowrap"
             >
-              <span className="text-xl">+</span> {STORE_TABS.find(t => t.id === activeStoreType)?.label} 등록
+              <span className="text-xl">+</span> {activeStoreType === 'all' ? '상품 등록' : STORE_TABS.find(t => t.id === activeStoreType)?.label + ' 등록'}
             </button>
           </div>
 
@@ -151,7 +158,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`${STORE_TABS.find(t => t.id === activeStoreType)?.label} 제목이나 전문가를 검색해보세요`} 
+            placeholder={activeStoreType === 'all' ? '상품 제목이나 전문가를 검색해보세요' : `${STORE_TABS.find(t => t.id === activeStoreType)?.label} 제목이나 전문가를 검색해보세요`} 
             className="w-full pl-12 md:pl-16 pr-6 py-4 md:py-5 bg-gray-50 rounded-[24px] md:rounded-[32px] border-none focus:ring-4 focus:ring-blue-50 text-base md:text-lg font-bold outline-none transition-all shadow-inner" 
           />
           <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-300 absolute left-6 md:left-8 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
