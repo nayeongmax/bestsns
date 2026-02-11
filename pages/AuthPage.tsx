@@ -69,9 +69,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     const loginId = formData.id.trim();
     const loginPw = formData.pw;
 
-    if (loginId === 'admin' && loginPw === '1234') {
+    const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim();
+    const adminPw = import.meta.env.VITE_ADMIN_PASSWORD;
+    if (adminPw && loginId === adminId && loginPw === adminPw) {
         const adminUser: UserProfile = {
-            id: 'admin',
+            id: adminId,
             nickname: '마케터김',
             profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=admin`,
             role: 'admin',
