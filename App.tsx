@@ -144,10 +144,11 @@ const App: React.FC = () => {
         return [...prev, updated];
       }
     });
-    if (updated.email) {
+    // 판매자 신청 포함: email 없어도 seller_status/seller_application 저장
+    if (updated.id) {
       supabase.from('profiles').upsert({
         id: updated.id,
-        email: updated.email,
+        email: updated.email ?? null,
         nickname: updated.nickname || updated.id,
         profile_image: updated.profileImage || null,
         phone: updated.phone || null,
@@ -155,7 +156,7 @@ const App: React.FC = () => {
         seller_status: updated.sellerStatus ?? null,
         seller_application: updated.sellerApplication ?? null
       }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.error('Profiles 동기화 실패(마이페이지 수정):', error.message, '- profiles 테이블에 id, email, nickname, seller_status, seller_application 컬럼이 있는지 확인하세요.');
+        if (error) console.error('Profiles 동기화 실패(마이페이지 수정):', error.message, '- profiles 테이블에 seller_status, seller_application 컬럼이 있는지 확인하세요. supabase-profiles-seller-columns.sql 실행 필요.');
       });
     }
   }, []);
@@ -285,7 +286,7 @@ const App: React.FC = () => {
             <Route path="/coupons" element={user ? <CouponBox user={user} /> : <Navigate to="/login" />} />
             <Route path="/payment/point" element={user ? <PointPayment user={user} ebooks={ebooks} members={members} onUpdateUser={handleGlobalUserUpdate} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/review/write" element={user ? <ReviewWritePage user={user} onAddReview={(r)=>setReviews(p=>[r,...p])} /> : <Navigate to="/login" />} />
-            <Route path="/admin" element={user?.role === 'admin' ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} addNotif={addNotif} /> : user ? <Navigate to="/sns" /> : <Navigate to="/login" />} />
+            <Route path="/admin" element={user?.role === 'admin' ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} onRefreshMembers={refreshMembersFromProfiles} addNotif={addNotif} /> : user ? <Navigate to="/sns" /> : <Navigate to="/login" />} />
             <Route path="/notices" element={<NoticePage notices={notices} setNotices={setNotices} user={user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
             <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
             <Route path="/" element={<Navigate to="/sns" />} />
