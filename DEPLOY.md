@@ -15,6 +15,11 @@
 Supabase 키는 [Supabase 대시보드](https://supabase.com/dashboard) → 프로젝트 선택 → Settings → API 에서 확인할 수 있습니다.  
 **anon key는 공개되어도 되는 키이지만, 서버용 secret key는 절대 프론트엔드나 Git에 넣지 마세요.**
 
+### 채팅 기능 (회원 간 문의) 사용 시
+
+채팅은 Supabase에 저장되어 **사이트에 접속한 모든 회원끼리** 대화할 수 있습니다.  
+Supabase 대시보드 → **SQL Editor** → New query → 프로젝트 루트의 **`supabase-chat-setup.sql`** 내용을 붙여넣고 **Run**으로 테이블을 한 번 생성해 주세요.
+
 ---
 
 ## 2. 회원가입 시 "email rate limit exceeded" 방지
