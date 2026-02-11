@@ -137,7 +137,8 @@ const App: React.FC = () => {
       setMembers(prev => prev.map(m => m.id === targetProfile.id ? targetProfile : m));
     } else {
       // 2. 신규 회원이면 기본값 설정
-      const isAdmin = userData.id.toLowerCase() === 'admin';
+      const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim().toLowerCase();
+      const isAdmin = userData.id.toLowerCase() === adminId;
       targetProfile = { 
         ...userData, 
         nickname: userData.nickname || userData.id,
@@ -183,7 +184,7 @@ const App: React.FC = () => {
             <Route path="/coupons" element={user ? <CouponBox user={user} /> : <Navigate to="/login" />} />
             <Route path="/payment/point" element={user ? <PointPayment user={user} ebooks={ebooks} members={members} onUpdateUser={handleGlobalUserUpdate} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/review/write" element={user ? <ReviewWritePage user={user} onAddReview={(r)=>setReviews(p=>[r,...p])} /> : <Navigate to="/login" />} />
-            <Route path="/admin" element={user ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} addNotif={addNotif} /> : <Navigate to="/login" />} />
+            <Route path="/admin" element={user?.role === 'admin' ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} addNotif={addNotif} /> : user ? <Navigate to="/sns" /> : <Navigate to="/login" />} />
             <Route path="/notices" element={<NoticePage notices={notices} setNotices={setNotices} user={user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
             <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
             <Route path="/" element={<Navigate to="/sns" />} />
