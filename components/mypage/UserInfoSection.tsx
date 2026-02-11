@@ -150,7 +150,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     reader.readAsDataURL(file);
   };
 
-  const handleCertificationRequest = () => {
+  const handleCertificationRequest = async () => {
     if (sellerType === 'individual' && (!individualForm.bankName || !individualForm.accountNo || !proofImages.bankbook)) {
       return alert('정산 계좌 정보와 통장 사본 이미지를 모두 등록해 주세요.');
     }
@@ -185,8 +185,12 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       alert('전문가 정보가 성공적으로 수정되었습니다.');
     } else {
       if (user.sellerStatus === 'none' && !window.confirm('전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.\n제출하시겠습니까?')) return;
-      onUpdate({ ...user, sellerStatus: 'pending', sellerApplication: newApp });
-      setShowApplySuccessModal(true);
+      try {
+        await onUpdate({ ...user, sellerStatus: 'pending', sellerApplication: newApp });
+        setShowApplySuccessModal(true);
+      } catch (_) {
+        // 저장 실패 시 App에서 이미 alert 함, 모달은 띄우지 않음
+      }
     }
   };
 
