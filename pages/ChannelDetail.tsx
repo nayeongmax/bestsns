@@ -41,7 +41,10 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
   const attachedImages = channel.attachedImages || [];
 
   const handleStartConsultation = () => {
-    navigate('/chat', { state: { productRef: channel } });
+    const targetUser = channel.sellerId
+      ? { id: channel.sellerId, nickname: channel.sellerNickname || '채널 운영자', profileImage: channel.sellerImage || '' }
+      : { id: 'admin', nickname: '채널 운영자', profileImage: '' };
+    navigate('/chat', { state: { productRef: channel, targetUser } });
   };
 
   const handleBuyNow = () => {
