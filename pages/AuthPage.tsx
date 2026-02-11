@@ -249,33 +249,13 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, passwordRecoveryMode, onRec
     if (!formData.email) return alert('비밀번호를 재설정할 이메일을 입력해주세요.');
     setLoading(true);
     try {
-      // Supabase 이메일 재설정 시도
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/#/login`,
+        redirectTo: window.location.origin + window.location.pathname,
       });
 
-      if (error) {
-        // Supabase 이메일 서비스 미설정 시 localStorage 기반 임시 재설정
-        const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
-        const found = members.find((m: any) => m.email === formData.email);
+      if (error) throw error;
 
-        if (found) {
-          const newPw = prompt(`[${found.id}] 계정의 새 비밀번호를 입력하세요:`);
-          if (newPw && newPw.length >= 6) {
-            found.password = newPw;
-            localStorage.setItem('site_members_v2', JSON.stringify(members));
-            alert('비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해주세요.');
-            setMode('LOGIN');
-          } else if (newPw) {
-            alert('비밀번호는 6자 이상이어야 합니다.');
-          }
-        } else {
-          alert('해당 이메일로 등록된 정보가 없습니다.');
-        }
-        return;
-      }
-
-      alert('입력하신 이메일로 비밀번호 재설정 안내 메일을 발송했습니다.');
+      alert('비밀번호 재설정 메일을 발송했습니다.\n이메일의 링크를 클릭하면 바로 새 비밀번호 설정 화면으로 이동합니다.');
       setMode('LOGIN');
     } catch (err: any) {
       alert(`오류 발생: ${err.message}`);
@@ -287,10 +267,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, passwordRecoveryMode, onRec
   return (
     <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white rounded-[48px] shadow-2xl border border-gray-100 overflow-hidden relative">
-        <div className="flex border-b border-gray-50">
-          <button onClick={() => setMode('LOGIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>LOG IN</button>
-          <button onClick={() => setMode('JOIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>SIGN UP</button>
-        </div>
+        {mode !== 'RESET_PW_CONFIRM' && (
+          <div className="flex border-b border-gray-50">
+            <button onClick={() => setMode('LOGIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>LOG IN</button>
+            <button onClick={() => setMode('JOIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>SIGN UP</button>
+          </div>
+        )}
 
         <div className="p-10 md:p-14 space-y-10">
           {mode === 'LOGIN' && (
