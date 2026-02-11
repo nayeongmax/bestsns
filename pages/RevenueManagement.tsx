@@ -12,10 +12,7 @@ const RevenueManagement: React.FC = () => {
   // 데이터 상태 관리 (독립적 로컬스토리지 사용)
   const [companies, setCompanies] = useState<OperatingCompany[]>(() => {
     const saved = localStorage.getItem('rev_companies');
-    return saved ? JSON.parse(saved) : [
-      { id: 'c1', name: '샘플 마케팅', openingDate: '2024-01-01', type: '개인사업자', taxBusinessNames: [] },
-      { id: 'c2', name: '(주)심플 종합기획', openingDate: '2023-05-10', type: '법인사업자', taxBusinessNames: [] }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [projects, setProjects] = useState<RevenueProject[]>(() => {
