@@ -29,21 +29,51 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     agreeTerms: false
   });
 
-  // 인증 감지 로직 보강
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
+
+  const buildProfileFromSession = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
+    const meta = user.user_metadata || {};
+    const email = (user.email || '').trim().toLowerCase();
+    const { data: profileRow } = await supabase.from('profiles').select('id, nickname, profile_image, phone').eq('email', email).maybeSingle();
+    const id = (profileRow?.id || (meta.user_id as string) || (meta.sub as string) || email.split('@')[0] || user.id).toString();
+    const nickname = (profileRow?.nickname || (meta.nickname as string) || (meta.name as string) || (meta.full_name as string) || id).toString();
+    const profileImage = (profileRow?.profile_image || (meta.avatar_url as string) || (meta.picture as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`).toString();
+    return {
+      id,
+      nickname,
+      profileImage,
+      email: user.email || email,
+      phone: (profileRow?.phone as string) || '',
+      role: 'user' as const,
+      points: 0,
+      joinDate: new Date().toISOString().split('T')[0],
+      coupons: [] as any[]
+    } as UserProfile;
+  };
+
+  // 인증 감지 로직 보강 + 소셜 로그인 리다이렉트 후 세션 처리
   useEffect(() => {
-    // 1. 세션 이벤트 감지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setMode('RESET_PW');
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user && (mode === 'LOGIN' || mode === 'JOIN')) {
+        buildProfileFromSession(session.user).then(profile => {
+          onLoginSuccess(profile);
+          navigate('/sns');
+        });
       }
     });
 
-    // 2. 해시 파라미터 직접 파싱 (HashRouter 환경 대응)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, { session }) => {
+      if (event === 'PASSWORD_RECOVERY') setMode('RESET_PW');
+      if (event === 'SIGNED_IN' && session?.user) {
+        const profile = await buildProfileFromSession(session.user);
+        onLoginSuccess(profile);
+        navigate('/sns');
+      }
+    });
+
     const checkHashToken = () => {
       const hash = window.location.hash;
-      if (hash.includes('type=recovery') || hash.includes('access_token=')) {
-        setMode('RESET_PW');
-      }
+      if (hash.includes('type=recovery') || hash.includes('access_token=')) setMode('RESET_PW');
     };
     checkHashToken();
     window.addEventListener('hashchange', checkHashToken);
@@ -52,7 +82,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       subscription.unsubscribe();
       window.removeEventListener('hashchange', checkHashToken);
     };
-  }, []);
+  }, [mode]);
 
   // 재전송 쿨다운 타이머
   useEffect(() => {
@@ -191,10 +221,50 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('Invalid login credentials')) {
-        alert('아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다.\n비밀번호를 재설정하셨다면, 가입 시 사용한 이메일 주소를 입력하고 새 비밀번호로 로그인해 보세요.');
+        alert('아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다.\n비밀번호를 재설정하셨다면 아래 "이메일로 로그인"을 사용해 보세요.');
       } else {
         alert(`로그인 실패: ${msg}`);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoginWithEmailOnly = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = formData.email.trim();
+    const pw = formData.pw;
+    if (!email || !pw) return alert('이메일과 비밀번호를 입력하세요.');
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
+      if (error) throw error;
+      const profile = await buildProfileFromSession(data.user);
+      if (saveId) localStorage.setItem(SAVED_LOGIN_ID_KEY, profile.id);
+      else localStorage.removeItem(SAVED_LOGIN_ID_KEY);
+      onLoginSuccess(profile);
+      navigate('/sns');
+    } catch (err: any) {
+      if ((err?.message || '').includes('Invalid login credentials')) {
+        alert('이메일 또는 비밀번호가 일치하지 않습니다. 비밀번호 재설정 메일의 링크를 클릭해 새 비밀번호를 설정한 뒤, 그 비밀번호로 다시 시도해 주세요.');
+      } else {
+        alert(`로그인 실패: ${err?.message || err}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: 'kakao' | 'naver') => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/#/login` }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert(`소셜 로그인 설정이 필요할 수 있습니다. Supabase 대시보드에서 ${provider === 'kakao' ? '카카오' : '네이버'} 로그인을 활성화해 주세요.\n${err?.message || ''}`);
     } finally {
       setLoading(false);
     }
@@ -413,6 +483,42 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                   {loading ? '인증 처리 중...' : 'LOG IN'}
                 </button>
               </form>
+
+              {!showEmailLogin && (
+                <p className="text-center">
+                  <button type="button" onClick={() => setShowEmailLogin(true)} className="text-[12px] font-bold text-gray-500 hover:text-blue-600 underline underline-offset-2">
+                    비밀번호 재설정했는데 로그인이 안 되나요? (이메일로 로그인)
+                  </button>
+                </p>
+              )}
+
+              {showEmailLogin && (
+                <form onSubmit={handleLoginWithEmailOnly} className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <p className="text-[12px] font-bold text-gray-600">가입 시 사용한 이메일과 새 비밀번호로 로그인하세요.</p>
+                  <input type="email" placeholder="이메일 주소" className="w-full p-4 bg-white border border-gray-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
+                  <input type="password" placeholder="비밀번호" className="w-full p-4 bg-white border border-gray-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} required />
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={loading} className={`flex-1 py-4 bg-blue-600 text-white rounded-xl font-black text-sm uppercase ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
+                      이메일로 로그인
+                    </button>
+                    <button type="button" onClick={() => setShowEmailLogin(false)} className="py-4 px-4 text-gray-500 font-bold text-sm hover:text-gray-800">
+                      취소
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="space-y-3 pt-2">
+                <p className="text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">소셜 로그인</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button type="button" onClick={() => handleSocialLogin('naver')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#03C75A] text-white hover:opacity-90 disabled:opacity-50 transition-all">
+                    <span className="font-black">N</span> 네이버 로그인
+                  </button>
+                  <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#FEE500] text-[#191919] hover:opacity-90 disabled:opacity-50 transition-all">
+                    <span className="font-black">K</span> 카카오 로그인
+                  </button>
+                </div>
+              </div>
             </>
           )}
 
