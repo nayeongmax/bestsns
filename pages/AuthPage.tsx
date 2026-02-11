@@ -13,12 +13,16 @@ type AuthMode = 'LOGIN' | 'JOIN' | 'FIND_ID' | 'FIND_PW' | 'RESET_PW_CONFIRM';
 
 const AuthPage: React.FC<Props> = ({ onLoginSuccess, passwordRecoveryMode, onRecoveryComplete }) => {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<AuthMode>('LOGIN');
+  // passwordRecoveryMode prop이 true면 바로 비밀번호 재설정 화면으로 시작
+  const [mode, setMode] = useState<AuthMode>(() => {
+    if (passwordRecoveryMode) return 'RESET_PW_CONFIRM';
+    return 'LOGIN';
+  });
   const [loading, setLoading] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [newPwForm, setNewPwForm] = useState({ pw: '', pwConfirm: '' });
 
-  // Supabase 복구 토큰 감지 시 비밀번호 재설정 화면으로 전환
+  // prop이 나중에 변경되는 경우도 대응
   useEffect(() => {
     if (passwordRecoveryMode) {
       setMode('RESET_PW_CONFIRM');

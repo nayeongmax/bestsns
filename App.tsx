@@ -47,36 +47,26 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Supabase 비밀번호 복구 모드 감지
-  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
+  // Supabase 비밀번호 복구 모드 감지 (동기적으로 URL 체크하여 초기값 결정)
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(() => {
+    return window.location.href.includes('type=recovery');
+  });
 
   useEffect(() => {
-    // 1) URL에서 recovery 토큰 직접 감지 (HashRouter와 Supabase 토큰 충돌 대응)
+    // URL에서 recovery 토큰 감지 시 세션 복원 후 login 페이지로 이동
     const fullUrl = window.location.href;
     if (fullUrl.includes('type=recovery')) {
-      // Supabase가 URL 해시에 넣은 토큰을 클라이언트가 처리할 수 있도록 잠시 대기
-      const hashParams = fullUrl.split('#').pop() || '';
-      if (hashParams.includes('access_token')) {
-        // 해시에서 토큰 추출하여 Supabase 세션 복원
-        const params = new URLSearchParams(hashParams.replace(/^\/.*\?/, '').replace(/^[^&]*&/, ''));
-        const accessToken = params.get('access_token') || hashParams.match(/access_token=([^&]+)/)?.[1];
-        const refreshToken = params.get('refresh_token') || hashParams.match(/refresh_token=([^&]+)/)?.[1];
-        if (accessToken && refreshToken) {
-          supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(() => {
-            setPasswordRecoveryMode(true);
-            window.location.hash = '#/login';
-          });
-        } else {
-          setPasswordRecoveryMode(true);
-          window.location.hash = '#/login';
-        }
-      } else {
-        setPasswordRecoveryMode(true);
-        window.location.hash = '#/login';
+      const hash = window.location.hash.substring(1); // # 제거
+      const accessToken = hash.match(/access_token=([^&]+)/)?.[1];
+      const refreshToken = hash.match(/refresh_token=([^&]+)/)?.[1];
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
       }
+      // HashRouter가 라우팅할 수 있도록 해시를 정리
+      window.location.hash = '#/login';
     }
 
-    // 2) onAuthStateChange 리스너 (정상적으로 토큰이 감지된 경우)
+    // onAuthStateChange 리스너
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecoveryMode(true);
@@ -226,6 +216,7 @@ const App: React.FC = () => {
             <Route path="/notices" element={<NoticePage notices={notices} setNotices={setNotices} user={user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
             <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} passwordRecoveryMode={passwordRecoveryMode} onRecoveryComplete={() => setPasswordRecoveryMode(false)} />} />
             <Route path="/" element={<Navigate to="/sns" />} />
+            <Route path="*" element={<Navigate to={passwordRecoveryMode ? "/login" : "/sns"} />} />
           </Routes>
         </div>
         <MobileBottomNav />
