@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { UserProfile, ChatMessage, ChannelProduct, NotificationType } from '../types';
-import { supabase } from '../supabase';
+import { supabase } from '@/supabase';
 
 interface Props {
   user: UserProfile;
