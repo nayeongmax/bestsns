@@ -138,6 +138,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       onUpdate({ ...user, sellerApplication: newApp });
       alert('전문가 정보가 성공적으로 수정되었습니다.');
     } else {
+      if (user.sellerStatus === 'none' && !window.confirm('전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.\n제출하시겠습니까?')) return;
       onUpdate({ ...user, sellerStatus: 'pending', sellerApplication: newApp });
       setShowApplySuccessModal(true);
     }
