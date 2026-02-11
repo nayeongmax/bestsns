@@ -149,7 +149,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                       {/* Certified Premium Partner 문구 삭제 완료 */}
                    </div>
                 </div>
-                <button onClick={() => navigate('/chat', { state: { productRef: ebook } })} className="bg-gray-900 text-white px-12 py-5 rounded-[28px] font-black text-xl hover:bg-blue-600 transition-all shadow-xl italic tracking-widest uppercase active:scale-95">전문가 문의하기</button>
+                <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="bg-gray-900 text-white px-12 py-5 rounded-[28px] font-black text-xl hover:bg-blue-600 transition-all shadow-xl italic tracking-widest uppercase active:scale-95">전문가 문의하기</button>
              </div>
              <div className="bg-gray-50/80 rounded-[40px] p-2 flex flex-wrap lg:flex-nowrap gap-2 shadow-inner border border-gray-100">
                 {[
@@ -418,7 +418,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                  </span>
               </div>
               <div className="space-y-4 pt-4">
-                <button onClick={() => navigate('/chat', { state: { productRef: ebook } })} className="w-full py-6 bg-white border-4 border-gray-900 text-gray-900 rounded-[32px] font-black text-lg hover:bg-gray-50 transition-all shadow-xl italic uppercase tracking-widest active:scale-95">문의하기 ✉</button>
+                <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="w-full py-6 bg-white border-4 border-gray-900 text-gray-900 rounded-[32px] font-black text-lg hover:bg-gray-50 transition-all shadow-xl italic uppercase tracking-widest active:scale-95">문의하기 ✉</button>
                 <button onClick={handleBuyNow} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 hover:shadow-blue-200 transition-all shadow-2xl uppercase italic tracking-[0.2em] active:scale-[0.98] animate-pulse`}>즉시 구매하기 🚀</button>
               </div>
             </div>
