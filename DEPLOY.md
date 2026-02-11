@@ -15,34 +15,32 @@
 Supabase 키는 [Supabase 대시보드](https://supabase.com/dashboard) → 프로젝트 선택 → Settings → API 에서 확인할 수 있습니다.  
 **anon key는 공개되어도 되는 키이지만, 서버용 secret key는 절대 프론트엔드나 Git에 넣지 마세요.**
 
-### 회원 프로필 테이블 (로그인·Table Editor 목록용)
+### 회원 정보 로직 (단일 소스: Supabase `profiles`)
 
-- **Authentication → Users**에는 회원가입 시 Supabase가 자동으로 사용자를 넣기 때문에 목록이 잘 보입니다.  
-- **Table Editor의 `profiles`**는 앱이 회원가입·로그인 시 **직접 insert/update**하는 별도 테이블입니다.  
-  → **`profiles` 테이블 구조가 `supabase-profiles-setup.sql`과 다르면** (예: `email` 컬럼 없음, `role`/`raw_json` 등 다른 컬럼만 있음) upsert가 실패해서 **Table Editor에는 행이 안 뜨거나 일부만 뜹니다.**  
-  → 이 경우 로그인도 실패할 수 있으므로, 아래대로 구조를 맞춰야 합니다.
+**흐름 요약**
 
-- **어드민 패널 회원 목록**은 앱의 회원 상태(members)에서 가져옵니다.  
-- **실제 로그인**은 **`profiles`** 테이블에서 **아이디 → 이메일**을 조회한 뒤 `signInWithPassword(이메일, 비밀번호)`로 처리합니다.  
-  → **`profiles`에 행이 없거나, 테이블 구조가 다르면** 다른 기기에서 로그인이 되지 않습니다.
+1. **회원가입** → Supabase **Authentication (Users)**에 계정 생성 + **`profiles`** 테이블에 한 행 추가 (id, email, nickname 등).  
+2. **앱 로드 시** → 회원 목록을 **Supabase `profiles`**에서 조회해 사용 (어드민 패널·채팅 등에서 사용하는 목록과 동일).  
+3. **로그인** → `profiles`에서 아이디로 이메일을 찾아 `signInWithPassword(이메일, 비밀번호)` 호출. 로그인 성공 시 해당 계정을 `profiles`에 다시 한 번 upsert.  
+4. **어드민 패널** → 위에서 불러온 **`profiles` 기반 회원 목록**을 그대로 표시.  
+   → 따라서 **Table Editor의 `profiles` 행 수 = 어드민에 보이는 회원 수** (admin 1명은 profiles에 없고 앱에서만 추가해 표시).
 
-**필수:** `profiles` 테이블은 **`supabase-profiles-setup.sql`과 동일한 구조**여야 합니다.  
-반드시 **id(text), email(text), nickname(text)** 컬럼이 있고, 필요 시 **profile_image, phone, created_at, updated_at** 도 있어야 합니다.
+**테이블 구조**
 
-1. **처음 설정:** Supabase **SQL Editor** → New query → **`supabase-profiles-setup.sql`** 전체 내용을 붙여넣고 **Run**으로 실행하세요.  
-2. **이미 `profiles` 테이블이 있는데 컬럼이 다르거나, 이전 회원가입 내역이 Table Editor에 안 보일 때:**  
-   **`supabase-profiles-alter-and-backfill.sql`** 을 SQL Editor에서 **순서대로 실행**하세요.  
-   - 누락된 컬럼(email, profile_image, phone, updated_at 등)이 추가되고,  
-   - **Authentication → Users**에 있는 기존 회원이 **profiles**로 한 번에 반영됩니다.  
-3. 회원가입·로그인 성공 시 앞으로는 자동으로 upsert됩니다. Table Editor에서 **id, email, nickname**이 보여야 정상입니다.
+- **`profiles`**는 **회원 목록의 단일 소스**입니다.  
+  반드시 **id(text), email(text), nickname(text)** 컬럼이 있고, 필요 시 **profile_image, phone, created_at, updated_at** 도 있어야 합니다.  
+  구조가 다르면(예: `email` 없음) upsert가 실패해 Table Editor·어드민에 회원이 안 뜨거나 로그인이 안 됩니다.
 
-**어드민 패널에는 4명인데 Table Editor(profiles)에는 2명만 보일 때**  
-- **admin**은 앱에서 **의도적으로 profiles에 넣지 않습니다.** (환경 변수로 로그인하므로 Supabase Auth가 아니라서 profiles 행이 없어도 됩니다.)  
-- **나머지 회원**은 **Supabase Authentication → Users**에 있는 사람만 profiles에 들어갑니다.  
-  → 어드민 목록(members)은 앱 메모리/로컬 저장이라, 예전에 한 번이라도 그 브라우저에서 로그인했던 사람이 보일 수 있습니다.  
-  → **Authentication → Users**에 실제로 없는 계정(예: 다른 기기에서만 가입한 경우, 또는 가입 시 오류로 Auth에 안 올라간 경우)은 profiles에도 없습니다.  
-  → **해결:** Supabase **Authentication → Users**에서 인원 수를 확인해 보세요. 거기 있는 이메일만 백필/로그인 시 profiles에 반영됩니다. 누락된 회원은 **해당 이메일로 다시 한 번 로그인**하면 그때 profiles에 추가됩니다.  
-4. **로그인은 되는데 Table Editor에 회원이 안 보이거나, 특정 회원만 안 보인다**면 브라우저 개발자 도구(F12) → Console에서 **"Profiles 동기화 실패"** 메시지가 나오는지 확인하고, Supabase Table Editor에서 `profiles` 테이블 컬럼 구조를 점검하세요.
+1. **처음 설정:** Supabase **SQL Editor** → **`supabase-profiles-setup.sql`** 전체 실행.  
+2. **이미 테이블이 있는데 컬럼이 다르거나, 예전 가입자가 안 보일 때:**  
+   **`supabase-profiles-alter-and-backfill.sql`** 을 **순서대로** 실행.  
+   - 누락된 컬럼 추가 + **Authentication → Users**에 있는 기존 회원을 **profiles**로 한 번에 백필.  
+3. 이후 회원가입·로그인 시 자동으로 `profiles`에 반영되며, 앱은 **항상 profiles에서 회원 목록을 불러와** Table Editor와 어드민이 일치합니다.
+
+**Table Editor에는 있는데 어드민에 안 보이거나, 그 반대인 경우**  
+- 앱은 **페이지 로드 시** `profiles`만 보고 회원 목록을 만듭니다.  
+- **admin**은 profiles에 없어도 앱에서 목록 맨 앞에 한 명 추가해 표시합니다.  
+- **해결:** 새로고침 후에도 같으면, 브라우저 콘솔에서 "회원 목록(profiles) 로드 실패" 메시지 여부와, Table Editor의 `profiles` 컬럼 구조를 확인하세요.
 
 **콘솔에 "Failed to load resource: 400" / grant_type=password 에러가 보일 때**  
 → 로그인 요청이 Supabase에서 거절된 상태입니다. (아이디·비밀번호 불일치 또는 해당 이메일이 Supabase [Authentication → Users]에 없을 때 흔히 발생합니다.)  
