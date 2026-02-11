@@ -21,10 +21,9 @@ interface Props {
   onAddReview: (review: Review) => void;
   onUpdateReview: (review: Review) => void;
   reviews: Review[];
-  /**
-   * Fixed: Added missing addNotif to Props interface
-   */
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+  /** 마이페이지 진입 시 로그인 사용자 프로필 재조회 (승인 직후 판매자 워크스페이스 즉시 반영) */
+  onRefetchProfile?: () => void;
 }
 
 type MainTab = 'buyer' | 'seller' | 'settings';
@@ -33,11 +32,15 @@ type NicknameStatus = 'idle' | 'available' | 'unavailable';
 /**
  * Fixed: Added addNotif to component destructuring
  */
-const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, onAddReview, onUpdateReview, reviews, addNotif }) => {
+const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, onAddReview, onUpdateReview, reviews, addNotif, onRefetchProfile }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  useEffect(() => {
+    onRefetchProfile?.();
+  }, [onRefetchProfile]);
+
   const [activeMainTab, setActiveMainTab] = useState<MainTab>(() => {
     return (location.state as any)?.activeTab || 'settings';
   });
