@@ -36,11 +36,26 @@ import EbookRegistration from './pages/EbookRegistration';
 import WishlistPage from './pages/WishlistPage';
 import PartTimePage from './pages/PartTimePage';
 
+// Supabase profiles 행 → UserProfile 변환 (테이블 스키마 차이 허용)
+function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
+  const id = String(row.id ?? '');
+  const email = String(row.email ?? (row.raw_json && typeof row.raw_json === 'object' && (row.raw_json as Record<string, unknown>).email) ?? '');
+  return {
+    id,
+    nickname: String(row.nickname ?? id),
+    profileImage: String(row.profile_image ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`),
+    email: email || undefined,
+    phone: String(row.phone ?? ''),
+    role: 'user',
+    points: Number(row.points ?? 0),
+    joinDate: String(row.join_date ?? row.updated_at ?? new Date().toISOString().split('T')[0]),
+    coupons: []
+  };
+}
+
 const App: React.FC = () => {
-  const [members, setMembers] = useState<UserProfile[]>(() => {
-    const saved = localStorage.getItem('site_members_v2');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [members, setMembers] = useState<UserProfile[]>([]);
+  const [membersLoaded, setMembersLoaded] = useState(false);
 
   const [user, setUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('user_profile_v2');
@@ -65,8 +80,36 @@ const App: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>(() => JSON.parse(localStorage.getItem('site_notices_v2') || '[]'));
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
 
-  // 로컬 저장소 동기화
-  useEffect(() => { localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members]);
+  // 회원 목록: Supabase profiles를 단일 소스로 로드 → 어드민/채팅 등에서 사용
+  useEffect(() => {
+    supabase.from('profiles').select('*').order('id').then(({ data, error }) => {
+      if (error) {
+        console.warn('회원 목록(profiles) 로드 실패:', error.message);
+        setMembersLoaded(true);
+        return;
+      }
+      const list: UserProfile[] = (data || []).map((row: Record<string, unknown>) => profileRowToUserProfile(row));
+      const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim().toLowerCase();
+      if (adminId && !list.some(m => m.id.toLowerCase() === adminId)) {
+        list.unshift({
+          id: adminId,
+          nickname: '마케터김',
+          profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=admin`,
+          email: 'admin@thebestsns.com',
+          phone: '010-0000-0000',
+          role: 'admin',
+          points: 999999,
+          joinDate: '2024-01-01',
+          coupons: []
+        });
+      }
+      setMembers(list);
+      setMembersLoaded(true);
+    });
+  }, []);
+
+  // 로컬 저장소 동기화 (members는 profiles 로드 후 덮어쓰므로, 캐시용으로만 저장)
+  useEffect(() => { if (membersLoaded) localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members, membersLoaded]);
   useEffect(() => { localStorage.setItem('user_profile_v2', JSON.stringify(user)); }, [user]);
   useEffect(() => { localStorage.setItem('site_notifications_v2', JSON.stringify(notifications)); }, [notifications]);
   useEffect(() => { localStorage.setItem('smm_orders_v2', JSON.stringify(smmOrders)); }, [smmOrders]);
@@ -138,37 +181,52 @@ const App: React.FC = () => {
     });
   }, [user, addNotif]);
 
-  // 회원가입 및 로그인 성공 시 처리 로직
-  const handleLoginSuccess = (userData: UserProfile) => {
-    // 1. 이미 존재하는 회원인지 확인
-    const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
-    let targetProfile: UserProfile;
-    
-    if (existingMember) {
-      targetProfile = { ...existingMember, ...userData };
-      setMembers(prev => prev.map(m => m.id === targetProfile.id ? targetProfile : m));
-    } else {
-      // 2. 신규 회원이면 기본값 설정
+  // 회원 목록을 Supabase profiles에서 다시 불러오기 (로그인/가입 후 동기화용)
+  const refreshMembersFromProfiles = useCallback(() => {
+    supabase.from('profiles').select('*').order('id').then(({ data, error }) => {
+      if (error) return;
+      const list: UserProfile[] = (data || []).map((row: Record<string, unknown>) => profileRowToUserProfile(row));
       const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim().toLowerCase();
-      const isAdmin = userData.id.toLowerCase() === adminId;
-      targetProfile = { 
-        ...userData, 
-        nickname: userData.nickname || userData.id,
-        role: isAdmin ? 'admin' : 'user', 
-        sellerStatus: isAdmin ? 'approved' : 'none', 
-        points: 0, 
-        joinDate: new Date().toISOString().split('T')[0], 
-        coupons: [] 
-      };
-      setMembers(prev => [targetProfile, ...prev]);
-    }
+      if (adminId && !list.some(m => m.id.toLowerCase() === adminId)) {
+        list.unshift({
+          id: adminId,
+          nickname: '마케터김',
+          profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=admin`,
+          email: 'admin@thebestsns.com',
+          phone: '010-0000-0000',
+          role: 'admin',
+          points: 999999,
+          joinDate: '2024-01-01',
+          coupons: []
+        });
+      }
+      setMembers(list);
+    });
+  }, []);
 
-    // 3. 현재 로그인 세션 유지
-    setUser(targetProfile);
-
-    // 4. Supabase profiles 테이블 동기화 (다른 기기 로그인·Table Editor 목록용)
+  // 회원가입 및 로그인 성공 시: profiles 동기화 후 회원 목록은 profiles 기준으로 유지
+  const handleLoginSuccess = useCallback((userData: UserProfile) => {
     const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim().toLowerCase();
-    if (targetProfile.email && targetProfile.id.toLowerCase() !== adminId) {
+    const isAdmin = userData.id.toLowerCase() === adminId;
+    const targetProfile: UserProfile = {
+      ...userData,
+      nickname: userData.nickname || userData.id,
+      role: isAdmin ? 'admin' : 'user',
+      sellerStatus: isAdmin ? 'approved' : 'none',
+      points: userData.points ?? 0,
+      joinDate: userData.joinDate ?? new Date().toISOString().split('T')[0],
+      coupons: userData.coupons ?? []
+    };
+
+    setUser(targetProfile);
+    setMembers(prev => {
+      const exists = prev.some(m => m.id.toLowerCase() === targetProfile.id.toLowerCase());
+      if (exists) return prev.map(m => m.id.toLowerCase() === targetProfile.id.toLowerCase() ? targetProfile : m);
+      return [targetProfile, ...prev];
+    });
+
+    // Supabase profiles에 반드시 기록 (회원 목록·Table Editor 단일 소스)
+    if (targetProfile.email && !isAdmin) {
       supabase.from('profiles').upsert({
         id: targetProfile.id,
         email: targetProfile.email,
@@ -177,10 +235,13 @@ const App: React.FC = () => {
         phone: targetProfile.phone || null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.error('Profiles 동기화 실패(로그인 시):', error.message, '- profiles 테이블 구조가 supabase-profiles-setup.sql과 같은지 확인하세요.');
+        if (error) console.error('Profiles 동기화 실패:', error.message);
+        refreshMembersFromProfiles();
       });
+    } else {
+      refreshMembersFromProfiles();
     }
-  };
+  }, [refreshMembersFromProfiles]);
 
   const handleLogout = () => setUser(null);
 
