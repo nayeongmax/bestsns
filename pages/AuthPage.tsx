@@ -32,8 +32,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   // 인증 감지 로직 보강
   useEffect(() => {
     // 1. 세션 이벤트 감지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event Triggered:", event);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setMode('RESET_PW');
       }
@@ -131,34 +130,79 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
+  // 이메일 형식 검증 (보안·유효성)
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.pw !== formData.pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
+    const id = formData.id.trim();
+    const email = formData.email.trim().toLowerCase();
+    const pw = formData.pw;
+    const pwConfirm = formData.pwConfirm;
+    const name = formData.name.trim();
+    const phone = formData.phone.trim();
+
+    if (id.length < 5) return alert('아이디는 5자 이상이어야 합니다.');
+    if (!isValidEmail(email)) return alert('올바른 이메일 주소를 입력해 주세요.');
+    if (pw.length < 8) return alert('비밀번호는 8자 이상이어야 합니다.');
+    if (pw !== pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
     if (!formData.agreeTerms) return alert('약관에 동의해주세요.');
-    if (formData.id.length < 5) return alert('아이디는 5자 이상이어야 합니다.');
 
     setLoading(true);
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.pw,
+        email,
+        password: pw,
         options: {
           data: {
-            nickname: formData.name,
-            phone: formData.phone,
-            user_id: formData.id
+            nickname: name,
+            phone,
+            user_id: id
           }
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        const msg = authError.message || '';
+        // 이메일 발송 rate limit: 가입은 됐을 수 있으므로 로그인 시도 후 안내
+        if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('rate_limit')) {
+          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
+          if (!signInErr) {
+            const newUser: UserProfile = {
+              id,
+              nickname: name || `유저_${id}`,
+              email,
+              phone,
+              profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
+              role: 'user',
+              points: 0,
+              joinDate: new Date().toISOString().split('T')[0],
+              coupons: []
+            };
+            onLoginSuccess(newUser);
+            alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
+            navigate('/sns');
+            setLoading(false);
+            return;
+          }
+          alert('일시적으로 가입 요청이 제한되었습니다. 1시간 후 다시 시도해 주세요.');
+          setLoading(false);
+          return;
+        }
+        if (msg.includes('already registered') || msg.includes('already exists')) {
+          alert('이미 사용 중인 이메일입니다.');
+          setLoading(false);
+          return;
+        }
+        throw authError;
+      }
 
       const newUser: UserProfile = {
-        id: formData.id,
-        nickname: formData.name || `유저_${formData.id}`,
-        email: formData.email,
-        phone: formData.phone,
-        profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.id}`,
+        id,
+        nickname: name || `유저_${id}`,
+        email,
+        phone,
+        profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
         role: 'user',
         points: 0,
         joinDate: new Date().toISOString().split('T')[0],
@@ -169,7 +213,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
       navigate('/sns');
     } catch (err: any) {
-      alert(`회원가입 실패: ${err.message}`);
+      const msg = err?.message || '';
+      if (msg.includes('already registered') || msg.includes('already exists')) {
+        alert('이미 사용 중인 이메일입니다.');
+      } else {
+        alert('회원가입에 실패했습니다. 입력 내용을 확인한 뒤 다시 시도해 주세요.');
+      }
     } finally {
       setLoading(false);
     }
@@ -294,9 +343,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
               <form onSubmit={handleJoin} className="space-y-4">
                 <div className="space-y-3">
-                  <input type="text" placeholder="아이디 (6~20자)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required />
-                  <input type="password" placeholder="비밀번호" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required />
-                  <input type="password" placeholder="비밀번호 확인" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.pwConfirm} onChange={e => setFormData({...formData, pwConfirm: e.target.value})} required />
+                  <input type="text" placeholder="아이디 (5자 이상)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required minLength={5} />
+                  <input type="password" placeholder="비밀번호 (8자 이상)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required minLength={8} autoComplete="new-password" />
+                  <input type="password" placeholder="비밀번호 확인" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.pwConfirm} onChange={e => setFormData({...formData, pwConfirm: e.target.value})} required minLength={8} autoComplete="new-password" />
                   <input type="text" placeholder="이름 (닉네임)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
                   <input type="email" placeholder="이메일 주소 (필수)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
                   <input type="text" placeholder="휴대폰 번호 (- 제외)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required />
