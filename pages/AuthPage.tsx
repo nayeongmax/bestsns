@@ -363,7 +363,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
         coupons: []
       };
 
-      await supabase.from('profiles').upsert({
+      const { error: profileErr } = await supabase.from('profiles').upsert({
         id,
         email,
         nickname: name || `유저_${id}`,
@@ -371,6 +371,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
         phone: phone || null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
+      if (profileErr) console.error('Profiles 저장 실패(회원가입):', profileErr.message, '- Table Editor에서 profiles 테이블에 id, email, nickname 컬럼이 있는지 확인하세요.');
 
       onLoginSuccess(newUser);
       alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
