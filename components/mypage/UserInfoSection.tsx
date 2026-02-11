@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserProfile, SellerApplication, NotificationType } from '../../types';
+import { supabase } from '@/supabase';
 
 interface Props {
   user: UserProfile;
@@ -60,11 +61,56 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     license: savedApp?.proofs?.licenseImg
   });
 
-  // --- 알림 설정 상태 ---
-  const [notifMarketing, setNotifMarketing] = useState({ app: true, sms: false, email: false });
-  const [notifChat, setNotifChat] = useState(true);
-  const [notifOrderStatus, setNotifOrderStatus] = useState(true);
-  const [isProfilePublic, setIsProfilePublic] = useState(true);
+  // --- 알림 설정 상태 (로컬 저장) ---
+  const notifStorageKey = `user_notif_${user.id}`;
+  const [notifMarketing, setNotifMarketing] = useState(() => {
+    try {
+      const s = localStorage.getItem(notifStorageKey);
+      if (s) {
+        const parsed = JSON.parse(s);
+        if (parsed?.marketing) return parsed.marketing;
+      }
+    } catch (_) {}
+    return { app: true, sms: false, email: false };
+  });
+  const [notifChat, setNotifChat] = useState(() => {
+    try {
+      const s = localStorage.getItem(notifStorageKey);
+      if (s) {
+        const parsed = JSON.parse(s);
+        if (typeof parsed?.chat === 'boolean') return parsed.chat;
+      }
+    } catch (_) {}
+    return true;
+  });
+  const [notifOrderStatus, setNotifOrderStatus] = useState(() => {
+    try {
+      const s = localStorage.getItem(notifStorageKey);
+      if (s) {
+        const parsed = JSON.parse(s);
+        if (typeof parsed?.orderStatus === 'boolean') return parsed.orderStatus;
+      }
+    } catch (_) {}
+    return true;
+  });
+  const [isProfilePublic, setIsProfilePublic] = useState(() => {
+    try {
+      const s = localStorage.getItem(notifStorageKey);
+      if (s) {
+        const parsed = JSON.parse(s);
+        if (typeof parsed?.profilePublic === 'boolean') return parsed.profilePublic;
+      }
+    } catch (_) {}
+    return true;
+  });
+  useEffect(() => {
+    localStorage.setItem(notifStorageKey, JSON.stringify({
+      marketing: notifMarketing,
+      chat: notifChat,
+      orderStatus: notifOrderStatus,
+      profilePublic: isProfilePublic
+    }));
+  }, [notifStorageKey, notifMarketing, notifChat, notifOrderStatus, isProfilePublic]);
 
   // --- 탈퇴 관련 상태 ---
   const [quitReason, setQuitReason] = useState('');
@@ -144,12 +190,33 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     }
   };
 
-  const handlePasswordUpdate = () => {
+  const handleQuit = async () => {
+    if (!quitReason || quitEmail !== user.email || !quitAgreed) return;
+    if (!window.confirm('정말 탈퇴하시겠습니까? 로그인 정보가 삭제되며 복구할 수 없습니다.')) return;
+    await supabase.auth.signOut();
+    try {
+      await supabase.from('profiles').delete().eq('id', user.id);
+    } catch (_) {}
+    localStorage.removeItem('user_profile_v2');
+    window.location.href = '/';
+  };
+
+  const handlePasswordUpdate = async () => {
     if (!pwForm.current || !pwForm.next || !pwForm.confirm) return alert('모든 정보를 입력해 주세요.');
     if (pwForm.next !== pwForm.confirm) return alert('새 비밀번호가 일치하지 않습니다.');
-    if (pwForm.current !== user.password) return alert('현재 비밀번호가 올바르지 않습니다.');
-
-    onUpdate({ ...user, password: pwForm.next });
+    if (pwForm.next.length < 8) return alert('새 비밀번호는 8자 이상이어야 합니다.');
+    const email = user.email || (await supabase.auth.getUser()).data.user?.email;
+    if (!email) return alert('이메일 정보가 없어 비밀번호 변경을 할 수 없습니다.');
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pwForm.current });
+    if (signInErr) {
+      alert('현재 비밀번호가 올바르지 않습니다.');
+      return;
+    }
+    const { error: updateErr } = await supabase.auth.updateUser({ password: pwForm.next });
+    if (updateErr) {
+      alert('비밀번호 변경에 실패했습니다. ' + (updateErr.message || ''));
+      return;
+    }
     alert('비밀번호가 성공적으로 변경되었습니다.');
     setPwForm({ current: '', next: '', confirm: '' });
   };
@@ -451,7 +518,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                    <input type="checkbox" checked={quitAgreed} onChange={(e) => setQuitAgreed(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-50" />
                    <span className="text-[15px] font-bold text-gray-600 group-hover:text-gray-900">주의사항을 모두 확인하였습니다.</span>
                 </label>
-                <button onClick={() => { localStorage.removeItem('user_profile_v2'); window.location.href = '/'; }} disabled={!(quitReason && quitEmail === user.email && quitAgreed)} className={`px-12 py-4 rounded-[8px] font-black text-[15px] transition-all border ${ (quitReason && quitEmail === user.email && quitAgreed) ? 'bg-gray-900 text-white hover:bg-black border-gray-900 shadow-lg' : 'bg-white text-gray-300 border-gray-200 cursor-not-allowed' }`}>회원 탈퇴</button>
+                <button onClick={handleQuit} disabled={!(quitReason && quitEmail === user.email && quitAgreed)} className={`px-12 py-4 rounded-[8px] font-black text-[15px] transition-all border ${ (quitReason && quitEmail === user.email && quitAgreed) ? 'bg-gray-900 text-white hover:bg-black border-gray-900 shadow-lg' : 'bg-white text-gray-300 border-gray-200 cursor-not-allowed' }`}>회원 탈퇴</button>
              </div>
           </div>
         )}
