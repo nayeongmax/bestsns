@@ -165,6 +165,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       if (authError) {
         const msg = authError.message || '';
         // 이메일 발송 rate limit: 가입은 됐을 수 있으므로 로그인 시도 후 안내
+        // 이메일 발송 한도(rate limit): 가입은 됐을 수 있으므로 로그인 시도. 실패 시 대시보드 설정 안내.
         if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('rate_limit')) {
           const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
           if (!signInErr) {
@@ -185,7 +186,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
             setLoading(false);
             return;
           }
-          alert('일시적으로 가입 요청이 제한되었습니다. 1시간 후 다시 시도해 주세요.');
+          alert(
+            '가입 시 이메일 발송 한도에 걸렸습니다. 관리자가 Supabase 대시보드에서 [Authentication → Providers → Email]의 "Confirm email"을 끄면, 이메일 없이 바로 가입할 수 있어 제한이 없습니다. (DEPLOY.md 참고)'
+          );
           setLoading(false);
           return;
         }
