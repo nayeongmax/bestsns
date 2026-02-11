@@ -26,11 +26,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     agreeTerms: false
   });
 
-  // 이메일의 재설정 링크를 클릭하고 들어왔는지 감지하는 핵심 로직
+  // 보안 핵심: 사용자가 이메일 내의 링크를 클릭하고 돌아오면 슈파베이스가 이 이벤트를 발생시킴
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // 슈파베이스가 메일 링크 클릭을 감지하면 자동으로 모드 변경
+        // 메일 링크 인증이 확인된 경우에만 비밀번호 변경 화면(RESET_PW)으로 전환
         setMode('RESET_PW');
       }
     });
@@ -167,45 +167,46 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
-  // 안전한 비밀번호 재설정 요청
-  const handleResetPwRequest = async () => {
+  // 1단계: 인증 메일 발송 요청
+  const handleResetPwRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!formData.email) return alert('비밀번호를 재설정할 이메일을 입력해주세요.');
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/#/login`,
+        redirectTo: `${window.location.origin}/#/login`, // 링크 클릭 시 돌아올 경로
       });
 
       if (error) throw error;
 
-      alert('입력하신 이메일로 비밀번호 재설정 안내 메일을 발송했습니다.\n메일함의 링크를 클릭하여 비밀번호를 변경해 주세요.');
+      alert('비밀번호 재설정 메일을 발송했습니다.\n메일함의 링크를 클릭하면 새 비밀번호를 설정할 수 있는 창이 나타납니다.');
       setMode('LOGIN');
     } catch (err: any) {
-      // Rate Limit(발송 제한) 오류 처리
       if (err.message.includes('rate limit')) {
-        alert('보안 정책상 짧은 시간에 여러 번 요청할 수 없습니다.\n약 1분 후에 다시 시도해 주세요.');
+        alert('보안 정책상 메일을 너무 자주 보낼 수 없습니다. 잠시 후(약 1~5분) 다시 시도해 주세요.');
       } else {
-        alert(`오류 발생: ${err.message}`);
+        alert(`발송 실패: ${err.message}`);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // 실제 비밀번호 업데이트 수행 (이메일 인증 통과자만 가능)
+  // 2단계: 실제 비밀번호 업데이트 수행 (메일 링크 인증 완료자만 가능)
   const handleFinalPasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.pw !== formData.pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
     if (formData.pw.length < 6) return alert('비밀번호는 6자 이상이어야 합니다.');
+    if (formData.pw !== formData.pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
 
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({
         password: formData.pw
       });
+
       if (error) throw error;
       
-      alert('비밀번호가 성공적으로 변경되었습니다. 새로운 비밀번호로 로그인해주세요.');
+      alert('비밀번호가 성공적으로 변경되었습니다. 이제 새로운 비밀번호로 로그인하세요.');
       setMode('LOGIN');
       setFormData({ ...formData, pw: '', pwConfirm: '' });
     } catch (err: any) {
@@ -284,12 +285,35 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
             </>
           )}
 
+          {mode === 'FIND_PW' && (
+            <div className="space-y-8 py-4 animate-in slide-in-from-top-2">
+               <div className="text-center">
+                 <h2 className="text-2xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8">비밀번호 재설정</h2>
+                 <p className="text-sm font-bold text-gray-400 mt-4 leading-relaxed">가입 시 등록한 이메일을 입력하세요.<br/>인증 링크가 포함된 메일을 보내드립니다.</p>
+               </div>
+               <form onSubmit={handleResetPwRequest} className="space-y-4">
+                 <input 
+                  type="email" 
+                  placeholder="이메일 주소 입력" 
+                  value={formData.email} 
+                  onChange={e => setFormData({...formData, email: e.target.value})} 
+                  className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
+                  required
+                 />
+                 <button type="submit" disabled={loading} className="w-full py-5 bg-black text-white rounded-2xl font-black shadow-lg hover:bg-blue-600 transition-all uppercase italic">
+                    {loading ? '메일 발송 중...' : '인증 메일 발송'}
+                 </button>
+               </form>
+               <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic transition-colors">Back to Login</button>
+            </div>
+          )}
+
           {mode === 'RESET_PW' && (
             <div className="space-y-10 animate-in zoom-in-95 duration-500">
               <div className="text-center space-y-2">
-                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 shadow-inner">🔓</div>
+                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 shadow-inner">🔒</div>
                 <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">New Password</h2>
-                <p className="text-sm font-bold text-gray-400">인증이 완료되었습니다. 새로운 비밀번호를 설정하세요.</p>
+                <p className="text-sm font-bold text-gray-400">인증이 완료되었습니다. 새 비밀번호를 설정하세요.</p>
               </div>
 
               <form onSubmit={handleFinalPasswordUpdate} className="space-y-4">
@@ -313,20 +337,19 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                   {loading ? '변경 중...' : '비밀번호 변경 완료'}
                 </button>
               </form>
-              <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic">Back to Login</button>
             </div>
           )}
 
-          {(mode === 'FIND_ID' || mode === 'FIND_PW') && (
+          {mode === 'FIND_ID' && (
             <div className="space-y-8 py-4">
                <div className="text-center">
-                 <h2 className="text-2xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8">{mode === 'FIND_ID' ? 'ID 찾기' : 'PW 재설정'}</h2>
+                 <h2 className="text-2xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8">ID 찾기</h2>
                  <p className="text-sm font-bold text-gray-400 mt-4 leading-relaxed">가입 시 등록한 이메일을 입력하세요.</p>
                </div>
                <div className="space-y-4">
                  <input type="email" placeholder="이메일 입력" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" />
-                 <button onClick={mode === 'FIND_ID' ? handleFindId : handleResetPwRequest} disabled={loading} className="w-full py-5 bg-black text-white rounded-2xl font-black shadow-lg hover:bg-blue-600 transition-all uppercase italic">
-                    {loading ? '진행 중...' : mode === 'FIND_ID' ? '아이디 찾기' : '인증 메일 발송'}
+                 <button onClick={handleFindId} disabled={loading} className="w-full py-5 bg-black text-white rounded-2xl font-black shadow-lg hover:bg-blue-600 transition-all uppercase italic">
+                    {loading ? '조회 중...' : '아이디 찾기'}
                  </button>
                </div>
                <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic transition-colors">Back to Login</button>
