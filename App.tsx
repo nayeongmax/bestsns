@@ -98,7 +98,9 @@ const App: React.FC = () => {
         profile_image: updated.profileImage || null,
         phone: updated.phone || null,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'id' }).then(() => {});
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.error('Profiles 동기화 실패(마이페이지 수정):', error.message, '- profiles 테이블에 id, email, nickname 컬럼이 있는지 확인하세요.');
+      });
     }
   }, []);
 
@@ -174,7 +176,9 @@ const App: React.FC = () => {
         profile_image: targetProfile.profileImage || null,
         phone: targetProfile.phone || null,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'id' }).then(() => {});
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.error('Profiles 동기화 실패(로그인 시):', error.message, '- profiles 테이블 구조가 supabase-profiles-setup.sql과 같은지 확인하세요.');
+      });
     }
   };
 
