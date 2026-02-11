@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile } from '../types';
 import { supabase } from '../supabase';
@@ -7,7 +8,7 @@ interface Props {
   onLoginSuccess: (user: UserProfile) => void;
 }
 
-type AuthMode = 'LOGIN' | 'JOIN' | 'FIND_ID' | 'FIND_PW';
+type AuthMode = 'LOGIN' | 'JOIN' | 'FIND_ID' | 'FIND_PW' | 'RESET_PW';
 
 const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
@@ -25,6 +26,20 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     agreeTerms: false
   });
 
+  // 이메일의 재설정 링크를 클릭하고 들어왔는지 감지하는 핵심 로직
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // 사용자가 이메일 링크를 통해 인증된 상태로 들어오면 자동으로 비밀번호 변경 모드로 전환
+        setMode('RESET_PW');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -32,7 +47,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     const loginId = formData.id.trim();
     const loginPw = formData.pw;
 
-    // 관리자 마스터 계정 (테스트용)
     if (loginId === 'admin' && loginPw === '1234') {
         const adminUser: UserProfile = {
             id: 'admin',
@@ -52,33 +66,16 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
 
     try {
-      // 1. 아이디로 이메일 조회: localStorage → Supabase profiles 순서로 탐색
-      let targetEmail = formData.email || '';
+      let targetEmail = '';
+      const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
+      const localUser = members.find((m: any) => m.id === loginId);
 
-      if (!targetEmail) {
-        // localStorage에서 먼저 조회
-        const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
-        const localUser = members.find((m: any) => m.id === loginId);
-
-        if (localUser?.email) {
-          targetEmail = localUser.email;
-        } else {
-          // Supabase profiles 테이블에서 조회
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('raw_json')
-            .eq('id', loginId)
-            .single();
-
-          if (profileData?.raw_json?.email) {
-            targetEmail = profileData.raw_json.email;
-          } else {
-            targetEmail = `${loginId}@thebestsns.user`;
-          }
-        }
+      if (localUser?.email) {
+        targetEmail = localUser.email;
+      } else {
+        targetEmail = `${loginId}@thebestsns.user`;
       }
 
-      // 2. Supabase Auth 로그인 수행
       const { data, error } = await supabase.auth.signInWithPassword({
         email: targetEmail,
         password: loginPw,
@@ -86,22 +83,14 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
       if (error) throw error;
 
-      // 3. 프로필 데이터 구성 (profiles 테이블에서 추가 정보 로드)
-      const { data: dbProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', loginId)
-        .single();
-
-      const profile: UserProfile = {
+      const profile: UserProfile = localUser || {
         id: loginId,
-        nickname: dbProfile?.nickname || data.user.user_metadata.nickname || loginId,
+        nickname: data.user.user_metadata.nickname || loginId,
         profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${loginId}`,
-        role: dbProfile?.role || 'user',
-        email: data.user.email || '',
-        phone: dbProfile?.raw_json?.phone || '',
-        points: dbProfile?.points || 0,
-        joinDate: dbProfile?.join_date || new Date().toISOString().split('T')[0],
+        role: 'user',
+        email: data.user.email,
+        points: 0,
+        joinDate: new Date().toISOString().split('T')[0],
         coupons: []
       };
 
@@ -122,7 +111,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
     setLoading(true);
     try {
-      // 1. Supabase Auth 회원가입 (메타데이터 포함)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.pw,
@@ -136,24 +124,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       });
 
       if (authError) throw authError;
-
-      // 2. 가입 성공 시, SQL Editor로 만든 'profiles' 테이블에 데이터 입력
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: formData.id,
-            nickname: formData.name || `유저_${formData.id}`,
-            role: 'user',
-            points: 0,
-            join_date: new Date().toISOString().split('T')[0],
-            raw_json: { email: formData.email, phone: formData.phone }
-          }
-        ]);
-
-      if (dbError) {
-        console.error('DB 저장 에러:', dbError);
-      }
 
       const newUser: UserProfile = {
         id: formData.id,
@@ -181,26 +151,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     if (!formData.email) return alert('가입하신 이메일을 입력해주세요.');
     setLoading(true);
     try {
-      // localStorage에서 이메일로 검색
       const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
       const found = members.find((m: any) => m.email === formData.email);
 
       if (found) {
         alert(`찾으시는 회원님의 아이디는 [ ${found.id} ] 입니다.`);
-        setMode('LOGIN');
-        return;
-      }
-
-      // Supabase profiles 테이블에서 검색
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, raw_json')
-        .limit(100);
-
-      const dbFound = profiles?.find((p: any) => p.raw_json?.email === formData.email);
-
-      if (dbFound) {
-        alert(`찾으시는 회원님의 아이디는 [ ${dbFound.id} ] 입니다.`);
         setMode('LOGIN');
       } else {
         alert('해당 이메일로 등록된 정보가 없습니다.');
@@ -212,37 +167,18 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleResetPw = async () => {
+  const handleResetPwRequest = async () => {
     if (!formData.email) return alert('비밀번호를 재설정할 이메일을 입력해주세요.');
     setLoading(true);
     try {
-      // Supabase 이메일 재설정 시도
+      // 팝업창 방식 삭제 -> 실제 이메일 발송만 수행
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
         redirectTo: `${window.location.origin}/#/login`,
       });
 
-      if (error) {
-        // Supabase 이메일 서비스 미설정 시 localStorage 기반 임시 재설정
-        const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
-        const found = members.find((m: any) => m.email === formData.email);
+      if (error) throw error;
 
-        if (found) {
-          const newPw = prompt(`[${found.id}] 계정의 새 비밀번호를 입력하세요:`);
-          if (newPw && newPw.length >= 6) {
-            found.password = newPw;
-            localStorage.setItem('site_members_v2', JSON.stringify(members));
-            alert('비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해주세요.');
-            setMode('LOGIN');
-          } else if (newPw) {
-            alert('비밀번호는 6자 이상이어야 합니다.');
-          }
-        } else {
-          alert('해당 이메일로 등록된 정보가 없습니다.');
-        }
-        return;
-      }
-
-      alert('입력하신 이메일로 비밀번호 재설정 안내 메일을 발송했습니다.');
+      alert('입력하신 이메일로 비밀번호 재설정 안내 메일을 발송했습니다.\n메일함의 링크를 클릭하여 비밀번호를 변경해 주세요.');
       setMode('LOGIN');
     } catch (err: any) {
       alert(`오류 발생: ${err.message}`);
@@ -251,13 +187,38 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
+  // 실제 비밀번호 업데이트 수행 (이메일 인증을 거친 유저 전용)
+  const handleFinalPasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.pw !== formData.pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
+    if (formData.pw.length < 6) return alert('비밀번호는 6자 이상이어야 합니다.');
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: formData.pw
+      });
+      if (error) throw error;
+      
+      alert('비밀번호가 성공적으로 변경되었습니다. 새로운 비밀번호로 로그인해주세요.');
+      setMode('LOGIN');
+      setFormData({ ...formData, pw: '', pwConfirm: '' });
+    } catch (err: any) {
+      alert(`변경 실패: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white rounded-[48px] shadow-2xl border border-gray-100 overflow-hidden relative">
-        <div className="flex border-b border-gray-50">
-          <button onClick={() => setMode('LOGIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>LOG IN</button>
-          <button onClick={() => setMode('JOIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>SIGN UP</button>
-        </div>
+        {(mode === 'LOGIN' || mode === 'JOIN') && (
+          <div className="flex border-b border-gray-50">
+            <button onClick={() => setMode('LOGIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>LOG IN</button>
+            <button onClick={() => setMode('JOIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>SIGN UP</button>
+          </div>
+        )}
 
         <div className="p-10 md:p-14 space-y-10">
           {mode === 'LOGIN' && (
@@ -318,6 +279,39 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
             </>
           )}
 
+          {mode === 'RESET_PW' && (
+            <div className="space-y-10 animate-in zoom-in-95 duration-500">
+              <div className="text-center space-y-2">
+                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 shadow-inner">🔒</div>
+                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">New Password</h2>
+                <p className="text-sm font-bold text-gray-400">인증이 완료되었습니다. 새 비밀번호를 설정하세요.</p>
+              </div>
+
+              <form onSubmit={handleFinalPasswordUpdate} className="space-y-4">
+                <input 
+                  type="password" 
+                  placeholder="새 비밀번호 (6자 이상)" 
+                  className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
+                  value={formData.pw} 
+                  onChange={e => setFormData({...formData, pw: e.target.value})} 
+                  required 
+                />
+                <input 
+                  type="password" 
+                  placeholder="새 비밀번호 확인" 
+                  className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
+                  value={formData.pwConfirm} 
+                  onChange={e => setFormData({...formData, pwConfirm: e.target.value})} 
+                  required 
+                />
+                <button type="submit" disabled={loading} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-black transition-all uppercase italic">
+                  {loading ? '변경 중...' : '비밀번호 변경 완료'}
+                </button>
+              </form>
+              <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic">Back to Login</button>
+            </div>
+          )}
+
           {(mode === 'FIND_ID' || mode === 'FIND_PW') && (
             <div className="space-y-8 py-4">
                <div className="text-center">
@@ -326,7 +320,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                </div>
                <div className="space-y-4">
                  <input type="email" placeholder="이메일 입력" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" />
-                 <button onClick={mode === 'FIND_ID' ? handleFindId : handleResetPw} disabled={loading} className="w-full py-5 bg-black text-white rounded-2xl font-black shadow-lg hover:bg-blue-600 transition-all uppercase italic">
+                 <button onClick={mode === 'FIND_ID' ? handleFindId : handleResetPwRequest} disabled={loading} className="w-full py-5 bg-black text-white rounded-2xl font-black shadow-lg hover:bg-blue-600 transition-all uppercase italic">
                     {loading ? '진행 중...' : mode === 'FIND_ID' ? '아이디 찾기' : '인증 메일 발송'}
                  </button>
                </div>
