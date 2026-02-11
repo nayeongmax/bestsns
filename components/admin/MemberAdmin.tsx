@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder } from '../../types';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/supabase';
 
 interface Props {
   members: UserProfile[];
@@ -86,7 +87,9 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
     return storeOrders.filter(o => o.sellerNickname === editingMember.nickname).map(o => ({ id: o.id, orderTime: o.orderTime, buyerNickname: o.userNickname, productName: o.productName, amount: o.price, status: o.status })).sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
   }, [editingMember, storeOrders]);
 
-  const handleApproveSeller = (userId: string) => {
+  const handleApproveSeller = async (userId: string) => {
+    const target = members.find(m => m.id === userId);
+    const app = target?.pendingApplication || target?.sellerApplication;
     setMembers(prev => prev.map(m => {
       if (m.id === userId) {
         if (m.pendingApplication) return { ...m, sellerStatus: 'approved', sellerApplication: m.pendingApplication, pendingApplication: undefined };
@@ -94,6 +97,11 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
       }
       return m;
     }));
+    await supabase.from('profiles').update({
+      seller_status: 'approved',
+      seller_application: app || target?.sellerApplication || null,
+      updated_at: new Date().toISOString()
+    }).eq('id', userId);
     alert('승인 처리가 완료되었습니다.');
     if (editingMember?.id === userId) setEditingMember(null);
   };
@@ -159,6 +167,66 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                  ))}
                </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'seller' && (
+        <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-50">
+            <h3 className="text-xl font-black text-gray-900">판매자 승인 대기 · 심사 내역</h3>
+            <p className="text-[13px] text-gray-500 font-bold mt-1">통장정보·통장사본 등 제출 내용을 확인한 뒤 승인해 주세요.</p>
+          </div>
+          <div className="p-8 space-y-8">
+            {pendingRequests.length === 0 ? (
+              <p className="text-gray-400 font-bold text-center py-16">승인 대기 중인 회원이 없습니다.</p>
+            ) : (
+              pendingRequests.map(m => {
+                const app: SellerApplication | undefined = m.pendingApplication || m.sellerApplication;
+                return (
+                  <div key={m.id} className="border border-gray-200 rounded-[24px] p-8 bg-gray-50/50 space-y-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <img src={m.profileImage} className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow" alt="" />
+                        <div>
+                          <p className="text-[18px] font-black text-gray-900">{m.nickname}</p>
+                          <p className="text-[12px] text-gray-500 font-bold">@{m.id}</p>
+                          {app?.appliedAt && <p className="text-[11px] text-blue-600 font-bold mt-1">신청일: {app.appliedAt}</p>}
+                        </div>
+                      </div>
+                      <button onClick={() => handleApproveSeller(m.id)} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-[14px] hover:bg-blue-700 transition-all shadow-lg">승인</button>
+                    </div>
+                    {app && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-black text-gray-400 uppercase">통장 정보</p>
+                          <p className="font-bold text-gray-800">은행: {app.bankInfo?.bankName || '-'}</p>
+                          <p className="font-bold text-gray-800">계좌: {app.bankInfo?.accountNo || '-'}</p>
+                          <p className="font-bold text-gray-800">예금주: {app.bankInfo?.ownerName || '-'}</p>
+                          <p className="font-bold text-gray-800">이메일: {app.bankInfo?.email || '-'}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-black text-gray-400 uppercase">첨부 (통장사본 등)</p>
+                          <div className="flex flex-wrap gap-3">
+                            {app.proofs?.bankbookImg && (
+                              <a href={app.proofs.bankbookImg} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden bg-white shadow-inner">
+                                <img src={app.proofs.bankbookImg} alt="통장사본" className="w-full h-full object-cover" />
+                              </a>
+                            )}
+                            {app.proofs?.licenseImg && (
+                              <a href={app.proofs.licenseImg} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden bg-white shadow-inner">
+                                <img src={app.proofs.licenseImg} alt="사업자등록증" className="w-full h-full object-cover" />
+                              </a>
+                            )}
+                            {!app.proofs?.bankbookImg && !app.proofs?.licenseImg && <span className="text-gray-400 text-[13px] font-bold">첨부 없음</span>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
