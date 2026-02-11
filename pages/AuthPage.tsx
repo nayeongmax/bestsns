@@ -30,7 +30,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // 사용자가 이메일 링크를 통해 인증된 상태로 들어오면 자동으로 비밀번호 변경 모드로 전환
+        // 슈파베이스가 메일 링크 클릭을 감지하면 자동으로 모드 변경
         setMode('RESET_PW');
       }
     });
@@ -167,11 +167,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
+  // 안전한 비밀번호 재설정 요청
   const handleResetPwRequest = async () => {
     if (!formData.email) return alert('비밀번호를 재설정할 이메일을 입력해주세요.');
     setLoading(true);
     try {
-      // 팝업창 방식 삭제 -> 실제 이메일 발송만 수행
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
         redirectTo: `${window.location.origin}/#/login`,
       });
@@ -181,13 +181,18 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       alert('입력하신 이메일로 비밀번호 재설정 안내 메일을 발송했습니다.\n메일함의 링크를 클릭하여 비밀번호를 변경해 주세요.');
       setMode('LOGIN');
     } catch (err: any) {
-      alert(`오류 발생: ${err.message}`);
+      // Rate Limit(발송 제한) 오류 처리
+      if (err.message.includes('rate limit')) {
+        alert('보안 정책상 짧은 시간에 여러 번 요청할 수 없습니다.\n약 1분 후에 다시 시도해 주세요.');
+      } else {
+        alert(`오류 발생: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // 실제 비밀번호 업데이트 수행 (이메일 인증을 거친 유저 전용)
+  // 실제 비밀번호 업데이트 수행 (이메일 인증 통과자만 가능)
   const handleFinalPasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.pw !== formData.pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
@@ -282,9 +287,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
           {mode === 'RESET_PW' && (
             <div className="space-y-10 animate-in zoom-in-95 duration-500">
               <div className="text-center space-y-2">
-                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 shadow-inner">🔒</div>
+                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 shadow-inner">🔓</div>
                 <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">New Password</h2>
-                <p className="text-sm font-bold text-gray-400">인증이 완료되었습니다. 새 비밀번호를 설정하세요.</p>
+                <p className="text-sm font-bold text-gray-400">인증이 완료되었습니다. 새로운 비밀번호를 설정하세요.</p>
               </div>
 
               <form onSubmit={handleFinalPasswordUpdate} className="space-y-4">
