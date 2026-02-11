@@ -47,6 +47,19 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  // Supabase 비밀번호 복구 모드 감지
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecoveryMode(true);
+        window.location.hash = '#/login';
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const [notifications, setNotifications] = useState<SiteNotification[]>(() => {
     const saved = localStorage.getItem('site_notifications_v2');
     return saved ? JSON.parse(saved) : [];
@@ -185,7 +198,7 @@ const App: React.FC = () => {
             <Route path="/review/write" element={user ? <ReviewWritePage user={user} onAddReview={(r)=>setReviews(p=>[r,...p])} /> : <Navigate to="/login" />} />
             <Route path="/admin" element={user ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/notices" element={<NoticePage notices={notices} setNotices={setNotices} user={user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
-            <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
+            <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} passwordRecoveryMode={passwordRecoveryMode} onRecoveryComplete={() => setPasswordRecoveryMode(false)} />} />
             <Route path="/" element={<Navigate to="/sns" />} />
           </Routes>
         </div>

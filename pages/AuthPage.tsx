@@ -1,19 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile } from '../types';
 import { supabase } from '../supabase';
 
 interface Props {
   onLoginSuccess: (user: UserProfile) => void;
+  passwordRecoveryMode?: boolean;
+  onRecoveryComplete?: () => void;
 }
 
-type AuthMode = 'LOGIN' | 'JOIN' | 'FIND_ID' | 'FIND_PW';
+type AuthMode = 'LOGIN' | 'JOIN' | 'FIND_ID' | 'FIND_PW' | 'RESET_PW_CONFIRM';
 
-const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
+const AuthPage: React.FC<Props> = ({ onLoginSuccess, passwordRecoveryMode, onRecoveryComplete }) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [loading, setLoading] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+  const [newPwForm, setNewPwForm] = useState({ pw: '', pwConfirm: '' });
+
+  // Supabase 복구 토큰 감지 시 비밀번호 재설정 화면으로 전환
+  useEffect(() => {
+    if (passwordRecoveryMode) {
+      setMode('RESET_PW_CONFIRM');
+    }
+  }, [passwordRecoveryMode]);
+
+  const handleConfirmNewPassword = async () => {
+    if (!newPwForm.pw || !newPwForm.pwConfirm) return alert('새 비밀번호를 입력해주세요.');
+    if (newPwForm.pw.length < 6) return alert('비밀번호는 6자 이상이어야 합니다.');
+    if (newPwForm.pw !== newPwForm.pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPwForm.pw });
+      if (error) throw error;
+
+      alert('비밀번호가 성공적으로 변경되었습니다! 새 비밀번호로 로그인해주세요.');
+      setNewPwForm({ pw: '', pwConfirm: '' });
+      setMode('LOGIN');
+      onRecoveryComplete?.();
+      // 복구 세션 정리
+      await supabase.auth.signOut();
+    } catch (err: any) {
+      alert(`비밀번호 변경 실패: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     id: '',
@@ -331,6 +364,26 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                  </button>
                </div>
                <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic transition-colors">Back to Login</button>
+            </div>
+          )}
+
+          {mode === 'RESET_PW_CONFIRM' && (
+            <div className="space-y-8 py-4">
+               <div className="text-center space-y-3">
+                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                   <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                 </div>
+                 <h2 className="text-2xl font-black text-gray-900 italic uppercase">New Password</h2>
+                 <p className="text-sm font-bold text-gray-400 leading-relaxed">새로운 비밀번호를 입력해주세요.</p>
+               </div>
+               <div className="space-y-4">
+                 <input type="password" placeholder="새 비밀번호 (6자 이상)" value={newPwForm.pw} onChange={e => setNewPwForm({...newPwForm, pw: e.target.value})} className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" />
+                 <input type="password" placeholder="새 비밀번호 확인" value={newPwForm.pwConfirm} onChange={e => setNewPwForm({...newPwForm, pwConfirm: e.target.value})} className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" />
+                 <button onClick={handleConfirmNewPassword} disabled={loading} className={`w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl transition-all active:scale-95 uppercase italic tracking-widest ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black'}`}>
+                    {loading ? '변경 중...' : '비밀번호 변경하기'}
+                 </button>
+               </div>
+               <button onClick={() => { setMode('LOGIN'); onRecoveryComplete?.(); }} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic transition-colors">Back to Login</button>
             </div>
           )}
         </div>
