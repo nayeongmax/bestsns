@@ -121,8 +121,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     try {
       let targetEmail = '';
       let resolvedId = loginId;
+      const idLower = loginId.trim().toLowerCase();
       const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
-      let localUser = members.find((m: any) => m.id === loginId);
+      let localUser = members.find((m: any) => m.id?.toLowerCase() === idLower || m.id === loginId);
 
       const isEmailInput = loginId.includes('@');
 
@@ -133,7 +134,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       } else if (localUser?.email) {
         targetEmail = localUser.email;
       } else {
-        const { data: profileRow } = await supabase.from('profiles').select('id, email, nickname, profile_image, phone').eq('id', loginId).maybeSingle();
+        // profiles 조회: 먼저 소문자 id로, 없으면 대소문자 무시(ilike)로 (기존 가입자 호환)
+        let profileRow = (await supabase.from('profiles').select('id, email, nickname, profile_image, phone').eq('id', idLower).maybeSingle()).data;
+        if (!profileRow?.email) {
+          const ilikeRes = await supabase.from('profiles').select('id, email, nickname, profile_image, phone').ilike('id', loginId.trim()).limit(1).maybeSingle();
+          profileRow = ilikeRes.data;
+        }
         if (profileRow?.email) {
           targetEmail = profileRow.email;
           resolvedId = profileRow.id;
@@ -149,7 +155,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
             coupons: []
           } as UserProfile;
         } else {
-          const { data: byEmailRow } = await supabase.from('profiles').select('id, email, nickname, profile_image, phone').eq('email', loginId.trim().toLowerCase()).maybeSingle();
+          const { data: byEmailRow } = await supabase.from('profiles').select('id, email, nickname, profile_image, phone').eq('email', idLower).maybeSingle();
           if (byEmailRow?.email) {
             targetEmail = byEmailRow.email;
             resolvedId = byEmailRow.id;
@@ -164,10 +170,15 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
               joinDate: new Date().toISOString().split('T')[0],
               coupons: []
             } as UserProfile;
-          } else {
-            targetEmail = `${loginId}@thebestsns.user`;
           }
         }
+      }
+
+      // 이메일을 찾지 못하면 가짜 이메일로 시도하지 않음 (Supabase Auth에 없는 계정이라 실패함)
+      if (!targetEmail) {
+        alert('등록된 아이디/이메일을 찾을 수 없습니다.\n\n가입 시 사용한 이메일로 로그인하려면 아래 "비밀번호 재설정했는데 로그인이 안 되나요?"를 눌러 이메일+비밀번호로 로그인해 보세요.');
+        setLoading(false);
+        return;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -274,14 +285,15 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const id = formData.id.trim();
+    const idRaw = formData.id.trim();
+    const id = idRaw.toLowerCase(); // 로그인 시 대소문자 구분 없이 조회하기 위해 소문자로 저장
     const email = formData.email.trim().toLowerCase();
     const pw = formData.pw;
     const pwConfirm = formData.pwConfirm;
     const name = formData.name.trim();
     const phone = formData.phone.trim();
 
-    if (id.length < 5) return alert('아이디는 5자 이상이어야 합니다.');
+    if (idRaw.length < 5) return alert('아이디는 5자 이상이어야 합니다.');
     if (!isValidEmail(email)) return alert('올바른 이메일 주소를 입력해 주세요.');
     if (pw.length < 8) return alert('비밀번호는 8자 이상이어야 합니다.');
     if (pw !== pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
