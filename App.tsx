@@ -134,7 +134,7 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('site_smm_providers_v2', JSON.stringify(smmProviders)); }, [smmProviders]);
   useEffect(() => { localStorage.setItem('site_smm_products_v2', JSON.stringify(smmProducts)); }, [smmProducts]);
 
-  const handleGlobalUserUpdate = useCallback((updated: UserProfile) => {
+  const handleGlobalUserUpdate = useCallback(async (updated: UserProfile) => {
     setUser(updated);
     setMembers(prev => {
       const exists = prev.some(m => m.id === updated.id);
@@ -144,20 +144,22 @@ const App: React.FC = () => {
         return [...prev, updated];
       }
     });
-    // 판매자 신청 포함: email 없어도 seller_status/seller_application 저장
-    if (updated.id) {
-      supabase.from('profiles').upsert({
-        id: updated.id,
-        email: updated.email ?? null,
-        nickname: updated.nickname || updated.id,
-        profile_image: updated.profileImage || null,
-        phone: updated.phone || null,
-        updated_at: new Date().toISOString(),
-        seller_status: updated.sellerStatus ?? null,
-        seller_application: updated.sellerApplication ?? null
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.error('Profiles 동기화 실패(마이페이지 수정):', error.message, '- profiles 테이블에 seller_status, seller_application 컬럼이 있는지 확인하세요. supabase-profiles-seller-columns.sql 실행 필요.');
-      });
+    // 판매자 신청 포함: Supabase profiles에 반드시 저장 (어드민 승인 대기 목록용)
+    if (!updated.id) return;
+    const { error } = await supabase.from('profiles').upsert({
+      id: updated.id,
+      email: updated.email ?? null,
+      nickname: updated.nickname || updated.id,
+      profile_image: updated.profileImage || null,
+      phone: updated.phone || null,
+      updated_at: new Date().toISOString(),
+      seller_status: updated.sellerStatus ?? null,
+      seller_application: updated.sellerApplication ?? null
+    }, { onConflict: 'id' });
+    if (error) {
+      console.error('Profiles 동기화 실패:', error.message);
+      alert('저장에 실패했습니다: ' + error.message + '\n\nSupabase 대시보드 → SQL Editor에서 supabase-profiles-seller-columns.sql 내용을 실행했는지 확인해 주세요.');
+      throw new Error(error.message);
     }
   }, []);
 
