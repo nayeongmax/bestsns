@@ -51,19 +51,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     } as UserProfile;
   };
 
-  // 인증 감지 로직 보강 + 소셜 로그인 리다이렉트 후 세션 처리
+  // 소셜 로그인 리다이렉트 후·폼 제출 직후에만 로그인 처리 (기존 세션으로 자동 로그인 안 함 → 로그인 UI 항상 표시)
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user && (mode === 'LOGIN' || mode === 'JOIN')) {
-        buildProfileFromSession(session.user).then(profile => {
-          onLoginSuccess(profile);
-          navigate('/sns');
-        });
-      }
-    });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, { session }) => {
       if (event === 'PASSWORD_RECOVERY') setMode('RESET_PW');
+      // SIGNED_IN: 이메일/소셜 로그인 폼 제출 직후 또는 소셜 리다이렉트 직후에만 처리
       if (event === 'SIGNED_IN' && session?.user) {
         const profile = await buildProfileFromSession(session.user);
         onLoginSuccess(profile);
