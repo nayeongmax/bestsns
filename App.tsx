@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from './supabase';
+import { supabase } from '@/supabase';
 
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
