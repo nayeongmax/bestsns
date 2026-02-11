@@ -15,6 +15,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [loading, setLoading] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const [formData, setFormData] = useState({
     id: '',
@@ -26,29 +27,39 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     agreeTerms: false
   });
 
-  // 이메일 재설정 링크 클릭 감지 보강
+  // 인증 감지 로직 보강
   useEffect(() => {
-    // 1. 이벤트 리스너 등록
+    // 1. 세션 이벤트 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event:", event);
+      console.log("Auth Event Triggered:", event);
       if (event === 'PASSWORD_RECOVERY') {
         setMode('RESET_PW');
       }
     });
 
-    // 2. URL 파라미터 직접 확인 (HashRouter 특성 대응)
-    const checkRecovery = () => {
+    // 2. 해시 파라미터 직접 파싱 (HashRouter 환경 대응)
+    const checkHashToken = () => {
       const hash = window.location.hash;
       if (hash.includes('type=recovery') || hash.includes('access_token=')) {
         setMode('RESET_PW');
       }
     };
-    checkRecovery();
+    checkHashToken();
+    window.addEventListener('hashchange', checkHashToken);
 
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('hashchange', checkHashToken);
     };
   }, []);
+
+  // 재전송 쿨다운 타이머
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,30 +188,34 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
+  // 인증 메일 발송
   const handleResetPwRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email) return alert('비밀번호를 재설정할 이메일을 입력해주세요.');
+    if (resendCooldown > 0) return;
+    if (!formData.email) return alert('이메일을 입력해 주세요.');
+    
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/#/login`,
+        redirectTo: `${window.location.origin}/#/login`, 
       });
 
       if (error) throw error;
 
-      alert('비밀번호 재설정 메일을 보냈습니다.\n메일함에 이미 메일이 와있을 수 있으니 확인해 보세요!\n(도착하지 않았다면 1~5분 후 다시 시도해 주세요)');
-      setMode('LOGIN');
+      alert('비밀번호 재설정 메일을 발송했습니다.\n이미 발송된 메일이 있는지 메일함(스팸함 포함)을 꼭 확인해 보세요!');
+      setResendCooldown(60); // 60초 대기 강제
     } catch (err: any) {
       if (err.message.includes('rate limit')) {
-        alert('보안 정책상 메일을 너무 자주 보낼 수 없습니다.\n이미 발송된 메일이 있는지 확인하시거나, 1~5분 후에 다시 눌러주세요.');
+        alert('서버 보안 정책상 요청이 거부되었습니다.\n현재 사용자님의 접속 환경에서 너무 많은 요청이 발생했습니다.\n\n[해결 방법]\n1. 이미 도착한 메일이 있는지 확인하세요.\n2. 약 5~10분 후 다시 시도해 주세요.\n3. 이미 인증 링크를 누르셨다면 아래 [변경창 열기] 버튼을 활용해 보세요.');
       } else {
-        alert(`오류 발생: ${err.message}`);
+        alert(`오류: ${err.message}`);
       }
     } finally {
       setLoading(false);
     }
   };
 
+  // 최종 비밀번호 업데이트
   const handleFinalPasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.pw.length < 6) return alert('비밀번호는 6자 이상이어야 합니다.');
@@ -213,13 +228,13 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       });
       if (error) throw error;
       
-      alert('비밀번호가 성공적으로 변경되었습니다! 이제 새로운 비밀번호로 로그인하세요.');
+      alert('비밀번호가 성공적으로 변경되었습니다!\n이제 새로운 비밀번호로 로그인해 주세요.');
       setMode('LOGIN');
       setFormData({ ...formData, pw: '', pwConfirm: '' });
-      // URL에서 토큰 정보 제거를 위해 새로고침 또는 경로 이동
       navigate('/login', { replace: true });
     } catch (err: any) {
-      alert(`변경 실패: ${err.message}`);
+      alert(`변경 실패: ${err.message}\n인증 세션이 만료되었을 수 있습니다. 다시 메일 발송부터 시도해 주세요.`);
+      setMode('LOGIN');
     } finally {
       setLoading(false);
     }
@@ -309,10 +324,25 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                   className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
                   required
                  />
-                 <button type="submit" disabled={loading} className="w-full py-5 bg-black text-white rounded-2xl font-black shadow-lg hover:bg-blue-600 transition-all uppercase italic">
-                    {loading ? '메일 발송 중...' : '인증 메일 발송'}
+                 <button 
+                   type="submit" 
+                   disabled={loading || resendCooldown > 0} 
+                   className={`w-full py-5 text-white rounded-2xl font-black shadow-lg transition-all uppercase italic ${loading || resendCooldown > 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-black hover:bg-blue-600'}`}
+                 >
+                    {loading ? '메일 발송 중...' : resendCooldown > 0 ? `${resendCooldown}초 후 재시도 가능` : '인증 메일 발송'}
                  </button>
                </form>
+               
+               <div className="pt-6 border-t border-gray-50 text-center space-y-4">
+                  <p className="text-[11px] text-gray-400 font-bold uppercase">메일이 발송되지 않거나 차단되었나요?</p>
+                  <button 
+                    onClick={() => setMode('RESET_PW')} 
+                    className="text-[12px] font-black text-blue-600 hover:underline underline-offset-4 decoration-2"
+                  >
+                    이미 메일 링크를 누르셨나요? 변경창 강제 열기 →
+                  </button>
+               </div>
+
                <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic transition-colors">Back to Login</button>
             </div>
           )}
@@ -320,29 +350,36 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
           {mode === 'RESET_PW' && (
             <div className="space-y-10 animate-in zoom-in-95 duration-500">
               <div className="text-center space-y-2">
-                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 shadow-inner">🔓</div>
+                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 shadow-inner">🔒</div>
                 <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">New Password</h2>
-                <p className="text-sm font-bold text-gray-400">메일 인증이 완료되었습니다. 새 비밀번호를 설정하세요.</p>
+                <p className="text-sm font-bold text-gray-400">인증이 확인되었습니다. 새 비밀번호를 설정하세요.</p>
               </div>
 
               <form onSubmit={handleFinalPasswordUpdate} className="space-y-4">
-                <input 
-                  type="password" 
-                  placeholder="새 비밀번호 (6자 이상)" 
-                  className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
-                  value={formData.pw} 
-                  onChange={e => setFormData({...formData, pw: e.target.value})} 
-                  required 
-                />
-                <input 
-                  type="password" 
-                  placeholder="새 비밀번호 확인" 
-                  className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
-                  value={formData.pwConfirm} 
-                  onChange={e => setFormData({...formData, pwConfirm: e.target.value})} 
-                  required 
-                />
-                <button type="submit" disabled={loading} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-black transition-all uppercase italic">
+                <div className="space-y-1.5">
+                   <label className="text-[11px] font-black text-gray-400 px-2 uppercase">New Password</label>
+                   <input 
+                    type="password" 
+                    placeholder="새 비밀번호 (6자 이상)" 
+                    className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
+                    value={formData.pw} 
+                    onChange={e => setFormData({...formData, pw: e.target.value})} 
+                    required 
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1.5">
+                   <label className="text-[11px] font-black text-gray-400 px-2 uppercase">Confirm Password</label>
+                   <input 
+                    type="password" 
+                    placeholder="새 비밀번호 확인" 
+                    className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
+                    value={formData.pwConfirm} 
+                    onChange={e => setFormData({...formData, pwConfirm: e.target.value})} 
+                    required 
+                  />
+                </div>
+                <button type="submit" disabled={loading} className="w-full py-6 bg-blue-600 text-white rounded-[24px] font-black text-lg shadow-xl hover:bg-black transition-all uppercase italic mt-4">
                   {loading ? '변경 중...' : '비밀번호 변경 완료'}
                 </button>
               </form>
