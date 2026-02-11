@@ -72,7 +72,6 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [showNewChat, setShowNewChat] = useState(false);
   const [useSupabase, setUseSupabase] = useState(true);
 
   const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
@@ -194,6 +193,31 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
     else setMessages([]);
   }, [activeChatId, loadMessages]);
 
+  useEffect(() => {
+    const targetUser = (location.state as { targetUser?: { id: string; nickname: string; profileImage?: string } })?.targetUser;
+    if (!targetUser?.id || targetUser.id === user.id) return;
+    const roomId = getRoomId(user.id, targetUser.id);
+    setActiveChatId(roomId);
+    setChatRooms(prev => {
+      if (prev.some(r => r.id === roomId)) return prev;
+      const meta = getMeta();
+      const roomMeta = meta[roomId] || {};
+      const next: ChatRoom = {
+        id: roomId,
+        otherParticipantId: targetUser.id,
+        name: targetUser.nickname,
+        otherImage: targetUser.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${targetUser.id}`,
+        lastMsg: '',
+        lastMsgTime: new Date().toISOString(),
+        isTrading: roomMeta.isTrading ?? false,
+        isFavorite: roomMeta.isFavorite ?? false,
+        online: false,
+        memo: roomMeta.memo,
+      };
+      return [next, ...prev];
+    });
+  }, [location.state, user.id, getMeta]);
+
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
 
   const handleSendMessage = async (customContent?: string, type: 'text' | 'image' = 'text', imageContent?: string) => {
@@ -287,33 +311,6 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
     setChatRooms(prev => prev.map(room => room.id === id ? { ...room, isTrading: next } : room));
   };
 
-  const startChatWith = (other: UserProfile) => {
-    const roomId = getRoomId(user.id, other.id);
-    setActiveChatId(roomId);
-    setShowNewChat(false);
-    const exists = chatRooms.some(r => r.id === roomId);
-    if (!exists) {
-      const meta = getMeta();
-      const roomMeta = meta[roomId] || {};
-      setChatRooms(prev => {
-        const next: ChatRoom = {
-          id: roomId,
-          otherParticipantId: other.id,
-          name: other.nickname,
-          otherImage: other.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${other.id}`,
-          lastMsg: '',
-          lastMsgTime: new Date().toISOString(),
-          isTrading: roomMeta.isTrading ?? false,
-          isFavorite: roomMeta.isFavorite ?? false,
-          online: false,
-          memo: roomMeta.memo,
-        };
-        return [next, ...prev];
-      });
-    }
-  };
-
-  const otherMembers = members.filter(m => m.id !== user.id);
   const filteredRooms = chatRooms.filter(room => {
     if (activeFilter === '거래 중') return room.isTrading;
     if (activeFilter === '즐겨찾기') return room.isFavorite;
@@ -330,18 +327,17 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
 
       <div className="w-[340px] border-r border-gray-200 flex flex-col bg-white">
         <div className="p-4 border-b border-gray-100">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar items-center">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {['전체', '거래 중', '즐겨찾기'].map(filter => (
               <button key={filter} onClick={() => setActiveFilter(filter)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[12px] font-bold transition-all border ${activeFilter === filter ? 'bg-[#303441] text-white border-[#303441]' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>{filter}</button>
             ))}
-            <button onClick={() => setShowNewChat(true)} className="ml-auto whitespace-nowrap px-4 py-1.5 rounded-full text-[12px] font-bold bg-blue-600 text-white border border-blue-600 hover:bg-blue-700">+ 새 채팅</button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loadingRooms ? (
             <div className="text-center py-20 text-gray-400 font-bold text-sm">대화 목록 불러오는 중...</div>
           ) : filteredRooms.length === 0 ? (
-            <div className="text-center py-20 text-gray-300 font-bold text-sm">대화방이 없습니다.<br /><span className="text-[11px] text-blue-500">+ 새 채팅</span>으로 회원에게 문의하세요.</div>
+            <div className="text-center py-20 text-gray-300 font-bold text-sm px-4">대화방이 없습니다.<br /><span className="text-[11px] text-gray-500 block mt-2">N잡 스토어·채널 상품에서 &quot;문의하기&quot;로 판매자·운영자에게 채팅을 보내세요.</span></div>
           ) : (
             filteredRooms.map(u => (
               <div key={u.id} onClick={() => setActiveChatId(u.id)} className={`p-4 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-50 relative ${activeChatId === u.id ? 'bg-[#F0F2F5]' : u.memo ? 'bg-blue-50/20' : ''}`}>
@@ -370,27 +366,6 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
         </div>
       </div>
 
-      {showNewChat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowNewChat(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b font-black text-gray-900">채팅할 회원 선택</div>
-            <div className="overflow-y-auto max-h-[60vh] p-2">
-              {otherMembers.length === 0 ? (
-                <p className="text-gray-500 text-sm py-8 text-center">다른 가입 회원이 없습니다.</p>
-              ) : (
-                otherMembers.map(m => (
-                  <button key={m.id} onClick={() => startChatWith(m)} className="w-full p-3 flex items-center gap-3 rounded-xl hover:bg-gray-50 text-left">
-                    <img src={m.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.id}`} className="w-12 h-12 rounded-full object-cover" alt="" />
-                    <div><span className="font-black text-gray-900">{m.nickname}</span><span className="text-gray-400 text-[12px] ml-2">@{m.id}</span></div>
-                  </button>
-                ))
-              )}
-            </div>
-            <div className="p-3 border-t"><button onClick={() => setShowNewChat(false)} className="w-full py-2 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm">닫기</button></div>
-          </div>
-        </div>
-      )}
-
       <div className="flex-1 flex flex-col bg-white">
         <div className="p-4 border-b border-gray-200 flex flex-col items-center bg-[#F9FBFF]">
           <div className="text-[12px] text-gray-500 font-black flex items-center gap-1.5 mb-1.5 uppercase italic">
@@ -414,7 +389,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
           {loadingMessages ? (
             <div className="text-center py-20 text-gray-400 font-bold text-sm">메시지 불러오는 중...</div>
           ) : !activeChatId ? (
-            <div className="text-center py-20 text-gray-300 font-bold text-sm">왼쪽에서 대화방을 선택하거나 <button type="button" onClick={() => setShowNewChat(true)} className="text-blue-500 underline">새 채팅</button>을 시작하세요.</div>
+            <div className="text-center py-20 text-gray-300 font-bold text-sm">왼쪽에서 대화방을 선택하세요.<br /><span className="text-[11px] text-gray-500 block mt-2">N잡 스토어·채널에서 문의하기로 대화를 시작할 수 있습니다.</span></div>
           ) : (
             messages.map(msg => {
               const showDate = msg.dateStr !== lastDate;
