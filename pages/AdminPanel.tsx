@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 /**
  * Fixed: Removed .ts extension from import
  */
@@ -27,9 +27,8 @@ interface Props {
   channelOrders: ChannelOrder[];
   storeOrders: StoreOrder[];
   onIssueCoupons?: (targetIds: string[], couponData: Omit<Coupon, 'id' | 'status'>) => void;
-  /**
-   * Fixed: Added missing addNotif to Props interface
-   */
+  /** 회원 목록(profiles) 다시 불러오기 - 판매자 승인 대기 목록 갱신용 */
+  onRefreshMembers?: () => void;
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
 }
 
@@ -39,13 +38,18 @@ interface Props {
 const AdminPanel: React.FC<Props> = ({ 
   user, ebooks, setEbooks, channels, setChannels, setNotifications,
   smmProviders, setSmmProviders, smmProducts, setSmmProducts, smmOrders,
-  members, setMembers, channelOrders, storeOrders, onIssueCoupons, addNotif
+  members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif
 }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing'>('sns');
 
   const panelPassword = import.meta.env.VITE_ADMIN_PANEL_PASSWORD ?? import.meta.env.VITE_ADMIN_PASSWORD;
+
+  // 회원 및 권한 관리 탭 열 때마다 profiles에서 회원 목록 재조회 → 판매자 승인 대기 반영
+  useEffect(() => {
+    if (activeTab === 'member' && onRefreshMembers) onRefreshMembers();
+  }, [activeTab, onRefreshMembers]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
