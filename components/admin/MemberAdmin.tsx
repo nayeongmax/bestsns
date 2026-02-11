@@ -197,26 +197,40 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                       <button onClick={() => handleApproveSeller(m.id)} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-[14px] hover:bg-blue-700 transition-all shadow-lg">승인</button>
                     </div>
                     {app && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
-                        <div className="space-y-2">
-                          <p className="text-[11px] font-black text-gray-400 uppercase">통장 정보</p>
-                          <p className="font-bold text-gray-800">은행: {app.bankInfo?.bankName || '-'}</p>
-                          <p className="font-bold text-gray-800">계좌: {app.bankInfo?.accountNo || '-'}</p>
-                          <p className="font-bold text-gray-800">예금주: {app.bankInfo?.ownerName || '-'}</p>
-                          <p className="font-bold text-gray-800">이메일: {app.bankInfo?.email || '-'}</p>
+                      <div className="space-y-6 pt-4 border-t border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <p className="text-[11px] font-black text-gray-400 uppercase">통장 정보</p>
+                            <p className="font-bold text-gray-800">은행: {app.bankInfo?.bankName || '-'}</p>
+                            <p className="font-bold text-gray-800">계좌: {app.bankInfo?.accountNo || '-'}</p>
+                            <p className="font-bold text-gray-800">예금주: {app.bankInfo?.ownerName || '-'}</p>
+                            <p className="font-bold text-gray-800">이메일: {app.bankInfo?.email || '-'}</p>
+                          </div>
+                          {(app.sellerType === 'business' && app.businessInfo) && (
+                            <div className="space-y-2">
+                              <p className="text-[11px] font-black text-gray-400 uppercase">사업자 정보</p>
+                              <p className="font-bold text-gray-800">상호/회사명: {app.businessInfo.companyName || '-'}</p>
+                              <p className="font-bold text-gray-800">사업자등록번호: {app.businessInfo.registrationNo || '-'}</p>
+                              <p className="font-bold text-gray-800">업종: {app.businessInfo.businessType || '-'}</p>
+                              <p className="font-bold text-gray-800">대표자: {app.businessInfo.repName || '-'}</p>
+                              <p className="font-bold text-gray-800">사업장 소재지: {app.businessInfo.location || '-'}</p>
+                            </div>
+                          )}
                         </div>
                         <div className="space-y-2">
-                          <p className="text-[11px] font-black text-gray-400 uppercase">첨부 (통장사본 등)</p>
+                          <p className="text-[11px] font-black text-gray-400 uppercase">첨부 (통장사본 등) · 클릭 시 확대</p>
                           <div className="flex flex-wrap gap-3">
                             {app.proofs?.bankbookImg && (
-                              <a href={app.proofs.bankbookImg} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden bg-white shadow-inner">
-                                <img src={app.proofs.bankbookImg} alt="통장사본" className="w-full h-full object-cover" />
-                              </a>
+                              <button type="button" onClick={() => setZoomImage(app.proofs!.bankbookImg!)} className="block w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden bg-white shadow-inner hover:border-blue-400 hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer text-left">
+                                <img src={app.proofs.bankbookImg} alt="통장사본" className="w-full h-full object-cover pointer-events-none" />
+                                <span className="sr-only">통장사본 확대 보기</span>
+                              </button>
                             )}
                             {app.proofs?.licenseImg && (
-                              <a href={app.proofs.licenseImg} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden bg-white shadow-inner">
-                                <img src={app.proofs.licenseImg} alt="사업자등록증" className="w-full h-full object-cover" />
-                              </a>
+                              <button type="button" onClick={() => setZoomImage(app.proofs!.licenseImg!)} className="block w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden bg-white shadow-inner hover:border-blue-400 hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer text-left">
+                                <img src={app.proofs.licenseImg} alt="사업자등록증" className="w-full h-full object-cover pointer-events-none" />
+                                <span className="sr-only">사업자등록증 확대 보기</span>
+                              </button>
                             )}
                             {!app.proofs?.bankbookImg && !app.proofs?.licenseImg && <span className="text-gray-400 text-[13px] font-bold">첨부 없음</span>}
                           </div>
@@ -270,6 +284,23 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                  <button onClick={handleUpdateMemberInfo} className="flex-[3] py-6 bg-blue-600 text-white rounded-[28px] font-black text-2xl shadow-2xl">업데이트 적용 💾</button>
               </div>
            </div>
+        </div>
+      )}
+
+      {/* 이미지 확대 팝업 (통장사본·사업자등록증 등) */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-6 cursor-pointer animate-in fade-in"
+          onClick={() => setZoomImage(null)}
+          role="dialog"
+          aria-label="이미지 확대"
+        >
+          <img
+            src={zoomImage}
+            alt="확대 보기"
+            className="max-w-full max-h-full rounded-2xl shadow-2xl object-contain select-none"
+          />
+          <p className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/80 text-sm font-bold">클릭하면 닫힙니다</p>
         </div>
       )}
     </div>
