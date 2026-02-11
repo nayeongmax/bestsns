@@ -45,9 +45,11 @@ const AdminPanel: React.FC<Props> = ({
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing'>('sns');
 
+  const panelPassword = import.meta.env.VITE_ADMIN_PANEL_PASSWORD ?? import.meta.env.VITE_ADMIN_PASSWORD;
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '1234') setIsLoggedIn(true);
+    if (panelPassword && password === panelPassword) setIsLoggedIn(true);
     else alert('비밀번호가 올바르지 않습니다.');
   };
 
@@ -57,10 +59,14 @@ const AdminPanel: React.FC<Props> = ({
         <div className="bg-white p-10 rounded-[48px] shadow-2xl border border-gray-100 text-center">
           <div className="w-20 h-20 bg-gray-900 text-white rounded-3xl mx-auto flex items-center justify-center text-3xl mb-8">🔐</div>
           <h2 className="text-2xl font-black text-gray-900 mb-8 italic uppercase underline decoration-blue-500">관리자 인증 센터</h2>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-5 bg-gray-50 rounded-[24px] text-center font-black outline-none focus:ring-2 focus:ring-blue-50" placeholder="비밀번호를 입력하세요" />
-            <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black shadow-xl hover:bg-blue-700 transition-all">로그인</button>
-          </form>
+          {!panelPassword ? (
+            <p className="text-sm text-amber-600 font-bold">관리자 패널 비밀번호가 설정되지 않았습니다.<br />.env 및 Netlify 환경 변수에 VITE_ADMIN_PASSWORD 또는 VITE_ADMIN_PANEL_PASSWORD를 설정하세요.</p>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-5 bg-gray-50 rounded-[24px] text-center font-black outline-none focus:ring-2 focus:ring-blue-50" placeholder="비밀번호를 입력하세요" />
+              <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black shadow-xl hover:bg-blue-700 transition-all">로그인</button>
+            </form>
+          )}
         </div>
       </div>
     );
