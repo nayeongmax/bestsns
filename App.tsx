@@ -40,6 +40,15 @@ import PartTimePage from './pages/PartTimePage';
 function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
   const id = String(row.id ?? '');
   const email = String(row.email ?? (row.raw_json && typeof row.raw_json === 'object' && (row.raw_json as Record<string, unknown>).email) ?? '');
+  const sellerStatusRaw = row.seller_status as string | undefined;
+  const sellerStatus: UserProfile['sellerStatus'] | undefined =
+    (sellerStatusRaw === 'none' || sellerStatusRaw === 'pending' || sellerStatusRaw === 'approved' || sellerStatusRaw === 'revision')
+      ? sellerStatusRaw
+      : undefined;
+  const rawApp = row.seller_application;
+  const sellerApplication = rawApp != null
+    ? (typeof rawApp === 'string' ? JSON.parse(rawApp) : rawApp)
+    : undefined;
   return {
     id,
     nickname: String(row.nickname ?? id),
@@ -49,7 +58,9 @@ function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
     role: 'user',
     points: Number(row.points ?? 0),
     joinDate: String(row.join_date ?? row.updated_at ?? new Date().toISOString().split('T')[0]),
-    coupons: []
+    coupons: [],
+    sellerStatus: sellerStatus ?? undefined,
+    sellerApplication
   };
 }
 
@@ -140,9 +151,11 @@ const App: React.FC = () => {
         nickname: updated.nickname || updated.id,
         profile_image: updated.profileImage || null,
         phone: updated.phone || null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        seller_status: updated.sellerStatus ?? null,
+        seller_application: updated.sellerApplication ?? null
       }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.error('Profiles 동기화 실패(마이페이지 수정):', error.message, '- profiles 테이블에 id, email, nickname 컬럼이 있는지 확인하세요.');
+        if (error) console.error('Profiles 동기화 실패(마이페이지 수정):', error.message, '- profiles 테이블에 id, email, nickname, seller_status, seller_application 컬럼이 있는지 확인하세요.');
       });
     }
   }, []);
