@@ -175,18 +175,21 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       }
 
       // 이메일을 찾지 못하면 가짜 이메일로 시도하지 않음 (Supabase Auth에 없는 계정이라 실패함)
-      if (!targetEmail) {
+      if (!targetEmail || !targetEmail.includes('@')) {
         alert('등록된 아이디/이메일을 찾을 수 없습니다.\n\n가입 시 사용한 이메일로 로그인하려면 아래 "비밀번호 재설정했는데 로그인이 안 되나요?"를 눌러 이메일+비밀번호로 로그인해 보세요.');
         setLoading(false);
         return;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: targetEmail,
+        email: targetEmail.trim().toLowerCase(),
         password: loginPw,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Supabase 로그인 응답:', error.message, '(콘솔 400은 이 요청이 거절된 것입니다.)');
+        throw error;
+      }
 
       let profile: UserProfile;
       if (localUser) {
@@ -231,7 +234,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('Invalid login credentials')) {
-        alert('아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다.\n비밀번호를 재설정하셨다면 아래 "이메일로 로그인"을 사용해 보세요.');
+        alert('아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다.\n\n• 비밀번호 재설정하셨다면 아래 "이메일로 로그인"을 사용해 보세요.\n• Supabase 대시보드 [Authentication → Users]에 해당 이메일로 가입된 계정이 있는지 확인해 보세요.');
       } else {
         alert(`로그인 실패: ${msg}`);
       }
