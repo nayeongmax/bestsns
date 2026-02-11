@@ -38,40 +38,23 @@ const SellerDashboard: React.FC<Props> = ({
   const isAdmin = user.role === 'admin';
   const isApproved = user.sellerStatus === 'approved';
 
-  // --- 오늘 날짜 기준 샘플 데이터 생성 ---
-  const getRecentDate = (daysAgo: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() - daysAgo);
-    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  };
-
-  const sampleStoreOrders: StoreOrder[] = useMemo(() => [
-    { id: 'SAMP-2026-001', userId: 'user1', userNickname: '성공한CEO', sellerNickname: user.nickname, orderTime: getRecentDate(4), confirmedAt: getRecentDate(3), productId: 'p1', productName: '인스타그램 바이럴 마케팅 풀패키지', tierName: 'MASTER', price: 1200000, storeType: 'marketing', status: '구매확정', reviewId: 'rev_sample_1' },
-    { id: 'SAMP-2026-002', userId: 'user2', userNickname: '꿈꾸는청년', sellerNickname: user.nickname, orderTime: getRecentDate(2), productId: 'p2', productName: '수익형 유튜브 채널 구축 가이드', tierName: 'STANDARD', price: 150000, storeType: 'ebook', status: '결제완료' },
-    { id: 'SAMP-2026-003', userId: 'user3', userNickname: '엔잡러A', sellerNickname: user.nickname, orderTime: getRecentDate(1), confirmedAt: getRecentDate(0), productId: 'p3', productName: '네이버 블로그 상위노출 컨설팅', tierName: 'LITE', price: 300000, storeType: 'consulting', status: '구매확정' },
-    { id: 'SAMP-2026-004', userId: 'user4', userNickname: '스타트업B', sellerNickname: user.nickname, orderTime: getRecentDate(10), confirmedAt: getRecentDate(8), productId: 'p4', productName: '틱톡 숏폼 제작 대행 10회', tierName: 'MASTER', price: 2500000, storeType: 'marketing', status: '구매확정' },
-    { id: 'W-SAMP-2026-001', userId: 'user5', userNickname: '성장하는중', sellerNickname: user.nickname, orderTime: getRecentDate(15), confirmedAt: getRecentDate(14), productId: 'p5', productName: '검색 엔진 최적화(SEO) 기초 세트', tierName: 'BASIC', price: 500000, storeType: 'marketing', status: '구매확정' },
-  ], [user.nickname]);
+  const actualStoreOrders = useMemo(() => storeOrders.filter(o => o.sellerNickname === user.nickname), [storeOrders, user.nickname]);
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
-    const orders = storeOrders.length > 0 ? storeOrders : sampleStoreOrders;
-    orders.forEach(o => months.add(o.orderTime.substring(0, 7).replace('.', '-')));
+    actualStoreOrders.forEach(o => months.add(o.orderTime.substring(0, 7).replace('.', '-')));
     return Array.from(months).sort((a, b) => b.localeCompare(a));
-  }, [storeOrders, sampleStoreOrders]);
+  }, [actualStoreOrders]);
 
   const filteredStoreOrders = useMemo(() => {
-    const actualOrders = storeOrders.filter(o => o.sellerNickname === user.nickname);
-    let combined = actualOrders.length > 0 ? [...actualOrders] : [...sampleStoreOrders];
-    
+    let combined = [...actualStoreOrders];
     if (monthFilter !== '전체') {
       combined = combined.filter(o => o.orderTime.startsWith(monthFilter.replace('-', '.')));
     }
     if (orderFilter === 'trading') combined = combined.filter(o => o.status !== '구매확정' && o.status !== '취소');
     else if (orderFilter === 'done') combined = combined.filter(o => o.status === '구매확정');
-    
     return combined.sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
-  }, [storeOrders, user.nickname, orderFilter, monthFilter, sampleStoreOrders]);
+  }, [actualStoreOrders, orderFilter, monthFilter]);
 
   // 내 판매 상품 필터링 (승인 대기 중 포함)
   const myProducts = useMemo(() => {
@@ -81,30 +64,19 @@ const SellerDashboard: React.FC<Props> = ({
   const stats = useMemo(() => {
     const myProductCount = myProducts.length;
     const myProductIds = myProducts.map(e => e.id);
-    
     const myReviews = reviews.filter(r => myProductIds.includes(r.productId));
-    const hasSampleReview = filteredStoreOrders.some(o => o.reviewId === 'rev_sample_1');
-    const totalReviewScore = myReviews.reduce((acc, curr) => acc + curr.rating, 0) + (hasSampleReview ? 5 : 0);
-    const totalReviewCount = myReviews.length + (hasSampleReview ? 1 : 0);
+    const totalReviewScore = myReviews.reduce((acc, curr) => acc + curr.rating, 0);
+    const totalReviewCount = myReviews.length;
     const avgRating = totalReviewCount > 0 ? (totalReviewScore / totalReviewCount).toFixed(1) : "0.0";
-
-    const actualOrders = storeOrders.filter(o => o.sellerNickname === user.nickname && o.status === '구매확정');
-    const displayOrders = actualOrders.length > 0 ? actualOrders : sampleStoreOrders.filter(o => o.status === '구매확정');
-    const annualRevenue = displayOrders.reduce((acc, curr) => acc + curr.price, 0);
+    const confirmedOrders = actualStoreOrders.filter(o => o.status === '구매확정');
+    const annualRevenue = confirmedOrders.reduce((acc, curr) => acc + curr.price, 0);
     const activeOrders = filteredStoreOrders.filter(o => o.status !== '구매확정').length;
-
     return { annualRevenue, activeOrders, productCount: myProductCount, avgRating };
-  }, [filteredStoreOrders, myProducts, storeOrders, user.nickname, sampleStoreOrders, reviews]);
+  }, [filteredStoreOrders, myProducts, actualStoreOrders, reviews]);
 
   const handleReviewManage = (order: StoreOrder) => {
     if (!order.reviewId) return;
     const review = reviews.find(r => r.id === order.reviewId);
-    if (order.reviewId === 'rev_sample_1') {
-      setSelectedReview({ id: 'rev_sample_1', productId: 'p1', userId: 'user1', author: '성공한CEO', rating: 5, content: '마케팅 진행 후 조회수가 비약적으로 상승했습니다. 정말 감사합니다!', date: '2026.03.02', reply: '좋은 후기 감사합니다!' });
-      setReplyInput('좋은 후기 감사합니다!');
-      setIsReplyEditing(false);
-      return;
-    }
     if (review) {
       setSelectedReview(review);
       setReplyInput(review.reply || '');
@@ -409,7 +381,7 @@ const SellerDashboard: React.FC<Props> = ({
                     <tbody className="divide-y divide-gray-200">
                        <tr>
                           <td className="w-1/3 bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">회사명(법인명)</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">{(showTaxModal.id === 'SAMP-2026-001' ? '(주)렌트앤카' : user.nickname)}</td>
+                          <td className="px-6 py-4 font-bold text-gray-900">{user.nickname}</td>
                        </tr>
                        <tr>
                           <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">사업자 등록번호</td>
