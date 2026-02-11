@@ -10,15 +10,17 @@ interface Props {
 
 type AuthMode = 'LOGIN' | 'JOIN' | 'FIND_ID' | 'FIND_PW' | 'RESET_PW';
 
+const SAVED_LOGIN_ID_KEY = 'saved_login_id';
+
 const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [loading, setLoading] = useState(false);
-  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+  const [saveId, setSaveId] = useState(() => !!localStorage.getItem(SAVED_LOGIN_ID_KEY));
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const [formData, setFormData] = useState({
-    id: '',
+    id: localStorage.getItem(SAVED_LOGIN_ID_KEY) || '',
     pw: '',
     pwConfirm: '',
     name: '',
@@ -115,6 +117,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
         coupons: []
       };
 
+      if (saveId) {
+        localStorage.setItem(SAVED_LOGIN_ID_KEY, loginId);
+      } else {
+        localStorage.removeItem(SAVED_LOGIN_ID_KEY);
+      }
       onLoginSuccess(profile);
       navigate('/sns');
     } catch (err: any) {
@@ -243,7 +250,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   return (
     <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="bg-white rounded-[48px] shadow-2xl border border-gray-100 overflow-hidden relative">
-        {(mode === 'LOGIN' || mode === 'JOIN') && (
+        {(mode === 'LOGIN' || mode === 'JOIN' || mode === 'RESET_PW') && (
           <div className="flex border-b border-gray-50">
             <button onClick={() => setMode('LOGIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>LOG IN</button>
             <button onClick={() => setMode('JOIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>SIGN UP</button>
@@ -263,8 +270,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                 <input type="password" placeholder="비밀번호" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required />
                 <div className="flex justify-between items-center px-2">
                   <label className="flex items-center gap-2 cursor-pointer group">
-                    <input type="checkbox" checked={keepLoggedIn} onChange={e => setKeepLoggedIn(e.target.checked)} className="w-4 h-4 rounded accent-blue-600" />
-                    <span className="text-[12px] font-bold text-gray-400 group-hover:text-gray-600 transition-colors">로그인 유지</span>
+                    <input type="checkbox" checked={saveId} onChange={e => setSaveId(e.target.checked)} className="w-4 h-4 rounded accent-blue-600" />
+                    <span className="text-[12px] font-bold text-gray-400 group-hover:text-gray-600 transition-colors">아이디 저장</span>
                   </label>
                   <div className="flex gap-4">
                     <button type="button" onClick={() => setMode('FIND_ID')} className="text-[12px] font-black text-gray-400 hover:text-blue-600 transition-colors">ID 찾기</button>
@@ -350,40 +357,34 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
           {mode === 'RESET_PW' && (
             <div className="space-y-10 animate-in zoom-in-95 duration-500">
               <div className="text-center space-y-2">
-                <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-6 shadow-inner">🔒</div>
-                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">New Password</h2>
-                <p className="text-sm font-bold text-gray-400">인증이 확인되었습니다. 새 비밀번호를 설정하세요.</p>
+                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">Welcome</h2>
+                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">비밀번호 재설정</p>
               </div>
 
               <form onSubmit={handleFinalPasswordUpdate} className="space-y-4">
-                <div className="space-y-1.5">
-                   <label className="text-[11px] font-black text-gray-400 px-2 uppercase">New Password</label>
-                   <input 
-                    type="password" 
-                    placeholder="새 비밀번호 (6자 이상)" 
-                    className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
-                    value={formData.pw} 
-                    onChange={e => setFormData({...formData, pw: e.target.value})} 
-                    required 
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-1.5">
-                   <label className="text-[11px] font-black text-gray-400 px-2 uppercase">Confirm Password</label>
-                   <input 
-                    type="password" 
-                    placeholder="새 비밀번호 확인" 
-                    className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
-                    value={formData.pwConfirm} 
-                    onChange={e => setFormData({...formData, pwConfirm: e.target.value})} 
-                    required 
-                  />
-                </div>
-                <button type="submit" disabled={loading} className="w-full py-6 bg-blue-600 text-white rounded-[24px] font-black text-lg shadow-xl hover:bg-black transition-all uppercase italic mt-4">
+                <input 
+                  type="password" 
+                  placeholder="새 비밀번호 입력" 
+                  className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
+                  value={formData.pw} 
+                  onChange={e => setFormData({...formData, pw: e.target.value})} 
+                  required 
+                  autoFocus
+                  minLength={6}
+                />
+                <input 
+                  type="password" 
+                  placeholder="새 비밀번호 확인" 
+                  className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" 
+                  value={formData.pwConfirm} 
+                  onChange={e => setFormData({...formData, pwConfirm: e.target.value})} 
+                  required 
+                />
+                <button type="submit" disabled={loading} className={`w-full py-5 bg-black text-white rounded-2xl font-black text-lg shadow-xl transition-all active:scale-95 uppercase italic tracking-widest ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}>
                   {loading ? '변경 중...' : '비밀번호 변경 완료'}
                 </button>
               </form>
-              <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic">취소하고 돌아가기</button>
+              <button type="button" onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic">취소하고 로그인으로</button>
             </div>
           )}
 
