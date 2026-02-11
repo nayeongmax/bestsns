@@ -40,21 +40,6 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
     return !!(bankName && accountNo);
   }, [user.sellerApplication]);
 
-  // --- 오늘 날짜 기준 샘플 데이터 생성 (그래프 가시성 확보) ---
-  const getRecentDate = (daysAgo: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() - daysAgo);
-    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  };
-
-  const sampleStoreOrders: StoreOrder[] = useMemo(() => [
-    { id: 'SAMP-2026-001', userId: 'user1', userNickname: '성공한CEO', sellerNickname: user.nickname, orderTime: getRecentDate(4), confirmedAt: getRecentDate(3), productId: 'p1', productName: '인스타그램 바이럴 마케팅 풀패키지', tierName: 'MASTER', price: 1200000, storeType: 'marketing', status: '구매확정' },
-    { id: 'SAMP-2026-002', userId: 'user2', userNickname: '꿈꾸는청년', sellerNickname: user.nickname, orderTime: getRecentDate(2), productId: 'p2', productName: '수익형 유튜브 채널 구축 가이드', tierName: 'STANDARD', price: 150000, storeType: 'ebook', status: '결제완료' },
-    { id: 'SAMP-2026-003', userId: 'user3', userNickname: '엔잡러A', sellerNickname: user.nickname, orderTime: getRecentDate(1), confirmedAt: getRecentDate(0), productId: 'p3', productName: '네이버 블로그 상위노출 컨설팅', tierName: 'LITE', price: 300000, storeType: 'consulting', status: '구매확정' },
-    { id: 'SAMP-2026-004', userId: 'user4', userNickname: '스타트업B', sellerNickname: user.nickname, orderTime: getRecentDate(10), confirmedAt: getRecentDate(8), productId: 'p4', productName: '틱톡 숏폼 제작 대행 10회', tierName: 'MASTER', price: 2500000, storeType: 'marketing', status: '구매확정' },
-    { id: 'W-SAMP-2026-001', userId: 'user5', userNickname: '성장하는중', sellerNickname: user.nickname, orderTime: getRecentDate(15), confirmedAt: getRecentDate(14), productId: 'p5', productName: '검색 엔진 최적화(SEO) 기초 세트', tierName: 'BASIC', price: 500000, storeType: 'marketing', status: '구매확정' },
-  ], [user.nickname]);
-
   const calculateDetailedProfit = (price: number) => {
     let tierDetails = { t1: 0, t2: 0, t3: 0 };
     let serviceFeeBase = 0;
@@ -81,17 +66,14 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
   };
 
   const allMyOrders = useMemo(() => {
-    const actual = storeOrders.filter(o => o.sellerNickname === user.nickname);
-    const combined = actual.length > 0 ? actual : sampleStoreOrders;
-    return combined.sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
-  }, [storeOrders, user.nickname, sampleStoreOrders]);
+    return storeOrders
+      .filter(o => o.sellerNickname === user.nickname)
+      .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
+  }, [storeOrders, user.nickname]);
 
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalBatch[]>(() => {
     const saved = localStorage.getItem(`withdrawal_history_v21_${user.id}`);
-    if (saved) return JSON.parse(saved);
-    return [
-      { id: 'W-LOG-001', confirmedDate: getRecentDate(14), amount: 410350, grossAmount: 500000, status: '지급 완료', orderIds: ['W-SAMP-2026-001'], productName: '검색 엔진 최적화(SEO) 기초 세트' }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const confirmedOrders = useMemo(() => allMyOrders.filter(o => o.status === '구매확정'), [allMyOrders]);
