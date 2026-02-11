@@ -119,6 +119,27 @@ const SellerDashboard: React.FC<Props> = ({
     return { label: '판매중', color: 'bg-[#00B06B]/10 text-[#00B06B]' };
   };
 
+  // 미승인 판매자: 첫 화면 잠금 → 판매자 등록 버튼으로 전문가 정보 작성·승인 유도
+  if (!isApproved && !isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 py-16 bg-gradient-to-b from-gray-50 to-white rounded-[48px] border-2 border-dashed border-gray-200 animate-in fade-in duration-500">
+        <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center text-5xl mb-8">🔒</div>
+        <h3 className="text-2xl font-black text-gray-900 italic tracking-tighter text-center mb-3">판매자 워크스페이스</h3>
+        <p className="text-gray-500 font-bold text-center mb-10 max-w-md">판매자 등록을 완료한 후 이용할 수 있습니다.<br/>전문가 정보를 작성하고 운영자 승인을 받아 주세요.</p>
+        <button
+          type="button"
+          onClick={() => {
+            alert('전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.');
+            onApplySeller();
+          }}
+          className="px-14 py-5 bg-blue-600 text-white rounded-[32px] font-black text-lg shadow-xl hover:bg-black transition-all italic uppercase tracking-widest"
+        >
+          판매자 등록
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
       {/* 통계 카드 */}
