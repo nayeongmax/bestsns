@@ -92,12 +92,28 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     try {
       let targetEmail = '';
       const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
-      const localUser = members.find((m: any) => m.id === loginId);
+      let localUser = members.find((m: any) => m.id === loginId);
 
       if (localUser?.email) {
         targetEmail = localUser.email;
       } else {
-        targetEmail = `${loginId}@thebestsns.user`;
+        const { data: profileRow } = await supabase.from('profiles').select('email, nickname, profile_image, phone').eq('id', loginId).maybeSingle();
+        if (profileRow?.email) {
+          targetEmail = profileRow.email;
+          localUser = {
+            id: loginId,
+            nickname: profileRow.nickname || loginId,
+            profileImage: profileRow.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${loginId}`,
+            email: profileRow.email,
+            phone: profileRow.phone || '',
+            role: 'user',
+            points: 0,
+            joinDate: new Date().toISOString().split('T')[0],
+            coupons: []
+          } as UserProfile;
+        } else {
+          targetEmail = `${loginId}@thebestsns.user`;
+        }
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -213,6 +229,15 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
         joinDate: new Date().toISOString().split('T')[0],
         coupons: []
       };
+
+      await supabase.from('profiles').upsert({
+        id,
+        email,
+        nickname: name || `유저_${id}`,
+        profile_image: newUser.profileImage,
+        phone: phone || null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
 
       onLoginSuccess(newUser);
       alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
