@@ -91,19 +91,27 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
     try {
       let targetEmail = '';
+      let resolvedId = loginId;
       const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
       let localUser = members.find((m: any) => m.id === loginId);
 
-      if (localUser?.email) {
+      const isEmailInput = loginId.includes('@');
+
+      if (isEmailInput) {
+        targetEmail = loginId.trim().toLowerCase();
+        const byEmail = members.find((m: any) => m.email?.toLowerCase() === targetEmail);
+        if (byEmail) localUser = byEmail;
+      } else if (localUser?.email) {
         targetEmail = localUser.email;
       } else {
-        const { data: profileRow } = await supabase.from('profiles').select('email, nickname, profile_image, phone').eq('id', loginId).maybeSingle();
+        const { data: profileRow } = await supabase.from('profiles').select('id, email, nickname, profile_image, phone').eq('id', loginId).maybeSingle();
         if (profileRow?.email) {
           targetEmail = profileRow.email;
+          resolvedId = profileRow.id;
           localUser = {
-            id: loginId,
-            nickname: profileRow.nickname || loginId,
-            profileImage: profileRow.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${loginId}`,
+            id: profileRow.id,
+            nickname: profileRow.nickname || profileRow.id,
+            profileImage: profileRow.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileRow.id}`,
             email: profileRow.email,
             phone: profileRow.phone || '',
             role: 'user',
@@ -112,7 +120,24 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
             coupons: []
           } as UserProfile;
         } else {
-          targetEmail = `${loginId}@thebestsns.user`;
+          const { data: byEmailRow } = await supabase.from('profiles').select('id, email, nickname, profile_image, phone').eq('email', loginId.trim().toLowerCase()).maybeSingle();
+          if (byEmailRow?.email) {
+            targetEmail = byEmailRow.email;
+            resolvedId = byEmailRow.id;
+            localUser = {
+              id: byEmailRow.id,
+              nickname: byEmailRow.nickname || byEmailRow.id,
+              profileImage: byEmailRow.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${byEmailRow.id}`,
+              email: byEmailRow.email,
+              phone: byEmailRow.phone || '',
+              role: 'user',
+              points: 0,
+              joinDate: new Date().toISOString().split('T')[0],
+              coupons: []
+            } as UserProfile;
+          } else {
+            targetEmail = `${loginId}@thebestsns.user`;
+          }
         }
       }
 
@@ -123,26 +148,53 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
       if (error) throw error;
 
-      const profile: UserProfile = localUser || {
-        id: loginId,
-        nickname: data.user.user_metadata.nickname || loginId,
-        profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${loginId}`,
-        role: 'user',
-        email: data.user.email,
-        points: 0,
-        joinDate: new Date().toISOString().split('T')[0],
-        coupons: []
-      };
+      let profile: UserProfile;
+      if (localUser) {
+        profile = { ...localUser, email: data.user?.email || localUser.email };
+      } else {
+        const { data: profileRow } = await supabase.from('profiles').select('id, nickname, profile_image, phone').eq('email', (data.user?.email || targetEmail).toLowerCase()).maybeSingle();
+        const meta = data.user?.user_metadata || {};
+        if (profileRow) {
+          profile = {
+            id: profileRow.id,
+            nickname: profileRow.nickname || profileRow.id,
+            profileImage: profileRow.profile_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileRow.id}`,
+            phone: profileRow.phone || '',
+            role: 'user',
+            email: data.user?.email || targetEmail,
+            points: 0,
+            joinDate: new Date().toISOString().split('T')[0],
+            coupons: []
+          };
+        } else {
+          const fallbackId = meta.user_id || resolvedId || (data.user?.email || '').split('@')[0] || loginId;
+          profile = {
+            id: fallbackId,
+            nickname: meta.nickname || fallbackId,
+            profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fallbackId}`,
+            role: 'user',
+            email: data.user?.email || targetEmail,
+            points: 0,
+            joinDate: new Date().toISOString().split('T')[0],
+            coupons: []
+          };
+        }
+      }
 
       if (saveId) {
-        localStorage.setItem(SAVED_LOGIN_ID_KEY, loginId);
+        localStorage.setItem(SAVED_LOGIN_ID_KEY, profile.id);
       } else {
         localStorage.removeItem(SAVED_LOGIN_ID_KEY);
       }
       onLoginSuccess(profile);
       navigate('/sns');
     } catch (err: any) {
-      alert(`로그인 실패: ${err.message === 'Invalid login credentials' ? '아이디 또는 비밀번호가 일치하지 않습니다.' : err.message}`);
+      const msg = err?.message || '';
+      if (msg.includes('Invalid login credentials')) {
+        alert('아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다.\n비밀번호를 재설정하셨다면, 가입 시 사용한 이메일 주소를 입력하고 새 비밀번호로 로그인해 보세요.');
+      } else {
+        alert(`로그인 실패: ${msg}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -345,7 +397,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
-                <input type="text" placeholder="아이디" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required />
+                <input type="text" placeholder="아이디 또는 이메일" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required />
                 <input type="password" placeholder="비밀번호" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required />
                 <div className="flex justify-between items-center px-2">
                   <label className="flex items-center gap-2 cursor-pointer group">
