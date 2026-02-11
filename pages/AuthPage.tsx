@@ -51,21 +51,28 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     } as UserProfile;
   };
 
-  // 소셜 로그인 리다이렉트 후·폼 제출 직후에만 로그인 처리 (기존 세션으로 자동 로그인 안 함 → 로그인 UI 항상 표시)
+  // 로그인 페이지에서는 기존 세션으로 자동 로그인하지 않음. OAuth 복귀 시에만 세션으로 로그인 처리.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, { session }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setMode('RESET_PW');
-      // SIGNED_IN: 이메일/소셜 로그인 폼 제출 직후 또는 소셜 리다이렉트 직후에만 처리
-      if (event === 'SIGNED_IN' && session?.user) {
-        const profile = await buildProfileFromSession(session.user);
-        onLoginSuccess(profile);
-        navigate('/sns');
-      }
+      // SIGNED_IN은 페이지 로드 시 기존 세션 복원에서도 발생하므로 여기서 리다이렉트하지 않음.
+      // 이메일/소셜 로그인은 각각 폼 제출·OAuth 복귀 처리에서만 로그인 완료함.
     });
 
     const checkHashToken = () => {
       const hash = window.location.hash;
-      if (hash.includes('type=recovery') || hash.includes('access_token=')) setMode('RESET_PW');
+      if (hash.includes('type=recovery')) setMode('RESET_PW');
+      // 소셜 로그인 복귀: URL에 access_token이 있을 때만 세션 확인 후 로그인 (자동 로그인 아님)
+      if (hash.includes('access_token=')) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            buildProfileFromSession(session.user).then(profile => {
+              onLoginSuccess(profile);
+              navigate('/sns', { replace: true });
+            });
+          }
+        });
+      }
     };
     checkHashToken();
     window.addEventListener('hashchange', checkHashToken);
