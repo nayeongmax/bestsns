@@ -148,6 +148,10 @@ export interface ChannelProduct {
   isHot?: boolean;
   sourceLink?: string;
   publicLink?: string;
+  /** 채널 운영자(문의하기 대상) */
+  sellerId?: string;
+  sellerNickname?: string;
+  sellerImage?: string;
 }
 
 export type NotificationType = 'chat' | 'ebook' | 'channel' | 'sns_activation' | 'approval' | 'payment' | 'prohibited' | 'notice' | 'coupon' | 'revenue' | 'review' | 'revision';
