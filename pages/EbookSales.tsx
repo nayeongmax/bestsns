@@ -210,20 +210,20 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                   )}
                 </div>
                 <div className="p-5">
-                  <div className="flex gap-1 mb-2">
-                    <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest">{ebook.category}</span>
+                  <div className="flex gap-1 mb-2 min-w-0">
+                    <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{ebook.category}</span>
                   </div>
-                  <h3 className={`font-black text-gray-900 mb-4 transition-colors line-clamp-2 h-9 leading-tight text-[14px] italic tracking-tight ${!ebook.isPaused && 'group-hover:text-blue-600'}`}>
+                  <h3 className={`font-black text-gray-900 mb-4 transition-colors line-clamp-1 text-[14px] italic tracking-tight truncate ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
                     {ebook.title}
                   </h3>
-                  <div className="flex justify-between items-end border-t border-gray-50 pt-3">
-                    <div className="flex flex-col">
+                  <div className="flex justify-between items-end border-t border-gray-50 pt-3 gap-2 min-w-0">
+                    <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
-                      <span className="text-11px font-black text-gray-600 italic">{ebook.author}</span>
+                      <span className="text-[11px] font-black text-gray-600 italic truncate">{ebook.author}</span>
                     </div>
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col items-end shrink-0">
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest italic">Price</span>
-                      <span className="text-lg font-black text-gray-900 italic tracking-tighter">₩{ebook.price.toLocaleString()}</span>
+                      <span className="text-lg font-black text-gray-900 italic tracking-tighter whitespace-nowrap">₩{ebook.price.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
