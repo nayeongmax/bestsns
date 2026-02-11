@@ -14,7 +14,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [loading, setLoading] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
-  
+
   const [formData, setFormData] = useState({
     id: '',
     pw: '',
@@ -28,7 +28,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     const loginId = formData.id.trim();
     const loginPw = formData.pw;
 
@@ -119,7 +119,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     if (formData.pw !== formData.pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
     if (!formData.agreeTerms) return alert('약관에 동의해주세요.');
     if (formData.id.length < 5) return alert('아이디는 5자 이상이어야 합니다.');
-    
+
     setLoading(true);
     try {
       // 1. Supabase Auth 회원가입 (메타데이터 포함)
@@ -153,7 +153,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
       if (dbError) {
         console.error('DB 저장 에러:', dbError);
-        // DB 저장이 실패해도 Auth는 성공했을 수 있으므로 로그만 찍습니다.
       }
 
       const newUser: UserProfile = {
