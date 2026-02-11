@@ -90,6 +90,16 @@ const App: React.FC = () => {
         return [...prev, updated];
       }
     });
+    if (updated.email) {
+      supabase.from('profiles').upsert({
+        id: updated.id,
+        email: updated.email,
+        nickname: updated.nickname || updated.id,
+        profile_image: updated.profileImage || null,
+        phone: updated.phone || null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' }).then(() => {});
+    }
   }, []);
 
   const addNotif = useCallback((userId: string, type: NotificationType, title: string, message: string, reason?: string) => {
@@ -153,6 +163,19 @@ const App: React.FC = () => {
 
     // 3. 현재 로그인 세션 유지
     setUser(targetProfile);
+
+    // 4. Supabase profiles 테이블 동기화 (다른 기기 로그인·Table Editor 목록용)
+    const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim().toLowerCase();
+    if (targetProfile.email && targetProfile.id.toLowerCase() !== adminId) {
+      supabase.from('profiles').upsert({
+        id: targetProfile.id,
+        email: targetProfile.email,
+        nickname: targetProfile.nickname || targetProfile.id,
+        profile_image: targetProfile.profileImage || null,
+        phone: targetProfile.phone || null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' }).then(() => {});
+    }
   };
 
   const handleLogout = () => setUser(null);
