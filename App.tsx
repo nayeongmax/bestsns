@@ -31,9 +31,8 @@ import ChannelDetail from './pages/ChannelDetail';
 import EbookDetail from './pages/EbookDetail';
 import EbookRegistration from './pages/EbookRegistration';
 import WishlistPage from './pages/WishlistPage';
-import PartTimePage from './pages/PartTimePage';
+import PartTimePage, { PartTimeTaskRegister } from './pages/PartTimePage';
 import PartTimeTaskDetail from './pages/PartTimeTaskDetail';
-import PartTimeTaskRegister from './pages/PartTimeTaskRegister';
 
 const App: React.FC = () => {
   // 스플래시 화면 제거로 인해 관련 상태 삭제
