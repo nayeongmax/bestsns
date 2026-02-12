@@ -134,17 +134,18 @@ const App: React.FC = () => {
   }, [user, addNotif]);
 
   const handleLoginSuccess = (userData: UserProfile) => {
+    const isAdminLogin = userData.role === 'admin' || userData.id?.toLowerCase() === 'admin';
     const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
     let targetProfile: UserProfile;
     if (existingMember) {
-      targetProfile = { ...existingMember };
+      targetProfile = { ...existingMember, role: isAdminLogin ? 'admin' : existingMember.role };
     } else {
-      const isAdmin = userData.id.toLowerCase() === 'admin';
-      targetProfile = { 
+      const isAdmin = userData.id?.toLowerCase() === 'admin';
+      targetProfile = {
         ...userData, nickname: isAdmin ? '마케터김' : userData.nickname,
-        role: isAdmin ? 'admin' : 'user', sellerStatus: isAdmin ? 'approved' : 'none', 
-        points: userData.id.toLowerCase() === 'test' ? 12500 : 0, 
-        joinDate: new Date().toISOString().split('T')[0], coupons: [] 
+        role: isAdmin ? 'admin' : 'user', sellerStatus: isAdmin ? 'approved' : 'none',
+        points: userData.id?.toLowerCase() === 'test' ? 12500 : 0,
+        joinDate: new Date().toISOString().split('T')[0], coupons: []
       };
       setMembers(prev => [...prev, targetProfile]);
     }
