@@ -165,13 +165,41 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
               ))}
             </div>
           )}
+          {sections.댓글목록 && sections.댓글목록.length > 0 && (
+            <div className="space-y-4">
+              {sections.댓글목록.map((text, i) => (
+                <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {sections.작업링크목록 && sections.작업링크목록.length > 0 && (
+            <div className="space-y-4">
+              {sections.작업링크목록.map((text, i) => {
+                const isUrl = text.startsWith('http://') || text.startsWith('https://');
+                return (
+                  <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {i + 1}</p>
+                    {isUrl ? (
+                      <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
+                    ) : (
+                      <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {SECTIONS_ORDER.filter((key) => key !== '제목' && key !== '내용').map(
             (key) => {
               const hasImageList = key === '이미지' && sections.이미지목록?.length;
               const hasImageContent = key === '이미지' && (sections[key] || hasImageList);
               if (key === '이미지' && !hasImageContent) return null;
-              if (key !== '이미지' && !sections[key]) return null;
-              if (sections.게시글목록?.length && (key === '제목' || key === '내용')) return null;
+              if (key === '댓글' && (sections.댓글목록?.length || !sections.댓글)) return null;
+              if (key === '작업링크' && (sections.작업링크목록?.length || !sections.작업링크)) return null;
+              if (key !== '이미지' && key !== '댓글' && key !== '작업링크' && !sections[key]) return null;
               return (
                 <div key={key} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                   <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{key}</p>
