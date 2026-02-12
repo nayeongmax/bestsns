@@ -56,7 +56,10 @@ export interface PartTimeTaskSections {
   내용?: string;
   /** 게시글 여러 개 (제목+내용 쌍). 있으면 단일 제목/내용 대신 사용 */
   게시글목록?: PartTimePostBlock[];
+  /** 댓글 지시 1개. 댓글목록이 있으면 댓글목록 사용 */
   댓글?: string;
+  /** 댓글 지시 여러 개 (댓글 1, 댓글 2, ...) */
+  댓글목록?: string[];
   키워드?: string;
   /** 이미지 지시사항 텍스트 또는 단일 이미지 data URL */
   이미지?: string;
@@ -64,8 +67,10 @@ export interface PartTimeTaskSections {
   이미지목록?: string[];
   동영상?: string;
   gif?: string;
-  /** 작업 링크 관련 안내 */
+  /** 작업 링크 관련 안내 1개. 작업링크목록이 있으면 작업링크목록 사용 */
   작업링크?: string;
+  /** 작업 링크/안내 여러 개 (작업링크 1, 작업링크 2, ...) */
+  작업링크목록?: string[];
   /** 작업 안내 (전체 가이드) */
   작업안내?: string;
 }
