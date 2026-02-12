@@ -1,34 +1,31 @@
-
-import { GoogleGenAI } from "@google/genai";
-
 /**
- * [보안 가이드]
- * 1. API 키는 절대로 코드에 직접 입력(Hardcoding)하지 않습니다.
- * 2. Netlify 대시보드 > Site settings > Environment variables에 API_KEY 또는 GEMINI_API_KEY를 등록하세요.
+ * AI 컨설팅: Netlify Function(서버)을 호출합니다.
+ * API 키는 서버 환경 변수(GEMINI_API_KEY 또는 API_KEY)에만 두고, 브라우저에는 노출되지 않습니다.
+ *
+ * [설정 방법]
+ * - Netlify: Site settings > Environment variables 에 GEMINI_API_KEY 또는 API_KEY 등록
+ * - 로컬: netlify dev 실행 시 .env 파일에 GEMINI_API_KEY 또는 API_KEY 추가
+ * - Gemini API 키 발급: https://aistudio.google.com/apikey
  */
+
+const AI_CONSULT_URL = '/.netlify/functions/ai-consult';
 
 export const getMarketingConsultation = async (prompt: string): Promise<string> => {
   try {
-    // API key MUST be obtained exclusively from process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: {
-        systemInstruction: "당신은 전문 SMM 마케팅 컨설턴트입니다. 사용자에게 안전하고 효율적인 SNS 성장 전략을 제시하세요.",
-        temperature: 0.7,
-      }
+    const res = await fetch(AI_CONSULT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt.trim() }),
     });
 
-    return response.text || '답변을 가져오지 못했습니다.';
-  } catch (error: any) {
-    console.error("Gemini API 호출 에러:", error);
-    
-    if (process.env.API_KEY && error?.message?.includes(process.env.API_KEY)) {
-      return '보안상의 이유로 요청이 거부되었습니다.';
-    }
-    
+    const data = await res.json().catch(() => ({}));
+
+    if (data.text) return data.text;
+    if (data.message) return `오류: ${data.message}`;
+
+    return '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.';
+  } catch (error) {
+    console.error('AI 컨설팅 요청 실패:', error);
     return '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.';
   }
 };
