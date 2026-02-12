@@ -183,6 +183,8 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const [maxApplicants, setMaxApplicants] = useState(0);
   const [selectedSectionKeys, setSelectedSectionKeys] = useState<(keyof PartTimeTaskSections)[]>(['제목', '내용']);
   const [postBlocks, setPostBlocks] = useState<PartTimePostBlock[]>([{ 제목: '', 내용: '' }]);
+  const [commentBlocks, setCommentBlocks] = useState<string[]>(['']);
+  const [workLinkBlocks, setWorkLinkBlocks] = useState<string[]>(['']);
   const [sections, setSections] = useState<Record<string, string>>({
     제목: '', 내용: '', 댓글: '', 키워드: '', 이미지: '', 동영상: '', gif: '', 작업링크: '', 작업안내: '',
   });
@@ -206,6 +208,16 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const removePostBlock = (index: number) => setPostBlocks((p) => (p.length <= 1 ? p : p.filter((_, i) => i !== index)));
   const updatePostBlock = (index: number, field: '제목' | '내용', value: string) =>
     setPostBlocks((p) => p.map((b, i) => (i === index ? { ...b, [field]: value } : b)));
+
+  const useCommentBlocks = selectedSectionKeys.includes('댓글');
+  const addCommentBlock = () => setCommentBlocks((c) => [...c, '']);
+  const removeCommentBlock = (index: number) => setCommentBlocks((c) => (c.length <= 1 ? c : c.filter((_, i) => i !== index)));
+  const updateCommentBlock = (index: number, value: string) => setCommentBlocks((c) => c.map((v, i) => (i === index ? value : v)));
+
+  const useWorkLinkBlocks = selectedSectionKeys.includes('작업링크');
+  const addWorkLinkBlock = () => setWorkLinkBlocks((w) => [...w, '']);
+  const removeWorkLinkBlock = (index: number) => setWorkLinkBlocks((w) => (w.length <= 1 ? w : w.filter((_, i) => i !== index)));
+  const updateWorkLinkBlock = (index: number, value: string) => setWorkLinkBlocks((w) => w.map((v, i) => (i === index ? value : v)));
 
   if (!user || user.role !== 'admin') {
     navigate('/part-time', { replace: true });
@@ -249,6 +261,14 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
         if (usePostBlocks) return;
         const val = sections[key];
         if (val != null && String(val).trim()) sectionsOut[key] = String(val).trim();
+      } else if (key === '댓글') {
+        const list = commentBlocks.filter((v) => v?.trim());
+        if (list.length > 0) sectionsOut.댓글목록 = list.map((v) => v.trim());
+        else if (sections.댓글?.trim()) sectionsOut.댓글 = sections.댓글.trim();
+      } else if (key === '작업링크') {
+        const list = workLinkBlocks.filter((v) => v?.trim());
+        if (list.length > 0) sectionsOut.작업링크목록 = list.map((v) => v.trim());
+        else if (sections.작업링크?.trim()) sectionsOut.작업링크 = sections.작업링크.trim();
       } else if (key === '이미지') {
         if (sections.이미지?.trim()) sectionsOut.이미지 = sections.이미지.trim();
         if (attachedImages.length) sectionsOut.이미지목록 = attachedImages;
@@ -376,8 +396,66 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
               ))}
             </div>
           )}
+          {useCommentBlocks && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-black text-gray-700">댓글 — 원하는 개수만큼 추가</span>
+                <button type="button" onClick={addCommentBlock} className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
+                  + 댓글 추가
+                </button>
+              </div>
+              {commentBlocks.map((value, idx) => (
+                <div key={idx} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-500 uppercase">댓글 {idx + 1}</span>
+                    {commentBlocks.length > 1 && (
+                      <button type="button" onClick={() => removeCommentBlock(idx)} className="text-red-500 text-sm font-bold hover:underline">삭제</button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => updateCommentBlock(idx, e.target.value)}
+                    placeholder="댓글 지시사항 (예: 공유 인증 댓글 작성)"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          {useWorkLinkBlocks && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-black text-gray-700">작업링크 — 원하는 개수만큼 추가</span>
+                <button type="button" onClick={addWorkLinkBlock} className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
+                  + 작업링크 추가
+                </button>
+              </div>
+              {workLinkBlocks.map((value, idx) => (
+                <div key={idx} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-500 uppercase">작업링크 {idx + 1}</span>
+                    {workLinkBlocks.length > 1 && (
+                      <button type="button" onClick={() => removeWorkLinkBlock(idx)} className="text-red-500 text-sm font-bold hover:underline">삭제</button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => updateWorkLinkBlock(idx, e.target.value)}
+                    placeholder="URL 또는 작업링크 안내 (예: https://... 또는 제출할 링크 1)"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="space-y-4">
-            {selectedSectionKeys.filter((k) => !usePostBlocks || (k !== '제목' && k !== '내용')).map((key) => (
+            {selectedSectionKeys.filter((k) => {
+              if (usePostBlocks && (k === '제목' || k === '내용')) return false;
+              if (k === '댓글' || k === '작업링크') return false;
+              return true;
+            }).map((key) => (
               <div key={key}>
                 <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{key}</label>
                 {key === '이미지' ? (
