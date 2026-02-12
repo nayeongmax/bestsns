@@ -18,13 +18,45 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
   const [applyComment, setApplyComment] = useState('');
-  const [workLink, setWorkLink] = useState('');
+  const [workLinks, setWorkLinks] = useState<string[]>(['']);
 
   const task = tasks.find((t) => t.id === taskId);
 
   useEffect(() => {
     setTasks(getPartTimeTasks());
   }, [taskId]);
+
+  /** 작업일 이틀 전 / 작업당일 알림 (선정된 신청자에게 1회만) */
+  useEffect(() => {
+    if (!task || !addNotif || task.pointPaid) return;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    const inTwo = new Date(today);
+    inTwo.setDate(today.getDate() + 2);
+    const twoDaysStr = `${inTwo.getFullYear()}-${String(inTwo.getMonth() + 1).padStart(2, '0')}-${String(inTwo.getDate()).padStart(2, '0')}`;
+    const start = task.workPeriod?.start;
+    if (!start) return;
+    const selected = task.applicants.filter((a) => a.selected);
+    if (selected.length === 0) return;
+
+    const key2day = `parttime_reminder_${task.id}_2day`;
+    const keyDay = `parttime_reminder_${task.id}_day`;
+    if (start === twoDaysStr && !localStorage.getItem(key2day)) {
+      localStorage.setItem(key2day, '1');
+      selected.forEach((a) =>
+        addNotif(a.userId, 'freelancer', '작업일 안내', `[${task.title}] 작업일까지 이틀 전입니다. 기한 내에 완료해 주세요.`, task.id)
+      );
+    }
+    if (start === todayStr && !localStorage.getItem(keyDay)) {
+      localStorage.setItem(keyDay, '1');
+      selected.forEach((a) =>
+        addNotif(a.userId, 'freelancer', '작업당일', `[${task.title}] 오늘이 작업일입니다. 완료 후 링크를 제출해 주세요.`, task.id)
+      );
+    }
+  }, [task, addNotif]);
 
   const saveTasks = (next: PartTimeTask[]) => {
     setPartTimeTasks(next);
@@ -56,7 +88,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     alert('신청되었습니다.');
   };
 
-  /** 운영자: 신청자 선정 (선정만 가능) → 선정자에게 알림 + 알림페이지/워크페이스 반영 */
+  /** 운영자: 신청자 선정 → 선정자에게 알림 */
   const handleSelect = (userId: string) => {
     if (!task) return;
     const applicant = task.applicants.find((a) => a.userId === userId);
@@ -77,12 +109,37 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     }
   };
 
-  /** 선정된 프리랜서: 작업링크 제출 */
+  /** 운영자: 선정 취소 → 해당 신청자에게 알림 */
+  const handleDeselect = (userId: string) => {
+    if (!task) return;
+    const applicant = task.applicants.find((a) => a.userId === userId);
+    const next = tasks.map((t) =>
+      t.id !== task.id
+        ? t
+        : { ...t, applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, selected: false } : a)) }
+    );
+    saveTasks(next);
+    if (applicant && addNotif) {
+      addNotif(
+        userId,
+        'freelancer',
+        '선정 취소',
+        `[${task.title}] 작업에서 선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.`,
+        task.id
+      );
+    }
+  };
+
+  /** 선정된 프리랜서: 작업링크 여러 개 제출 */
+  const addWorkLinkInput = () => setWorkLinks((w) => [...w, '']);
+  const removeWorkLinkInput = (index: number) => setWorkLinks((w) => (w.length <= 1 ? w : w.filter((_, i) => i !== index)));
+  const updateWorkLinkInput = (index: number, value: string) => setWorkLinks((w) => w.map((v, i) => (i === index ? value : v)));
+
   const handleSubmitWorkLink = () => {
     if (!user || !task) return;
-    const link = workLink.trim();
-    if (!link) {
-      alert('작업 링크를 입력해 주세요.');
+    const links = workLinks.map((s) => s.trim()).filter(Boolean);
+    if (links.length === 0) {
+      alert('작업 링크를 1개 이상 입력해 주세요.');
       return;
     }
     const next = tasks.map((t) =>
@@ -91,19 +148,21 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
         : {
             ...t,
             applicants: t.applicants.map((a) =>
-              a.userId === user.id ? { ...a, workLink: link } : a
+              a.userId === user.id ? { ...a, workLinks: links, workLink: links[0] } : a
             ),
           }
     );
     saveTasks(next);
-    setWorkLink('');
+    setWorkLinks(['']);
     alert('작업 링크가 제출되었습니다. 운영자 확인 후 포인트가 지급됩니다.');
   };
 
   /** 운영자: 작업링크 확인 후 포인트 지급 (작업링크 제출한 선정자만) → 수익통장 적립 + 알림 */
+  const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
+    (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
   const handlePayPoints = () => {
     if (!task) return;
-    const selectedWithLink = task.applicants.filter((a) => a.selected && a.workLink?.trim());
+    const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
     if (selectedWithLink.length === 0) {
       alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다. 선정 후 작업자가 링크를 제출하면 지급할 수 있습니다.');
       return;
@@ -283,24 +342,46 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                 {(() => {
                   const me = task.applicants.find((a) => a.userId === user?.id);
                   if (me?.selected) {
+                    const submitted = me.workLinks?.length ? me.workLinks : (me.workLink ? [me.workLink] : []);
                     return (
                       <div className="border-t border-gray-100 pt-6 mt-4">
                         <h3 className="text-lg font-black text-gray-800 mb-2">작업 링크 제출</h3>
-                        <p className="text-sm text-gray-500 mb-3">작업을 완료한 후 결과 링크를 남겨 주세요. 운영자 확인 후 포인트가 지급됩니다.</p>
-                        {me.workLink ? (
-                          <p className="text-gray-700 font-bold">제출된 링크: <a href={me.workLink} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">{me.workLink}</a></p>
+                        <p className="text-sm text-gray-500 mb-3">작업을 완료한 후 결과 링크를 남겨 주세요. 링크를 여러 개 제출할 수 있습니다. 운영자 확인 후 포인트가 지급됩니다.</p>
+                        {submitted.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-gray-700 font-bold">제출된 링크:</p>
+                            {submitted.map((url, i) => (
+                              <p key={i} className="text-sm">
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline break-all">{url}</a>
+                              </p>
+                            ))}
+                          </div>
                         ) : (
                           <>
-                            <input
-                              type="url"
-                              value={workLink}
-                              onChange={(e) => setWorkLink(e.target.value)}
-                              placeholder="https://..."
-                              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-2"
-                            />
-                            <button type="button" onClick={handleSubmitWorkLink} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all">
-                              작업 링크 제출
-                            </button>
+                            <div className="space-y-2 mb-3">
+                              {workLinks.map((url, idx) => (
+                                <div key={idx} className="flex gap-2 items-center">
+                                  <input
+                                    type="url"
+                                    value={url}
+                                    onChange={(e) => updateWorkLinkInput(idx, e.target.value)}
+                                    placeholder="https://..."
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none"
+                                  />
+                                  {workLinks.length > 1 && (
+                                    <button type="button" onClick={() => removeWorkLinkInput(idx)} className="px-3 py-2 rounded-lg text-red-500 text-sm font-bold hover:bg-red-50">삭제</button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              <button type="button" onClick={addWorkLinkInput} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">
+                                + 링크 추가
+                              </button>
+                              <button type="button" onClick={handleSubmitWorkLink} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all">
+                                작업 링크 제출
+                              </button>
+                            </div>
                           </>
                         )}
                       </div>
@@ -326,17 +407,38 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                           <p className="font-black text-gray-800">{a.nickname}</p>
                           <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
                         </div>
-                        {a.selected ? (
-                          <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
-                        ) : (
-                          <button type="button" onClick={() => handleSelect(a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700 transition-all">
-                            선정
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {a.selected ? (
+                            <>
+                              <button type="button" onClick={() => handleDeselect(a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all">
+                                선정취소
+                              </button>
+                              <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
+                            </>
+                          ) : (
+                            <button type="button" onClick={() => handleSelect(a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700 transition-all">
+                              선정
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => navigate('/chat', { state: { targetUser: { id: a.userId, nickname: a.nickname, profileImage: '' } } })}
+                            className="px-4 py-2 rounded-lg text-sm font-black bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all"
+                          >
+                            채팅하기
                           </button>
-                        )}
+                        </div>
                       </div>
                       {a.selected && (
                         <div className="text-sm">
-                          {a.workLink ? (
+                          {(a.workLinks?.length ?? 0) > 0 ? (
+                            <div className="space-y-1">
+                              <p className="text-gray-700 font-bold">작업 링크 ({a.workLinks!.length}개):</p>
+                              {a.workLinks!.map((url, i) => (
+                                <p key={i}><a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{url}</a></p>
+                              ))}
+                            </div>
+                          ) : a.workLink ? (
                             <p className="text-gray-700">작업 링크: <a href={a.workLink} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{a.workLink}</a></p>
                           ) : (
                             <p className="text-amber-600 font-bold">작업 링크 미제출</p>
@@ -351,7 +453,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                 <button
                   type="button"
                   onClick={handlePayPoints}
-                  disabled={!task.applicants.some((a) => a.selected && a.workLink?.trim())}
+                  disabled={!task.applicants.some((a) => a.selected && hasWorkLink(a))}
                   className="mt-4 px-6 py-3 rounded-xl bg-amber-500 text-white font-black hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   포인트 지급하기
