@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile, SiteNotification } from '../types';
 
 interface Props {
@@ -12,7 +12,9 @@ interface Props {
 
 const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout }) => {
   const navigate = useNavigate();
-  
+  const location = useLocation();
+  const pathname = location.pathname;
+
   const unreadNotifCount = user 
     ? notifications.filter(n => n.userId === user.id && !n.isRead).length 
     : 0;
@@ -55,31 +57,66 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
           </div>
 
           <nav className="hidden xl:flex items-center gap-1 flex-1 justify-center h-full">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) => 
-                  `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
-                    isActive 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                    : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                  }`
-                }
-              >
-                <div className="flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-base">{item.icon}</span>
-                  <span>{item.label}</span>
-                </div>
-                {item.badge && (
-                  <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
-                    <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
-                      {item.badge}
-                    </span>
+            {navItems.map((item) => {
+              const isEbooks = item.path === '/ebooks';
+              const isActive = isEbooks
+                ? pathname === '/ebooks' || pathname.startsWith('/ebooks/')
+                : item.path === '/channels'
+                  ? pathname === '/channels' || pathname.startsWith('/channels/')
+                  : pathname === item.path;
+              if (isEbooks) {
+                return (
+                  <button
+                    key={item.path}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate('/ebooks', { replace: false });
+                    }}
+                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
+                      isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                      <span className="text-base">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge && (
+                      <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
+                        <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
+                          {item.badge}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                );
+              }
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/channels' ? false : true}
+                  className={({ isActive: navActive }) =>
+                    `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
+                      (item.path === '/channels' ? pathname.startsWith('/channels') : navActive) ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                    }`
+                  }
+                >
+                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="text-base">{item.icon}</span>
+                    <span>{item.label}</span>
                   </div>
-                )}
-              </NavLink>
-            ))}
+                  {item.badge && (
+                    <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
+                      <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
+                        {item.badge}
+                      </span>
+                    </div>
+                  )}
+                </NavLink>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-4 flex-shrink-0">
