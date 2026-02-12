@@ -40,8 +40,10 @@ export interface PartTimeApplicant {
   comment: string;
   selected: boolean;
   appliedAt: string;
-  /** 선정된 사람이 작업 완료 후 제출하는 작업 링크 */
+  /** 선정된 사람이 작업 완료 후 제출하는 작업 링크 (하위 호환) */
   workLink?: string;
+  /** 작업 링크 여러 개 제출 */
+  workLinks?: string[];
 }
 
 /** 게시글 한 건 (제목+내용) - 여러 개 넣을 때 사용 */
