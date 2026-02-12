@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { UserProfile, SiteNotification } from '../types';
 
 interface Props {
@@ -8,12 +8,10 @@ interface Props {
   notifications: SiteNotification[];
   unreadChatCount: number;
   onLogout: () => void;
-  onNavigateToEbooks?: () => void;
 }
 
-const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout, onNavigateToEbooks }) => {
+const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout }) => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const unreadNotifCount = user 
     ? notifications.filter(n => n.userId === user.id && !n.isRead).length 
@@ -56,68 +54,36 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             </Link>
           </div>
 
-          {/* 웹/태블릿용 메뉴 영역: lg(1024px) 이상에서 노출 - z-[60]으로 우측 아이콘보다 위에 두어 N잡스토어 클릭이 채팅으로 가지 않도록 */}
-          <nav className="hidden lg:flex items-center flex-1 justify-center h-full mx-4 overflow-visible relative z-[60] min-w-0">
-            <div className="flex items-center gap-1 overflow-visible flex-shrink-0">
-              {navItems.map((item) => {
-                const href = item.path;
-                const isChatPage = location.pathname === '/chat';
-                const isEbooks = href === '/ebooks';
-                const content = (
-                  <>
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                      <span className="text-base">{item.icon}</span>
-                      <span>{item.label}</span>
+          <nav className="hidden lg:flex items-center flex-1 justify-center h-full mx-4 overflow-visible">
+            <div className="flex items-center gap-1 overflow-visible">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/channels' ? false : true}
+                  className={({ isActive }) =>
+                    `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 ${
+                      isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                    }`
+                  }
+                >
+                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="text-base">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
+                      <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
+                        {item.badge}
+                      </span>
                     </div>
-                    {item.badge && (
-                      <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
-                        <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
-                          {item.badge}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                );
-                if (isEbooks) {
-                  const ebooksActive = !isChatPage && (location.pathname === '/ebooks' || location.pathname.startsWith('/ebooks/'));
-                  return (
-                    <button
-                      key={item.path}
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onNavigateToEbooks?.();
-                        window.location.hash = '#/ebooks';
-                      }}
-                      className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 z-[70] ${
-                        ebooksActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                      }`}
-                    >
-                      {content}
-                    </button>
-                  );
-                }
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={href}
-                    end={href === '/channels' ? false : true}
-                    className={({ isActive: navActive }) => {
-                      const active = !isChatPage && navActive;
-                      return `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 ${
-                        active ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                      }`;
-                    }}
-                  >
-                    {content}
-                  </NavLink>
-                );
-              })}
+                  )}
+                </NavLink>
+              ))}
             </div>
           </nav>
 
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 relative z-40">
+          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
             <div className="flex items-center gap-0.5 md:gap-1">
               <Link to="/wishlist" className="p-2 text-gray-400 hover:text-red-500 transition-colors relative group">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
