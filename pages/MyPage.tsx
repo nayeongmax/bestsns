@@ -8,6 +8,7 @@ import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Revi
 import UserInfoSection from '../components/mypage/UserInfoSection';
 import BuyerDashboard from '../components/mypage/BuyerDashboard';
 import SellerDashboard from '../components/mypage/SellerDashboard';
+import FreelancerDashboard from '../components/mypage/FreelancerDashboard';
 
 interface Props {
   user: UserProfile;
@@ -26,7 +27,7 @@ interface Props {
   onRefetchProfile?: () => void;
 }
 
-type MainTab = 'buyer' | 'seller' | 'settings';
+type MainTab = 'buyer' | 'seller' | 'freelancer' | 'settings';
 type NicknameStatus = 'idle' | 'available' | 'unavailable';
 
 /**
@@ -152,16 +153,17 @@ const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, 
         </div>
       </div>
 
-      <div className="bg-gray-100/50 p-2 rounded-[32px] flex gap-2 w-full max-w-4xl mx-auto shadow-inner">
+      <div className="bg-gray-100/50 p-2 rounded-[32px] flex flex-wrap gap-2 w-full max-w-5xl mx-auto shadow-inner">
         {[
           { id: 'buyer', label: '🖥️ 구매자 대시보드', color: 'text-blue-600' },
           { id: 'seller', label: '👨‍🏫 판매자 워크페이스', color: 'text-orange-600' },
+          { id: 'freelancer', label: '👷 프리랜서 워크페이스', color: 'text-emerald-600' },
           { id: 'settings', label: '⚙️ 계정 및 정보 관리', color: 'text-gray-900' }
         ].map(mode => (
           <button
             key={mode.id}
             onClick={() => setActiveMainTab(mode.id as MainTab)}
-            className={`flex-1 py-5 rounded-[24px] font-black text-[16px] transition-all duration-300 relative ${
+            className={`flex-1 min-w-[140px] py-5 rounded-[24px] font-black text-[14px] md:text-[16px] transition-all duration-300 relative ${
               activeMainTab === mode.id 
               ? 'bg-white shadow-xl scale-[1.02] ' + mode.color 
               : 'text-gray-400 hover:text-gray-600'
@@ -187,6 +189,7 @@ const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, 
           />
         )}
         {activeMainTab === 'buyer' && <BuyerDashboard user={user} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} ebooks={ebooks} onAddReview={onAddReview} />}
+        {activeMainTab === 'freelancer' && <FreelancerDashboard user={user} onUpdate={onUpdate} />}
         {activeMainTab === 'seller' && (
           <SellerDashboard 
             user={user} 
