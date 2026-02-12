@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/supabase';
 
 import { 
@@ -285,16 +285,104 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="min-h-screen bg-[#F8FAFC]">
-        <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
-        <LiveNotification />
-        <div className="container mx-auto py-10 px-4 mb-20 lg:mb-0">
+      <AppContent
+        user={user}
+        setUser={setUser}
+        handleLogout={handleLogout}
+        wishlist={wishlist}
+        setWishlist={setWishlist}
+        notifications={notifications}
+        channels={channels}
+        setChannels={setChannels}
+        ebooks={ebooks}
+        setEbooks={setEbooks}
+        members={members}
+        setMembers={setMembers}
+        posts={posts}
+        setPosts={setPosts}
+        reviews={reviews}
+        setReviews={setReviews}
+        notices={notices}
+        setNotices={setNotices}
+        storeOrders={storeOrders}
+        channelOrders={channelOrders}
+        smmOrders={smmOrders}
+        setSmmOrders={setSmmOrders}
+        smmProviders={smmProviders}
+        setSmmProviders={setSmmProviders}
+        smmProducts={smmProducts}
+        setSmmProducts={setSmmProducts}
+        setNotifications={setNotifications}
+        addNotif={addNotif}
+        handleGlobalUserUpdate={handleGlobalUserUpdate}
+        refreshMembersFromProfiles={refreshMembersFromProfiles}
+        refetchCurrentUserProfile={refetchCurrentUserProfile}
+        handleMassIssueCoupons={handleMassIssueCoupons}
+        onResetUnread={() => {}}
+      />
+    </Router>
+  );
+}
+
+function AppContent(props: {
+  user: UserProfile | null;
+  setUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
+  handleLogout: () => void;
+  wishlist: WishlistItem[];
+  setWishlist: React.Dispatch<React.SetStateAction<WishlistItem[]>>;
+  notifications: SiteNotification[];
+  channels: ChannelProduct[];
+  setChannels: React.Dispatch<React.SetStateAction<ChannelProduct[]>>;
+  ebooks: EbookProduct[];
+  setEbooks: React.Dispatch<React.SetStateAction<EbookProduct[]>>;
+  members: UserProfile[];
+  setMembers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
+  posts: Post[];
+  setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
+  reviews: Review[];
+  setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
+  notices: Notice[];
+  setNotices: React.Dispatch<React.SetStateAction<Notice[]>>;
+  storeOrders: StoreOrder[];
+  channelOrders: ChannelOrder[];
+  smmOrders: SMMOrder[];
+  setSmmOrders: React.Dispatch<React.SetStateAction<SMMOrder[]>>;
+  smmProviders: SMMProvider[];
+  setSmmProviders: React.Dispatch<React.SetStateAction<SMMProvider[]>>;
+  smmProducts: SMMProduct[];
+  setSmmProducts: React.Dispatch<React.SetStateAction<SMMProduct[]>>;
+  setNotifications: React.Dispatch<React.SetStateAction<SiteNotification[]>>;
+  addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+  handleGlobalUserUpdate: (profile: UserProfile) => Promise<void>;
+  refreshMembersFromProfiles: () => void;
+  refetchCurrentUserProfile: () => Promise<void>;
+  handleMassIssueCoupons: () => void;
+  onResetUnread: () => void;
+}) {
+  const location = useLocation();
+  const {
+    user, setUser, handleLogout, wishlist, setWishlist, notifications, channels, setChannels, ebooks, setEbooks, members, setMembers,
+    posts, setPosts, reviews, setReviews, notices, setNotices, storeOrders, channelOrders, smmOrders, setSmmOrders,
+    smmProviders, setSmmProviders, smmProducts, setSmmProducts, setNotifications, addNotif,
+    handleGlobalUserUpdate, refreshMembersFromProfiles, refetchCurrentUserProfile, handleMassIssueCoupons
+  } = props;
+
+  const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
+  const handleLoginSuccess = (profile: UserProfile) => setUser(profile);
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
+      <LiveNotification />
+      <div className="container mx-auto py-10 px-4 mb-20 lg:mb-0">
+        {location.pathname === '/ebooks' ? (
+          <EbookSales ebooks={ebooks} setEbooks={setEbooks} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={wishlist} onToggleWishlist={wishlistToggle} />
+        ) : (
           <Routes>
             <Route path="/sns" element={<SNSActivation smmProducts={smmProducts} providers={smmProviders} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 0 }} notices={notices} onOrderComplete={(o) => { setSmmOrders(prev => [o, ...prev]); addNotif(user!.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={handleLogout} />} />
-            <Route path="/channels" element={<ChannelSales channels={channels} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} />} />
-            <Route path="/channels/:id" element={<ChannelDetail channels={channels} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} reviews={reviews} members={members} />} />
-            <Route path="/ebooks" element={<EbookSales ebooks={ebooks} setEbooks={setEbooks} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} />} />
-            <Route path="/ebooks/:id" element={user ? <EbookDetail ebooks={ebooks} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} user={user} reviews={reviews} storeOrders={storeOrders} members={members} /> : <Navigate to="/login" />} />
+            <Route path="/channels" element={<ChannelSales channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} />} />
+            <Route path="/channels/:id" element={<ChannelDetail channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} reviews={reviews} members={members} />} />
+            <Route path="/ebooks/:id" element={user ? <EbookDetail ebooks={ebooks} wishlist={wishlist} onToggleWishlist={wishlistToggle} user={user} reviews={reviews} storeOrders={storeOrders} members={members} /> : <Navigate to="/login" />} />
             <Route path="/ebooks/register" element={user ? <EbookRegistration user={user} setEbooks={setEbooks} /> : <Navigate to="/login" />} />
             <Route path="/part-time" element={<PartTimePage />} />
             <Route path="/ai" element={<AIConsulting />} />
@@ -306,7 +394,7 @@ const App: React.FC = () => {
             <Route path="/chat" element={user ? <ChatPage user={user} members={members} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/mypage" element={user ? <MyPage user={user} onUpdate={handleGlobalUserUpdate} ebooks={ebooks} setEbooks={setEbooks} channels={channels} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} onAddReview={(r)=>setReviews(p=>[r,...p])} onUpdateReview={(r)=>setReviews(p=>p.map(i=>i.id===r.id?r:i))} reviews={reviews} addNotif={addNotif} onRefetchProfile={refetchCurrentUserProfile} /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <NotificationsPage notifications={notifications} setNotifications={setNotifications} user={user} /> : <Navigate to="/login" />} />
-            <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} channels={channels} ebooks={ebooks} />} />
+            <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={wishlistToggle} channels={channels} ebooks={ebooks} />} />
             <Route path="/coupons" element={user ? <CouponBox user={user} /> : <Navigate to="/login" />} />
             <Route path="/payment/point" element={user ? <PointPayment user={user} ebooks={ebooks} members={members} onUpdateUser={handleGlobalUserUpdate} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/review/write" element={user ? <ReviewWritePage user={user} onAddReview={(r)=>setReviews(p=>[r,...p])} /> : <Navigate to="/login" />} />
@@ -315,10 +403,10 @@ const App: React.FC = () => {
             <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
             <Route path="/" element={<Navigate to="/sns" />} />
           </Routes>
-        </div>
-        <MobileBottomNav />
+        )}
       </div>
-    </Router>
+      <MobileBottomNav />
+    </div>
   );
 };
 
