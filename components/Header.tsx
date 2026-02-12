@@ -55,9 +55,9 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             </Link>
           </div>
 
-          {/* 웹/태블릿용 메뉴 영역: lg(1024px) 이상에서 노출 */}
-          <nav className="hidden lg:flex items-center flex-1 justify-center h-full mx-4 overflow-visible">
-            <div className="flex items-center gap-1 overflow-visible">
+          {/* 웹/태블릿용 메뉴 영역: lg(1024px) 이상에서 노출 - z-[60]으로 우측 아이콘보다 위에 두어 N잡스토어 클릭이 채팅으로 가지 않도록 */}
+          <nav className="hidden lg:flex items-center flex-1 justify-center h-full mx-4 overflow-visible relative z-[60] min-w-0">
+            <div className="flex items-center gap-1 overflow-visible flex-shrink-0">
               {navItems.map((item) => {
                 const href = item.path;
                 const isChatPage = location.pathname === '/chat';
@@ -83,8 +83,12 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                     <button
                       key={item.path}
                       type="button"
-                      onClick={() => navigate('/ebooks')}
-                      className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 z-10 ${
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate('/ebooks', { replace: true });
+                      }}
+                      className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 z-[70] ${
                         ebooksActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                     >
@@ -111,7 +115,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             </div>
           </nav>
 
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 relative z-40">
             <div className="flex items-center gap-0.5 md:gap-1">
               <Link to="/wishlist" className="p-2 text-gray-400 hover:text-red-500 transition-colors relative group">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
