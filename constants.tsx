@@ -33,3 +33,71 @@ export const MARKETING_CATEGORIES = {
 export const CHANNEL_CATEGORIES = [
   '게임', '비즈니스', '뷰티/패션', '음식/맛집', '정보/뉴스', '스포츠', '유머/엔터', '라이프스타일', '기타'
 ];
+
+// ----- 프리랜서 수익통장 (누구나알바) -----
+import type { FreelancerEarningEntry } from '@/types';
+
+const FREELANCER_BALANCE_KEY = (userId: string) => `freelancer_earnings_v1_${userId}`;
+const FREELANCER_HISTORY_KEY = (userId: string) => `freelancer_earnings_history_v1_${userId}`;
+
+export const MIN_WITHDRAW_FREELANCER = 5000;
+
+export function getFreelancerBalance(userId: string): number {
+  try {
+    const raw = localStorage.getItem(FREELANCER_BALANCE_KEY(userId));
+    return raw ? Math.max(0, Number(raw)) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function setFreelancerBalance(userId: string, amount: number): void {
+  const value = Math.max(0, Math.round(amount));
+  localStorage.setItem(FREELANCER_BALANCE_KEY(userId), String(value));
+}
+
+export function addFreelancerEarning(userId: string, amount: number, label: string): number {
+  const cur = getFreelancerBalance(userId);
+  const next = cur + Math.max(0, Math.round(amount));
+  setFreelancerBalance(userId, next);
+  const entry: FreelancerEarningEntry = {
+    id: `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    type: 'task',
+    amount,
+    label,
+    at: new Date().toISOString(),
+  };
+  const history = getFreelancerHistory(userId);
+  localStorage.setItem(FREELANCER_HISTORY_KEY(userId), JSON.stringify([entry, ...history].slice(0, 100)));
+  return next;
+}
+
+export function getFreelancerHistory(userId: string): FreelancerEarningEntry[] {
+  try {
+    const raw = localStorage.getItem(FREELANCER_HISTORY_KEY(userId));
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+export function withdrawFreelancerEarnings(userId: string, amount: number): { success: boolean; newBalance: number } {
+  const cur = getFreelancerBalance(userId);
+  if (amount < MIN_WITHDRAW_FREELANCER || amount > cur) {
+    return { success: false, newBalance: cur };
+  }
+  const next = cur - amount;
+  setFreelancerBalance(userId, next);
+  const entry: FreelancerEarningEntry = {
+    id: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    type: 'withdraw',
+    amount: -amount,
+    label: '출금',
+    at: new Date().toISOString(),
+  };
+  const history = getFreelancerHistory(userId);
+  localStorage.setItem(FREELANCER_HISTORY_KEY(userId), JSON.stringify([entry, ...history].slice(0, 100)));
+  return { success: true, newBalance: next };
+}
