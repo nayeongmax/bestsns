@@ -91,40 +91,30 @@ function ContainerRoutes(props: {
   );
 }
 
+function safeStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw == null || raw === '') return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 const App: React.FC = () => {
-  // 스플래시 화면 제거로 인해 관련 상태 삭제
-
-  const [members, setMembers] = useState<UserProfile[]>(() => {
-    const saved = localStorage.getItem('site_members_v2');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('user_profile_v2');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const [notifications, setNotifications] = useState<SiteNotification[]>(() => {
-    const saved = localStorage.getItem('site_notifications_v2');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [smmOrders, setSmmOrders] = useState<SMMOrder[]>(() => JSON.parse(localStorage.getItem('smm_orders_v2') || '[]'));
-  const [smmProviders, setSmmProviders] = useState<SMMProvider[]>(() => JSON.parse(localStorage.getItem('site_smm_providers_v2') || '[]'));
-  const [smmProducts, setSmmProducts] = useState<SMMProduct[]>(() => JSON.parse(localStorage.getItem('site_smm_products_v2') || '[]'));
-
-  const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => {
-    const saved = localStorage.getItem('store_orders_v2');
-    if (saved) return JSON.parse(saved);
-    return [];
-  });
-
-  const [channelOrders, setChannelOrders] = useState<ChannelOrder[]>(() => JSON.parse(localStorage.getItem('channel_orders_v2') || '[]'));
-  const [ebooks, setEbooks] = useState<EbookProduct[]>(() => JSON.parse(localStorage.getItem('site_ebooks_v2') || '[]'));
-  const [channels, setChannels] = useState<ChannelProduct[]>(() => JSON.parse(localStorage.getItem('site_channels_v2') || '[]'));
-  const [posts, setPosts] = useState<Post[]>(() => JSON.parse(localStorage.getItem('site_posts_v2') || '[]'));
-  const [reviews, setReviews] = useState<Review[]>(() => JSON.parse(localStorage.getItem('site_reviews_v2') || '[]'));
-  const [notices, setNotices] = useState<Notice[]>(() => JSON.parse(localStorage.getItem('site_notices_v2') || '[]'));
+  const [members, setMembers] = useState<UserProfile[]>(() => safeStorage('site_members_v2', []));
+  const [user, setUser] = useState<UserProfile | null>(() => safeStorage<UserProfile | null>('user_profile_v2', null));
+  const [notifications, setNotifications] = useState<SiteNotification[]>(() => safeStorage('site_notifications_v2', []));
+  const [smmOrders, setSmmOrders] = useState<SMMOrder[]>(() => safeStorage('smm_orders_v2', []));
+  const [smmProviders, setSmmProviders] = useState<SMMProvider[]>(() => safeStorage('site_smm_providers_v2', []));
+  const [smmProducts, setSmmProducts] = useState<SMMProduct[]>(() => safeStorage('site_smm_products_v2', []));
+  const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => safeStorage('store_orders_v2', []));
+  const [channelOrders, setChannelOrders] = useState<ChannelOrder[]>(() => safeStorage('channel_orders_v2', []));
+  const [ebooks, setEbooks] = useState<EbookProduct[]>(() => safeStorage('site_ebooks_v2', []));
+  const [channels, setChannels] = useState<ChannelProduct[]>(() => safeStorage('site_channels_v2', []));
+  const [posts, setPosts] = useState<Post[]>(() => safeStorage('site_posts_v2', []));
+  const [reviews, setReviews] = useState<Review[]>(() => safeStorage('site_reviews_v2', []));
+  const [notices, setNotices] = useState<Notice[]>(() => safeStorage('site_notices_v2', []));
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
 
   useEffect(() => { localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members]);
