@@ -1,16 +1,17 @@
 
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChannelProduct, WishlistItem, Review } from '../types';
+import { ChannelProduct, WishlistItem, Review, UserProfile } from '../types';
 
 interface Props {
   channels: ChannelProduct[];
   wishlist: WishlistItem[];
   onToggleWishlist: (item: WishlistItem) => void;
   reviews: Review[];
+  members: UserProfile[];
 }
 
-const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, reviews }) => {
+const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, reviews, members }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
@@ -41,9 +42,20 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
   const attachedImages = channel.attachedImages || [];
 
   const handleStartConsultation = () => {
-    const targetUser = channel.sellerId
-      ? { id: channel.sellerId, nickname: channel.sellerNickname || '채널 운영자', profileImage: channel.sellerImage || '' }
-      : { id: 'admin', nickname: '채널 운영자', profileImage: '' };
+    let targetUser: { id: string; nickname: string; profileImage: string };
+    if (channel.sellerId) {
+      const seller = members.find(m => m.id === channel.sellerId);
+      targetUser = {
+        id: channel.sellerId,
+        nickname: channel.sellerNickname || seller?.nickname || '채널 운영자',
+        profileImage: channel.sellerImage || seller?.profileImage || '',
+      };
+    } else {
+      const admin = members.find(m => m.role === 'admin');
+      targetUser = admin
+        ? { id: admin.id, nickname: admin.nickname, profileImage: admin.profileImage || '' }
+        : { id: 'admin', nickname: '채널 운영자', profileImage: '' };
+    }
     navigate('/chat', { state: { productRef: channel, targetUser } });
   };
 
