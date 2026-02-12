@@ -32,6 +32,7 @@ interface ChatRoom {
 }
 
 const CHAT_META_KEY = 'chat_room_meta_v2';
+const CHAT_ROOMS_FALLBACK_KEY = (userId: string) => `chat_rooms_fallback_${userId}`;
 const PROHIBITED_KEYWORDS = ['휴대폰', '폰번호', '직거래', '계좌', '이체', '010', '전화번호', '카톡', '연락처', '입금', '현금', '계좌번호'];
 
 const formatRelativeTime = (isoString: string) => {
@@ -62,6 +63,8 @@ function getOtherParticipantId(roomId: string, myId: string): string {
   return other || parts[0] || '';
 }
 
+type PendingTargetUser = { id: string; nickname: string; profileImage?: string };
+
 const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) => {
   const location = useLocation();
   const [messages, setMessages] = useState<ChatMessageExtended[]>([]);
@@ -76,6 +79,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
 
   const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
   const [tempMemoValue, setTempMemoValue] = useState('');
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,9 +97,32 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
     localStorage.setItem(CHAT_META_KEY, JSON.stringify(meta));
   }, [getMeta]);
 
-  const loadRooms = useCallback(async () => {
+  /** 문의하기/채팅하기로 진입 시: 대상 대화방을 만들고 선택해 오른쪽에서 바로 채팅 가능하게 함 */
+  const ensureTargetRoom = useCallback((pendingTargetUser: PendingTargetUser, existingRooms: ChatRoom[]) => {
+    if (!pendingTargetUser?.id || pendingTargetUser.id === user.id) return existingRooms;
+    const roomId = getRoomId(user.id, pendingTargetUser.id);
+    if (existingRooms.some(r => r.id === roomId)) return existingRooms;
+    const meta = getMeta();
+    const roomMeta = meta[roomId] || {};
+    const newRoom: ChatRoom = {
+      id: roomId,
+      otherParticipantId: pendingTargetUser.id,
+      name: pendingTargetUser.nickname,
+      otherImage: pendingTargetUser.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pendingTargetUser.id}`,
+      lastMsg: '',
+      lastMsgTime: new Date().toISOString(),
+      isTrading: roomMeta.isTrading ?? false,
+      isFavorite: roomMeta.isFavorite ?? false,
+      online: false,
+      memo: roomMeta.memo,
+    };
+    return [newRoom, ...existingRooms];
+  }, [user.id, getMeta]);
+
+  const loadRooms = useCallback(async (navState?: { targetUser?: PendingTargetUser }) => {
     setLoadingRooms(true);
     const meta = getMeta();
+    const pendingTargetUser = navState?.targetUser;
     try {
       const { data: rows, error } = await supabase
         .from('chat_messages')
@@ -117,7 +144,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
         }
       });
 
-      const rooms: ChatRoom[] = [];
+      let rooms: ChatRoom[] = [];
       byRoom.forEach((last, roomId) => {
         const otherId = getOtherParticipantId(roomId, user.id);
         if (!otherId) return;
@@ -137,16 +164,41 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
         });
       });
       rooms.sort((a, b) => new Date(b.lastMsgTime).getTime() - new Date(a.lastMsgTime).getTime());
-      setChatRooms(rooms);
-      setActiveChatId(prev => (prev && rooms.some(r => r.id === prev)) ? prev : (rooms.length > 0 ? rooms[0].id : null));
+
+      // 문의하기/채팅하기 진입: 판매자·상품등록자·프리랜서 신청자 대화방이 없으면 생성 후 선택 → 오른쪽에서 바로 채팅 가능
+      rooms = ensureTargetRoom(pendingTargetUser || { id: '', nickname: '', profileImage: '' }, rooms);
+      if (pendingTargetUser?.id && pendingTargetUser.id !== user.id) {
+        const roomId = getRoomId(user.id, pendingTargetUser.id);
+        setChatRooms(rooms);
+        setActiveChatId(roomId);
+      } else {
+        setChatRooms(rooms);
+        setActiveChatId(prev => (prev && rooms.some(r => r.id === prev)) ? prev : (rooms.length > 0 ? rooms[0].id : null));
+      }
     } catch {
       setUseSupabase(false);
-      setChatRooms([]);
-      setActiveChatId(null);
+      // Supabase 실패해도 문의하기로 들어온 경우: 해당 대상과의 대화방을 만들고 선택해 오른쪽에서 채팅 가능하게 함
+      let rooms: ChatRoom[] = [];
+      try {
+        const raw = localStorage.getItem(CHAT_ROOMS_FALLBACK_KEY(user.id));
+        if (raw) rooms = JSON.parse(raw) as ChatRoom[];
+      } catch { /* ignore */ }
+      if (pendingTargetUser?.id && pendingTargetUser.id !== user.id) {
+        rooms = ensureTargetRoom(pendingTargetUser, rooms);
+        const roomId = getRoomId(user.id, pendingTargetUser.id);
+        setChatRooms(rooms);
+        setActiveChatId(roomId);
+      } else {
+        setChatRooms(rooms);
+        setActiveChatId(rooms.length > 0 ? rooms[0].id : null);
+      }
+      try {
+        localStorage.setItem(CHAT_ROOMS_FALLBACK_KEY(user.id), JSON.stringify(rooms));
+      } catch { /* ignore */ }
     } finally {
       setLoadingRooms(false);
     }
-  }, [user.id, members, getMeta]);
+  }, [user.id, members, getMeta, ensureTargetRoom]);
 
   const loadMessages = useCallback(async (roomId: string) => {
     if (!roomId) { setMessages([]); return; }
@@ -184,39 +236,55 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
 
   useEffect(() => { if (onResetUnread) onResetUnread(); }, [onResetUnread]);
 
+  // 채팅 페이지 접속 시 presence로 온라인 표시 (상대방 접속 여부)
   useEffect(() => {
-    loadRooms();
-  }, [user.id, loadRooms]);
+    const channel = supabase.channel('chat_presence');
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState() as Record<string, { user_id?: string }[]>;
+        const ids = new Set<string>();
+        Object.values(state).forEach((payloads) => {
+          payloads.forEach((p) => {
+            if (p.user_id && p.user_id !== user.id) ids.add(p.user_id);
+          });
+        });
+        setOnlineUserIds(ids);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ user_id: user.id, updated_at: new Date().toISOString() });
+        }
+      });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user.id]);
+
+  const navState = (location.state as { targetUser?: PendingTargetUser } | null) || undefined;
+  const pendingTargetFromNav = navState?.targetUser;
+
+  useEffect(() => {
+    loadRooms(navState);
+  }, [user.id, loadRooms, location.pathname, location.key]);
+
+  // 문의하기/채팅하기로 진입했는데 아직 대화방이 선택되지 않은 경우(로딩 직후 등): 대상 방을 만들어 선택 → 오른쪽에서 바로 채팅 가능
+  useEffect(() => {
+    if (loadingRooms || !pendingTargetFromNav?.id || pendingTargetFromNav.id === user.id) return;
+    const roomId = getRoomId(user.id, pendingTargetFromNav.id);
+    if (activeChatId === roomId) return;
+    if (chatRooms.some(r => r.id === roomId)) {
+      setActiveChatId(roomId);
+      return;
+    }
+    const rooms = ensureTargetRoom(pendingTargetFromNav, chatRooms);
+    setChatRooms(rooms);
+    setActiveChatId(roomId);
+  }, [loadingRooms, pendingTargetFromNav, user.id, activeChatId, chatRooms, ensureTargetRoom]);
 
   useEffect(() => {
     if (activeChatId) loadMessages(activeChatId);
     else setMessages([]);
   }, [activeChatId, loadMessages]);
-
-  useEffect(() => {
-    const targetUser = (location.state as { targetUser?: { id: string; nickname: string; profileImage?: string } })?.targetUser;
-    if (!targetUser?.id || targetUser.id === user.id) return;
-    const roomId = getRoomId(user.id, targetUser.id);
-    setActiveChatId(roomId);
-    setChatRooms(prev => {
-      if (prev.some(r => r.id === roomId)) return prev;
-      const meta = getMeta();
-      const roomMeta = meta[roomId] || {};
-      const next: ChatRoom = {
-        id: roomId,
-        otherParticipantId: targetUser.id,
-        name: targetUser.nickname,
-        otherImage: targetUser.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${targetUser.id}`,
-        lastMsg: '',
-        lastMsgTime: new Date().toISOString(),
-        isTrading: roomMeta.isTrading ?? false,
-        isFavorite: roomMeta.isFavorite ?? false,
-        online: false,
-        memo: roomMeta.memo,
-      };
-      return [next, ...prev];
-    });
-  }, [location.state, user.id, getMeta]);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
 
@@ -284,9 +352,14 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => handleSendMessage('이미지를 전송했습니다.', 'image', reader.result as string);
-    reader.readAsDataURL(file);
+    const isImage = (file.type || '').startsWith('image/');
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => handleSendMessage('이미지를 전송했습니다.', 'image', reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      handleSendMessage(`[문서 첨부: ${file.name}] (문서 파일)`, 'text');
+    }
     e.target.value = '';
   };
 
@@ -323,7 +396,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
 
   return (
     <div className="max-w-6xl mx-auto h-[85vh] flex bg-[#F8F9FA] border border-gray-200 shadow-sm overflow-hidden rounded-lg">
-      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+      <input type="file" ref={fileInputRef} className="hidden" accept="image/*,.pdf,.doc,.docx" onChange={handleFileChange} />
 
       <div className="w-[340px] border-r border-gray-200 flex flex-col bg-white">
         <div className="p-4 border-b border-gray-100">
@@ -337,13 +410,15 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
           {loadingRooms ? (
             <div className="text-center py-20 text-gray-400 font-bold text-sm">대화 목록 불러오는 중...</div>
           ) : filteredRooms.length === 0 ? (
-            <div className="text-center py-20 text-gray-300 font-bold text-sm px-4">대화방이 없습니다.<br /><span className="text-[11px] text-gray-500 block mt-2">N잡 스토어·채널 상품에서 &quot;문의하기&quot;로 판매자·운영자에게 채팅을 보내세요.</span></div>
+            <div className="text-center py-20 text-gray-300 font-bold text-sm px-4">대화방이 없습니다.<br /><span className="text-[11px] text-gray-500 block mt-2">채널·전자책·프리랜서 작업 등에서 &quot;문의하기&quot;/&quot;채팅하기&quot;로 판매자·운영자·신청자와 대화를 시작하세요. 채팅 이력은 CS 참고를 위해 삭제되지 않습니다.</span></div>
           ) : (
-            filteredRooms.map(u => (
+            filteredRooms.map(u => {
+              const isOnline = onlineUserIds.has(u.otherParticipantId);
+              return (
               <div key={u.id} onClick={() => setActiveChatId(u.id)} className={`p-4 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-50 relative ${activeChatId === u.id ? 'bg-[#F0F2F5]' : u.memo ? 'bg-blue-50/20' : ''}`}>
                 <div className="relative shrink-0">
                   <img src={u.otherImage} className="w-14 h-14 rounded-full object-cover border border-gray-100 shadow-sm" alt="" />
-                  <div className={`absolute bottom-0.5 right-0.5 w-4 h-4 border-2 border-white rounded-full shadow-sm ${u.online ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <div className={`absolute bottom-0.5 right-0.5 w-4 h-4 border-2 border-white rounded-full shadow-sm ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`} title={isOnline ? '접속 중' : '오프라인'} />
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <div className="flex justify-between items-center mb-0.5"><span className="font-black text-[14.5px] text-gray-900 truncate leading-none">{u.name}</span><span className="text-[10px] font-bold text-gray-400 shrink-0">{formatRelativeTime(u.lastMsgTime)}</span></div>
@@ -357,11 +432,12 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
                   <p className="text-[12px] text-gray-500 truncate leading-tight opacity-70">{u.lastMsg || '메시지 없음'}</p>
                   <div className="mt-1 flex items-center justify-between">
                     <div className="flex gap-1">{u.isTrading && <span className="bg-[#E6F7F0] text-[#00B06B] text-[9px] px-1.5 py-0.5 rounded font-black italic">거래 중</span>}</div>
-                    <button onClick={e => toggleFavorite(u.id, e)} className={`transition-colors ${u.isFavorite ? 'text-yellow-400' : 'text-gray-200 hover:text-yellow-400'}`}><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></button>
+                    <button onClick={e => toggleFavorite(u.id, e)} className={`transition-colors ${u.isFavorite ? 'text-yellow-400' : 'text-gray-200 hover:text-yellow-400'}`} title={u.isFavorite ? '즐겨찾기 해제' : '즐겨찾기'}><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></button>
                   </div>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -377,7 +453,12 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
 
         <div className="px-6 py-3 border-b border-gray-50 flex justify-between items-center bg-white shadow-sm">
           <div className="flex flex-col">
-            <span className="font-black text-gray-900 text-sm italic">{activeRoom ? `${activeRoom.name}님과 대화 중` : '대화를 선택하세요'}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-gray-900 text-sm italic">{activeRoom ? `${activeRoom.name}님과 대화 중` : '대화를 선택하세요'}</span>
+              {activeRoom && onlineUserIds.has(activeRoom.otherParticipantId) && (
+                <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">접속 중</span>
+              )}
+            </div>
             {activeRoom?.memo && <span className="text-[10px] font-black text-blue-500 italic uppercase">Memo: {activeRoom.memo}</span>}
           </div>
           {activeChatId && (
@@ -389,7 +470,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
           {loadingMessages ? (
             <div className="text-center py-20 text-gray-400 font-bold text-sm">메시지 불러오는 중...</div>
           ) : !activeChatId ? (
-            <div className="text-center py-20 text-gray-300 font-bold text-sm">왼쪽에서 대화방을 선택하세요.<br /><span className="text-[11px] text-gray-500 block mt-2">N잡 스토어·채널에서 문의하기로 대화를 시작할 수 있습니다.</span></div>
+            <div className="text-center py-20 text-gray-300 font-bold text-sm">왼쪽에서 대화방을 선택하세요.<br /><span className="text-[11px] text-gray-500 block mt-2">채널·전자책·프리랜서 작업 등에서 문의하기/채팅하기로 판매자·운영자·신청자와 대화를 시작할 수 있습니다.</span></div>
           ) : (
             messages.map(msg => {
               const showDate = msg.dateStr !== lastDate;
@@ -431,7 +512,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
           <div className="bg-gray-50 border border-gray-100 rounded-[24px] p-3 transition-all focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-50 shadow-inner">
             <textarea rows={3} placeholder="메시지를 입력하세요 (Ctrl+Enter 전송)" className="w-full p-2 outline-none text-[14px] resize-none font-bold text-gray-700 bg-transparent no-scrollbar" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); handleSendMessage(); } }} disabled={!activeChatId} />
             <div className="flex items-center justify-between border-t border-gray-100 pt-3 px-1 mt-1">
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-white text-gray-400 rounded-xl text-[11px] font-black hover:text-blue-500 hover:border-blue-100 transition-all border border-gray-100 shadow-sm uppercase italic" disabled={!activeChatId}>문서첨부</button>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-white text-gray-400 rounded-xl text-[11px] font-black hover:text-blue-500 hover:border-blue-100 transition-all border border-gray-100 shadow-sm uppercase italic disabled:opacity-50 disabled:cursor-not-allowed" disabled={!activeChatId} title="이미지·문서 첨부 (이미지/PDF 등)">이미지·문서 첨부</button>
               <button type="button" onClick={() => handleSendMessage()} className={`px-10 py-2.5 rounded-xl text-[13px] font-black transition-all shadow-xl uppercase italic tracking-widest ${input.trim() && activeChatId ? 'bg-blue-600 text-white hover:bg-black shadow-blue-100' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`} disabled={!activeChatId}>메시지전송</button>
             </div>
           </div>
