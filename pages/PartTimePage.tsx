@@ -172,7 +172,7 @@ const todayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-const REGISTER_SECTION_KEYS: (keyof PartTimeTaskSections)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif'];
+const ALL_SECTION_KEYS: (keyof PartTimeTaskSections)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
 export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ user }) => {
   const navigate = useNavigate();
@@ -181,8 +181,9 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const [category, setCategory] = useState(REGISTER_CATEGORIES[0]);
   const [reward, setReward] = useState(300);
   const [maxApplicants, setMaxApplicants] = useState(0);
+  const [selectedSectionKeys, setSelectedSectionKeys] = useState<(keyof PartTimeTaskSections)[]>(['제목', '내용']);
   const [sections, setSections] = useState<Record<string, string>>({
-    제목: '', 내용: '', 댓글: '', 키워드: '', 이미지: '', 동영상: '', gif: '',
+    제목: '', 내용: '', 댓글: '', 키워드: '', 이미지: '', 동영상: '', gif: '', 작업링크: '', 작업안내: '',
   });
   const [appStart, setAppStart] = useState(todayStr());
   const [appEnd, setAppEnd] = useState(todayStr());
@@ -192,6 +193,12 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_IMAGES = 10;
+
+  const toggleSectionKey = (key: keyof PartTimeTaskSections) => {
+    setSelectedSectionKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
 
   if (!user || user.role !== 'admin') {
     navigate('/part-time', { replace: true });
@@ -222,6 +229,16 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
     e.preventDefault();
     if (!title.trim()) { alert('게시글 제목을 입력해 주세요.'); return; }
     const tasks = getPartTimeTasks();
+    const sectionsOut: PartTimeTaskSections = {};
+    selectedSectionKeys.forEach((key) => {
+      if (key === '이미지') {
+        if (sections.이미지?.trim()) sectionsOut.이미지 = sections.이미지.trim();
+        if (attachedImages.length) sectionsOut.이미지목록 = attachedImages;
+      } else {
+        const val = sections[key];
+        if (val != null && String(val).trim()) sectionsOut[key] = String(val).trim();
+      }
+    });
     const newTask: PartTimeTask = {
       id: `t_${Date.now()}`,
       title: title.trim(),
@@ -229,7 +246,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
       category,
       reward: Math.max(0, reward),
       maxApplicants: maxApplicants > 0 ? maxApplicants : undefined,
-      sections: { 제목: sections.제목, 내용: sections.내용, 댓글: sections.댓글, 키워드: sections.키워드, 이미지: sections.이미지, 이미지목록: attachedImages.length ? attachedImages : undefined, 동영상: sections.동영상, gif: sections.gif },
+      sections: sectionsOut,
       applicationPeriod: { start: appStart, end: appEnd },
       workPeriod: { start: workStart, end: workEnd },
       createdAt: new Date().toISOString(),
@@ -292,9 +309,23 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
           </div>
         </section>
         <section className="space-y-6">
-          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용 (섹션별 안내)</h3></div>
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용 (필요한 섹션만 선택)</h3></div>
+          <p className="text-sm text-gray-500">필요한 항목만 체크하세요. 예: 게시글 5개만 필요하면 제목·내용만 선택하면 됩니다.</p>
+          <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+            {ALL_SECTION_KEYS.map((key) => (
+              <label key={key} className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedSectionKeys.includes(key)}
+                  onChange={() => toggleSectionKey(key)}
+                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm font-bold text-gray-700">{key}</span>
+              </label>
+            ))}
+          </div>
           <div className="space-y-4">
-            {REGISTER_SECTION_KEYS.map((key) => (
+            {selectedSectionKeys.map((key) => (
               <div key={key}>
                 <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{key}</label>
                 {key === '이미지' ? (
@@ -315,6 +346,14 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
                     )}
                     <input type="text" value={sections.이미지 ?? ''} onChange={(e) => handleSectionChange('이미지', e.target.value)} placeholder="이미지 관련 지시사항 텍스트 (선택)" className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
                   </div>
+                ) : key === '내용' || key === '작업안내' ? (
+                  <textarea
+                    value={sections[key] ?? ''}
+                    onChange={(e) => handleSectionChange(key, e.target.value)}
+                    placeholder={key === '작업안내' ? '전체 작업 가이드 (긴 글 가능)' : '예: 내용 관련 지시사항 (긴 글 가능)'}
+                    rows={8}
+                    className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y min-h-[180px]"
+                  />
                 ) : (
                   <input type="text" value={sections[key] ?? ''} onChange={(e) => handleSectionChange(key, e.target.value)} placeholder={`예: ${key} 관련 지시사항`} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
                 )}
