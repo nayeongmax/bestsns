@@ -108,9 +108,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
           <ul className="space-y-2">
             {selectedTasks.map((t) => {
               const me = t.applicants.find((a) => a.userId === user.id);
+              const hasLink = (me?.workLinks?.length ?? 0) > 0 || !!me?.workLink;
               const status = t.paidUserIds?.includes(user.id)
                 ? '포인트 지급됨'
-                : me?.workLink
+                : hasLink
                   ? '링크 제출됨 (확인 대기)'
                   : '링크 미제출';
               return (
