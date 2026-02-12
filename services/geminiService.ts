@@ -8,7 +8,7 @@
  * - Gemini API 키 발급: https://aistudio.google.com/apikey
  */
 
-const AI_CONSULT_URL = '/.netlify/functions/ai-consult';
+const AI_CONSULT_URL = '/api/ai-consult';
 
 export const getMarketingConsultation = async (prompt: string): Promise<string> => {
   try {
