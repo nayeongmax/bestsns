@@ -61,6 +61,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
               누구나<span className="text-emerald-600">알바</span>
             </h2>
             <p className="text-gray-500 font-bold mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
+            <p className="text-gray-400 text-sm mt-1">프리랜서 작업이 필요하시면 고객센터로 문의주세요.</p>
           </div>
           {user ? (
             <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 min-w-[200px]">
@@ -76,6 +77,14 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           ) : (
             <button onClick={() => navigate('/login')} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black hover:bg-emerald-600 transition-all">
               로그인 후 이용
+            </button>
+          )}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/part-time/register')}
+              className="shrink-0 px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-emerald-700 transition-all"
+            >
+              작업 등록
             </button>
           )}
         </div>
