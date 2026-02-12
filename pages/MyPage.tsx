@@ -5,10 +5,10 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
  * Fixed: Imported missing NotificationType
  */
 import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType } from '../types';
-import UserInfoSection from '../components/mypage/UserInfoSection';
-import BuyerDashboard from '../components/mypage/BuyerDashboard';
-import SellerDashboard from '../components/mypage/SellerDashboard';
-import FreelancerDashboard from '../components/mypage/FreelancerDashboard';
+import UserInfoSection from '@/components/mypage/UserInfoSection';
+import BuyerDashboard from '@/components/mypage/BuyerDashboard';
+import SellerDashboard from '@/components/mypage/SellerDashboard';
+import FreelancerDashboard from '@/components/mypage/FreelancerDashboard';
 
 interface Props {
   user: UserProfile;
