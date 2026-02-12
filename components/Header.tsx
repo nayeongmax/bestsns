@@ -37,6 +37,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
     { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
     { label: '자유게시판', path: '/board', icon: '🗨️' },
     { label: '매출관리', path: '/revenue', icon: '📊' },
+    ...(user?.role === 'admin' ? [{ label: '어드민패널', path: '/admin', icon: '⚙️', adminOnly: true }] : []),
   ];
 
   const handleLogoutClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -59,11 +60,30 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
           <nav className="hidden xl:flex items-center gap-1 flex-1 justify-center h-full">
             {navItems.map((item) => {
               const isEbooks = item.path === '/ebooks';
-              const isActive = isEbooks
+              const isAdmin = 'adminOnly' in item && item.adminOnly;
+              const isActive = isAdmin
+                ? pathname === '/admin' || pathname.startsWith('/admin')
+                : isEbooks
                 ? pathname === '/ebooks' || pathname.startsWith('/ebooks/')
                 : item.path === '/channels'
                   ? pathname === '/channels' || pathname.startsWith('/channels/')
                   : pathname === item.path;
+              if (isAdmin) {
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
+                      isActive ? 'bg-[#0d1117] text-white shadow-lg shadow-gray-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                      <span className="text-base">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                  </Link>
+                );
+              }
               if (isEbooks) {
                 return (
                   <button
@@ -145,8 +165,8 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             </div>
             
             {user?.role === 'admin' && (
-              <Link to="/admin" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d1117] text-white text-sm font-black hover:bg-black transition-all italic tracking-tight">
-                어드민패널
+              <Link to="/admin" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d1117] text-white text-sm font-black hover:bg-black transition-all italic tracking-tight shrink-0">
+                ⚙️ 어드민패널
               </Link>
             )}
             <div className="w-[1px] h-4 bg-gray-200 mx-1"></div>
