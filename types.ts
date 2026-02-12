@@ -44,10 +44,18 @@ export interface PartTimeApplicant {
   workLink?: string;
 }
 
+/** 게시글 한 건 (제목+내용) - 여러 개 넣을 때 사용 */
+export interface PartTimePostBlock {
+  제목: string;
+  내용: string;
+}
+
 /** 누구나알바 작업 상세 (작업 내용 섹션) - 필요한 항목만 사용 */
 export interface PartTimeTaskSections {
   제목?: string;
   내용?: string;
+  /** 게시글 여러 개 (제목+내용 쌍). 있으면 단일 제목/내용 대신 사용 */
+  게시글목록?: PartTimePostBlock[];
   댓글?: string;
   키워드?: string;
   /** 이미지 지시사항 텍스트 또는 단일 이미지 data URL */
