@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
-import { getFreelancerBalance, addFreelancerEarning, MIN_WITHDRAW } from '@/services/freelancerEarnings';
+import { getFreelancerBalance, addFreelancerEarning, MIN_WITHDRAW_FREELANCER } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -82,7 +82,7 @@ const PartTimePage: React.FC<Props> = ({ user, onUpdateUser }) => {
               <p className="text-[11px] font-black text-gray-500 uppercase italic">수익통장</p>
               <p className="text-2xl font-black text-emerald-700 italic">{balance.toLocaleString()} P</p>
               <p className="text-[11px] text-gray-500 mt-1">
-                {balance >= MIN_WITHDRAW ? '출금 가능' : `${(MIN_WITHDRAW - balance).toLocaleString()} P 더 모으면 출금 가능`}
+                {balance >= MIN_WITHDRAW_FREELANCER ? '출금 가능' : `${(MIN_WITHDRAW_FREELANCER - balance).toLocaleString()} P 더 모으면 출금 가능`}
               </p>
               <Link
                 to="/mypage"
@@ -137,7 +137,7 @@ const PartTimePage: React.FC<Props> = ({ user, onUpdateUser }) => {
 
         <div className="bg-blue-50/80 p-6 rounded-2xl border border-blue-100">
           <p className="text-blue-800 font-bold">
-            💡 수익통장에 쌓인 포인트는 <strong>{MIN_WITHDRAW.toLocaleString()} P</strong> 이상일 때 마이페이지 &gt; 프리랜서 워크페이스에서 포인트로 출금할 수 있습니다.
+            💡 수익통장에 쌓인 포인트는 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()} P</strong> 이상일 때 마이페이지 &gt; 프리랜서 워크페이스에서 포인트로 출금할 수 있습니다.
           </p>
         </div>
 
