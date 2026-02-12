@@ -2,7 +2,11 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
-const MobileBottomNav: React.FC = () => {
+interface Props {
+  onNavigateToEbooks?: () => void;
+}
+
+const MobileBottomNav: React.FC<Props> = ({ onNavigateToEbooks }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const navItems = [
@@ -51,7 +55,7 @@ const MobileBottomNav: React.FC = () => {
               <button
                 key={item.path}
                 type="button"
-                onClick={() => { window.location.hash = '#/ebooks'; }}
+                onClick={() => { onNavigateToEbooks?.(); window.location.hash = '#/ebooks'; }}
                 className={`relative flex flex-col items-center justify-center min-w-[85px] h-16 transition-all duration-300 flex-shrink-0 pb-2 ${ebooksActive ? 'text-blue-600 scale-105' : 'text-gray-400'}`}
               >
                 {inner}
