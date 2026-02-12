@@ -43,6 +43,8 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
       case 'coupon': return { label: '쿠폰', color: 'bg-yellow-500', icon: '🎫' };
       case 'revenue': return { label: '수익', color: 'bg-purple-600', icon: '💰' };
       case 'review': return { label: '리뷰', color: 'bg-cyan-600', icon: '⭐' };
+      case 'revision': return { label: '수정', color: 'bg-amber-500', icon: '✏️' };
+      case 'freelancer': return { label: '프리랜서', color: 'bg-emerald-600', icon: '👷' };
       default: return { label: '알림', color: 'bg-gray-400', icon: '🔔' };
     }
   };
