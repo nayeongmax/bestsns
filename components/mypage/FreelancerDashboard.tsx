@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
+import type { PartTimeTask } from '@/types';
 import {
   getFreelancerBalance,
   getFreelancerHistory,
   withdrawFreelancerEarnings,
   MIN_WITHDRAW_FREELANCER,
+  getPartTimeTasks,
 } from '@/constants';
 
 interface Props {
@@ -17,6 +19,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
   const [balance, setBalance] = useState(0);
   const [history, setHistory] = useState<ReturnType<typeof getFreelancerHistory>>([]);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
 
   const refresh = () => {
     setBalance(getFreelancerBalance(user.id));
@@ -25,6 +28,11 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
 
   useEffect(() => {
     refresh();
+    const tasks = getPartTimeTasks();
+    const mySelected = tasks.filter(
+      (t) => !t.pointPaid && t.applicants.some((a) => a.userId === user.id && a.selected)
+    );
+    setSelectedTasks(mySelected);
   }, [user.id]);
 
   const handleWithdraw = () => {
@@ -100,6 +108,37 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
           </Link>
         </div>
       </div>
+
+      {selectedTasks.length > 0 && (
+        <div>
+          <h4 className="font-black text-gray-800 mb-3">선정된 작업</h4>
+          <p className="text-sm text-gray-500 mb-3">작업 완료 후 링크를 제출하면 운영자 확인 후 수익통장에 포인트가 적립됩니다.</p>
+          <ul className="space-y-2">
+            {selectedTasks.map((t) => {
+              const me = t.applicants.find((a) => a.userId === user.id);
+              const status = t.paidUserIds?.includes(user.id)
+                ? '포인트 지급됨'
+                : me?.workLink
+                  ? '링크 제출됨 (확인 대기)'
+                  : '링크 미제출';
+              return (
+                <li key={t.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-emerald-200">
+                  <div>
+                    <p className="font-black text-gray-900">{t.title}</p>
+                    <p className="text-xs text-gray-500">+{t.reward.toLocaleString()} P · {status}</p>
+                  </div>
+                  <Link
+                    to={`/part-time/${t.id}`}
+                    className="shrink-0 px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200"
+                  >
+                    상세/링크 제출
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <div>
         <h4 className="font-black text-gray-800 mb-4">수익통장 내역</h4>
