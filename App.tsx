@@ -370,12 +370,16 @@ function AppContent(props: {
   const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
   const handleLoginSuccess = (profile: UserProfile) => setUser(profile);
 
+  // HashRouter 기준: 주소창 해시가 #/ebooks(만) 일 때 무조건 N잡스토어 리스트 표시 (채팅이 나오는 현상 방지)
+  const hash = typeof window !== 'undefined' ? window.location.hash : '';
+  const isEbooksListPage = hash === '#/ebooks' || hash === '#/ebooks/' || location.pathname === '/ebooks';
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
       <LiveNotification />
       <div className="container mx-auto py-10 px-4 mb-20 lg:mb-0">
-        {location.pathname === '/ebooks' ? (
+        {isEbooksListPage ? (
           <EbookSales ebooks={ebooks} setEbooks={setEbooks} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={wishlist} onToggleWishlist={wishlistToggle} />
         ) : (
           <Routes>
