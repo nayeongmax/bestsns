@@ -61,31 +61,51 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
               {navItems.map((item) => {
                 const href = item.path;
                 const isChatPage = location.pathname === '/chat';
-                return (
-                <NavLink
-                  key={item.path}
-                  to={href}
-                  end={href === '/ebooks' || href === '/channels' ? false : true}
-                  className={({ isActive }) => {
-                    const active = !isChatPage && isActive;
-                    return `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 ${
-                      active ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                    }`;
-                  }}
-                >
-                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="text-base">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
-                      <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
-                        {item.badge}
-                      </span>
+                const isEbooks = href === '/ebooks';
+                const content = (
+                  <>
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                      <span className="text-base">{item.icon}</span>
+                      <span>{item.label}</span>
                     </div>
-                  )}
-                </NavLink>
-              );
+                    {item.badge && (
+                      <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
+                        <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
+                          {item.badge}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                );
+                if (isEbooks) {
+                  const ebooksActive = !isChatPage && (location.pathname === '/ebooks' || location.pathname.startsWith('/ebooks/'));
+                  return (
+                    <Link
+                      key={item.path}
+                      to="/ebooks"
+                      className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 ${
+                        ebooksActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                      }`}
+                    >
+                      {content}
+                    </Link>
+                  );
+                }
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={href}
+                    end={href === '/channels' ? false : true}
+                    className={({ isActive: navActive }) => {
+                      const active = !isChatPage && navActive;
+                      return `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 ${
+                        active ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                      }`;
+                    }}
+                  >
+                    {content}
+                  </NavLink>
+                );
               })}
             </div>
           </nav>
