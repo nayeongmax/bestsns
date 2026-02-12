@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { HashRouter } from 'react-router-dom';
 import App from './App.tsx';
 
 class ErrorBoundary extends React.Component<
@@ -37,11 +38,22 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+// bestsns.com에서는 상위에 이미 Router가 있으므로 우리는 Router를 쓰지 않음 (중첩 오류 방지)
+const isBestsns =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'bestsns.com' ||
+    window.location.hostname.endsWith('.bestsns.com') ||
+    (window as any).__BESTSNS_EMBEDDED__ === true);
+
+const AppWithRouter = isBestsns ? App : function AppWithRouter() {
+  return <HashRouter><App /></HashRouter>;
+};
+
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <AppWithRouter />
     </ErrorBoundary>
   </React.StrictMode>
 );
