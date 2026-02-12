@@ -138,17 +138,35 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user }) => {
         <div className="grid gap-4">
           <h3 className="text-sm font-black text-gray-500 uppercase">작업 내용 (작업자가 할 일)</h3>
           {SECTIONS_ORDER.map(
-            (key) =>
-              sections[key] && (
+            (key) => {
+              const hasImageList = key === '이미지' && sections.이미지목록?.length;
+              const hasImageContent = key === '이미지' && (sections[key] || hasImageList);
+              if (key === '이미지' && !hasImageContent) return null;
+              if (key !== '이미지' && !sections[key]) return null;
+              return (
                 <div key={key} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                   <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{key}</p>
-                  {key === '이미지' && sections[key]?.startsWith('data:') ? (
-                    <img src={sections[key]} alt="참고" className="max-h-40 rounded-lg object-contain border border-gray-200" />
+                  {key === '이미지' ? (
+                    <>
+                      {sections.이미지목록 && sections.이미지목록.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {sections.이미지목록.map((src, i) => (
+                            <img key={i} src={src} alt={`참고 ${i + 1}`} className="max-h-32 rounded-lg object-contain border border-gray-200" />
+                          ))}
+                        </div>
+                      )}
+                      {sections.이미지?.startsWith('data:') && !sections.이미지목록?.length ? (
+                        <img src={sections.이미지} alt="참고" className="max-h-40 rounded-lg object-contain border border-gray-200" />
+                      ) : sections.이미지 ? (
+                        <p className="text-gray-800 whitespace-pre-wrap">{sections.이미지}</p>
+                      ) : null}
+                    </>
                   ) : (
                     <p className="text-gray-800 whitespace-pre-wrap">{sections[key]}</p>
                   )}
                 </div>
-              )
+              );
+            }
           )}
         </div>
 
