@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 
 const MobileBottomNav: React.FC = () => {
+  const location = useLocation();
   const navItems = [
     { label: 'SNS활성화', path: '/sns', icon: '📈' },
     { label: '채널판매', path: '/channels', icon: '📺' },
@@ -27,37 +28,46 @@ const MobileBottomNav: React.FC = () => {
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white shadow-[0_-15px_40px_rgba(0,0,0,0.1)] border-t border-gray-100 pb-safe overflow-hidden h-24">
       {/* 가로 슬라이드 핵심: flex-nowrap과 overflow-x-auto, 그리고 충분한 높이(h-24) */}
       <div className="flex flex-nowrap items-end h-full overflow-x-auto no-scrollbar scroll-smooth px-4 pt-8">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => 
-              `relative flex flex-col items-center justify-center min-w-[85px] h-16 transition-all duration-300 flex-shrink-0 pb-2 ${
-                isActive 
-                ? 'text-blue-600 scale-105' 
-                : 'text-gray-400'
-              }`
-            }
-          >
-            {/* 뱃지 영역: h-24 내의 상단 여백(pt-8) 공간을 활용하여 잘림 방지 */}
-            {item.badge && (
-              <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 z-[110] animate-float-badge pointer-events-none">
-                <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[11px] px-3 py-1 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.4)] border border-white/30 leading-none text-center italic tracking-tighter">
-                  {item.badge}
-                </span>
-              </div>
-            )}
-
-            <span className="text-2xl mb-1">{item.icon}</span>
-            <span className="text-[11px] font-black italic tracking-tighter whitespace-nowrap">{item.label}</span>
-            
-            {/* 활성화 하단 포인트 */}
-            <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-600 transition-all duration-300 transform ${
-              // NavLink isActive는 부모 className에서 체크됨
-              'opacity-0 scale-0'
-            }`}></div>
-          </NavLink>
-        ))}
+        {navItems.map((item) => {
+          const isEbooks = item.path === '/ebooks';
+          const ebooksActive = location.pathname === '/ebooks' || location.pathname.startsWith('/ebooks/');
+          const inner = (
+            <>
+              {item.badge && (
+                <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 z-[110] animate-float-badge pointer-events-none">
+                  <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[11px] px-3 py-1 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.4)] border border-white/30 leading-none text-center italic tracking-tighter">
+                    {item.badge}
+                  </span>
+                </div>
+              )}
+              <span className="text-2xl mb-1">{item.icon}</span>
+              <span className="text-[11px] font-black italic tracking-tighter whitespace-nowrap">{item.label}</span>
+              <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-600 transition-all duration-300 transform ${(isEbooks ? ebooksActive : false) ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}></div>
+            </>
+          );
+          if (isEbooks) {
+            return (
+              <Link
+                key={item.path}
+                to="/ebooks"
+                className={`relative flex flex-col items-center justify-center min-w-[85px] h-16 transition-all duration-300 flex-shrink-0 pb-2 ${ebooksActive ? 'text-blue-600 scale-105' : 'text-gray-400'}`}
+              >
+                {inner}
+              </Link>
+            );
+          }
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `relative flex flex-col items-center justify-center min-w-[85px] h-16 transition-all duration-300 flex-shrink-0 pb-2 ${isActive ? 'text-blue-600 scale-105' : 'text-gray-400'}`
+              }
+            >
+              {inner}
+            </NavLink>
+          );
+        })}
       </div>
     </nav>
   );
