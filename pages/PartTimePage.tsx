@@ -1,69 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
-import { getFreelancerBalance, addFreelancerEarning, MIN_WITHDRAW_FREELANCER } from '@/constants';
+import type { PartTimeTask } from '@/types';
+import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
   onUpdateUser?: (updated: UserProfile) => void;
 }
 
-interface FreelanceTask {
-  id: string;
-  title: string;
-  description: string;
-  reward: number;
-  category: string;
-  done?: boolean;
-}
-
-const MOCK_TASKS: FreelanceTask[] = [
-  { id: 't1', title: '간단 설문 참여', description: '1분 소요 설문에 참여해 주세요.', reward: 300, category: '설문' },
-  { id: 't2', title: 'SNS 공유 인증', description: '지정 포스트 공유 후 캡처 제출', reward: 500, category: 'SNS' },
-  { id: 't3', title: '리뷰 작성', description: '이용 후 리뷰 한 건 작성', reward: 400, category: '리뷰' },
-  { id: 't4', title: '콘텐츠 검수', description: '짧은 텍스트/이미지 검수', reward: 600, category: '검수' },
-  { id: 't5', title: '데이터 라벨링 (소량)', description: '이미지/텍스트 분류 10건', reward: 800, category: '라벨링' },
-  { id: 't6', title: '번역/교정 (1페이지)', description: 'A4 1페이지 분량 번역 또는 교정', reward: 1500, category: '번역' },
-];
-
-const PartTimePage: React.FC<Props> = ({ user, onUpdateUser }) => {
+const PartTimePage: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
-  const [completedIds, setCompletedIds] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem('parttime_completed_v1');
-      return raw ? new Set(JSON.parse(raw)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
+  const [dateIndex, setDateIndex] = useState(0);
 
   useEffect(() => {
-    if (user?.id) {
-      setBalance(getFreelancerBalance(user.id));
-    }
+    setTasks(getPartTimeTasks());
+  }, []);
+
+  useEffect(() => {
+    if (user?.id) setBalance(getFreelancerBalance(user.id));
   }, [user?.id]);
 
-  useEffect(() => {
-    localStorage.setItem('parttime_completed_v1', JSON.stringify(Array.from(completedIds)));
-  }, [completedIds]);
+  const completedIds = useMemo(() => {
+    const raw = localStorage.getItem('parttime_completed_v1');
+    return raw ? new Set<string>(JSON.parse(raw)) : new Set<string>();
+  }, [tasks]);
 
-  const handleCompleteTask = (task: FreelanceTask) => {
-    if (!user?.id) {
-      alert('로그인 후 이용 가능합니다.');
-      navigate('/login');
-      return;
-    }
-    if (completedIds.has(task.id)) return;
-    setProcessingId(task.id);
-    addFreelancerEarning(user.id, task.reward, task.title);
-    setBalance((prev) => prev + task.reward);
-    setCompletedIds((prev) => new Set(prev).add(task.id));
-    setProcessingId(null);
-  };
+  const isTaskDone = (task: PartTimeTask) =>
+    completedIds.has(task.id) || (task.paidUserIds && user?.id && task.paidUserIds.includes(user.id));
 
-  const tasksWithDone = MOCK_TASKS.map((t) => ({ ...t, done: completedIds.has(t.id) }));
+  const dateKeys = useMemo(() => {
+    const set = new Set(tasks.map((t) => t.applicationPeriod.start));
+    return Array.from(set).sort();
+  }, [tasks]);
+
+  const currentDate = dateKeys[dateIndex] ?? dateKeys[0] ?? '';
+  const tasksForDate = useMemo(() => {
+    return tasks.filter((t) => t.applicationPeriod.start === currentDate);
+  }, [tasks, currentDate]);
+
+  const sortedTasks = useMemo(() => {
+    const incomplete = tasksForDate.filter((t) => !isTaskDone(t));
+    const complete = tasksForDate.filter((t) => isTaskDone(t));
+    return [...incomplete, ...complete];
+  }, [tasksForDate, isTaskDone]);
+
+  const canGoPrev = dateIndex > 0;
+  const canGoNext = dateIndex < dateKeys.length - 1;
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 animate-in fade-in duration-700">
@@ -84,67 +69,85 @@ const PartTimePage: React.FC<Props> = ({ user, onUpdateUser }) => {
               <p className="text-[11px] text-gray-500 mt-1">
                 {balance >= MIN_WITHDRAW_FREELANCER ? '출금 가능' : `${(MIN_WITHDRAW_FREELANCER - balance).toLocaleString()} P 더 모으면 출금 가능`}
               </p>
-              <Link
-                to="/mypage"
-                state={{ activeTab: 'freelancer' } as any}
-                className="inline-block mt-3 text-emerald-600 font-black text-sm hover:underline"
-              >
+              <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-3 text-emerald-600 font-black text-sm hover:underline">
                 마이페이지에서 출금하기 →
               </Link>
             </div>
           ) : (
-            <button
-              onClick={() => navigate('/login')}
-              className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black hover:bg-emerald-600 transition-all"
-            >
+            <button onClick={() => navigate('/login')} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black hover:bg-emerald-600 transition-all">
               로그인 후 이용
             </button>
           )}
         </div>
 
         <div className="grid gap-4">
-          <h3 className="text-xl font-black text-gray-800">진행 가능한 작업</h3>
-          {tasksWithDone.map((task) => (
-            <div
-              key={task.id}
-              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border ${
-                task.done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200'
-              }`}
-            >
-              <div className="flex-1">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
-                <h4 className="font-black text-gray-900">{task.title}</h4>
-                <p className="text-sm text-gray-500 mt-0.5">{task.description}</p>
+          <div className="flex items-center justify-between gap-4">
+            <h3 className="text-xl font-black text-gray-800">진행 가능한 작업</h3>
+            {dateKeys.length > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDateIndex((i) => Math.max(0, i - 1))}
+                  disabled={!canGoPrev}
+                  className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed font-black text-gray-600"
+                >
+                  ←
+                </button>
+                <span className="text-sm font-bold text-gray-600 min-w-[100px] text-center">
+                  {currentDate || '-'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDateIndex((i) => Math.min(dateKeys.length - 1, i + 1))}
+                  disabled={!canGoNext}
+                  className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed font-black text-gray-600"
+                >
+                  →
+                </button>
               </div>
-              <div className="flex items-center gap-4 shrink-0">
-                <span className="font-black text-emerald-600">+{task.reward.toLocaleString()} P</span>
-                {task.done ? (
-                  <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleCompleteTask(task)}
-                    disabled={!user || processingId === task.id}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {processingId === task.id ? '처리 중...' : '완료하기'}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+            )}
+          </div>
+
+          {sortedTasks.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">해당 날짜의 작업이 없습니다.</p>
+          ) : (
+            sortedTasks.map((task) => {
+              const done = isTaskDone(task);
+              return (
+                <button
+                  key={task.id}
+                  type="button"
+                  onClick={() => navigate(`/part-time/${task.id}`)}
+                  className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border transition-all ${
+                    done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex-1">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
+                    <h4 className="font-black text-gray-900">{task.title}</h4>
+                    <p className="text-sm text-gray-500 mt-0.5">{task.description}</p>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className="font-black text-emerald-600">+{task.reward.toLocaleString()} P</span>
+                    {done ? (
+                      <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
+                    ) : (
+                      <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-sm font-black">상세보기 →</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
 
         <div className="bg-blue-50/80 p-6 rounded-2xl border border-blue-100">
           <p className="text-blue-800 font-bold">
-            💡 수익통장에 쌓인 포인트는 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()} P</strong> 이상일 때 마이페이지 &gt; 프리랜서 워크페이스에서 포인트로 출금할 수 있습니다.
+            💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다. 수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()} P</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
           </p>
         </div>
 
-        <button
-          onClick={() => navigate('/sns')}
-          className="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-black hover:bg-gray-200 transition-all"
-        >
+        <button onClick={() => navigate('/sns')} className="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-black hover:bg-gray-200 transition-all">
           돌아가기
         </button>
       </div>
