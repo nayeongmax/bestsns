@@ -154,12 +154,25 @@ const App: React.FC = () => {
 
   const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
 
+  const [currentHash, setCurrentHash] = useState(() => window.location.hash);
+  useEffect(() => {
+    const onHashChange = () => setCurrentHash(window.location.hash);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const pathFromHash = (currentHash || '#/').replace('#', '') || '/';
+  const showEbooksList = pathFromHash === '/ebooks' || pathFromHash === '/ebooks/' || pathFromHash.startsWith('/ebooks?');
+
   return (
     <Router>
       <div className="min-h-screen bg-[#F8FAFC]">
         <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
         <LiveNotification />
         <div className="container mx-auto py-10 px-4">
+          {showEbooksList ? (
+            <EbookSales ebooks={ebooks} setEbooks={setEbooks} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={wishlist} onToggleWishlist={wishlistToggle} />
+          ) : (
           <Routes>
             <Route path="/sns" element={<SNSActivation smmProducts={smmProducts} providers={smmProviders} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={notices} onOrderComplete={(o) => { setSmmOrders(prev => [o, ...prev]); addNotif(user!.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={handleLogout} />} />
             <Route path="/channels" element={<ChannelSales channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} />} />
@@ -186,6 +199,7 @@ const App: React.FC = () => {
             <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
             <Route path="/" element={<Navigate to="/sns" />} />
           </Routes>
+          )}
         </div>
       </div>
     </Router>
