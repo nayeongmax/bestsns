@@ -214,7 +214,7 @@ export interface ChannelProduct {
   sellerImage?: string;
 }
 
-export type NotificationType = 'chat' | 'ebook' | 'channel' | 'sns_activation' | 'approval' | 'payment' | 'prohibited' | 'notice' | 'coupon' | 'revenue' | 'review' | 'revision';
+export type NotificationType = 'chat' | 'ebook' | 'channel' | 'sns_activation' | 'approval' | 'payment' | 'prohibited' | 'notice' | 'coupon' | 'revenue' | 'review' | 'revision' | 'freelancer';
 
 export interface SiteNotification {
   id: string;
