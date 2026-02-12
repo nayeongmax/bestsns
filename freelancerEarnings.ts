@@ -1,4 +1,4 @@
-import type { FreelancerEarningEntry } from '../types';
+import type { FreelancerEarningEntry } from '@/types';
 
 const BALANCE_KEY = (userId: string) => `freelancer_earnings_v1_${userId}`;
 const HISTORY_KEY = (userId: string) => `freelancer_earnings_history_v1_${userId}`;
