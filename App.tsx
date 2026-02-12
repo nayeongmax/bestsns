@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation, useInRouterContext } from 'react-router-dom';
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
@@ -203,13 +203,13 @@ const App: React.FC = () => {
 
   const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
 
-  return (
-    <Router>
-      <div className="min-h-screen bg-[#F8FAFC]">
-        <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
-        <LiveNotification />
-        <div className="container mx-auto py-10 px-4">
-          <ContainerRoutes
+  const alreadyInRouter = useInRouterContext();
+  const content = (
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
+      <LiveNotification />
+      <div className="container mx-auto py-10 px-4">
+        <ContainerRoutes
             ebooks={ebooks}
             setEbooks={setEbooks}
             user={user}
@@ -243,10 +243,11 @@ const App: React.FC = () => {
             setNotices={setNotices}
             handleMassIssueCoupons={handleMassIssueCoupons}
           />
-        </div>
       </div>
-    </Router>
+    </div>
   );
+
+  return alreadyInRouter ? content : <Router>{content}</Router>;
 }
 
 export default App;
