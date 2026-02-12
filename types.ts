@@ -33,6 +33,46 @@ export interface FreelancerEarningEntry {
   at: string;
 }
 
+/** 누구나알바 작업 신청자 */
+export interface PartTimeApplicant {
+  userId: string;
+  nickname: string;
+  comment: string;
+  selected: boolean;
+  appliedAt: string;
+}
+
+/** 누구나알바 작업 상세 (작업 내용 섹션) */
+export interface PartTimeTaskSections {
+  제목?: string;
+  내용?: string;
+  댓글?: string;
+  키워드?: string;
+  이미지?: string;
+}
+
+/** 누구나알바 작업 */
+export interface PartTimeTask {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  reward: number;
+  /** 작업 상세 지시 (제목, 내용, 댓글, 키워드, 이미지 등) */
+  sections: PartTimeTaskSections;
+  /** 신청기간 */
+  applicationPeriod: { start: string; end: string };
+  /** 작업기간 */
+  workPeriod: { start: string; end: string };
+  createdAt: string;
+  createdBy?: string;
+  applicants: PartTimeApplicant[];
+  /** 포인트 지급 완료 여부 */
+  pointPaid: boolean;
+  /** 포인트를 받은 작업자 userId 목록 */
+  paidUserIds?: string[];
+}
+
 export interface SellerApplication {
   sellerType: 'individual' | 'business';
   appliedAt: string;
