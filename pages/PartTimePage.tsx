@@ -167,7 +167,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
 export default PartTimePage;
 
 // ----- 프리랜서 작업 등록 (같은 파일에 두어 Netlify 빌드 시 단일 파일로 해결) -----
-const REGISTER_CATEGORIES = ['설문', 'SNS', '카페', '리뷰', '검수', '라벨링', '번역', '기타'];
+const REGISTER_CATEGORIES = ['설문', 'SNS', '네이버카페', '리뷰', '검수', '라벨링', '번역', '블로그체험단', '블로그기자단', '인스타그램', '유튜브', '웹사이트', '기타'];
 const todayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -188,7 +188,10 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const [appEnd, setAppEnd] = useState(todayStr());
   const [workStart, setWorkStart] = useState(todayStr());
   const [workEnd, setWorkEnd] = useState(todayStr());
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_IMAGES = 10;
 
   if (!user || user.role !== 'admin') {
     navigate('/part-time', { replace: true });
@@ -197,13 +200,23 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
 
   const handleSectionChange = (key: string, value: string) => setSections((s) => ({ ...s, [key]: value }));
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setSections((s) => ({ ...s, 이미지: reader.result as string }));
-    reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (!files?.length) return;
+    const remaining = MAX_IMAGES - attachedImages.length;
+    const toAdd = Math.min(remaining, files.length);
+    if (toAdd <= 0) {
+      alert(`이미지는 최대 ${MAX_IMAGES}개까지 첨부할 수 있습니다.`);
+      e.target.value = '';
+      return;
+    }
+    Array.from(files).slice(0, toAdd).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => setAttachedImages((prev) => [...prev, reader.result as string].slice(0, MAX_IMAGES));
+      reader.readAsDataURL(file);
+    });
     e.target.value = '';
   };
+  const removeAttachedImage = (index: number) => setAttachedImages((prev) => prev.filter((_, i) => i !== index));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,7 +229,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
       category,
       reward: Math.max(0, reward),
       maxApplicants: maxApplicants > 0 ? maxApplicants : undefined,
-      sections: { 제목: sections.제목, 내용: sections.내용, 댓글: sections.댓글, 키워드: sections.키워드, 이미지: sections.이미지, 동영상: sections.동영상, gif: sections.gif },
+      sections: { 제목: sections.제목, 내용: sections.내용, 댓글: sections.댓글, 키워드: sections.키워드, 이미지: sections.이미지, 이미지목록: attachedImages.length ? attachedImages : undefined, 동영상: sections.동영상, gif: sections.gif },
       applicationPeriod: { start: appStart, end: appEnd },
       workPeriod: { start: workStart, end: workEnd },
       createdAt: new Date().toISOString(),
@@ -286,15 +299,21 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
                 <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{key}</label>
                 {key === '이미지' ? (
                   <div className="flex flex-col gap-2">
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm">이미지 업로드 (참고용)</button>
-                    {sections.이미지 && (
-                      <div className="relative inline-block max-w-[200px]">
-                        <img src={sections.이미지} alt="참고" className="rounded-xl border border-gray-100 max-h-32 object-cover" />
-                        <button type="button" onClick={() => setSections((s) => ({ ...s, 이미지: '' }))} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-black">×</button>
+                    <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={attachedImages.length >= MAX_IMAGES} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm disabled:opacity-50">
+                      이미지 업로드 (참고용, 최대 {MAX_IMAGES}개) {attachedImages.length > 0 && `(${attachedImages.length}/${MAX_IMAGES})`}
+                    </button>
+                    {attachedImages.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {attachedImages.map((src, i) => (
+                          <div key={i} className="relative">
+                            <img src={src} alt={`참고 ${i + 1}`} className="w-20 h-20 rounded-lg object-cover border border-gray-200" />
+                            <button type="button" onClick={() => removeAttachedImage(i)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-black leading-none">×</button>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <input type="text" value={sections.이미지?.startsWith('data:') ? '' : (sections.이미지 ?? '')} onChange={(e) => handleSectionChange('이미지', e.target.value)} placeholder="또는 이미지 관련 지시사항 텍스트" className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
+                    <input type="text" value={sections.이미지 ?? ''} onChange={(e) => handleSectionChange('이미지', e.target.value)} placeholder="이미지 관련 지시사항 텍스트 (선택)" className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
                   </div>
                 ) : (
                   <input type="text" value={sections[key] ?? ''} onChange={(e) => handleSectionChange(key, e.target.value)} placeholder={`예: ${key} 관련 지시사항`} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
