@@ -29,7 +29,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user }) => {
   };
 
   const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
-  const isCreator = user && task?.createdBy === user.id;
+  const isOperator = user?.role === 'admin';
 
   const handleApply = () => {
     if (!user || !task) return;
@@ -157,9 +157,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user }) => {
               <p className="text-gray-500 font-bold">신청 완료되었습니다. 선정 시 수익통장에 포인트가 적립됩니다.</p>
             )}
 
-            {(isCreator || user.role === 'admin') && task.applicants.length > 0 && (
+            {isOperator && (
               <div className="border-t border-gray-100 pt-6">
-                <h3 className="text-lg font-black text-gray-800 mb-3">신청자 목록 (선정 / 미선정)</h3>
+                <h3 className="text-lg font-black text-gray-800 mb-3">신청자 목록 (운영자만 선정/미선정 가능)</h3>
+                {task.applicants.length === 0 ? (
+                  <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
+                ) : (
                 <ul className="space-y-2">
                   {task.applicants.map((a) => (
                     <li key={a.userId} className="flex items-center justify-between gap-4 p-3 rounded-xl bg-gray-50 border border-gray-100">
@@ -179,10 +182,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user }) => {
                     </li>
                   ))}
                 </ul>
+                )}
                 <button
                   type="button"
                   onClick={handlePayPoints}
-                  disabled={!task.applicants.some((a) => a.selected)}
+                  disabled={task.applicants.length === 0 || !task.applicants.some((a) => a.selected)}
                   className="mt-4 px-6 py-3 rounded-xl bg-amber-500 text-white font-black hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   포인트 지급하기
