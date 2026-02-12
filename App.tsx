@@ -204,7 +204,12 @@ const App: React.FC = () => {
 
   const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
 
-  const alreadyInRouter = useInRouterContext();
+  // bestsns.com 등 상위 페이지에 이미 Router가 있으면 우리는 Router를 추가하지 않음 (중첩 오류 방지)
+  const isLikelyEmbedded = typeof window !== 'undefined' && (
+    window.location.hostname === 'bestsns.com' ||
+    window.location.hostname.endsWith('.bestsns.com')
+  );
+  const alreadyInRouter = isLikelyEmbedded || useInRouterContext();
   const content = (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
