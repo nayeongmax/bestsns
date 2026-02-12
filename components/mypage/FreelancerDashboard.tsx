@@ -5,8 +5,8 @@ import {
   getFreelancerBalance,
   getFreelancerHistory,
   withdrawFreelancerEarnings,
-  MIN_WITHDRAW,
-} from '@/services/freelancerEarnings';
+  MIN_WITHDRAW_FREELANCER,
+} from '@/constants';
 
 interface Props {
   user: UserProfile;
@@ -28,26 +28,26 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
   }, [user.id]);
 
   const handleWithdraw = () => {
-    if (balance < MIN_WITHDRAW) {
-      alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW.toLocaleString()}원입니다.`);
+    if (balance < MIN_WITHDRAW_FREELANCER) {
+      alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()}원입니다.`);
       return;
     }
-    if (!confirm(`${MIN_WITHDRAW.toLocaleString()}원을 포인트로 출금하시겠습니까?`)) return;
+    if (!confirm(`${MIN_WITHDRAW_FREELANCER.toLocaleString()}원을 포인트로 출금하시겠습니까?`)) return;
     setWithdrawing(true);
-    const result = withdrawFreelancerEarnings(user.id, MIN_WITHDRAW);
+    const result = withdrawFreelancerEarnings(user.id, MIN_WITHDRAW_FREELANCER);
     if (result.success) {
       setBalance(result.newBalance);
       refresh();
-      const newPoints = (user.points ?? 0) + MIN_WITHDRAW;
+      const newPoints = (user.points ?? 0) + MIN_WITHDRAW_FREELANCER;
       onUpdate({ ...user, points: newPoints });
-      alert(`${MIN_WITHDRAW.toLocaleString()} P가 포인트로 출금되었습니다.`);
+      alert(`${MIN_WITHDRAW_FREELANCER.toLocaleString()} P가 포인트로 출금되었습니다.`);
     } else {
       alert('출금 처리에 실패했습니다.');
     }
     setWithdrawing(false);
   };
 
-  const canWithdraw = balance >= MIN_WITHDRAW;
+  const canWithdraw = balance >= MIN_WITHDRAW_FREELANCER;
 
   return (
     <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
@@ -76,7 +76,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
             </div>
           </div>
           <p className="text-[11px] text-gray-500 mt-3">
-            {MIN_WITHDRAW.toLocaleString()} P 이상 모이면 포인트로 출금할 수 있습니다.
+            {MIN_WITHDRAW_FREELANCER.toLocaleString()} P 이상 모이면 포인트로 출금할 수 있습니다.
           </p>
           <button
             type="button"
@@ -88,7 +88,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {withdrawing ? '처리 중...' : canWithdraw ? `${MIN_WITHDRAW.toLocaleString()} P 출금하기` : '5,000 P 이상 시 출금 가능'}
+            {withdrawing ? '처리 중...' : canWithdraw ? `${MIN_WITHDRAW_FREELANCER.toLocaleString()} P 출금하기` : '5,000 P 이상 시 출금 가능'}
           </button>
         </div>
 
