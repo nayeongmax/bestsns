@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 const MobileBottomNav: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const navItems = [
     { label: 'SNS활성화', path: '/sns', icon: '📈' },
     { label: '채널판매', path: '/channels', icon: '📺' },
@@ -47,13 +48,14 @@ const MobileBottomNav: React.FC = () => {
           );
           if (isEbooks) {
             return (
-              <Link
+              <button
                 key={item.path}
-                to="/ebooks"
+                type="button"
+                onClick={() => navigate('/ebooks')}
                 className={`relative flex flex-col items-center justify-center min-w-[85px] h-16 transition-all duration-300 flex-shrink-0 pb-2 ${ebooksActive ? 'text-blue-600 scale-105' : 'text-gray-400'}`}
               >
                 {inner}
-              </Link>
+              </button>
             );
           }
           return (
