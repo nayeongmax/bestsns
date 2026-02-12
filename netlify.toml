@@ -3,6 +3,13 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# AI 컨설팅 함수 — SPA 리다이렉트보다 먼저 매칭되도록 위에 둠
+[[redirects]]
+  from = "/api/ai-consult"
+  to = "/.netlify/functions/ai-consult"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
