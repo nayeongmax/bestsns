@@ -1,192 +1,199 @@
-import React from 'react';
-import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
-import { UserProfile, SiteNotification } from '../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { 
+  UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
+  ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
+  SMMProvider, SMMProduct, NotificationType, GradeConfig
+} from './types';
 
-interface Props {
-  user: UserProfile | null;
-  wishlistCount: number;
-  notifications: SiteNotification[];
-  unreadChatCount: number;
-  onLogout: () => void;
-}
+// Page and Component Imports
+import Header from './components/Header';
+import LiveNotification from './components/LiveNotification';
+import SNSActivation from './pages/SNSActivation';
+import ChannelSales from './pages/ChannelSales';
+import EbookSales from './pages/EbookSales';
+import AIConsulting from './pages/AIConsulting';
+import FreeBoard from './pages/FreeBoard';
+import RevenueManagement from './pages/RevenueManagement';
+import ProfitManagement from './pages/ProfitManagement';
+import ChatPage from './pages/ChatPage';
+import MyPage from './pages/MyPage';
+import AdminPanel from './pages/AdminPanel';
+import NotificationsPage from './pages/NotificationsPage';
+import FreeBoardWrite from './pages/FreeBoardWrite';
+import FreeBoardDetail from './pages/FreeBoardDetail';
+import PointPayment from './pages/PointPayment';
+import CouponBox from './pages/CouponBox';
+import NoticePage from './pages/NoticePage';
+import ReviewWritePage from './pages/ReviewWritePage';
+import AuthPage from './pages/AuthPage';
+import ChannelDetail from './pages/ChannelDetail';
+import EbookDetail from './pages/EbookDetail';
+import EbookRegistration from './pages/EbookRegistration';
+import WishlistPage from './pages/WishlistPage';
+import PartTimePage, { PartTimeTaskRegister } from './pages/PartTimePage';
+import PartTimeTaskDetail from './pages/PartTimeTaskDetail';
 
-const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const pathname = location.pathname;
+const App: React.FC = () => {
+  // 스플래시 화면 제거로 인해 관련 상태 삭제
 
-  const unreadNotifCount = user 
-    ? notifications.filter(n => n.userId === user.id && !n.isRead).length 
-    : 0;
+  const [members, setMembers] = useState<UserProfile[]>(() => {
+    const saved = localStorage.getItem('site_members_v2');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const isAdmin = user?.role === 'admin' || user?.id?.toLowerCase() === 'admin';
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    const saved = localStorage.getItem('user_profile_v2');
+    return saved ? JSON.parse(saved) : null;
+  });
 
-  const navItems = [
-    { label: 'SNS활성화', path: '/sns', icon: '📈' },
-    { label: '채널판매', path: '/channels', icon: '📺' },
-    {
-      label: 'N잡스토어',
-      path: '/ebooks',
-      icon: '📖',
-      badge: '누구나 판매OK'
-    },
-    {
-      label: '누구나알바',
-      path: '/part-time',
-      icon: '👷',
-      badge: '누구나 지원OK'
-    },
-    { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
-    { label: '자유게시판', path: '/board', icon: '🗨️' },
-    { label: '매출관리', path: '/revenue', icon: '📊' },
-  ];
+  const [notifications, setNotifications] = useState<SiteNotification[]>(() => {
+    const saved = localStorage.getItem('site_notifications_v2');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const handleLogoutClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onLogout();
+  const [smmOrders, setSmmOrders] = useState<SMMOrder[]>(() => JSON.parse(localStorage.getItem('smm_orders_v2') || '[]'));
+  const [smmProviders, setSmmProviders] = useState<SMMProvider[]>(() => JSON.parse(localStorage.getItem('site_smm_providers_v2') || '[]'));
+  const [smmProducts, setSmmProducts] = useState<SMMProduct[]>(() => JSON.parse(localStorage.getItem('site_smm_products_v2') || '[]'));
+
+  const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => {
+    const saved = localStorage.getItem('store_orders_v2');
+    if (saved) return JSON.parse(saved);
+    return [];
+  });
+
+  const [channelOrders, setChannelOrders] = useState<ChannelOrder[]>(() => JSON.parse(localStorage.getItem('channel_orders_v2') || '[]'));
+  const [ebooks, setEbooks] = useState<EbookProduct[]>(() => JSON.parse(localStorage.getItem('site_ebooks_v2') || '[]'));
+  const [channels, setChannels] = useState<ChannelProduct[]>(() => JSON.parse(localStorage.getItem('site_channels_v2') || '[]'));
+  const [posts, setPosts] = useState<Post[]>(() => JSON.parse(localStorage.getItem('site_posts_v2') || '[]'));
+  const [reviews, setReviews] = useState<Review[]>(() => JSON.parse(localStorage.getItem('site_reviews_v2') || '[]'));
+  const [notices, setNotices] = useState<Notice[]>(() => JSON.parse(localStorage.getItem('site_notices_v2') || '[]'));
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+
+  useEffect(() => { localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members]);
+  useEffect(() => { localStorage.setItem('user_profile_v2', JSON.stringify(user)); }, [user]);
+  useEffect(() => { localStorage.setItem('site_notifications_v2', JSON.stringify(notifications)); }, [notifications]);
+  useEffect(() => { localStorage.setItem('smm_orders_v2', JSON.stringify(smmOrders)); }, [smmOrders]);
+  useEffect(() => { localStorage.setItem('store_orders_v2', JSON.stringify(storeOrders)); }, [storeOrders]);
+  useEffect(() => { localStorage.setItem('channel_orders_v2', JSON.stringify(channelOrders)); }, [channelOrders]);
+  useEffect(() => { localStorage.setItem('site_ebooks_v2', JSON.stringify(ebooks)); }, [ebooks]);
+  useEffect(() => { localStorage.setItem('site_channels_v2', JSON.stringify(channels)); }, [channels]);
+  useEffect(() => { localStorage.setItem('site_posts_v2', JSON.stringify(posts)); }, [posts]);
+  useEffect(() => { localStorage.setItem('site_reviews_v2', JSON.stringify(reviews)); }, [reviews]);
+  useEffect(() => { localStorage.setItem('site_notices_v2', JSON.stringify(notices)); }, [notices]);
+  useEffect(() => { localStorage.setItem('site_smm_providers_v2', JSON.stringify(smmProviders)); }, [smmProviders]);
+  useEffect(() => { localStorage.setItem('site_smm_products_v2', JSON.stringify(smmProducts)); }, [smmProducts]);
+
+  const handleGlobalUserUpdate = useCallback((updated: UserProfile) => {
+    setUser(updated);
+    setMembers(prev => prev.map(m => m.id === updated.id ? updated : m));
+  }, []);
+
+  useEffect(() => {
+    const handleSync = (e: any) => {
+      if (e.detail) {
+        handleGlobalUserUpdate(e.detail);
+      }
+    };
+    window.addEventListener('site-user-update', handleSync);
+    return () => window.removeEventListener('site-user-update', handleSync);
+  }, [handleGlobalUserUpdate]);
+
+  const addNotif = useCallback((userId: string, type: NotificationType, title: string, message: string, reason?: string) => {
+    const newNotif: SiteNotification = {
+      id: `NOTIF_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      userId, type, title, message, reason, isRead: false, createdAt: new Date().toISOString()
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+  }, []);
+
+  const handleMassIssueCoupons = useCallback((targetIds: string[], couponData: Omit<Coupon, 'id' | 'status'>) => {
+    const now = Date.now();
+    const targetIdsLower = targetIds.map(id => id.trim().toLowerCase());
+    
+    setMembers(prev => {
+      const next = prev.map(m => {
+        if (targetIdsLower.includes(m.id.trim().toLowerCase())) {
+          const newCoupon: Coupon = { ...couponData, id: `CPN_${now}_${m.id}`, status: 'available' };
+          addNotif(
+            m.id, 
+            'coupon', 
+            '🎫 새로운 쿠폰이 도착했습니다!', 
+            `회원님께 [${couponData.title}] (${couponData.discountLabel}) 쿠폰이 발행되었습니다. 쿠폰함을 확인해 보세요!`
+          );
+          return { ...m, coupons: [...(m.coupons || []), newCoupon] };
+        }
+        return m;
+      });
+      if (user) {
+        const updatedMe = next.find(m => m.id.trim().toLowerCase() === user.id.trim().toLowerCase());
+        if (updatedMe) setUser({ ...updatedMe });
+      }
+      return next;
+    });
+  }, [user, addNotif]);
+
+  const handleLoginSuccess = (userData: UserProfile) => {
+    const isAdminLogin = userData.role === 'admin' || userData.id?.toLowerCase() === 'admin';
+    const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
+    let targetProfile: UserProfile;
+    if (existingMember) {
+      targetProfile = { ...existingMember, role: isAdminLogin ? 'admin' : existingMember.role };
+    } else {
+      const isAdmin = userData.id?.toLowerCase() === 'admin';
+      targetProfile = {
+        ...userData, nickname: isAdmin ? '마케터김' : userData.nickname,
+        role: isAdmin ? 'admin' : 'user', sellerStatus: isAdmin ? 'approved' : 'none',
+        points: userData.id?.toLowerCase() === 'test' ? 12500 : 0,
+        joinDate: new Date().toISOString().split('T')[0], coupons: []
+      };
+      setMembers(prev => [...prev, targetProfile]);
+    }
+    setUser(targetProfile);
   };
 
+  const handleLogout = () => setUser(null);
+
+  const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
+
   return (
-    <>
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px]">
-          <div className="flex items-center gap-6 flex-shrink-0">
-            <Link to="/" className="text-2xl font-black flex items-center tracking-tighter">
-              <span className="text-gray-900 uppercase">THEBEST</span>
-              <span className="text-blue-600 uppercase">SNS</span>
-            </Link>
-          </div>
-
-          <nav className="hidden xl:flex items-center gap-1 flex-1 justify-center h-full">
-            {navItems.map((item) => {
-              const isEbooks = item.path === '/ebooks';
-              const isActive = isEbooks
-                ? pathname === '/ebooks' || pathname.startsWith('/ebooks/')
-                : item.path === '/channels'
-                  ? pathname === '/channels' || pathname.startsWith('/channels/')
-                  : pathname === item.path;
-              if (isEbooks) {
-                return (
-                  <button
-                    key={item.path}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      navigate('/ebooks', { replace: false });
-                    }}
-                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
-                      isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                      <span className="text-base">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </div>
-                    {item.badge && (
-                      <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
-                        <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
-                          {item.badge}
-                        </span>
-                      </div>
-                    )}
-                  </button>
-                );
-              }
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  end={item.path === '/channels' ? false : true}
-                  className={({ isActive: navActive }) =>
-                    `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
-                      (item.path === '/channels' ? pathname.startsWith('/channels') : navActive) ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                    }`
-                  }
-                >
-                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="text-base">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
-                      <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
-                        {item.badge}
-                      </span>
-                    </div>
-                  )}
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-4 flex-shrink-0">
-            <div className="flex items-center gap-1">
-              <Link to="/wishlist" className="p-2 text-gray-400 hover:text-red-500 transition-colors relative group">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                {wishlistCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full border border-white animate-bounce">
-                    {wishlistCount}
-                  </span>
-                )}
-              </Link>
-              
-              <Link to="/chat" className="p-2 text-gray-400 hover:text-blue-600 transition-colors relative group">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-              </Link>
-
-              <Link to="/notifications" className="p-2 text-gray-400 hover:text-orange-500 transition-colors relative group">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full border border-white animate-pulse">
-                    {unreadNotifCount}
-                  </span>
-                )}
-              </Link>
-            </div>
-            
-            {isAdmin && (
-              <Link to="/admin" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d1117] text-white text-sm font-black hover:bg-black transition-all italic tracking-tight shrink-0">
-                ⚙️ 어드민패널
-              </Link>
-            )}
-            <div className="w-[1px] h-4 bg-gray-200 mx-1"></div>
-            
-            {user && user.id ? (
-              <div className="flex items-center gap-3">
-                <Link to="/mypage" className="flex items-center gap-2 group">
-                  <img src={user.profileImage} alt="profile" className="w-9 h-9 rounded-full border border-gray-100 object-cover group-hover:ring-2 group-hover:ring-blue-100 transition-all shadow-sm" />
-                  <span className="text-sm font-black text-gray-700 hidden sm:block italic tracking-tight">{user.nickname}</span>
-                </Link>
-                <button 
-                  type="button"
-                  onClick={handleLogoutClick}
-                  className="bg-gray-100 text-gray-400 hover:bg-gray-900 hover:text-white px-3 py-2 rounded-xl text-[10px] font-black transition-all italic uppercase tracking-tighter"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <button 
-                type="button"
-                onClick={() => navigate('/login')}
-                className="bg-gray-900 text-white px-6 py-2.5 rounded-xl text-[13px] font-black hover:bg-blue-600 transition-all shadow-lg active:scale-95 italic tracking-tighter uppercase"
-              >
-                로그인
-              </button>
-            )}
-          </div>
+    <Router>
+      <div className="min-h-screen bg-[#F8FAFC]">
+        <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
+        <LiveNotification />
+        <div className="container mx-auto py-10 px-4">
+          <Routes>
+            <Route path="/ebooks" element={<EbookSales ebooks={ebooks} setEbooks={setEbooks} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={wishlist} onToggleWishlist={wishlistToggle} />} />
+            <Route path="/sns" element={<SNSActivation smmProducts={smmProducts} providers={smmProviders} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={notices} onOrderComplete={(o) => { setSmmOrders(prev => [o, ...prev]); if (user) addNotif(user.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={handleLogout} />} />
+            <Route path="/channels" element={<ChannelSales channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} />} />
+            <Route path="/channels/:id" element={<ChannelDetail channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} reviews={reviews} members={members} />} />
+            <Route path="/ebooks/:id" element={user ? <EbookDetail ebooks={ebooks} wishlist={wishlist} onToggleWishlist={wishlistToggle} user={user} reviews={reviews} storeOrders={storeOrders} members={members} /> : <Navigate to="/login" />} />
+            <Route path="/ebooks/register" element={user ? <EbookRegistration user={user} setEbooks={setEbooks} /> : <Navigate to="/login" />} />
+            <Route path="/part-time" element={<PartTimePage user={user} onUpdateUser={handleGlobalUserUpdate} />} />
+            <Route path="/part-time/register" element={<PartTimeTaskRegister user={user} />} />
+            <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={user} onUpdateUser={handleGlobalUserUpdate} addNotif={addNotif} />} />
+            <Route path="/ai" element={<AIConsulting />} />
+            <Route path="/board" element={<FreeBoard posts={posts} notices={notices} />} />
+            <Route path="/board/:id" element={user ? <FreeBoardDetail user={user} posts={posts} setPosts={setPosts} /> : <Navigate to="/login" />} />
+            <Route path="/board/write" element={user ? <FreeBoardWrite user={user} posts={posts} setPosts={setPosts} /> : <Navigate to="/login" />} />
+            <Route path="/revenue" element={user ? <RevenueManagement /> : <Navigate to="/login" />} />
+            <Route path="/profit-mgmt" element={user ? <ProfitManagement user={user} storeOrders={storeOrders} /> : <Navigate to="/login" />} />
+            <Route path="/chat" element={user ? <ChatPage user={user} members={members} addNotif={addNotif} /> : <Navigate to="/login" />} />
+            <Route path="/mypage" element={user ? <MyPage user={user} onUpdate={handleGlobalUserUpdate} ebooks={ebooks} setEbooks={setEbooks} channels={channels} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} onAddReview={(r)=>setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={reviews} addNotif={addNotif} onRefetchProfile={() => {}} /> : <Navigate to="/login" />} />
+            <Route path="/notifications" element={user ? <NotificationsPage notifications={notifications} setNotifications={setNotifications} user={user} /> : <Navigate to="/login" />} />
+            <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={wishlistToggle} channels={channels} ebooks={ebooks} />} />
+            <Route path="/coupons" element={user ? <CouponBox user={user} /> : <Navigate to="/login" />} />
+            <Route path="/payment/point" element={user ? <PointPayment user={user} ebooks={ebooks} members={members} onUpdateUser={handleGlobalUserUpdate} addNotif={addNotif} /> : <Navigate to="/login" />} />
+            <Route path="/review/write" element={user ? <ReviewWritePage user={user} onAddReview={(r)=>setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
+            <Route path="/admin" element={user ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} addNotif={addNotif} /> : <Navigate to="/login" />} />
+            <Route path="/notices" element={<NoticePage notices={notices} setNotices={setNotices} user={user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
+            <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
+            <Route path="/" element={<Navigate to="/sns" />} />
+          </Routes>
         </div>
-      </header>
-
-      {isAdmin && (
-        <Link to="/admin" className="fixed bottom-8 right-8 z-[60] bg-[#0d1117] text-white w-14 h-14 rounded-2xl shadow-2xl flex items-center justify-center hover:bg-black transition-all hover:scale-110 active:scale-95 group">
-          <span className="text-[11px] font-black italic tracking-widest text-center leading-none">ADMIN<br/>PANEL</span>
-        </Link>
-      )}
-    </>
+      </div>
+    </Router>
   );
-};
+}
 
-export default Header;
+export default App;
