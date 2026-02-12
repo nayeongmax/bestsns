@@ -51,7 +51,7 @@ const MobileBottomNav: React.FC = () => {
               <button
                 key={item.path}
                 type="button"
-                onClick={() => navigate('/ebooks')}
+                onClick={() => { window.location.hash = '#/ebooks'; }}
                 className={`relative flex flex-col items-center justify-center min-w-[85px] h-16 transition-all duration-300 flex-shrink-0 pb-2 ${ebooksActive ? 'text-blue-600 scale-105' : 'text-gray-400'}`}
               >
                 {inner}
