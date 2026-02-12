@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
@@ -234,27 +234,12 @@ type AppBodyProps = {
 };
 
 function AppBody(p: AppBodyProps) {
-  const location = useLocation();
-  const isEbooksList = location.pathname === '/ebooks';
-
-  if (isEbooksList) {
-    return (
-      <EbookSales
-        ebooks={p.ebooks}
-        setEbooks={p.setEbooks}
-        user={p.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }}
-        wishlist={p.wishlist}
-        onToggleWishlist={p.wishlistToggle}
-      />
-    );
-  }
-
   return (
     <Routes>
+      <Route path="/ebooks" element={<EbookSales ebooks={p.ebooks} setEbooks={p.setEbooks} user={p.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={p.wishlist} onToggleWishlist={p.wishlistToggle} />} />
       <Route path="/sns" element={<SNSActivation smmProducts={p.smmProducts} providers={p.smmProviders} user={p.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={p.notices} onOrderComplete={(o) => { p.setSmmOrders(prev => [o, ...prev]); if (p.user) p.addNotif(p.user.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={p.handleLogout} />} />
       <Route path="/channels" element={<ChannelSales channels={p.channels} wishlist={p.wishlist} onToggleWishlist={p.wishlistToggle} />} />
       <Route path="/channels/:id" element={<ChannelDetail channels={p.channels} wishlist={p.wishlist} onToggleWishlist={p.wishlistToggle} reviews={p.reviews} members={p.members} />} />
-      <Route path="/ebooks" element={<EbookSales ebooks={p.ebooks} setEbooks={p.setEbooks} user={p.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={p.wishlist} onToggleWishlist={p.wishlistToggle} />} />
       <Route path="/ebooks/:id" element={p.user ? <EbookDetail ebooks={p.ebooks} wishlist={p.wishlist} onToggleWishlist={p.wishlistToggle} user={p.user} reviews={p.reviews} storeOrders={p.storeOrders} members={p.members} /> : <Navigate to="/login" />} />
       <Route path="/ebooks/register" element={p.user ? <EbookRegistration user={p.user} setEbooks={p.setEbooks} /> : <Navigate to="/login" />} />
       <Route path="/part-time" element={<PartTimePage user={p.user} onUpdateUser={p.handleGlobalUserUpdate} />} />
