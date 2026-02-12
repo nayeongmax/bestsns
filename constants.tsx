@@ -35,7 +35,9 @@ export const CHANNEL_CATEGORIES = [
 ];
 
 // ----- 프리랜서 수익통장 (누구나알바) -----
-import type { FreelancerEarningEntry } from '@/types';
+import type { FreelancerEarningEntry, PartTimeTask } from '@/types';
+
+const PARTTIME_TASKS_KEY = 'parttime_tasks_v1';
 
 const FREELANCER_BALANCE_KEY = (userId: string) => `freelancer_earnings_v1_${userId}`;
 const FREELANCER_HISTORY_KEY = (userId: string) => `freelancer_earnings_history_v1_${userId}`;
@@ -100,4 +102,122 @@ export function withdrawFreelancerEarnings(userId: string, amount: number): { su
   const history = getFreelancerHistory(userId);
   localStorage.setItem(FREELANCER_HISTORY_KEY(userId), JSON.stringify([entry, ...history].slice(0, 100)));
   return { success: true, newBalance: next };
+}
+
+// ----- 누구나알바 작업 목록 -----
+const _now = new Date();
+const _d = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+export const DEFAULT_PARTTIME_TASKS: PartTimeTask[] = [
+  {
+    id: 't1',
+    title: '간단 설문 참여',
+    description: '1분 소요 설문에 참여해 주세요.',
+    category: '설문',
+    reward: 300,
+    sections: { 제목: '설문 제목', 내용: '아래 링크에서 설문 10문항에 답해 주세요.', 댓글: '없음', 키워드: '설문, 참여', 이미지: '없음' },
+    applicationPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 1), end: _d(_now.getFullYear(), _now.getMonth() + 1, 15) },
+    workPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 16), end: _d(_now.getFullYear(), _now.getMonth() + 1, 20) },
+    createdAt: new Date().toISOString(),
+    createdBy: 'admin',
+    applicants: [],
+    pointPaid: false,
+    paidUserIds: [],
+  },
+  {
+    id: 't2',
+    title: 'SNS 공유 인증',
+    description: '지정 포스트 공유 후 캡처 제출',
+    category: 'SNS',
+    reward: 500,
+    sections: { 제목: '공유할 포스트 제목', 내용: '본문 그대로 공유해 주세요.', 댓글: '공유 인증 댓글 작성', 키워드: '#해시태그1 #해시태그2', 이미지: 'jpg, png (캡처본 제출)' },
+    applicationPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 1), end: _d(_now.getFullYear(), _now.getMonth() + 1, 10) },
+    workPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 11), end: _d(_now.getFullYear(), _now.getMonth() + 1, 15) },
+    createdAt: new Date().toISOString(),
+    createdBy: 'admin',
+    applicants: [],
+    pointPaid: false,
+    paidUserIds: [],
+  },
+  {
+    id: 't3',
+    title: '카페 글 작성',
+    description: '지정 카페에 글을 작성해 주세요.',
+    category: '카페',
+    reward: 600,
+    sections: {
+      제목: '예시: OO 사용 후기 남깁니다',
+      내용: '최소 500자 이상 작성. 사용 경험, 장단점을 포함해 주세요.',
+      댓글: '댓글 2건 이상 달아 주세요.',
+      키워드: '키워드1, 키워드2, 키워드3 (본문에 자연스럽게 포함)',
+      이미지: 'jpg 또는 gif 1장 이상 (본문 첨부)',
+    },
+    applicationPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 1), end: _d(_now.getFullYear(), _now.getMonth() + 1, 12) },
+    workPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 13), end: _d(_now.getFullYear(), _now.getMonth() + 1, 18) },
+    createdAt: new Date().toISOString(),
+    createdBy: 'admin',
+    applicants: [],
+    pointPaid: false,
+    paidUserIds: [],
+  },
+  {
+    id: 't4',
+    title: '리뷰 작성',
+    description: '이용 후 리뷰 한 건 작성',
+    category: '리뷰',
+    reward: 400,
+    sections: { 제목: '리뷰 제목 (자유)', 내용: '200자 이상 리뷰 내용', 댓글: '없음', 키워드: '없음', 이미지: '선택 (jpg)' },
+    applicationPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 5), end: _d(_now.getFullYear(), _now.getMonth() + 1, 14) },
+    workPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 15), end: _d(_now.getFullYear(), _now.getMonth() + 1, 19) },
+    createdAt: new Date().toISOString(),
+    createdBy: 'admin',
+    applicants: [],
+    pointPaid: false,
+    paidUserIds: [],
+  },
+  {
+    id: 't5',
+    title: '콘텐츠 검수',
+    description: '짧은 텍스트/이미지 검수',
+    category: '검수',
+    reward: 600,
+    sections: { 제목: '검수 대상 제목', 내용: '오타, 어색한 표현 확인', 댓글: '수정 제안 댓글', 키워드: '없음', 이미지: '이미지 적합성 확인 (jpg, gif)' },
+    applicationPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 1), end: _d(_now.getFullYear(), _now.getMonth() + 1, 8) },
+    workPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 9), end: _d(_now.getFullYear(), _now.getMonth() + 1, 12) },
+    createdAt: new Date().toISOString(),
+    createdBy: 'admin',
+    applicants: [],
+    pointPaid: false,
+    paidUserIds: [],
+  },
+  {
+    id: 't6',
+    title: '번역/교정 (1페이지)',
+    description: 'A4 1페이지 분량 번역 또는 교정',
+    category: '번역',
+    reward: 1500,
+    sections: { 제목: '원문 제목', 내용: '원문 내용 (번역 또는 교정)', 댓글: '없음', 키워드: '없음', 이미지: '없음' },
+    applicationPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 1), end: _d(_now.getFullYear(), _now.getMonth() + 1, 20) },
+    workPeriod: { start: _d(_now.getFullYear(), _now.getMonth() + 1, 21), end: _d(_now.getFullYear(), _now.getMonth() + 1, 25) },
+    createdAt: new Date().toISOString(),
+    createdBy: 'admin',
+    applicants: [],
+    pointPaid: false,
+    paidUserIds: [],
+  },
+];
+
+export function getPartTimeTasks(): PartTimeTask[] {
+  try {
+    const raw = localStorage.getItem(PARTTIME_TASKS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return DEFAULT_PARTTIME_TASKS.map((t) => ({ ...t, applicants: [...(t.applicants || [])], pointPaid: t.pointPaid ?? false, paidUserIds: t.paidUserIds || [] }));
+}
+
+export function setPartTimeTasks(tasks: PartTimeTask[]): void {
+  localStorage.setItem(PARTTIME_TASKS_KEY, JSON.stringify(tasks));
 }
