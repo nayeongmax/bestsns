@@ -68,10 +68,15 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                   : pathname === item.path;
               if (isEbooks) {
                 return (
-                  <a
+                  <button
                     key={item.path}
-                    href="#/ebooks"
-                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 no-underline ${
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate('/ebooks', { replace: false });
+                    }}
+                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
                       isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
                     }`}
                   >
@@ -86,7 +91,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                         </span>
                       </div>
                     )}
-                  </a>
+                  </button>
                 );
               }
               return (
