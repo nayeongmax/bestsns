@@ -13,7 +13,7 @@ export default defineConfig({
       './components/Header': path.resolve(__dirname, 'components/Header.tsx'),
       './components/LiveNotification': path.resolve(__dirname, 'components/LiveNotification.tsx'),
       './pages': path.resolve(__dirname, 'pages'),
-      './types': path.resolve(__dirname, 'types.ts'),
+      // './types' alias 제거: Supabase 패키지가 자체 ./types를 쓰므로 덮어쓰면 FunctionRegion 오류 발생
     },
   },
   build: {
