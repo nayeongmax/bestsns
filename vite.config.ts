@@ -9,9 +9,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
-      // Netlify 빌드 시 "./components/Header" 해석 오류 방지 (어디서 요청해도 동일 파일로)
+      // 어디서 요청하든 항상 프로젝트 루트 기준으로 해석 (Netlify 빌드 오류 방지)
       './components/Header': path.resolve(__dirname, 'components/Header.tsx'),
       './components/LiveNotification': path.resolve(__dirname, 'components/LiveNotification.tsx'),
+      './pages': path.resolve(__dirname, 'pages'),
+      './types': path.resolve(__dirname, 'types.ts'),
     },
   },
   build: {
