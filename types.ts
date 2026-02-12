@@ -40,6 +40,8 @@ export interface PartTimeApplicant {
   comment: string;
   selected: boolean;
   appliedAt: string;
+  /** 선정된 사람이 작업 완료 후 제출하는 작업 링크 */
+  workLink?: string;
 }
 
 /** 누구나알바 작업 상세 (작업 내용 섹션) */
@@ -49,6 +51,8 @@ export interface PartTimeTaskSections {
   댓글?: string;
   키워드?: string;
   이미지?: string;
+  동영상?: string;
+  gif?: string;
 }
 
 /** 누구나알바 작업 */
@@ -58,7 +62,9 @@ export interface PartTimeTask {
   description: string;
   category: string;
   reward: number;
-  /** 작업 상세 지시 (제목, 내용, 댓글, 키워드, 이미지 등) */
+  /** 모집 인원 (0이면 제한 없음) */
+  maxApplicants?: number;
+  /** 작업 상세 지시 (제목, 내용, 댓글, 키워드, 이미지, 동영상, gif 등) */
   sections: PartTimeTaskSections;
   /** 신청기간 */
   applicationPeriod: { start: string; end: string };
