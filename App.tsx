@@ -258,7 +258,7 @@ function AppBody(p: AppBodyProps) {
       <Route path="/ebooks/register" element={p.user ? <EbookRegistration user={p.user} setEbooks={p.setEbooks} /> : <Navigate to="/login" />} />
       <Route path="/part-time" element={<PartTimePage user={p.user} onUpdateUser={p.handleGlobalUserUpdate} />} />
       <Route path="/part-time/register" element={<PartTimeTaskRegister user={p.user} />} />
-      <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={p.user} onUpdateUser={p.handleGlobalUserUpdate} />} />
+      <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={p.user} onUpdateUser={p.handleGlobalUserUpdate} addNotif={p.addNotif} />} />
       <Route path="/ai" element={<AIConsulting />} />
       <Route path="/board" element={<FreeBoard posts={p.posts} notices={p.notices} />} />
       <Route path="/board/:id" element={p.user ? <FreeBoardDetail user={p.user} posts={p.posts} setPosts={p.setPosts} /> : <Navigate to="/login" />} />
