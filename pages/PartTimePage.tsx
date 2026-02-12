@@ -51,7 +51,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   const canGoNext = dateIndex < dateKeys.length - 1;
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 animate-in fade-in duration-700">
+    <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700">
       <div className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-10 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
 
