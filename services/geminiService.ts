@@ -21,11 +21,17 @@ export const getMarketingConsultation = async (prompt: string): Promise<string> 
     const data = await res.json().catch(() => ({}));
 
     if (data.text) return data.text;
-    if (data.message) return `오류: ${data.message}`;
+    if (data.message) return data.message;
+
+    if (!res.ok) {
+      if (res.status === 404) return 'AI 기능을 사용할 수 없습니다. Netlify에서 Functions 배포를 확인해 주세요.';
+      if (res.status === 500) return 'AI 서비스 설정이 되어 있지 않습니다. Netlify 환경 변수에 GEMINI_API_KEY를 등록해 주세요.';
+      return '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.';
+    }
 
     return '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.';
   } catch (error) {
     console.error('AI 컨설팅 요청 실패:', error);
-    return '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.';
+    return 'AI 서버에 연결할 수 없습니다. 네트워크를 확인하거나 잠시 후 다시 시도해 주세요.';
   }
 };
