@@ -100,7 +100,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     alert('작업 링크가 제출되었습니다. 운영자 확인 후 포인트가 지급됩니다.');
   };
 
-  /** 운영자: 작업링크 확인 후 포인트 지급 (작업링크 제출한 선정자만) */
+  /** 운영자: 작업링크 확인 후 포인트 지급 (작업링크 제출한 선정자만) → 수익통장 적립 + 알림 */
   const handlePayPoints = () => {
     if (!task) return;
     const selectedWithLink = task.applicants.filter((a) => a.selected && a.workLink?.trim());
@@ -110,6 +110,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     }
     if (!confirm(`작업 링크를 확인하셨나요? ${selectedWithLink.length}명에게 각 ${task.reward.toLocaleString()} P를 지급합니다.`)) return;
     selectedWithLink.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
+    if (addNotif) {
+      selectedWithLink.forEach((a) =>
+        addNotif(a.userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()} P가 수익통장에 적립되었습니다.`, task.id)
+      );
+    }
     const paidIds = selectedWithLink.map((a) => a.userId);
     const next = tasks.map((t) =>
       t.id !== task.id ? t : { ...t, pointPaid: true, paidUserIds: [...(t.paidUserIds || []), ...paidIds] }
