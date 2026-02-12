@@ -19,13 +19,15 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
     ? notifications.filter(n => n.userId === user.id && !n.isRead).length 
     : 0;
 
+  const isAdmin = user?.role === 'admin' || user?.id?.toLowerCase() === 'admin';
+
   const navItems = [
     { label: 'SNS활성화', path: '/sns', icon: '📈' },
     { label: '채널판매', path: '/channels', icon: '📺' },
-    { 
-      label: 'N잡스토어', 
-      path: '/ebooks', 
-      icon: '📖', 
+    {
+      label: 'N잡스토어',
+      path: '/ebooks',
+      icon: '📖',
       badge: '누구나 판매OK'
     },
     { 
@@ -37,7 +39,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
     { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
     { label: '자유게시판', path: '/board', icon: '🗨️' },
     { label: '매출관리', path: '/revenue', icon: '📊' },
-    ...(user?.role === 'admin' ? [{ label: '어드민패널', path: '/admin', icon: '⚙️', adminOnly: true }] : []),
+    ...(isAdmin ? [{ label: '어드민패널', path: '/admin', icon: '⚙️', adminOnly: true }] : []),
   ];
 
   const handleLogoutClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -86,17 +88,15 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
               }
               if (isEbooks) {
                 return (
-                  <button
+                  <NavLink
                     key={item.path}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      navigate('/ebooks', { replace: false });
-                    }}
-                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
-                      isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                    }`}
+                    to="/ebooks"
+                    end={false}
+                    className={({ isActive: navActive }) =>
+                      `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
+                        navActive || pathname.startsWith('/ebooks') ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                      }`
+                    }
                   >
                     <div className="flex items-center gap-1.5 whitespace-nowrap">
                       <span className="text-base">{item.icon}</span>
@@ -109,7 +109,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                         </span>
                       </div>
                     )}
-                  </button>
+                  </NavLink>
                 );
               }
               return (
@@ -164,7 +164,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
               </Link>
             </div>
             
-            {user?.role === 'admin' && (
+            {isAdmin && (
               <Link to="/admin" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d1117] text-white text-sm font-black hover:bg-black transition-all italic tracking-tight shrink-0">
                 ⚙️ 어드민패널
               </Link>
@@ -198,7 +198,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
         </div>
       </header>
 
-      {user?.role === 'admin' && (
+      {isAdmin && (
         <Link to="/admin" className="fixed bottom-8 right-8 z-[60] bg-[#0d1117] text-white w-14 h-14 rounded-2xl shadow-2xl flex items-center justify-center hover:bg-black transition-all hover:scale-110 active:scale-95 group">
           <span className="text-[11px] font-black italic tracking-widest text-center leading-none">ADMIN<br/>PANEL</span>
         </Link>
