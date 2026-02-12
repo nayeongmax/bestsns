@@ -38,16 +38,11 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-// bestsns.com일 때는 상위에 이미 Router가 있다고 보고 우리는 Router를 넣지 않음 (중첩 오류 방지)
-// 그 외(로컬, netlify.app 등)에서는 우리가 HashRouter 한 번만 사용
-const host = typeof window !== 'undefined' ? window.location.hostname : '';
-const isBestsns = host === 'bestsns.com' || host.endsWith('.bestsns.com');
-
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      {isBestsns ? <App /> : <HashRouter><App /></HashRouter>}
+      <HashRouter><App /></HashRouter>
     </ErrorBoundary>
   </React.StrictMode>
 );
