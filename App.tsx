@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from '@/supabase';
-
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
@@ -10,7 +8,6 @@ import {
 
 // Page and Component Imports
 import Header from './components/Header';
-import MobileBottomNav from './components/MobileBottomNav';
 import LiveNotification from './components/LiveNotification';
 import SNSActivation from './pages/SNSActivation';
 import ChannelSales from './pages/ChannelSales';
@@ -36,37 +33,13 @@ import EbookRegistration from './pages/EbookRegistration';
 import WishlistPage from './pages/WishlistPage';
 import PartTimePage from './pages/PartTimePage';
 
-// Supabase profiles 행 → UserProfile 변환 (테이블 스키마 차이 허용)
-function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
-  const id = String(row.id ?? '');
-  const email = String(row.email ?? (row.raw_json && typeof row.raw_json === 'object' && (row.raw_json as Record<string, unknown>).email) ?? '');
-  const sellerStatusRaw = row.seller_status as string | undefined;
-  const sellerStatus: UserProfile['sellerStatus'] | undefined =
-    (sellerStatusRaw === 'none' || sellerStatusRaw === 'pending' || sellerStatusRaw === 'approved' || sellerStatusRaw === 'revision')
-      ? sellerStatusRaw
-      : undefined;
-  const rawApp = row.seller_application;
-  const sellerApplication = rawApp != null
-    ? (typeof rawApp === 'string' ? JSON.parse(rawApp) : rawApp)
-    : undefined;
-  return {
-    id,
-    nickname: String(row.nickname ?? id),
-    profileImage: String(row.profile_image ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`),
-    email: email || undefined,
-    phone: String(row.phone ?? ''),
-    role: 'user',
-    points: Number(row.points ?? 0),
-    joinDate: String(row.join_date ?? row.updated_at ?? new Date().toISOString().split('T')[0]),
-    coupons: [],
-    sellerStatus: sellerStatus ?? undefined,
-    sellerApplication
-  };
-}
-
 const App: React.FC = () => {
-  const [members, setMembers] = useState<UserProfile[]>([]);
-  const [membersLoaded, setMembersLoaded] = useState(false);
+  // 스플래시 화면 제거로 인해 관련 상태 삭제
+
+  const [members, setMembers] = useState<UserProfile[]>(() => {
+    const saved = localStorage.getItem('site_members_v2');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const [user, setUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('user_profile_v2');
@@ -82,7 +55,12 @@ const App: React.FC = () => {
   const [smmProviders, setSmmProviders] = useState<SMMProvider[]>(() => JSON.parse(localStorage.getItem('site_smm_providers_v2') || '[]'));
   const [smmProducts, setSmmProducts] = useState<SMMProduct[]>(() => JSON.parse(localStorage.getItem('site_smm_products_v2') || '[]'));
 
-  const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => JSON.parse(localStorage.getItem('store_orders_v2') || '[]'));
+  const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => {
+    const saved = localStorage.getItem('store_orders_v2');
+    if (saved) return JSON.parse(saved);
+    return [];
+  });
+
   const [channelOrders, setChannelOrders] = useState<ChannelOrder[]>(() => JSON.parse(localStorage.getItem('channel_orders_v2') || '[]'));
   const [ebooks, setEbooks] = useState<EbookProduct[]>(() => JSON.parse(localStorage.getItem('site_ebooks_v2') || '[]'));
   const [channels, setChannels] = useState<ChannelProduct[]>(() => JSON.parse(localStorage.getItem('site_channels_v2') || '[]'));
@@ -91,48 +69,7 @@ const App: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>(() => JSON.parse(localStorage.getItem('site_notices_v2') || '[]'));
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
 
-  // 회원 목록: Supabase profiles를 단일 소스로 로드 → 어드민/채팅 등에서 사용
-  useEffect(() => {
-    supabase.from('profiles').select('*').order('id').then(({ data, error }) => {
-      if (error) {
-        console.warn('회원 목록(profiles) 로드 실패:', error.message);
-        setMembersLoaded(true);
-        return;
-      }
-      const list: UserProfile[] = (data || []).map((row: Record<string, unknown>) => profileRowToUserProfile(row));
-      const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim().toLowerCase();
-      if (adminId && !list.some(m => m.id.toLowerCase() === adminId)) {
-        list.unshift({
-          id: adminId,
-          nickname: '마케터김',
-          profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=admin`,
-          email: 'admin@thebestsns.com',
-          phone: '010-0000-0000',
-          role: 'admin',
-          points: 999999,
-          joinDate: '2024-01-01',
-          coupons: []
-        });
-      }
-      setMembers(list);
-      setMembersLoaded(true);
-    });
-  }, []);
-
-  // 로그인한 사용자: profiles(회원 목록)에서 판매자 승인 상태 동기화 → 승인 즉시 판매자 워크스페이스 해제
-  useEffect(() => {
-    if (!user || !members.length) return;
-    const same = members.find(m => m.id === user.id);
-    if (!same) return;
-    const serverApproved = same.sellerStatus === 'approved';
-    const currentApproved = user.sellerStatus === 'approved';
-    if (serverApproved && !currentApproved) {
-      setUser(prev => prev ? { ...prev, sellerStatus: 'approved', sellerApplication: same.sellerApplication ?? prev.sellerApplication } : null);
-    }
-  }, [members, user?.id, user?.sellerStatus]);
-
-  // 로컬 저장소 동기화 (members는 profiles 로드 후 덮어쓰므로, 캐시용으로만 저장)
-  useEffect(() => { if (membersLoaded) localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members, membersLoaded]);
+  useEffect(() => { localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members]);
   useEffect(() => { localStorage.setItem('user_profile_v2', JSON.stringify(user)); }, [user]);
   useEffect(() => { localStorage.setItem('site_notifications_v2', JSON.stringify(notifications)); }, [notifications]);
   useEffect(() => { localStorage.setItem('smm_orders_v2', JSON.stringify(smmOrders)); }, [smmOrders]);
@@ -146,34 +83,20 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('site_smm_providers_v2', JSON.stringify(smmProviders)); }, [smmProviders]);
   useEffect(() => { localStorage.setItem('site_smm_products_v2', JSON.stringify(smmProducts)); }, [smmProducts]);
 
-  const handleGlobalUserUpdate = useCallback(async (updated: UserProfile) => {
+  const handleGlobalUserUpdate = useCallback((updated: UserProfile) => {
     setUser(updated);
-    setMembers(prev => {
-      const exists = prev.some(m => m.id === updated.id);
-      if (exists) {
-        return prev.map(m => m.id === updated.id ? updated : m);
-      } else {
-        return [...prev, updated];
-      }
-    });
-    // 판매자 신청 포함: Supabase profiles에 반드시 저장 (어드민 승인 대기 목록용)
-    if (!updated.id) return;
-    const { error } = await supabase.from('profiles').upsert({
-      id: updated.id,
-      email: updated.email ?? null,
-      nickname: updated.nickname || updated.id,
-      profile_image: updated.profileImage || null,
-      phone: updated.phone || null,
-      updated_at: new Date().toISOString(),
-      seller_status: updated.sellerStatus ?? null,
-      seller_application: updated.sellerApplication ?? null
-    }, { onConflict: 'id' });
-    if (error) {
-      console.error('Profiles 동기화 실패:', error.message);
-      alert('저장에 실패했습니다: ' + error.message + '\n\nSupabase 대시보드 → SQL Editor에서 supabase-profiles-seller-columns.sql 내용을 실행했는지 확인해 주세요.');
-      throw new Error(error.message);
-    }
+    setMembers(prev => prev.map(m => m.id === updated.id ? updated : m));
   }, []);
+
+  useEffect(() => {
+    const handleSync = (e: any) => {
+      if (e.detail) {
+        handleGlobalUserUpdate(e.detail);
+      }
+    };
+    window.addEventListener('site-user-update', handleSync);
+    return () => window.removeEventListener('site-user-update', handleSync);
+  }, [handleGlobalUserUpdate]);
 
   const addNotif = useCallback((userId: string, type: NotificationType, title: string, message: string, reason?: string) => {
     const newNotif: SiteNotification = {
@@ -209,77 +132,23 @@ const App: React.FC = () => {
     });
   }, [user, addNotif]);
 
-  // 회원 목록을 Supabase profiles에서 다시 불러오기 (로그인/가입 후 동기화용)
-  const refreshMembersFromProfiles = useCallback(() => {
-    supabase.from('profiles').select('*').order('id').then(({ data, error }) => {
-      if (error) return;
-      const list: UserProfile[] = (data || []).map((row: Record<string, unknown>) => profileRowToUserProfile(row));
-      const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim().toLowerCase();
-      if (adminId && !list.some(m => m.id.toLowerCase() === adminId)) {
-        list.unshift({
-          id: adminId,
-          nickname: '마케터김',
-          profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=admin`,
-          email: 'admin@thebestsns.com',
-          phone: '010-0000-0000',
-          role: 'admin',
-          points: 999999,
-          joinDate: '2024-01-01',
-          coupons: []
-        });
-      }
-      setMembers(list);
-    });
-  }, []);
-
-  // 로그인한 사용자 프로필만 Supabase에서 다시 불러오기 (승인 직후 새로고침 없이 판매자 워크스페이스 해제용)
-  const refetchCurrentUserProfile = useCallback(() => {
-    if (!user?.id) return;
-    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle().then(({ data, error }) => {
-      if (error || !data) return;
-      const row = profileRowToUserProfile(data as Record<string, unknown>);
-      setUser(prev => prev ? { ...prev, sellerStatus: row.sellerStatus ?? prev.sellerStatus, sellerApplication: row.sellerApplication ?? prev.sellerApplication } : null);
-    });
-  }, [user?.id]);
-
-  // 회원가입 및 로그인 성공 시: profiles 동기화 후 회원 목록은 profiles 기준으로 유지
-  const handleLoginSuccess = useCallback((userData: UserProfile) => {
-    const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim().toLowerCase();
-    const isAdmin = userData.id.toLowerCase() === adminId;
-    const targetProfile: UserProfile = {
-      ...userData,
-      nickname: userData.nickname || userData.id,
-      role: isAdmin ? 'admin' : 'user',
-      sellerStatus: isAdmin ? 'approved' : 'none',
-      points: userData.points ?? 0,
-      joinDate: userData.joinDate ?? new Date().toISOString().split('T')[0],
-      coupons: userData.coupons ?? []
-    };
-
-    setUser(targetProfile);
-    setMembers(prev => {
-      const exists = prev.some(m => m.id.toLowerCase() === targetProfile.id.toLowerCase());
-      if (exists) return prev.map(m => m.id.toLowerCase() === targetProfile.id.toLowerCase() ? targetProfile : m);
-      return [targetProfile, ...prev];
-    });
-
-    // Supabase profiles에 반드시 기록 (회원 목록·Table Editor 단일 소스)
-    if (targetProfile.email && !isAdmin) {
-      supabase.from('profiles').upsert({
-        id: targetProfile.id,
-        email: targetProfile.email,
-        nickname: targetProfile.nickname || targetProfile.id,
-        profile_image: targetProfile.profileImage || null,
-        phone: targetProfile.phone || null,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.error('Profiles 동기화 실패:', error.message);
-        refreshMembersFromProfiles();
-      });
+  const handleLoginSuccess = (userData: UserProfile) => {
+    const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
+    let targetProfile: UserProfile;
+    if (existingMember) {
+      targetProfile = { ...existingMember };
     } else {
-      refreshMembersFromProfiles();
+      const isAdmin = userData.id.toLowerCase() === 'admin';
+      targetProfile = { 
+        ...userData, nickname: isAdmin ? '마케터김' : userData.nickname,
+        role: isAdmin ? 'admin' : 'user', sellerStatus: isAdmin ? 'approved' : 'none', 
+        points: userData.id.toLowerCase() === 'test' ? 12500 : 0, 
+        joinDate: new Date().toISOString().split('T')[0], coupons: [] 
+      };
+      setMembers(prev => [...prev, targetProfile]);
     }
-  }, [refreshMembersFromProfiles]);
+    setUser(targetProfile);
+  };
 
   const handleLogout = () => setUser(null);
 
@@ -290,9 +159,9 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-[#F8FAFC]">
         <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
         <LiveNotification />
-        <div className="container mx-auto py-10 px-4 mb-20 lg:mb-0">
+        <div className="container mx-auto py-10 px-4">
           <Routes>
-            <Route path="/sns" element={<SNSActivation smmProducts={smmProducts} providers={smmProviders} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 0 }} notices={notices} onOrderComplete={(o) => { setSmmOrders(prev => [o, ...prev]); addNotif(user!.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={handleLogout} />} />
+            <Route path="/sns" element={<SNSActivation smmProducts={smmProducts} providers={smmProviders} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={notices} onOrderComplete={(o) => { setSmmOrders(prev => [o, ...prev]); addNotif(user!.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={handleLogout} />} />
             <Route path="/channels" element={<ChannelSales channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} />} />
             <Route path="/channels/:id" element={<ChannelDetail channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} reviews={reviews} members={members} />} />
             <Route path="/ebooks" element={<EbookSales ebooks={ebooks} setEbooks={setEbooks} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={wishlist} onToggleWishlist={wishlistToggle} />} />
@@ -306,22 +175,21 @@ const App: React.FC = () => {
             <Route path="/revenue" element={user ? <RevenueManagement /> : <Navigate to="/login" />} />
             <Route path="/profit-mgmt" element={user ? <ProfitManagement user={user} storeOrders={storeOrders} /> : <Navigate to="/login" />} />
             <Route path="/chat" element={user ? <ChatPage user={user} members={members} addNotif={addNotif} /> : <Navigate to="/login" />} />
-            <Route path="/mypage" element={user ? <MyPage user={user} onUpdate={handleGlobalUserUpdate} ebooks={ebooks} setEbooks={setEbooks} channels={channels} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} onAddReview={(r)=>setReviews(p=>[r,...p])} onUpdateReview={(r)=>setReviews(p=>p.map(i=>i.id===r.id?r:i))} reviews={reviews} addNotif={addNotif} onRefetchProfile={refetchCurrentUserProfile} /> : <Navigate to="/login" />} />
+            <Route path="/mypage" element={user ? <MyPage user={user} onUpdate={handleGlobalUserUpdate} ebooks={ebooks} setEbooks={setEbooks} channels={channels} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} onAddReview={(r)=>setReviews(p=>[r,...p])} onUpdateReview={(r)=>setReviews(p=>p.map(i=>i.id===r.id?r:i))} reviews={reviews} addNotif={addNotif} onRefetchProfile={() => {}} /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <NotificationsPage notifications={notifications} setNotifications={setNotifications} user={user} /> : <Navigate to="/login" />} />
             <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={wishlistToggle} channels={channels} ebooks={ebooks} />} />
             <Route path="/coupons" element={user ? <CouponBox user={user} /> : <Navigate to="/login" />} />
             <Route path="/payment/point" element={user ? <PointPayment user={user} ebooks={ebooks} members={members} onUpdateUser={handleGlobalUserUpdate} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/review/write" element={user ? <ReviewWritePage user={user} onAddReview={(r)=>setReviews(p=>[r,...p])} /> : <Navigate to="/login" />} />
-            <Route path="/admin" element={user?.role === 'admin' ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} onRefreshMembers={refreshMembersFromProfiles} addNotif={addNotif} /> : user ? <Navigate to="/sns" /> : <Navigate to="/login" />} />
+            <Route path="/admin" element={user ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} addNotif={addNotif} /> : <Navigate to="/login" />} />
             <Route path="/notices" element={<NoticePage notices={notices} setNotices={setNotices} user={user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
             <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
             <Route path="/" element={<Navigate to="/sns" />} />
           </Routes>
         </div>
-        <MobileBottomNav />
       </div>
     </Router>
   );
-}
+};
 
 export default App;
