@@ -144,6 +144,11 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
               </Link>
             </div>
             
+            {user?.role === 'admin' && (
+              <Link to="/admin" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d1117] text-white text-sm font-black hover:bg-black transition-all italic tracking-tight">
+                어드민패널
+              </Link>
+            )}
             <div className="w-[1px] h-4 bg-gray-200 mx-1"></div>
             
             {user && user.id ? (
