@@ -61,7 +61,7 @@ exports.handler = async (event, context) => {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const payload = {
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    contents: [{ parts: [{ text: prompt }] }],
     systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
     generationConfig: {
       temperature: 0.7,
@@ -76,18 +76,19 @@ exports.handler = async (event, context) => {
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       const errMsg = data?.error?.message || res.statusText || 'API 오류';
       console.error('Gemini API error:', res.status, errMsg);
+      let userMsg = '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.';
+      if (res.status === 400 && /API key|invalid|key/i.test(errMsg)) userMsg = 'API 키를 확인해 주세요. Netlify 환경 변수 GEMINI_API_KEY를 확인해 주세요.';
+      else if (res.status === 403 || res.status === 401) userMsg = 'API 키가 올바르지 않거나 권한이 없습니다. GEMINI_API_KEY를 확인해 주세요.';
+      else if (res.status === 404) userMsg = 'AI 모델을 찾을 수 없습니다. 잠시 후 다시 시도해 주세요.';
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({
-          status: 'ok',
-          text: '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.',
-        }),
+        body: JSON.stringify({ status: 'ok', text: userMsg }),
       };
     }
 
@@ -107,7 +108,7 @@ exports.handler = async (event, context) => {
       headers,
       body: JSON.stringify({
         status: 'ok',
-        text: '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.',
+        text: 'AI 서버에 연결할 수 없습니다. 네트워크를 확인하거나 잠시 후 다시 시도해 주세요.',
       }),
     };
   }
