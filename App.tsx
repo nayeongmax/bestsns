@@ -6,9 +6,9 @@ import {
   SMMProvider, SMMProduct, NotificationType, GradeConfig
 } from './types';
 
-// Page and Component Imports
-import Header from './components/Header';
-import LiveNotification from './components/LiveNotification';
+// Page and Component Imports (alias로 루트 기준 경로 사용 - 빌드 해상도 오류 방지)
+import Header from '@/components/Header';
+import LiveNotification from '@/components/LiveNotification';
 import SNSActivation from './pages/SNSActivation';
 import ChannelSales from './pages/ChannelSales';
 import EbookSales from './pages/EbookSales';
