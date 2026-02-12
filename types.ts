@@ -44,7 +44,7 @@ export interface PartTimeApplicant {
   workLink?: string;
 }
 
-/** 누구나알바 작업 상세 (작업 내용 섹션) */
+/** 누구나알바 작업 상세 (작업 내용 섹션) - 필요한 항목만 사용 */
 export interface PartTimeTaskSections {
   제목?: string;
   내용?: string;
@@ -56,6 +56,10 @@ export interface PartTimeTaskSections {
   이미지목록?: string[];
   동영상?: string;
   gif?: string;
+  /** 작업 링크 관련 안내 */
+  작업링크?: string;
+  /** 작업 안내 (전체 가이드) */
+  작업안내?: string;
 }
 
 /** 누구나알바 작업 */
