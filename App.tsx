@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
@@ -33,6 +33,63 @@ import EbookRegistration from './pages/EbookRegistration';
 import WishlistPage from './pages/WishlistPage';
 import PartTimePage, { PartTimeTaskRegister } from './pages/PartTimePage';
 import PartTimeTaskDetail from './pages/PartTimeTaskDetail';
+
+/** pathname이 /ebooks일 때 항상 EbookSales만 렌더 (다른 라우트 간섭 방지) */
+function ContainerRoutes(props: {
+  ebooks: any[]; setEbooks: React.Dispatch<React.SetStateAction<any[]>>;
+  user: UserProfile | null; wishlist: WishlistItem[]; wishlistToggle: (i: WishlistItem) => void;
+  smmProducts: any[]; smmProviders: any[]; smmOrders: any[]; notices: any[]; setSmmOrders: React.Dispatch<React.SetStateAction<any[]>>; addNotif: (userId: string, type: NotificationType, title: string, body: string) => void; handleLogout: () => void;
+  channels: any[]; setChannels: React.Dispatch<React.SetStateAction<any[]>>; reviews: any[]; members: UserProfile[]; setMembers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
+  storeOrders: any[]; channelOrders: any[]; posts: any[]; setPosts: React.Dispatch<React.SetStateAction<any[]>>; setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
+  setNotifications: React.Dispatch<React.SetStateAction<SiteNotification[]>>; notifications: SiteNotification[]; setStoreOrders: React.Dispatch<React.SetStateAction<any[]>>; setChannelOrders: React.Dispatch<React.SetStateAction<any[]>>;
+  handleGlobalUserUpdate: (u: UserProfile) => void; handleLoginSuccess: (u: UserProfile) => void;
+  setSmmProviders: React.Dispatch<React.SetStateAction<any[]>>; setSmmProducts: React.Dispatch<React.SetStateAction<any[]>>; setNotices: React.Dispatch<React.SetStateAction<Notice[]>>;
+  handleMassIssueCoupons: () => void;
+}) {
+  const location = useLocation();
+  const pathname = location.pathname || '';
+  if (pathname === '/ebooks') {
+    return (
+      <EbookSales
+        ebooks={props.ebooks}
+        setEbooks={props.setEbooks}
+        user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }}
+        wishlist={props.wishlist}
+        onToggleWishlist={props.wishlistToggle}
+      />
+    );
+  }
+  return (
+    <Routes>
+      <Route path="/ebooks" element={<EbookSales ebooks={props.ebooks} setEbooks={props.setEbooks} user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} />} />
+      <Route path="/sns" element={<SNSActivation smmProducts={props.smmProducts} providers={props.smmProviders} user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={props.notices} onOrderComplete={(o) => { props.setSmmOrders(prev => [o, ...prev]); if (props.user) props.addNotif(props.user.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={props.handleLogout} />} />
+      <Route path="/channels" element={<ChannelSales channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} />} />
+      <Route path="/channels/:id" element={<ChannelDetail channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} reviews={props.reviews} members={props.members} />} />
+      <Route path="/ebooks/:id" element={props.user ? <EbookDetail ebooks={props.ebooks} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} user={props.user} reviews={props.reviews} storeOrders={props.storeOrders} members={props.members} /> : <Navigate to="/login" />} />
+      <Route path="/ebooks/register" element={props.user ? <EbookRegistration user={props.user} setEbooks={props.setEbooks} /> : <Navigate to="/login" />} />
+      <Route path="/part-time" element={<PartTimePage user={props.user} onUpdateUser={props.handleGlobalUserUpdate} />} />
+      <Route path="/part-time/register" element={<PartTimeTaskRegister user={props.user} />} />
+      <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={props.user} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} />} />
+      <Route path="/ai" element={<AIConsulting />} />
+      <Route path="/board" element={<FreeBoard posts={props.posts} notices={props.notices} />} />
+      <Route path="/board/:id" element={props.user ? <FreeBoardDetail user={props.user} posts={props.posts} setPosts={props.setPosts} /> : <Navigate to="/login" />} />
+      <Route path="/board/write" element={props.user ? <FreeBoardWrite user={props.user} posts={props.posts} setPosts={props.setPosts} /> : <Navigate to="/login" />} />
+      <Route path="/revenue" element={props.user ? <RevenueManagement /> : <Navigate to="/login" />} />
+      <Route path="/profit-mgmt" element={props.user ? <ProfitManagement user={props.user} storeOrders={props.storeOrders} /> : <Navigate to="/login" />} />
+      <Route path="/chat" element={props.user ? <ChatPage user={props.user} members={props.members} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
+      <Route path="/mypage" element={props.user ? <MyPage user={props.user} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={() => {}} /> : <Navigate to="/login" />} />
+      <Route path="/notifications" element={props.user ? <NotificationsPage notifications={props.notifications} setNotifications={props.setNotifications} user={props.user} /> : <Navigate to="/login" />} />
+      <Route path="/wishlist" element={<WishlistPage wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channels={props.channels} ebooks={props.ebooks} />} />
+      <Route path="/coupons" element={props.user ? <CouponBox user={props.user} /> : <Navigate to="/login" />} />
+      <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
+      <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
+      <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
+      <Route path="/notices" element={<NoticePage notices={props.notices} setNotices={props.setNotices} user={props.user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
+      <Route path="/login" element={<AuthPage onLoginSuccess={props.handleLoginSuccess} />} />
+      <Route path="/" element={<Navigate to="/sns" />} />
+    </Routes>
+  );
+}
 
 const App: React.FC = () => {
   // 스플래시 화면 제거로 인해 관련 상태 삭제
@@ -162,34 +219,40 @@ const App: React.FC = () => {
         <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
         <LiveNotification />
         <div className="container mx-auto py-10 px-4">
-          <Routes>
-            <Route path="/ebooks" element={<EbookSales ebooks={ebooks} setEbooks={setEbooks} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={wishlist} onToggleWishlist={wishlistToggle} />} />
-            <Route path="/sns" element={<SNSActivation smmProducts={smmProducts} providers={smmProviders} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={notices} onOrderComplete={(o) => { setSmmOrders(prev => [o, ...prev]); if (user) addNotif(user.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={handleLogout} />} />
-            <Route path="/channels" element={<ChannelSales channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} />} />
-            <Route path="/channels/:id" element={<ChannelDetail channels={channels} wishlist={wishlist} onToggleWishlist={wishlistToggle} reviews={reviews} members={members} />} />
-            <Route path="/ebooks/:id" element={user ? <EbookDetail ebooks={ebooks} wishlist={wishlist} onToggleWishlist={wishlistToggle} user={user} reviews={reviews} storeOrders={storeOrders} members={members} /> : <Navigate to="/login" />} />
-            <Route path="/ebooks/register" element={user ? <EbookRegistration user={user} setEbooks={setEbooks} /> : <Navigate to="/login" />} />
-            <Route path="/part-time" element={<PartTimePage user={user} onUpdateUser={handleGlobalUserUpdate} />} />
-            <Route path="/part-time/register" element={<PartTimeTaskRegister user={user} />} />
-            <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={user} onUpdateUser={handleGlobalUserUpdate} addNotif={addNotif} />} />
-            <Route path="/ai" element={<AIConsulting />} />
-            <Route path="/board" element={<FreeBoard posts={posts} notices={notices} />} />
-            <Route path="/board/:id" element={user ? <FreeBoardDetail user={user} posts={posts} setPosts={setPosts} /> : <Navigate to="/login" />} />
-            <Route path="/board/write" element={user ? <FreeBoardWrite user={user} posts={posts} setPosts={setPosts} /> : <Navigate to="/login" />} />
-            <Route path="/revenue" element={user ? <RevenueManagement /> : <Navigate to="/login" />} />
-            <Route path="/profit-mgmt" element={user ? <ProfitManagement user={user} storeOrders={storeOrders} /> : <Navigate to="/login" />} />
-            <Route path="/chat" element={user ? <ChatPage user={user} members={members} addNotif={addNotif} /> : <Navigate to="/login" />} />
-            <Route path="/mypage" element={user ? <MyPage user={user} onUpdate={handleGlobalUserUpdate} ebooks={ebooks} setEbooks={setEbooks} channels={channels} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} onAddReview={(r)=>setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={reviews} addNotif={addNotif} onRefetchProfile={() => {}} /> : <Navigate to="/login" />} />
-            <Route path="/notifications" element={user ? <NotificationsPage notifications={notifications} setNotifications={setNotifications} user={user} /> : <Navigate to="/login" />} />
-            <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={wishlistToggle} channels={channels} ebooks={ebooks} />} />
-            <Route path="/coupons" element={user ? <CouponBox user={user} /> : <Navigate to="/login" />} />
-            <Route path="/payment/point" element={user ? <PointPayment user={user} ebooks={ebooks} members={members} onUpdateUser={handleGlobalUserUpdate} addNotif={addNotif} /> : <Navigate to="/login" />} />
-            <Route path="/review/write" element={user ? <ReviewWritePage user={user} onAddReview={(r)=>setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
-            <Route path="/admin" element={user ? <AdminPanel user={user} ebooks={ebooks} setEbooks={setEbooks} channels={channels} setChannels={setChannels} setNotifications={setNotifications} smmProviders={smmProviders} setSmmProviders={setSmmProviders} smmProducts={smmProducts} setSmmProducts={setSmmProducts} smmOrders={smmOrders} members={members} setMembers={setMembers} channelOrders={channelOrders} storeOrders={storeOrders} onIssueCoupons={handleMassIssueCoupons} addNotif={addNotif} /> : <Navigate to="/login" />} />
-            <Route path="/notices" element={<NoticePage notices={notices} setNotices={setNotices} user={user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
-            <Route path="/login" element={<AuthPage onLoginSuccess={handleLoginSuccess} />} />
-            <Route path="/" element={<Navigate to="/sns" />} />
-          </Routes>
+          <ContainerRoutes
+            ebooks={ebooks}
+            setEbooks={setEbooks}
+            user={user}
+            wishlist={wishlist}
+            wishlistToggle={wishlistToggle}
+            smmProducts={smmProducts}
+            smmProviders={smmProviders}
+            smmOrders={smmOrders}
+            notices={notices}
+            setSmmOrders={setSmmOrders}
+            addNotif={addNotif}
+            handleLogout={handleLogout}
+            channels={channels}
+            setChannels={setChannels}
+            reviews={reviews}
+            members={members}
+            setMembers={setMembers}
+            storeOrders={storeOrders}
+            channelOrders={channelOrders}
+            posts={posts}
+            setPosts={setPosts}
+            setReviews={setReviews}
+            setNotifications={setNotifications}
+            notifications={notifications}
+            setStoreOrders={setStoreOrders}
+            setChannelOrders={setChannelOrders}
+            handleGlobalUserUpdate={handleGlobalUserUpdate}
+            handleLoginSuccess={handleLoginSuccess}
+            setSmmProviders={setSmmProviders}
+            setSmmProducts={setSmmProducts}
+            setNotices={setNotices}
+            handleMassIssueCoupons={handleMassIssueCoupons}
+          />
         </div>
       </div>
     </Router>
