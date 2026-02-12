@@ -30,16 +30,15 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
       icon: '📖',
       badge: '누구나 판매OK'
     },
-    { 
-      label: '누구나알바', 
-      path: '/part-time', 
+    {
+      label: '누구나알바',
+      path: '/part-time',
       icon: '👷',
       badge: '누구나 지원OK'
     },
     { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
     { label: '자유게시판', path: '/board', icon: '🗨️' },
     { label: '매출관리', path: '/revenue', icon: '📊' },
-    ...(isAdmin ? [{ label: '어드민패널', path: '/admin', icon: '⚙️', adminOnly: true }] : []),
   ];
 
   const handleLogoutClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -62,37 +61,19 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
           <nav className="hidden xl:flex items-center gap-1 flex-1 justify-center h-full">
             {navItems.map((item) => {
               const isEbooks = item.path === '/ebooks';
-              const isAdmin = 'adminOnly' in item && item.adminOnly;
-              const isActive = isAdmin
-                ? pathname === '/admin' || pathname.startsWith('/admin')
-                : isEbooks
+              const isActive = isEbooks
                 ? pathname === '/ebooks' || pathname.startsWith('/ebooks/')
                 : item.path === '/channels'
                   ? pathname === '/channels' || pathname.startsWith('/channels/')
                   : pathname === item.path;
-              if (isAdmin) {
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
-                      isActive ? 'bg-[#0d1117] text-white shadow-lg shadow-gray-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                      <span className="text-base">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </div>
-                  </Link>
-                );
-              }
               if (isEbooks) {
                 return (
-                  <Link
+                  <button
                     key={item.path}
-                    to="/ebooks"
+                    type="button"
+                    onClick={() => navigate('/ebooks')}
                     className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
-                      pathname === '/ebooks' || pathname.startsWith('/ebooks/') ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                      isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -106,7 +87,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                         </span>
                       </div>
                     )}
-                  </Link>
+                  </button>
                 );
               }
               return (
