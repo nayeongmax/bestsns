@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
-import type { PartTimeTask, PartTimeTaskSections } from '@/types';
+import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '@/types';
 import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks } from '@/constants';
 
 interface Props {
@@ -182,6 +182,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const [reward, setReward] = useState(300);
   const [maxApplicants, setMaxApplicants] = useState(0);
   const [selectedSectionKeys, setSelectedSectionKeys] = useState<(keyof PartTimeTaskSections)[]>(['제목', '내용']);
+  const [postBlocks, setPostBlocks] = useState<PartTimePostBlock[]>([{ 제목: '', 내용: '' }]);
   const [sections, setSections] = useState<Record<string, string>>({
     제목: '', 내용: '', 댓글: '', 키워드: '', 이미지: '', 동영상: '', gif: '', 작업링크: '', 작업안내: '',
   });
@@ -199,6 +200,12 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   };
+
+  const usePostBlocks = selectedSectionKeys.includes('제목') && selectedSectionKeys.includes('내용');
+  const addPostBlock = () => setPostBlocks((p) => [...p, { 제목: '', 내용: '' }]);
+  const removePostBlock = (index: number) => setPostBlocks((p) => (p.length <= 1 ? p : p.filter((_, i) => i !== index)));
+  const updatePostBlock = (index: number, field: '제목' | '내용', value: string) =>
+    setPostBlocks((p) => p.map((b, i) => (i === index ? { ...b, [field]: value } : b)));
 
   if (!user || user.role !== 'admin') {
     navigate('/part-time', { replace: true });
@@ -228,10 +235,21 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) { alert('게시글 제목을 입력해 주세요.'); return; }
+    if (usePostBlocks && !postBlocks.some((b) => b.제목?.trim() || b.내용?.trim())) {
+      alert('게시글을 1개 이상 입력해 주세요.');
+      return;
+    }
     const tasks = getPartTimeTasks();
     const sectionsOut: PartTimeTaskSections = {};
+    if (usePostBlocks && postBlocks.some((b) => b.제목?.trim() || b.내용?.trim())) {
+      sectionsOut.게시글목록 = postBlocks.filter((b) => b.제목?.trim() || b.내용?.trim()).map((b) => ({ 제목: b.제목.trim(), 내용: b.내용.trim() }));
+    }
     selectedSectionKeys.forEach((key) => {
-      if (key === '이미지') {
+      if (key === '제목' || key === '내용') {
+        if (usePostBlocks) return;
+        const val = sections[key];
+        if (val != null && String(val).trim()) sectionsOut[key] = String(val).trim();
+      } else if (key === '이미지') {
         if (sections.이미지?.trim()) sectionsOut.이미지 = sections.이미지.trim();
         if (attachedImages.length) sectionsOut.이미지목록 = attachedImages;
       } else {
@@ -324,8 +342,42 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
               </label>
             ))}
           </div>
+          {usePostBlocks && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-black text-gray-700">게시글 (제목 + 내용) — 원하는 개수만큼 추가</span>
+                <button type="button" onClick={addPostBlock} className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
+                  + 게시글 추가
+                </button>
+              </div>
+              {postBlocks.map((block, idx) => (
+                <div key={idx} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-500 uppercase">게시글 {idx + 1}</span>
+                    {postBlocks.length > 1 && (
+                      <button type="button" onClick={() => removePostBlock(idx)} className="text-red-500 text-sm font-bold hover:underline">삭제</button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={block.제목}
+                    onChange={(e) => updatePostBlock(idx, '제목', e.target.value)}
+                    placeholder="제목"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                  />
+                  <textarea
+                    value={block.내용}
+                    onChange={(e) => updatePostBlock(idx, '내용', e.target.value)}
+                    placeholder="내용 (긴 글 가능)"
+                    rows={6}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y min-h-[120px]"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="space-y-4">
-            {selectedSectionKeys.map((key) => (
+            {selectedSectionKeys.filter((k) => !usePostBlocks || (k !== '제목' && k !== '내용')).map((key) => (
               <div key={key}>
                 <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{key}</label>
                 {key === '이미지' ? (
