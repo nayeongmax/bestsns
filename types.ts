@@ -20,6 +20,17 @@ export interface UserProfile {
   violationCount?: number;
   isOnline?: boolean;
   manualGrade?: string;
+  /** 프리랜서 수익통장 잔액 (누구나알바 작업으로 쌓인 포인트) */
+  freelancerEarnings?: number;
+}
+
+/** 프리랜서 수익통장 내역 한 건 */
+export interface FreelancerEarningEntry {
+  id: string;
+  type: 'task' | 'withdraw';
+  amount: number;
+  label: string;
+  at: string;
 }
 
 export interface SellerApplication {
