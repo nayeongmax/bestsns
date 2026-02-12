@@ -370,19 +370,28 @@ function AppContent(props: {
   const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
   const handleLoginSuccess = (profile: UserProfile) => setUser(profile);
 
-  // 주소창 해시를 state로 두고 hashchange 시 동기화 → #/ebooks 일 때만 N잡스토어 리스트 표시 (채팅 대신)
+  // N잡스토어 리스트 강제 표시: 클릭 시 콜백으로 켜고, 해시도 동기화
+  const [forceShowEbooks, setForceShowEbooks] = useState(false);
   const [currentHash, setCurrentHash] = useState(() => (typeof window !== 'undefined' ? window.location.hash : ''));
   useEffect(() => {
-    const sync = () => setCurrentHash(window.location.hash);
+    const sync = () => {
+      const h = window.location.hash;
+      setCurrentHash(h);
+      if (h !== '#/ebooks' && h !== '#/ebooks/') setForceShowEbooks(false);
+    };
     sync();
     window.addEventListener('hashchange', sync);
     return () => window.removeEventListener('hashchange', sync);
   }, []);
-  const isEbooksListPage = currentHash === '#/ebooks' || currentHash === '#/ebooks/' || location.pathname === '/ebooks';
+  const showEbooksList = () => {
+    setForceShowEbooks(true);
+    window.location.hash = '#/ebooks';
+  };
+  const isEbooksListPage = forceShowEbooks || currentHash === '#/ebooks' || currentHash === '#/ebooks/' || location.pathname === '/ebooks';
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
+      <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} onNavigateToEbooks={showEbooksList} />
       <LiveNotification />
       <div className="container mx-auto py-10 px-4 mb-20 lg:mb-0">
         {isEbooksListPage ? (
@@ -415,7 +424,7 @@ function AppContent(props: {
           </Routes>
         )}
       </div>
-      <MobileBottomNav />
+      <MobileBottomNav onNavigateToEbooks={showEbooksList} />
     </div>
   );
 };
