@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useInRouterContext } from 'react-router';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
@@ -247,15 +246,7 @@ const App: React.FC = () => {
     </div>
   );
 
-  // 상위에 이미 Router가 있으면 우리는 Router를 추가하지 않음 (Netlify/연동 시 중첩 오류 방지)
-  const inRouter = useInRouterContext();
-  const isBestsns =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'bestsns.com' ||
-      window.location.hostname.endsWith('.bestsns.com') ||
-      (window as any).__BESTSNS_EMBEDDED__ === true);
-  const skipOurRouter = inRouter || isBestsns;
-  return skipOurRouter ? content : <Router>{content}</Router>;
+  return content;
 }
 
 export default App;
