@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile, SiteNotification } from '../types';
 
 interface Props {
@@ -13,7 +12,8 @@ interface Props {
 
 const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout }) => {
   const navigate = useNavigate();
-  
+  const location = useLocation();
+
   const unreadNotifCount = user 
     ? notifications.filter(n => n.userId === user.id && !n.isRead).length 
     : 0;
@@ -58,17 +58,20 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
           {/* 웹/태블릿용 메뉴 영역: lg(1024px) 이상에서 노출 */}
           <nav className="hidden lg:flex items-center flex-1 justify-center h-full mx-4 overflow-visible">
             <div className="flex items-center gap-1 overflow-visible">
-              {navItems.map((item) => (
+              {navItems.map((item) => {
+                const href = item.path;
+                const isChatPage = location.pathname === '/chat';
+                return (
                 <NavLink
                   key={item.path}
-                  to={item.path}
-                  className={({ isActive }) => 
-                    `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 ${
-                      isActive 
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                      : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                    }`
-                  }
+                  to={href}
+                  end={href === '/ebooks' || href === '/channels' ? false : true}
+                  className={({ isActive }) => {
+                    const active = !isChatPage && isActive;
+                    return `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 ${
+                      active ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                    }`;
+                  }}
                 >
                   <div className="flex items-center gap-1.5 whitespace-nowrap">
                     <span className="text-base">{item.icon}</span>
@@ -82,7 +85,8 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                     </div>
                   )}
                 </NavLink>
-              ))}
+              );
+              })}
             </div>
           </nav>
 
