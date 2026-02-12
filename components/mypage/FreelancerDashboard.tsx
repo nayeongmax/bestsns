@@ -6,7 +6,7 @@ import {
   getFreelancerHistory,
   withdrawFreelancerEarnings,
   MIN_WITHDRAW,
-} from '@/lib/freelancerEarnings';
+} from '@/services/freelancerEarnings';
 
 interface Props {
   user: UserProfile;
