@@ -33,6 +33,7 @@ import EbookRegistration from './pages/EbookRegistration';
 import WishlistPage from './pages/WishlistPage';
 import PartTimePage from './pages/PartTimePage';
 import PartTimeTaskDetail from './pages/PartTimeTaskDetail';
+import PartTimeTaskRegister from './pages/PartTimeTaskRegister';
 
 const App: React.FC = () => {
   // 스플래시 화면 제거로 인해 관련 상태 삭제
@@ -257,6 +258,7 @@ function AppBody(p: AppBodyProps) {
       <Route path="/ebooks/:id" element={p.user ? <EbookDetail ebooks={p.ebooks} wishlist={p.wishlist} onToggleWishlist={p.wishlistToggle} user={p.user} reviews={p.reviews} storeOrders={p.storeOrders} members={p.members} /> : <Navigate to="/login" />} />
       <Route path="/ebooks/register" element={p.user ? <EbookRegistration user={p.user} setEbooks={p.setEbooks} /> : <Navigate to="/login" />} />
       <Route path="/part-time" element={<PartTimePage user={p.user} onUpdateUser={p.handleGlobalUserUpdate} />} />
+      <Route path="/part-time/register" element={<PartTimeTaskRegister user={p.user} />} />
       <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={p.user} onUpdateUser={p.handleGlobalUserUpdate} />} />
       <Route path="/ai" element={<AIConsulting />} />
       <Route path="/board" element={<FreeBoard posts={p.posts} notices={p.notices} />} />
