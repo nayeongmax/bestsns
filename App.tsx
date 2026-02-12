@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation, useInRouterContext } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useInRouterContext } from 'react-router';
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
