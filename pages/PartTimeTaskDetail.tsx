@@ -11,7 +11,7 @@ interface Props {
   addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
 }
 
-const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif'];
+const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
 const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
   const { taskId } = useParams<{ taskId: string }>();
@@ -178,6 +178,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                         <p className="text-gray-800 whitespace-pre-wrap">{sections.이미지}</p>
                       ) : null}
                     </>
+                  ) : key === '작업링크' && sections.작업링크 && (sections.작업링크.startsWith('http://') || sections.작업링크.startsWith('https://')) ? (
+                    <p className="text-gray-800 whitespace-pre-wrap"><a href={sections.작업링크} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{sections.작업링크}</a></p>
                   ) : (
                     <p className="text-gray-800 whitespace-pre-wrap">{sections[key]}</p>
                   )}
