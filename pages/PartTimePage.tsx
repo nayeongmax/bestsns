@@ -152,7 +152,9 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
 
         <div className="bg-blue-50/80 p-6 rounded-2xl border border-blue-100">
           <p className="text-blue-800 font-bold">
-            💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다. 수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()} P</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
+            💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.
+            <br />
+            수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()} P</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
           </p>
         </div>
 
