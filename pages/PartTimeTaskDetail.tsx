@@ -154,12 +154,24 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
 
         <div className="grid gap-4">
           <h3 className="text-sm font-black text-gray-500 uppercase">작업 내용 (작업자가 할 일)</h3>
-          {SECTIONS_ORDER.map(
+          {sections.게시글목록 && sections.게시글목록.length > 0 && (
+            <div className="space-y-4">
+              {sections.게시글목록.map((block, i) => (
+                <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {i + 1}</p>
+                  {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
+                  {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+          {SECTIONS_ORDER.filter((key) => key !== '제목' && key !== '내용').map(
             (key) => {
               const hasImageList = key === '이미지' && sections.이미지목록?.length;
               const hasImageContent = key === '이미지' && (sections[key] || hasImageList);
               if (key === '이미지' && !hasImageContent) return null;
               if (key !== '이미지' && !sections[key]) return null;
+              if (sections.게시글목록?.length && (key === '제목' || key === '내용')) return null;
               return (
                 <div key={key} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                   <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{key}</p>
@@ -200,11 +212,28 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
           </div>
         </div>
 
+        {/* 신청 댓글 — 누구나 볼 수 있음 (닉네임 + 댓글만, 선정/링크/포인트 없음) */}
+        <div className="border-t border-gray-100 pt-6">
+          <h3 className="text-lg font-black text-gray-800 mb-3">신청 댓글</h3>
+          {task.applicants.length === 0 ? (
+            <p className="text-gray-500 py-3">아직 신청한 사람이 없습니다.</p>
+          ) : (
+            <ul className="space-y-2">
+              {task.applicants.map((a) => (
+                <li key={a.userId} className="flex items-start gap-2 py-2 px-3 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="font-black text-gray-800 shrink-0">{a.nickname}</span>
+                  <span className="text-gray-600 text-sm">{a.comment || '신청합니다'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {user && !task.pointPaid && (
           <>
             {!isApplicant ? (
               <div className="border-t border-gray-100 pt-6">
-                <p className="text-sm font-bold text-gray-700 mb-2">신청 댓글 (선택)</p>
+                <p className="text-sm font-bold text-gray-700 mb-2">내 신청 댓글 (선택)</p>
                 <input
                   type="text"
                   value={applyComment}
@@ -256,7 +285,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
 
             {isOperator && (
               <div className="border-t border-gray-100 pt-6">
-                <h3 className="text-lg font-black text-gray-800 mb-3">프리랜서 신청자 목록</h3>
+                <h3 className="text-lg font-black text-gray-800 mb-3">프리랜서 신청자 목록 (운영자 전용)</h3>
+                <p className="text-sm text-gray-500 mb-3">링크 확인 후 포인트 지급. 일반 회원은 이 목록·선정·지급 결과를 볼 수 없습니다.</p>
                 {task.applicants.length === 0 ? (
                   <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
                 ) : (
