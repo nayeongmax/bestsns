@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserProfile } from '../types';
-import { getFreelancerBalance, addFreelancerEarning, MIN_WITHDRAW } from '../lib/freelancerEarnings';
+import { UserProfile } from '@/types';
+import { getFreelancerBalance, addFreelancerEarning, MIN_WITHDRAW } from '@/lib/freelancerEarnings';
 
 interface Props {
   user: UserProfile | null;
