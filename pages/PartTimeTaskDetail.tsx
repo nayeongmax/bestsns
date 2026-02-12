@@ -2,16 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
+import { NotificationType } from '@/types';
 import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
   onUpdateUser?: (updated: UserProfile) => void;
+  addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
 }
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif'];
 
-const PartTimeTaskDetail: React.FC<Props> = ({ user }) => {
+const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
@@ -54,15 +56,25 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user }) => {
     alert('신청되었습니다.');
   };
 
-  /** 운영자: 신청자 선정 (선정만 가능, 미선정 토글 없음) */
+  /** 운영자: 신청자 선정 (선정만 가능) → 선정자에게 알림 + 알림페이지/워크페이스 반영 */
   const handleSelect = (userId: string) => {
     if (!task) return;
+    const applicant = task.applicants.find((a) => a.userId === userId);
     const next = tasks.map((t) =>
       t.id !== task.id
         ? t
         : { ...t, applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, selected: true } : a)) }
     );
     saveTasks(next);
+    if (applicant && addNotif) {
+      addNotif(
+        userId,
+        'freelancer',
+        '프리랜서 선정',
+        `[${task.title}]에 선정되었습니다. 작업 완료 후 작업 링크를 제출해 주세요.`,
+        task.id
+      );
+    }
   };
 
   /** 선정된 프리랜서: 작업링크 제출 */
