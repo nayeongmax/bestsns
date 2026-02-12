@@ -86,6 +86,9 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (window.location.hash !== '#/ebooks') {
+                          window.location.hash = '#/ebooks';
+                        }
                         navigate('/ebooks', { replace: true });
                       }}
                       className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 z-[70] ${
