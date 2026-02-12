@@ -8,9 +8,10 @@ interface Props {
   notifications: SiteNotification[];
   unreadChatCount: number;
   onLogout: () => void;
+  onNavigateToEbooks?: () => void;
 }
 
-const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout }) => {
+const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout, onNavigateToEbooks }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -86,6 +87,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        onNavigateToEbooks?.();
                         window.location.hash = '#/ebooks';
                       }}
                       className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 z-[70] ${
