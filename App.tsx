@@ -4,35 +4,35 @@ import {
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
   SMMProvider, SMMProduct, NotificationType, GradeConfig
-} from './types';
+} from '@/types';
 
-// Page and Component Imports (확장자 명시 + Vite alias로 빌드 해석 고정)
-import Header from './components/Header.tsx';
-import LiveNotification from './components/LiveNotification.tsx';
-import SNSActivation from './pages/SNSActivation';
-import ChannelSales from './pages/ChannelSales';
-import EbookSales from './pages/EbookSales';
-import AIConsulting from './pages/AIConsulting';
-import FreeBoard from './pages/FreeBoard';
-import RevenueManagement from './pages/RevenueManagement';
-import ProfitManagement from './pages/ProfitManagement';
-import ChatPage from './pages/ChatPage';
-import MyPage from './pages/MyPage';
-import AdminPanel from './pages/AdminPanel';
-import NotificationsPage from './pages/NotificationsPage';
-import FreeBoardWrite from './pages/FreeBoardWrite';
-import FreeBoardDetail from './pages/FreeBoardDetail';
-import PointPayment from './pages/PointPayment';
-import CouponBox from './pages/CouponBox';
-import NoticePage from './pages/NoticePage';
-import ReviewWritePage from './pages/ReviewWritePage';
-import AuthPage from './pages/AuthPage';
-import ChannelDetail from './pages/ChannelDetail';
-import EbookDetail from './pages/EbookDetail';
-import EbookRegistration from './pages/EbookRegistration';
-import WishlistPage from './pages/WishlistPage';
-import PartTimePage, { PartTimeTaskRegister } from './pages/PartTimePage';
-import PartTimeTaskDetail from './pages/PartTimeTaskDetail';
+// Page and Component Imports (루트 기준 @/ 사용 - Netlify 빌드 시 해석 기준 오류 방지)
+import Header from '@/components/Header';
+import LiveNotification from '@/components/LiveNotification';
+import SNSActivation from '@/pages/SNSActivation';
+import ChannelSales from '@/pages/ChannelSales';
+import EbookSales from '@/pages/EbookSales';
+import AIConsulting from '@/pages/AIConsulting';
+import FreeBoard from '@/pages/FreeBoard';
+import RevenueManagement from '@/pages/RevenueManagement';
+import ProfitManagement from '@/pages/ProfitManagement';
+import ChatPage from '@/pages/ChatPage';
+import MyPage from '@/pages/MyPage';
+import AdminPanel from '@/pages/AdminPanel';
+import NotificationsPage from '@/pages/NotificationsPage';
+import FreeBoardWrite from '@/pages/FreeBoardWrite';
+import FreeBoardDetail from '@/pages/FreeBoardDetail';
+import PointPayment from '@/pages/PointPayment';
+import CouponBox from '@/pages/CouponBox';
+import NoticePage from '@/pages/NoticePage';
+import ReviewWritePage from '@/pages/ReviewWritePage';
+import AuthPage from '@/pages/AuthPage';
+import ChannelDetail from '@/pages/ChannelDetail';
+import EbookDetail from '@/pages/EbookDetail';
+import EbookRegistration from '@/pages/EbookRegistration';
+import WishlistPage from '@/pages/WishlistPage';
+import PartTimePage, { PartTimeTaskRegister } from '@/pages/PartTimePage';
+import PartTimeTaskDetail from '@/pages/PartTimeTaskDetail';
 
 /** pathname이 /ebooks일 때 항상 EbookSales만 렌더 (다른 라우트 간섭 방지) */
 function ContainerRoutes(props: {
