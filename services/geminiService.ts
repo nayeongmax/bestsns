@@ -24,7 +24,11 @@ export const getMarketingConsultation = async (prompt: string): Promise<string> 
     if (data.message) return data.message;
 
     if (!res.ok) {
-      if (res.status === 404) return 'AI 기능을 사용할 수 없습니다. Netlify에서 Functions 배포를 확인해 주세요.';
+      if (res.status === 404) {
+        const isLocal = typeof window !== 'undefined' && /localhost|127\.0\.0\.1/.test(window.location?.hostname || '');
+        if (isLocal) return '로컬에서는 AI 기능이 동작하지 않습니다. 터미널에서 "netlify dev"로 실행하거나, 배포된 사이트(프로덕션 URL)에서 이용해 주세요.';
+        return 'AI 기능을 사용할 수 없습니다. Netlify 대시보드 → Deploys → Functions 에 ai-consult가 있는지 확인하고, 없으면 다시 배포해 주세요.';
+      }
       if (res.status === 500) return 'AI 서비스 설정이 되어 있지 않습니다. Netlify 환경 변수에 GEMINI_API_KEY를 등록해 주세요.';
       return '현재 AI 상담이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.';
     }
