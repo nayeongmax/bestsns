@@ -50,7 +50,10 @@ export interface PartTimeTaskSections {
   내용?: string;
   댓글?: string;
   키워드?: string;
+  /** 이미지 지시사항 텍스트 또는 단일 이미지 data URL */
   이미지?: string;
+  /** 참고 이미지 최대 10개 (data URL) */
+  이미지목록?: string[];
   동영상?: string;
   gif?: string;
 }
