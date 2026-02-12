@@ -142,8 +142,8 @@ export const DEFAULT_PARTTIME_TASKS: PartTimeTask[] = [
   {
     id: 't3',
     title: '카페 글 작성',
-    description: '지정 카페에 글을 작성해 주세요.',
-    category: '카페',
+    description: '지정 네이버카페에 글을 작성해 주세요.',
+    category: '네이버카페',
     reward: 600,
     sections: {
       제목: '예시: OO 사용 후기 남깁니다',
