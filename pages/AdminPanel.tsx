@@ -9,6 +9,7 @@ import ChannelAdmin from '../components/admin/ChannelAdmin.tsx';
 import StoreAdmin from '../components/admin/StoreAdmin.tsx';
 import MemberAdmin from '../components/admin/MemberAdmin.tsx';
 import MarketingAdmin from '../components/admin/MarketingAdmin.tsx';
+import PartTimeAdmin from '../components/admin/PartTimeAdmin.tsx';
 
 interface Props {
   user: UserProfile | null;
@@ -42,7 +43,7 @@ const AdminPanel: React.FC<Props> = ({
 }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing'>('sns');
+  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime'>('sns');
 
   const panelPassword = import.meta.env.VITE_ADMIN_PANEL_PASSWORD ?? import.meta.env.VITE_ADMIN_PASSWORD;
 
@@ -89,6 +90,7 @@ const AdminPanel: React.FC<Props> = ({
            <button onClick={() => setActiveTab('ebook')} className={`px-8 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'ebook' ? 'bg-black text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>N잡 스토어 관리</button>
            <button onClick={() => setActiveTab('member')} className={`px-8 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'member' ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>회원 및 권한 관리</button>
            <button onClick={() => setActiveTab('marketing')} className={`px-8 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'marketing' ? 'bg-rose-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>마케팅 캠페인</button>
+           <button onClick={() => setActiveTab('parttime')} className={`px-8 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'parttime' ? 'bg-emerald-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>누구나알바</button>
          </div>
       </div>
 
@@ -118,6 +120,7 @@ const AdminPanel: React.FC<Props> = ({
           />
         )}
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
+        {activeTab === 'parttime' && <PartTimeAdmin addNotif={addNotif} />}
       </main>
     </div>
   );
