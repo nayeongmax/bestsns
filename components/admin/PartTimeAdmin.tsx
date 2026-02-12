@@ -24,8 +24,10 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
     setTasks(next);
   };
 
+  const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
+    (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
   const handlePayPoints = (task: PartTimeTask) => {
-    const selectedWithLink = task.applicants.filter((a) => a.selected && a.workLink?.trim());
+    const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
     if (selectedWithLink.length === 0) {
       alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
       return;
@@ -57,8 +59,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       ) : (
         <ul className="space-y-6">
           {tasksWithSelected.map((task) => {
-            const selectedWithLink = task.applicants.filter((a) => a.selected && a.workLink?.trim());
-            const selectedNoLink = task.applicants.filter((a) => a.selected && !a.workLink?.trim());
+            const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
+            const selectedNoLink = task.applicants.filter((a) => a.selected && !hasWorkLink(a));
             return (
               <li key={task.id} className="p-6 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -77,18 +79,21 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                   )}
                 </div>
                 <div className="space-y-2">
-                  {task.applicants.filter((a) => a.selected).map((a) => (
-                    <div key={a.userId} className="flex items-center justify-between gap-4 py-2 px-3 rounded-xl bg-white border border-gray-100">
-                      <span className="font-bold text-gray-800">{a.nickname}</span>
-                      {a.workLink ? (
-                        <a href={a.workLink} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold text-sm truncate max-w-[280px] hover:underline">
-                          작업 링크 확인
-                        </a>
-                      ) : (
-                        <span className="text-amber-600 text-sm font-bold">링크 미제출</span>
-                      )}
-                    </div>
-                  ))}
+                  {task.applicants.filter((a) => a.selected).map((a) => {
+                    const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
+                    return (
+                      <div key={a.userId} className="flex items-center justify-between gap-4 py-2 px-3 rounded-xl bg-white border border-gray-100">
+                        <span className="font-bold text-gray-800">{a.nickname}</span>
+                        {links.length > 0 ? (
+                          <a href={links[0]} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold text-sm truncate max-w-[280px] hover:underline">
+                            작업 링크 확인 {links.length > 1 ? `(${links.length}개)` : ''}
+                          </a>
+                        ) : (
+                          <span className="text-amber-600 text-sm font-bold">링크 미제출</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
                 {selectedNoLink.length > 0 && (
                   <p className="text-xs text-gray-500">링크 미제출 {selectedNoLink.length}명은 링크 제출 후 지급 가능합니다.</p>
