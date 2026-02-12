@@ -72,7 +72,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="max-w-md">
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[24px] p-8 border border-emerald-100">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm">
@@ -98,14 +98,6 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
           >
             {withdrawing ? '처리 중...' : canWithdraw ? `${MIN_WITHDRAW_FREELANCER.toLocaleString()} P 출금하기` : '5,000 P 이상 시 출금 가능'}
           </button>
-        </div>
-
-        <div className="bg-gray-50 rounded-[24px] p-6 border border-gray-100">
-          <h4 className="font-black text-gray-800 mb-3">포인트 잔액</h4>
-          <p className="text-xl font-black text-gray-900 italic">{(user.points ?? 0).toLocaleString()} P</p>
-          <Link to="/payment/point" className="inline-block mt-3 text-blue-600 font-black text-sm hover:underline">
-            충전하기 →
-          </Link>
         </div>
       </div>
 
