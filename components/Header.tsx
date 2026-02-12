@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { UserProfile, SiteNotification } from '../types';
 
 interface Props {
@@ -12,9 +12,7 @@ interface Props {
 
 const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const pathname = location.pathname;
-
+  
   const unreadNotifCount = user 
     ? notifications.filter(n => n.userId === user.id && !n.isRead).length 
     : 0;
@@ -47,8 +45,8 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
 
   return (
     <>
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm overflow-visible">
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px] overflow-visible">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px]">
           <div className="flex items-center gap-6 flex-shrink-0">
             <Link to="/" className="text-2xl font-black flex items-center tracking-tighter">
               <span className="text-gray-900 uppercase">THEBEST</span>
@@ -56,41 +54,36 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             </Link>
           </div>
 
-          <nav className="hidden lg:flex items-center flex-1 justify-center h-full mx-4 overflow-visible relative z-[50]">
-            <div className="flex items-center gap-1 overflow-visible">
-              {navItems.map((item) => {
-                const isChannels = item.path === '/channels';
-                const isActive = isChannels
-                  ? pathname === '/channels' || pathname.startsWith('/channels/')
-                  : pathname === item.path || (item.path !== '/' && pathname.startsWith(item.path + '/'));
-                const href = `#${item.path}`;
-                return (
-                  <a
-                    key={item.path}
-                    href={href}
-                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 flex-shrink-0 ${
-                      isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                      <span className="text-base">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </div>
-                    {item.badge && (
-                      <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
-                        <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
-                          {item.badge}
-                        </span>
-                      </div>
-                    )}
-                  </a>
-                );
-              })}
-            </div>
+          <nav className="hidden xl:flex items-center gap-1 flex-1 justify-center h-full">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => 
+                  `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
+                    isActive 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
+                    : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-1.5 whitespace-nowrap">
+                  <span className="text-base">{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
+                    <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
+                      {item.badge}
+                    </span>
+                  </div>
+                )}
+              </NavLink>
+            ))}
           </nav>
 
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-            <div className="flex items-center gap-0.5 md:gap-1">
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <div className="flex items-center gap-1">
               <Link to="/wishlist" className="p-2 text-gray-400 hover:text-red-500 transition-colors relative group">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                 {wishlistCount > 0 && (
@@ -119,8 +112,8 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             {user && user.id ? (
               <div className="flex items-center gap-3">
                 <Link to="/mypage" className="flex items-center gap-2 group">
-                  <img src={user.profileImage} alt="profile" className="w-8 h-8 md:w-9 md:h-9 rounded-full border border-gray-100 object-cover group-hover:ring-2 group-hover:ring-blue-100 transition-all shadow-sm" />
-                  <span className="text-sm font-black text-gray-700 hidden lg:block italic tracking-tight">{user.nickname}</span>
+                  <img src={user.profileImage} alt="profile" className="w-9 h-9 rounded-full border border-gray-100 object-cover group-hover:ring-2 group-hover:ring-blue-100 transition-all shadow-sm" />
+                  <span className="text-sm font-black text-gray-700 hidden sm:block italic tracking-tight">{user.nickname}</span>
                 </Link>
                 <button 
                   type="button"
@@ -134,7 +127,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
               <button 
                 type="button"
                 onClick={() => navigate('/login')}
-                className="bg-gray-900 text-white px-5 md:px-6 py-2 md:py-2.5 rounded-xl text-[12px] md:text-[13px] font-black hover:bg-blue-600 transition-all shadow-lg active:scale-95 italic tracking-tighter uppercase"
+                className="bg-gray-900 text-white px-6 py-2.5 rounded-xl text-[13px] font-black hover:bg-blue-600 transition-all shadow-lg active:scale-95 italic tracking-tighter uppercase"
               >
                 로그인
               </button>
@@ -144,7 +137,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
       </header>
 
       {user?.role === 'admin' && (
-        <Link to="/admin" className="fixed bottom-24 right-8 lg:bottom-8 z-[60] bg-[#0d1117] text-white w-14 h-14 rounded-2xl shadow-2xl flex items-center justify-center hover:bg-black transition-all hover:scale-110 active:scale-95 group border border-white/10">
+        <Link to="/admin" className="fixed bottom-8 right-8 z-[60] bg-[#0d1117] text-white w-14 h-14 rounded-2xl shadow-2xl flex items-center justify-center hover:bg-black transition-all hover:scale-110 active:scale-95 group">
           <span className="text-[11px] font-black italic tracking-widest text-center leading-none">ADMIN<br/>PANEL</span>
         </Link>
       )}
