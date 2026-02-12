@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
-import { useInRouterContext } from 'react-router';
 import App from './App.tsx';
 
 class ErrorBoundary extends React.Component<
@@ -39,22 +38,16 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-// 이미 상위에 Router가 있으면 우리는 Router를 추가하지 않음 (중첩 오류 방지)
-function Root() {
-  const alreadyInRouter = useInRouterContext();
-  if (alreadyInRouter) return <App />;
-  return (
-    <HashRouter>
-      <App />
-    </HashRouter>
-  );
-}
+// bestsns.com일 때는 상위에 이미 Router가 있다고 보고 우리는 Router를 넣지 않음 (중첩 오류 방지)
+// 그 외(로컬, netlify.app 등)에서는 우리가 HashRouter 한 번만 사용
+const host = typeof window !== 'undefined' ? window.location.hostname : '';
+const isBestsns = host === 'bestsns.com' || host.endsWith('.bestsns.com');
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <Root />
+      {isBestsns ? <App /> : <HashRouter><App /></HashRouter>}
     </ErrorBoundary>
   </React.StrictMode>
 );
