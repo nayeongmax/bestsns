@@ -123,13 +123,13 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user || !members.length) return;
     const same = members.find(m => m.id === user.id);
-    if (!same || (same.sellerStatus === user.sellerStatus && !same.sellerApplication && !user.sellerApplication)) return;
-    setUser(prev => prev ? {
-      ...prev,
-      sellerStatus: same.sellerStatus ?? prev.sellerStatus,
-      sellerApplication: same.sellerApplication ?? prev.sellerApplication
-    } : null);
-  }, [members]);
+    if (!same) return;
+    const serverApproved = same.sellerStatus === 'approved';
+    const currentApproved = user.sellerStatus === 'approved';
+    if (serverApproved && !currentApproved) {
+      setUser(prev => prev ? { ...prev, sellerStatus: 'approved', sellerApplication: same.sellerApplication ?? prev.sellerApplication } : null);
+    }
+  }, [members, user?.id, user?.sellerStatus]);
 
   // 로컬 저장소 동기화 (members는 profiles 로드 후 덮어쓰므로, 캐시용으로만 저장)
   useEffect(() => { if (membersLoaded) localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members, membersLoaded]);
@@ -292,7 +292,7 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/sns" element={<SNSActivation smmProducts={smmProducts} providers={smmProviders} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 0 }} notices={notices} onOrderComplete={(o) => { setSmmOrders(prev => [o, ...prev]); addNotif(user!.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={handleLogout} />} />
             <Route path="/channels" element={<ChannelSales channels={channels} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} />} />
-            <Route path="/channels/:id" element={<ChannelDetail channels={channels} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} reviews={reviews} />} />
+            <Route path="/channels/:id" element={<ChannelDetail channels={channels} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} reviews={reviews} members={members} />} />
             <Route path="/ebooks" element={<EbookSales ebooks={ebooks} setEbooks={setEbooks} user={user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} />} />
             <Route path="/ebooks/:id" element={user ? <EbookDetail ebooks={ebooks} wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} user={user} reviews={reviews} storeOrders={storeOrders} members={members} /> : <Navigate to="/login" />} />
             <Route path="/ebooks/register" element={user ? <EbookRegistration user={user} setEbooks={setEbooks} /> : <Navigate to="/login" />} />
@@ -304,7 +304,7 @@ const App: React.FC = () => {
             <Route path="/revenue" element={user ? <RevenueManagement /> : <Navigate to="/login" />} />
             <Route path="/profit-mgmt" element={user ? <ProfitManagement user={user} storeOrders={storeOrders} /> : <Navigate to="/login" />} />
             <Route path="/chat" element={user ? <ChatPage user={user} members={members} addNotif={addNotif} /> : <Navigate to="/login" />} />
-            <Route path="/mypage" element={user ? <MyPage user={user} onUpdate={handleGlobalUserUpdate} ebooks={ebooks} setEbooks={setEbooks} channels={channels} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} onAddReview={(r)=>setReviews(p=>[r,...p])} onUpdateReview={(r)=>setReviews(p=>p.map(i=>i.id===r.id?r:i))} reviews={reviews} addNotif={addNotif} /> : <Navigate to="/login" />} />
+            <Route path="/mypage" element={user ? <MyPage user={user} onUpdate={handleGlobalUserUpdate} ebooks={ebooks} setEbooks={setEbooks} channels={channels} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} onAddReview={(r)=>setReviews(p=>[r,...p])} onUpdateReview={(r)=>setReviews(p=>p.map(i=>i.id===r.id?r:i))} reviews={reviews} addNotif={addNotif} onRefetchProfile={refetchCurrentUserProfile} /> : <Navigate to="/login" />} />
             <Route path="/notifications" element={user ? <NotificationsPage notifications={notifications} setNotifications={setNotifications} user={user} /> : <Navigate to="/login" />} />
             <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={(i) => setWishlist(p => p.some(w=>w.data.id===i.data.id)?p.filter(w=>w.data.id!==i.data.id):[...p, i])} channels={channels} ebooks={ebooks} />} />
             <Route path="/coupons" element={user ? <CouponBox user={user} /> : <Navigate to="/login" />} />
