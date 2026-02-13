@@ -1,6 +1,47 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { getMarketingConsultation } from '../services/geminiService';
+
+/** 마크다운 형식 텍스트를 가독성 있게 렌더링 (추가 의존성 없음) */
+function formatAiText(text: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  const formatInline = (s: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    let rest = s;
+    let key = 0;
+    while (rest.length) {
+      const m = rest.match(/\*\*(.+?)\*\*/);
+      if (m && m.index !== undefined) {
+        if (m.index > 0) parts.push(<span key={key++}>{rest.slice(0, m.index)}</span>);
+        parts.push(<strong key={key++} className="font-bold text-gray-800">{m[1]}</strong>);
+        rest = rest.slice(m.index + m[0].length);
+      } else {
+        parts.push(<span key={key++}>{rest}</span>);
+        break;
+      }
+    }
+    return parts.length === 1 ? parts[0] : <>{parts}</>;
+  };
+  let listItems: string[] = [];
+  const flushList = () => {
+    if (listItems.length) {
+      out.push(<ul key={out.length} className="list-disc list-inside mb-3 space-y-1.5">{listItems.map((item, i) => <li key={i} className="ml-1">{formatInline(item)}</li>)}</ul>);
+      listItems = [];
+    }
+  };
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) { flushList(); continue; }
+    if (t.startsWith('### ')) { flushList(); out.push(<h3 key={out.length} className="font-bold text-gray-900 mt-4 mb-2 text-[15px] block">{formatInline(t.slice(4))}</h3>); continue; }
+    if (t.startsWith('## ')) { flushList(); out.push(<h2 key={out.length} className="font-bold text-gray-900 mt-4 mb-2 text-base block border-b border-gray-200 pb-1">{formatInline(t.slice(3))}</h2>); continue; }
+    if (t.startsWith('- ') || t.startsWith('* ')) { listItems.push(t.slice(2)); continue; }
+    if (/^\d+\.\s/.test(t)) { listItems.push(t.replace(/^\d+\.\s+/, '')); continue; }
+    flushList();
+    out.push(<p key={out.length} className="mb-3">{formatInline(t)}</p>);
+  }
+  flushList();
+  return out;
+}
 
 const AIConsulting: React.FC = () => {
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; text: string }[]>([]);
@@ -82,22 +123,8 @@ const AIConsulting: React.FC = () => {
               {m.role === 'user' ? (
                 m.text
               ) : (
-                <div className="ai-response [&_p]:mb-3 [&_ul]:list-disc [&_ul]:list-inside [&_ul]:mb-3 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:list-inside [&_ol]:mb-3 [&_ol]:space-y-1 [&_li]:ml-2 [&_strong]:font-bold [&_strong]:text-gray-800 [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-base [&_h4]:font-semibold [&_h4]:text-gray-800 [&_h4]:mt-3 [&_h4]:mb-1.5">
-                  <ReactMarkdown
-                    components={{
-                      p: ({ children }) => <p className="mb-3">{children}</p>,
-                      ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1.5">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1.5">{children}</ol>,
-                      li: ({ children }) => <li className="ml-1">{children}</li>,
-                      strong: ({ children }) => <strong className="font-bold text-gray-800">{children}</strong>,
-                      h2: ({ children }) => <h2 className="font-bold text-gray-900 mt-4 mb-2 text-base block border-b border-gray-200 pb-1">{children}</h2>,
-                      h3: ({ children }) => <h3 className="font-bold text-gray-900 mt-4 mb-2 text-[15px] block">{children}</h3>,
-                      h4: ({ children }) => <h4 className="font-semibold text-gray-800 mt-3 mb-1.5 text-[14px] block">{children}</h4>,
-                      a: ({ href, children }) => <a href={href || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">{children}</a>,
-                    }}
-                  >
-                    {m.text}
-                  </ReactMarkdown>
+                <div className="ai-response">
+                  {formatAiText(m.text)}
                 </div>
               )}
             </div>
