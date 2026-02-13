@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '../../types';
-import { getPartTimeJobRequests, setPartTimeJobRequests, getPartTimeTasks } from '@/constants';
+import { getPartTimeJobRequests, setPartTimeJobRequests, getPartTimeTasks, processAutoApprovals } from '@/constants';
 import type { PartTimeTask } from '../../types';
 
 interface Props {
@@ -43,13 +43,30 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
   const [workConfirmModal, setWorkConfirmModal] = useState<PartTimeTask | null>(null);
 
   useEffect(() => {
+    if (activeTab === 'alba') processAutoApprovals();
     setJobRequests(getPartTimeJobRequests());
     setTasks(getPartTimeTasks());
   }, [activeTab]);
 
-  const myApprovedRequests = useMemo(() =>
-    jobRequests.filter((jr) => jr.applicantUserId === user.id && jr.status === 'pending' && !jr.paid),
+  const myJobRequests = useMemo(() =>
+    jobRequests.filter((jr) => jr.applicantUserId === user.id),
     [jobRequests, user.id]
+  );
+  const myApprovedRequests = useMemo(() =>
+    myJobRequests.filter((jr) => jr.status === 'pending' && !jr.paid),
+    [myJobRequests]
+  );
+  const myRejectedRequests = useMemo(() =>
+    myJobRequests.filter((jr) => jr.status === 'not_selected'),
+    [myJobRequests]
+  );
+  const myPendingReviewRequests = useMemo(() =>
+    myJobRequests.filter((jr) => jr.status === 'pending_review'),
+    [myJobRequests]
+  );
+  const myPaidRequests = useMemo(() =>
+    myJobRequests.filter((jr) => jr.paid),
+    [myJobRequests]
   );
 
   const myTasksAsApplicant = useMemo(() =>
@@ -213,16 +230,54 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
 
       {activeTab === 'alba' ? (
         <div className="space-y-8">
+          {myPendingReviewRequests.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="font-black text-gray-900">검토 대기</h4>
+              {myPendingReviewRequests.map((jr) => (
+                <div key={jr.id} className="bg-amber-50/50 p-6 rounded-[32px] shadow-sm border border-amber-100 flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                    <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
+                    <span className="inline-block mt-3 px-3 py-1 rounded-lg bg-amber-200 text-amber-800 text-xs font-black">운영자 검토 중</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {myRejectedRequests.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="font-black text-gray-900">거절 · 수정 필요</h4>
+              {myRejectedRequests.map((jr) => (
+                <div key={jr.id} className="bg-red-50/50 p-6 rounded-[32px] shadow-sm border border-red-100 flex flex-col gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                    <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
+                    {jr.rejectReason && (
+                      <div className="mt-3 p-3 rounded-xl bg-white border border-red-100">
+                        <p className="text-xs font-black text-red-600 uppercase">거절 사유</p>
+                        <p className="text-gray-800 font-bold mt-1">{jr.rejectReason}</p>
+                      </div>
+                    )}
+                  </div>
+                  <Link to="/part-time/request" className="inline-flex items-center gap-2 text-red-600 font-black hover:underline">
+                    수정 후 재신청 →
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+
           {myApprovedRequests.length > 0 && (
             <div className="space-y-4">
-              <h4 className="font-black text-gray-900">승인된 의뢰 · 결제 대기</h4>
+              <h4 className="font-black text-gray-900">승인 완료 · 결제 대기</h4>
               {myApprovedRequests.map((jr) => (
                 <div key={jr.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-10">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
                     <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
                     <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                      <span className="font-bold text-gray-700">광고금액: {jr.adAmount.toLocaleString()}원</span>
+                      <span className="font-bold text-gray-700">{jr.unitPrice != null && jr.quantity != null ? `단가 ${jr.unitPrice.toLocaleString()}원 × ${jr.quantity}개` : `광고금액: ${jr.adAmount.toLocaleString()}원`}</span>
                       <span className="font-bold text-gray-700">수수료: {jr.fee.toLocaleString()}원</span>
                       <span className="font-black text-emerald-600">총 결제: {(jr.adAmount + jr.fee).toLocaleString()}원</span>
                     </div>
@@ -237,38 +292,75 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
               ))}
             </div>
           )}
+
           {myTasksAsApplicant.length > 0 && (
             <div className="space-y-4">
               <h4 className="font-black text-gray-900">의뢰 진행 현황</h4>
               {myTasksAsApplicant.map((t) => {
+                const selectedCount = t.applicants.filter((a) => a.selected).length;
                 const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
+                const hasDelivery = selectedWithLink.some((a) => a.deliveryAt);
+                const allPaid = selectedWithLink.length > 0 && selectedWithLink.every((a) => t.paidUserIds?.includes(a.userId));
                 const canShowConfirm = selectedWithLink.length > 0;
+                const statusLabel = t.applicants.length === 0 ? '모집중' : selectedCount === 0 ? '모집중' : selectedWithLink.length === 0 ? '선정완료' : allPaid ? '대금지급 완료' : hasDelivery ? '3일 이내 자동확정' : '검수중';
                 return (
-                  <div key={t.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-10">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-gray-900 text-lg">{t.title}</h4>
-                      <p className="text-gray-500 mt-2 line-clamp-2">{t.description}</p>
-                      <p className="text-sm text-gray-500 mt-2">
-                        작업기간: {t.workPeriod?.start ?? '-'} ~ {t.workPeriod?.end ?? '-'}
-                      </p>
+                  <div key={t.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col gap-6">
+                    <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-gray-900 text-lg">{t.title}</h4>
+                        <p className="text-gray-500 mt-2 line-clamp-2">{t.description}</p>
+                        <p className="text-sm text-gray-500 mt-2">작업기간: {t.workPeriod?.start ?? '-'} ~ {t.workPeriod?.end ?? '-'}</p>
+                        <span className={`inline-block mt-3 px-3 py-1 rounded-lg text-xs font-black ${
+                          statusLabel === '모집중' ? 'bg-gray-200 text-gray-700' :
+                          statusLabel === '선정완료' ? 'bg-blue-100 text-blue-700' :
+                          statusLabel === '검수중' ? 'bg-amber-100 text-amber-700' :
+                          statusLabel === '3일 이내 자동확정' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'
+                        }`}>{statusLabel}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        {canShowConfirm && (
+                          <button
+                            onClick={() => setWorkConfirmModal(t)}
+                            className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all"
+                          >
+                            결과물 확인
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setWorkConfirmModal(t)}
+                          className="px-6 py-3 rounded-xl bg-gray-800 text-white font-black hover:bg-gray-700 transition-all"
+                        >
+                          작업확정서
+                        </button>
+                        <Link
+                          to="/chat"
+                          state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any}
+                          className="px-6 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-black hover:bg-gray-100 transition-all"
+                        >
+                          문의요청
+                        </Link>
+                      </div>
                     </div>
-                    {canShowConfirm && (
-                      <button
-                        onClick={() => setWorkConfirmModal(t)}
-                        className="px-10 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all shrink-0"
-                      >
-                        작업확인서
-                      </button>
+                    {canShowConfirm && selectedWithLink.length > 0 && (
+                      <div className="pt-4 border-t border-gray-100">
+                        <p className="text-xs font-black text-gray-500 uppercase mb-2">작업 링크</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedWithLink.flatMap((a) => (a.workLinks ?? (a.workLink ? [a.workLink] : []))).filter(Boolean).map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-sm hover:underline break-all">{url}</a>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
               })}
             </div>
           )}
-          {myApprovedRequests.length === 0 && myTasksAsApplicant.length === 0 && (
+
+          {myJobRequests.length === 0 && myTasksAsApplicant.length === 0 && (
             <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-gray-100">
-              <p className="text-gray-300 font-black italic">승인된 알바의뢰 내역이 없습니다.</p>
-              <Link to="/part-time" className="inline-block mt-4 text-emerald-600 font-black hover:underline">작업의뢰 신청하러 가기 →</Link>
+              <p className="text-gray-300 font-black italic">알바의뢰 내역이 없습니다.</p>
+              <Link to="/part-time/request" className="inline-block mt-4 text-emerald-600 font-black hover:underline">작업의뢰 신청하러 가기 →</Link>
             </div>
           )}
         </div>
@@ -413,23 +505,38 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
 
       {workConfirmModal && (
         <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-[48px] p-10 shadow-2xl space-y-6 my-8">
+          <div className="bg-white w-full max-w-2xl rounded-[48px] p-10 shadow-2xl space-y-6 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-black text-gray-900">작업확인서</h3>
+              <h3 className="text-2xl font-black text-gray-900">📂 프로젝트 작업확정서</h3>
               <button onClick={() => setWorkConfirmModal(null)} className="text-gray-400 hover:text-gray-800 text-2xl font-bold">×</button>
             </div>
-            <div className="space-y-4">
+            <p className="text-xs text-gray-500">본 문서의 내용은 이용약관에 의거하여 결제 시점부터 법적 효력이 발생합니다.</p>
+            <div className="space-y-6 text-sm">
               <div>
-                <p className="text-xs font-black text-gray-400 uppercase mb-1">작업내용</p>
-                <p className="font-bold text-gray-800">{workConfirmModal.title}</p>
-                <p className="text-sm text-gray-500 mt-1">{workConfirmModal.description}</p>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">1. 계약 기본 정보</p>
+                <p className="font-bold text-gray-800">프로젝트: {workConfirmModal.title}</p>
+                <p className="text-gray-600 mt-1">재위탁 수행자: {workConfirmModal.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}</p>
               </div>
               <div>
-                <p className="text-xs font-black text-gray-400 uppercase mb-1">작업기간</p>
-                <p className="font-bold text-gray-800">{workConfirmModal.workPeriod?.start ?? '-'} ~ {workConfirmModal.workPeriod?.end ?? '-'}</p>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">2. 업무 범위 및 단가</p>
+                <p className="font-bold text-gray-800">과업 내용: {workConfirmModal.description}</p>
+                <p className="text-gray-600 mt-1">최종 납기: {workConfirmModal.workPeriod?.end ?? '-'}</p>
+                <p className="text-emerald-600 font-black mt-1">총 계약 금액: ₩{workConfirmModal.reward.toLocaleString()} (VAT 포함)</p>
               </div>
               <div>
-                <p className="text-xs font-black text-gray-400 uppercase mb-1">작업링크</p>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">3. 취소 및 환불 규정</p>
+                <p className="text-gray-700 leading-relaxed">용역 제공 개시 전: 전액 취소 및 환불 가능.<br />용역 제공 개시 후: 가분적 용역은 미수행 범위 환불 가능, 불가분적 용역은 원칙 환불 불가.</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">4. 검수 및 A/S 규정</p>
+                <p className="text-gray-700 leading-relaxed">A/S 요청 기한: 결과물 전달일로부터 3일 이내. 해당 기간 내 이의없으면 자동 승인 및 대금 지급.</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">5. 강력 법적 조치</p>
+                <p className="text-gray-700 leading-relaxed">직거래 시도 시 거래액 10배 위약벌 청구 및 영구 제명. 게시글/대화 기록 임의 삭제 불가.</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">작업 링크 (결과물)</p>
                 <div className="space-y-2 mt-2">
                   {workConfirmModal.applicants
                     .filter((a) => a.selected && hasWorkLink(a))
@@ -438,6 +545,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                     .map((link, i) => (
                       <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="block text-blue-600 font-bold hover:underline break-all">{link}</a>
                     ))}
+                  {!workConfirmModal.applicants.some((a) => a.selected && hasWorkLink(a)) && <p className="text-gray-400">제출 대기 중</p>}
                 </div>
               </div>
             </div>
