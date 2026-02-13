@@ -102,6 +102,8 @@ export interface PartTimeTaskSections {
   작업링크목록?: string[];
   /** 작업 안내 (전체 가이드) */
   작업안내?: string;
+  /** 섹션 표시 순서 (등록 시 넣은 순서 유지) [{ type, index }] */
+  sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크'; index: number }>;
 }
 
 /** 누구나알바 작업의뢰 (광고주→운영진 신청) */
@@ -113,6 +115,8 @@ export interface PartTimeJobRequest {
   workContent: string;
   /** 플랫폼링크 */
   platformLink: string;
+  /** 플랫폼링크 여러 개 */
+  platformLinks?: string[];
   /** 연락처 */
   contact: string;
   /** 작업기간 시작 (YYYY-MM-DD) */
