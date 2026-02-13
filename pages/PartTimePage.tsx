@@ -107,9 +107,9 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           {user ? (
             <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 min-w-[200px]">
               <p className="text-[11px] font-black text-gray-500 uppercase italic">수익통장</p>
-              <p className="text-2xl font-black text-emerald-700 italic">{balance.toLocaleString()} P</p>
+              <p className="text-2xl font-black text-emerald-700 italic">{balance.toLocaleString()}원</p>
               <p className="text-[11px] text-gray-500 mt-1">
-                {balance >= MIN_WITHDRAW_FREELANCER ? '출금 가능' : `${(MIN_WITHDRAW_FREELANCER - balance).toLocaleString()} P 더 모으면 출금 가능`}
+                {balance >= MIN_WITHDRAW_FREELANCER ? '출금 가능' : `${(MIN_WITHDRAW_FREELANCER - balance).toLocaleString()}원 더 모으면 출금 가능`}
               </p>
               <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-3 text-emerald-600 font-black text-sm hover:underline">
                 마이페이지에서 출금하기 →
@@ -170,7 +170,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                       <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
-                      <span className="font-black text-emerald-600 text-base">+{task.reward.toLocaleString()} P</span>
+                      <span className="font-black text-emerald-600 text-base">+{task.reward.toLocaleString()}원</span>
                       {done ? (
                         <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
                       ) : (
@@ -188,7 +188,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           <p className="text-blue-800 font-bold text-base">
             💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.
             <br />
-            수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()} P</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
+            수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()}원</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
           </p>
         </div>
 
