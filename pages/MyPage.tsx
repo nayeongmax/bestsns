@@ -47,7 +47,9 @@ const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, 
     return (location.state as any)?.activeTab || 'settings';
   });
   
-  const [settingsSubTab, setSettingsSubTab] = useState<'profile' | 'expert' | 'notif' | 'pw' | 'quit'>('profile');
+  const [settingsSubTab, setSettingsSubTab] = useState<'profile' | 'expert' | 'notif' | 'pw' | 'quit'>(() => {
+    return (location.state as any)?.openExpert ? 'expert' : 'profile';
+  });
 
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [editNicknameValue, setEditNicknameValue] = useState(user.nickname);
