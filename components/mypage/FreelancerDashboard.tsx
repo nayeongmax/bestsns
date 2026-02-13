@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell,
+} from 'recharts';
 import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
 import {
@@ -20,6 +24,45 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
   const [history, setHistory] = useState<ReturnType<typeof getFreelancerHistory>>([]);
   const [withdrawing, setWithdrawing] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
+  const [chartTab, setChartTab] = useState<'daily' | 'monthly'>('daily');
+
+  /** 입금 내역 (작업 완료 후 지급된 알바비만) */
+  const depositEntries = useMemo(
+    () => history.filter((e) => e.type === 'task' && e.amount > 0),
+    [history]
+  );
+
+  /** 일별/월별 알바비 차트 데이터 */
+  const chartData = useMemo(() => {
+    if (chartTab === 'daily') {
+      const data: { name: string; 금액: number }[] = [];
+      const now = new Date();
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const daySum = depositEntries
+          .filter((e) => e.at.startsWith(dateStr))
+          .reduce((sum, e) => sum + e.amount, 0);
+        data.push({
+          name: `${d.getMonth() + 1}/${d.getDate()}`,
+          금액: daySum,
+        });
+      }
+      return data;
+    } else {
+      const data: { name: string; 금액: number }[] = [];
+      const year = new Date().getFullYear();
+      for (let m = 0; m < 12; m++) {
+        const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
+        const monthSum = depositEntries
+          .filter((e) => e.at.startsWith(prefix))
+          .reduce((sum, e) => sum + e.amount, 0);
+        data.push({ name: `${m + 1}월`, 금액: monthSum });
+      }
+      return data;
+    }
+  }, [chartTab, depositEntries]);
 
   const refresh = () => {
     setBalance(getFreelancerBalance(user.id));
@@ -37,18 +80,18 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
 
   const handleWithdraw = () => {
     if (balance < MIN_WITHDRAW_FREELANCER) {
-      alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()}원입니다.`);
+      alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()} P입니다.`);
       return;
     }
-    if (!confirm(`${MIN_WITHDRAW_FREELANCER.toLocaleString()}원을 포인트로 출금하시겠습니까?`)) return;
+    if (!confirm(`수익통장의 전액 ${balance.toLocaleString()} P를 포인트로 출금하시겠습니까?`)) return;
     setWithdrawing(true);
-    const result = withdrawFreelancerEarnings(user.id, MIN_WITHDRAW_FREELANCER);
+    const result = withdrawFreelancerEarnings(user.id, balance);
     if (result.success) {
       setBalance(result.newBalance);
       refresh();
-      const newPoints = (user.points ?? 0) + MIN_WITHDRAW_FREELANCER;
+      const newPoints = (user.points ?? 0) + balance;
       onUpdate({ ...user, points: newPoints });
-      alert(`${MIN_WITHDRAW_FREELANCER.toLocaleString()} P가 포인트로 출금되었습니다.`);
+      alert(`${balance.toLocaleString()} P가 포인트로 출금되었습니다.`);
     } else {
       alert('출금 처리에 실패했습니다.');
     }
@@ -96,7 +139,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {withdrawing ? '처리 중...' : canWithdraw ? `${MIN_WITHDRAW_FREELANCER.toLocaleString()} P 출금하기` : '5,000 P 이상 시 출금 가능'}
+            {withdrawing ? '처리 중...' : canWithdraw ? `전액 ${balance.toLocaleString()} P 출금하기` : '5,000 P 이상 시 출금 가능'}
           </button>
         </div>
       </div>
@@ -133,8 +176,115 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
         </div>
       )}
 
+      {/* 알바비 관리 - 입금 내역 + 일별/월별 그래프 */}
+      <div className="border-t border-gray-100 pt-10">
+        <h4 className="font-black text-gray-800 mb-1 flex items-center gap-2">
+          <span className="text-xl">📊</span> 알바비 관리
+        </h4>
+        <p className="text-sm text-gray-500 mb-6">
+          작업 완료 후 입금된 내역과 수익 현황을 확인하세요. 시시비비 가리지 않고 한눈에 확인!
+        </p>
+
+        {/* 일별/월별 그래프 */}
+        <div className="bg-white p-6 md:p-8 rounded-[32px] border border-gray-100 shadow-sm mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+            <h5 className="font-black text-gray-900">알바비 수익 현황</h5>
+            <div className="flex p-1.5 bg-gray-100 rounded-full shadow-inner border border-gray-200/50">
+              <button
+                type="button"
+                onClick={() => setChartTab('daily')}
+                className={`px-6 py-2.5 rounded-full text-xs font-black transition-all ${chartTab === 'daily' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400'}`}
+              >
+                일별
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartTab('monthly')}
+                className={`px-6 py-2.5 rounded-full text-xs font-black transition-all ${chartTab === 'monthly' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400'}`}
+              >
+                월별
+              </button>
+            </div>
+          </div>
+          <div className="h-[280px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              {chartTab === 'daily' ? (
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorAlbaAmount" x1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                  <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                  <Tooltip formatter={(val: number) => [`${val.toLocaleString()} P`, '알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
+                  <Area type="monotone" dataKey="금액" stroke="#059669" strokeWidth={4} fillOpacity={1} fill="url(#colorAlbaAmount)" />
+                </AreaChart>
+              ) : (
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                  <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                  <Tooltip cursor={{ fill: '#f8fafc', radius: 8 }} formatter={(val: number) => [`${val.toLocaleString()} P`, '월간 알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
+                  <Bar dataKey="금액" radius={[8, 8, 0, 0]}>
+                    {chartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={index === new Date().getMonth() ? '#059669' : '#d1fae5'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* 입금 내역 테이블 */}
+        <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm mb-6">
+          <div className="px-6 py-4 bg-gray-50/80 border-b border-gray-100">
+            <h5 className="font-black text-gray-800 text-sm">입금 내역 (작업 완료 후 지급)</h5>
+            <p className="text-xs text-gray-500 mt-0.5">입금날짜, 작업내역, 금액을 상세히 확인할 수 있습니다.</p>
+          </div>
+          {depositEntries.length === 0 ? (
+            <div className="p-10 text-center text-gray-400 font-bold">
+              아직 입금 내역이 없습니다.<br />
+              <Link to="/part-time" className="text-emerald-600 hover:underline mt-2 inline-block font-black">누구나알바</Link>에서 작업을 완료하면 여기에 입금 내역이 쌓입니다.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-4">입금날짜</th>
+                    <th className="px-6 py-4">작업내역</th>
+                    <th className="px-6 py-4 text-right">금액 (P)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {depositEntries.slice(0, 50).map((entry) => (
+                    <tr key={entry.id} className="hover:bg-emerald-50/30 transition-colors">
+                      <td className="px-6 py-4 font-bold text-gray-700 text-sm">
+                        {new Date(entry.at).toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                      <td className="px-6 py-4 font-black text-gray-900">{entry.label}</td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-600">+{entry.amount.toLocaleString()} P</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div>
-        <h4 className="font-black text-gray-800 mb-4">수익통장 내역</h4>
+        <h4 className="font-black text-gray-800 mb-4">수익통장 내역 (전체)</h4>
         <div className="rounded-2xl border border-gray-100 overflow-hidden">
           {history.length === 0 ? (
             <div className="p-8 text-center text-gray-400 font-bold">
