@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '../../types';
+import { getPartTimeJobRequests, setPartTimeJobRequests } from '@/constants';
 
 interface Props {
   user: UserProfile;
@@ -12,7 +13,7 @@ interface Props {
   onAddReview: (review: Review) => void;
 }
 
-type BuyerSubTab = 'sns' | 'channel' | 'store';
+type BuyerSubTab = 'sns' | 'channel' | 'store' | 'alba';
 
 interface OrderItem {
   id: string;
@@ -35,6 +36,17 @@ interface OrderItem {
 
 const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, ebooks, onAddReview }) => {
   const [activeTab, setActiveTab] = useState<BuyerSubTab>('sns');
+  const [jobRequests, setJobRequests] = useState(() => getPartTimeJobRequests());
+  const [pgModal, setPgModal] = useState<{ jrId: string; amount: number; title: string } | null>(null);
+
+  useEffect(() => {
+    setJobRequests(getPartTimeJobRequests());
+  }, [activeTab]);
+
+  const myApprovedRequests = useMemo(() =>
+    jobRequests.filter((jr) => jr.applicantUserId === user.id && jr.status === 'pending' && !jr.paid),
+    [jobRequests, user.id]
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // 리뷰 모달 상태
@@ -92,8 +104,25 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
         price: o.price, quantity: 1, totalPrice: o.price, status: o.status, storeType: o.storeType
       }));
 
-    return [...snsItems, ...channelItems, ...storeItems].filter(o => o.type === activeTab);
+    const base = [...snsItems, ...channelItems, ...storeItems];
+    return activeTab === 'alba' ? base : base.filter(o => o.type === activeTab);
   }, [smmOrders, channelOrders, storeOrders, user.id, activeTab]);
+
+  const handlePayJobRequest = (jr: { id: string; adAmount: number; fee: number; title: string }) => {
+    const total = jr.adAmount + jr.fee;
+    setPgModal({ jrId: jr.id, amount: total, title: jr.title });
+  };
+
+  const confirmPgPayment = () => {
+    if (!pgModal) return;
+    const next = jobRequests.map((r) =>
+      r.id === pgModal.jrId ? { ...r, paid: true } : r
+    );
+    setPartTimeJobRequests(next);
+    setJobRequests(next);
+    setPgModal(null);
+    alert('결제가 완료되었습니다. 운영자가 곧 연락드리겠습니다.');
+  };
 
   const handleConfirmOrder = (order: OrderItem, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
@@ -157,7 +186,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
         {[ 
           { id: 'sns', label: 'SNS 활성화 내역' }, 
           { id: 'channel', label: '채널 구매 내역' }, 
-          { id: 'store', label: 'N잡 스토어 내역' } 
+          { id: 'store', label: 'N잡 스토어 내역' },
+          { id: 'alba', label: '알바의뢰' }
         ].map(tab => (
           <button 
             key={tab.id} 
@@ -169,7 +199,36 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
         ))}
       </div>
 
-      {activeTab === 'sns' ? (
+      {activeTab === 'alba' ? (
+        <div className="space-y-4">
+          {myApprovedRequests.length === 0 ? (
+            <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-gray-100">
+              <p className="text-gray-300 font-black italic">승인된 알바의뢰 내역이 없습니다.</p>
+              <Link to="/part-time" className="inline-block mt-4 text-emerald-600 font-black hover:underline">작업의뢰 신청하러 가기 →</Link>
+            </div>
+          ) : (
+            myApprovedRequests.map((jr) => (
+              <div key={jr.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-10">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                  <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
+                  <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                    <span className="font-bold text-gray-700">광고금액: {jr.adAmount.toLocaleString()} P</span>
+                    <span className="font-bold text-gray-700">수수료: {jr.fee.toLocaleString()} P</span>
+                    <span className="font-black text-emerald-600">총 결제: {(jr.adAmount + jr.fee).toLocaleString()} P</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handlePayJobRequest(jr)}
+                  className="px-10 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shrink-0"
+                >
+                  결제하기
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      ) : activeTab === 'sns' ? (
         <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[1100px]">
@@ -305,6 +364,27 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
               );
             })
           )}
+        </div>
+      )}
+
+      {pgModal && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
+          <div className="bg-white w-full max-w-md rounded-[48px] p-10 shadow-2xl space-y-8 text-center">
+            <h3 className="text-2xl font-black text-gray-900">PG 결제</h3>
+            <div>
+              <p className="text-gray-500 font-bold">{pgModal.title}</p>
+              <p className="text-3xl font-black text-emerald-600 mt-2">{(pgModal.amount).toLocaleString()} P</p>
+              <p className="text-xs text-gray-400 mt-1">(실제 PG 연동 시 결제창으로 이동합니다)</p>
+            </div>
+            <div className="flex gap-4">
+              <button onClick={() => setPgModal(null)} className="flex-1 py-4 rounded-xl bg-gray-100 text-gray-700 font-black">
+                취소
+              </button>
+              <button onClick={confirmPgPayment} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">
+                결제 완료
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
