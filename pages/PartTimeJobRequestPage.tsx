@@ -22,9 +22,13 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const [contact, setContact] = useState('');
   const [workPeriodStart, setWorkPeriodStart] = useState(todayStr());
   const [workPeriodEnd, setWorkPeriodEnd] = useState(todayStr());
-  const [adAmount, setAdAmount] = useState<number>(0);
+  const [unitPrice, setUnitPrice] = useState<number>(0);
+  const [quantity, setQuantity] = useState<number>(1);
   const [showModal, setShowModal] = useState(false);
-  const [agreePlatformContract, setAgreePlatformContract] = useState(false);
+  const adAmount = (unitPrice || 0) * (quantity || 1);
+  const [agree1, setAgree1] = useState(false);
+  const [agree2, setAgree2] = useState(false);
+  const [agree3, setAgree3] = useState(false);
 
   const fee = calcJobRequestFee(adAmount);
 
@@ -42,8 +46,8 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       alert('연락처를 입력해 주세요.');
       return;
     }
-    if (!agreePlatformContract) {
-      alert('플랫폼과 계약 체결에 동의해 주세요.');
+    if (!agree1 || !agree2 || !agree3) {
+      alert('필수 동의 항목에 모두 체크해 주세요.');
       return;
     }
     const requests = getPartTimeJobRequests();
@@ -56,6 +60,8 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       workPeriodStart,
       workPeriodEnd,
       adAmount,
+      unitPrice: unitPrice || undefined,
+      quantity: quantity || 1,
       fee,
       applicantUserId: user.id,
       status: 'pending_review' as const,
@@ -95,7 +101,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
               부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 불법게시물 작업을 엄격히 제한합니다.
             </p>
             <p className="text-amber-300/90 font-bold text-sm mt-3">
-              의뢰신청하기 이전에 작업결과물로 인한 법적인 부분의 책임은 광고주에게 있습니다.
+              작업결과물로 인한 법적인 부분의 책임은 광고주에게 있습니다.
             </p>
           </div>
         </div>
@@ -168,29 +174,48 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">광고금액 (프리랜서에게 지급되는 금액, 원)</label>
-          <input
-            type="number"
-            min={0}
-            value={adAmount || ''}
-            onChange={(e) => setAdAmount(Number(e.target.value) || 0)}
-            placeholder="0"
-            className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-base"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">단가 (개당, 원)</label>
+            <input
+              type="number"
+              min={0}
+              value={unitPrice || ''}
+              onChange={(e) => setUnitPrice(Number(e.target.value) || 0)}
+              placeholder="0"
+              className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-base"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">갯수</label>
+            <input
+              type="number"
+              min={1}
+              value={quantity || ''}
+              onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+              placeholder="1"
+              className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-base"
+            />
+          </div>
         </div>
 
         <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">수수료 (광고금액의 15% + 광고수수료의 부가세 10% 자동계산)</label>
+          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">수수료 (20% + 수수료의 부가세 10% 자동계산)</label>
           <p className="text-2xl font-black text-emerald-700">{fee.toLocaleString()}원</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+        <div className="space-y-3 p-4 rounded-2xl bg-amber-50 border border-amber-200">
           <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" checked={agreePlatformContract} onChange={(e) => setAgreePlatformContract(e.target.checked)} className="mt-1 rounded" />
-            <span className="text-sm">
-              플랫폼과 용역 계약을 체결하는 데 동의합니다. 플랫폼은 광고주와 계약의 당사자이며, 프리랜서는 플랫폼의 재위탁 수행자입니다. 광고주와 프리랜서는 직접 계약 관계가 아니며, 손해배상 한도는 해당 건 결제금액 범위로 제한됩니다.
-            </span>
+            <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
+            <span className="text-sm">(필수) 결제와 동시에 플랫폼과 귀하 사이의 용역 공급 계약이 성립됨에 동의합니다.</span>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
+            <span className="text-sm">(필수) 취소/환불 규정(개시 전 전액, 개시 후 범위 제한)을 확인하였으며 이에 동의합니다.</span>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
+            <span className="text-sm">(필수) 플랫폼 외 직접 거래 시 거래액의 10배 위약벌이 부과됨을 확인하였습니다.</span>
           </label>
         </div>
         <button
