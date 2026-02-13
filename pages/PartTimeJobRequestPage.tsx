@@ -21,7 +21,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const fromAlba = (location.state as { fromAlba?: boolean })?.fromAlba;
   const [title, setTitle] = useState('');
   const [workContent, setWorkContent] = useState('');
-  const [platformLink, setPlatformLink] = useState('');
+  const [platformLinks, setPlatformLinks] = useState<string[]>(['']);
   const [contact, setContact] = useState('');
   const [workPeriodStart, setWorkPeriodStart] = useState(todayStr());
   const [workPeriodEnd, setWorkPeriodEnd] = useState(todayStr());
@@ -39,7 +39,8 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
     if (editRequest && editRequest.applicantUserId === user.id) {
       setTitle(editRequest.title);
       setWorkContent(editRequest.workContent);
-      setPlatformLink(editRequest.platformLink || '');
+      const pl = editRequest.platformLinks?.length ? editRequest.platformLinks : (editRequest.platformLink ? editRequest.platformLink.split(',').map((s) => s.trim()).filter(Boolean) : ['']);
+      setPlatformLinks(pl.length ? pl : ['']);
       setContact(editRequest.contact || '');
       setWorkPeriodStart(editRequest.workPeriodStart);
       setWorkPeriodEnd(editRequest.workPeriodEnd);
@@ -73,7 +74,8 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         ...editRequest,
         title: title.trim(),
         workContent: workContent.trim(),
-        platformLink: platformLink.trim(),
+        platformLink: platformLinks.filter(Boolean).join(', ') || '',
+        platformLinks: platformLinks.filter(Boolean),
         contact: contact.trim(),
         workPeriodStart,
         workPeriodEnd,
@@ -87,11 +89,13 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       setPartTimeJobRequests(requests.map((r) => (r.id === editRequest.id ? updated : r)));
       setShowModal(true);
     } else {
+      const plTrimmed = platformLinks.map((s) => s.trim()).filter(Boolean);
       const newRequest = {
         id: `jr_${Date.now()}`,
         title: title.trim(),
         workContent: workContent.trim(),
-        platformLink: platformLink.trim(),
+        platformLink: plTrimmed.join(', ') || '',
+        platformLinks: plTrimmed,
         contact: contact.trim(),
         workPeriodStart,
         workPeriodEnd,
@@ -192,13 +196,27 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
 
         <div>
           <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">플랫폼링크 (작업 대상 SNS/채널 주소)</label>
-          <input
-            type="url"
-            value={platformLink}
-            onChange={(e) => setPlatformLink(e.target.value)}
-            placeholder="https://instagram.com/... 또는 https://youtube.com/..."
-            className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-base"
-          />
+          <div className="space-y-2">
+            {platformLinks.map((link, idx) => (
+              <div key={idx} className="flex gap-2">
+                <input
+                  type="url"
+                  value={link}
+                  onChange={(e) => setPlatformLinks((prev) => prev.map((v, i) => (i === idx ? e.target.value : v)))}
+                  placeholder="https://instagram.com/... 또는 https://youtube.com/..."
+                  className="flex-1 px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-base"
+                />
+                {platformLinks.length > 1 && (
+                  <button type="button" onClick={() => setPlatformLinks((prev) => prev.filter((_, i) => i !== idx))} className="px-4 py-2 rounded-xl bg-red-100 text-red-700 font-bold hover:bg-red-200 shrink-0">
+                    삭제
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" onClick={() => setPlatformLinks((prev) => [...prev, ''])} className="mt-2 px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
+              + 플랫폼링크 추가
+            </button>
+          </div>
         </div>
 
         <div>
@@ -266,7 +284,11 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
 
         <div className="p-6 rounded-2xl bg-blue-50 border border-blue-100">
           <p className="text-sm font-black text-blue-800 mb-2">취소/환불 규정</p>
-          <p className="text-sm text-blue-900 leading-relaxed">작업 개시 전: 전액 취소 및 환불 가능.<br />작업 개시 후: 가분적 용역은 미수행 범위만 환불 가능, 불가분적 용역은 원칙 환불 불가. 최종 확정 후에는 협의에 따릅니다.</p>
+          <p className="text-sm text-blue-900 leading-relaxed">
+            <strong>작업 시작 전:</strong> 언제든 전액 취소·환불 가능합니다.<br />
+            <strong>작업 시작 후:</strong> 단계별로 나눌 수 있는 작업(예: 10건 중 3건만 완료)은 아직 하지 않은 부분만 환불 가능하고, 한 번에 끝내는 작업(예: 영상 1편 편집)은 시작 후에는 환불이 어렵습니다.<br />
+            <strong>최종 확정 후:</strong> 양측 협의가 필요합니다.
+          </p>
           <label className="flex items-start gap-3 cursor-pointer mt-4">
             <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
             <span className="text-sm font-bold">(필수) 취소/환불 규정을 확인하였으며 이에 동의합니다.</span>
