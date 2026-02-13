@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus } from '@/constants';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
@@ -14,13 +14,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>(() => getPartTimeJobRequests());
+  const [withdrawRequests, setWithdrawRequests] = useState(() => getFreelancerWithdrawRequests());
   const [rejectModal, setRejectModal] = useState<{ jr: PartTimeJobRequest; reason: string } | null>(null);
   const [revisionModal, setRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string; text: string } | null>(null);
 
   useEffect(() => {
     setTasks(getPartTimeTasks());
     setJobRequests(getPartTimeJobRequests());
+    setWithdrawRequests(getFreelancerWithdrawRequests());
   }, []);
+
+  const refreshWithdrawRequests = () => setWithdrawRequests(getFreelancerWithdrawRequests());
 
   const pendingReviews = jobRequests.filter((jr) => jr.status === 'pending_review');
 
@@ -79,11 +83,11 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
       return;
     }
-    if (!confirm(`작업을 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()} P를 지급합니다.`)) return;
+    if (!confirm(`작업을 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
     target.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
     if (addNotif) {
       target.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()} P가 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()} P가 적립되었습니다.`)
+        addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
       );
     }
     const paidIds = target.map((a) => a.userId);
@@ -94,7 +98,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }
     );
     saveTasks(next);
-    alert('포인트가 지급되었습니다.');
+    alert('알바비가 지급되었습니다.');
   };
 
   const handleSelect = (task: PartTimeTask, userId: string) => {
@@ -136,8 +140,79 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
     alert('수정요청 알림이 전송되었습니다.');
   };
 
+  const pendingWithdrawals = withdrawRequests.filter((r) => r.status === 'pending');
+
   return (
     <div className="space-y-10">
+      {/* 프리랜서 출금 신청 목록 */}
+      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+        <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
+        <p className="text-sm text-gray-500 mb-6">수익통장에서 출금을 신청한 프리랜서 목록입니다. 전문가정보에 등록된 통장으로 PortOne을 통해 입금 처리해 주세요.</p>
+        {pendingWithdrawals.length === 0 ? (
+          <div className="py-8 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
+            대기 중인 출금 신청이 없습니다.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">신청일시</th>
+                  <th className="px-6 py-4">프리랜서</th>
+                  <th className="px-6 py-4 text-right">금액 (원)</th>
+                  <th className="px-6 py-4">입금 계좌</th>
+                  <th className="px-6 py-4 text-center">처리</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {pendingWithdrawals.map((r) => (
+                  <tr key={r.id} className="hover:bg-emerald-50/20">
+                    <td className="px-6 py-4 font-bold text-sm text-gray-700">
+                      {new Date(r.requestedAt).toLocaleString('ko-KR')}
+                    </td>
+                    <td className="px-6 py-4 font-black text-gray-900">{r.nickname}</td>
+                    <td className="px-6 py-4 text-right font-black text-emerald-600">{r.amount.toLocaleString()}원</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className="font-bold text-gray-800">{r.bankName}</span> {r.accountNo}
+                      <br />
+                      <span className="text-gray-500 text-xs">예금주: {r.ownerName}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateFreelancerWithdrawRequestStatus(r.id, 'completed');
+                            refreshWithdrawRequests();
+                            if (addNotif) addNotif(r.userId, 'freelancer', '출금 완료', `${r.amount.toLocaleString()}원이 ${r.bankName} ${r.accountNo} 계좌로 입금되었습니다.`);
+                            alert('입금 완료로 표시했습니다.');
+                          }}
+                          className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700"
+                        >
+                          입금 완료
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!confirm('입금 실패로 표시하시겠습니까?')) return;
+                            updateFreelancerWithdrawRequestStatus(r.id, 'failed');
+                            refreshWithdrawRequests();
+                            alert('실패로 표시했습니다.');
+                          }}
+                          className="px-4 py-2 rounded-lg bg-red-100 text-red-700 font-black text-xs hover:bg-red-200"
+                        >
+                          실패
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
         <h3 className="text-xl font-black text-gray-900 mb-1">누구나알바 · 작업의뢰 검토</h3>
         <p className="text-sm text-gray-500 mb-6">광고주 신청 폼을 검토한 후, 금액·내용이 적절하면 승인하여 누구나알바 페이지에 업로드해 주세요.</p>
@@ -181,7 +256,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                     </div>
                     <div>
                       <p className="text-xs font-black text-gray-500 uppercase mb-1">광고금액 · 수수료</p>
-                      <p className="font-bold text-gray-800">{jr.adAmount.toLocaleString()} P / 수수료 {jr.fee.toLocaleString()} P</p>
+                      <p className="font-bold text-gray-800">{jr.adAmount.toLocaleString()}원 / 수수료 {jr.fee.toLocaleString()}원</p>
                     </div>
                   </div>
                 </div>
@@ -232,12 +307,12 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       </div>
 
       <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-black text-gray-900 mb-2">프리랜서 작업 · 포인트 지급</h3>
+        <h3 className="text-xl font-black text-gray-900 mb-2">프리랜서 작업 · 알바비 지급</h3>
         <p className="text-sm text-gray-500 mb-6">작업 상세와 선정된 프리랜서 목록을 확인한 후, 링크를 클릭해 검토하고 수정요청 또는 포인트 지급해 주세요.</p>
 
       {tasksWithSelected.length === 0 ? (
         <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
-          링크 확인 후 포인트 지급이 필요한 작업이 없습니다.
+          링크 확인 후 알바비 지급이 필요한 작업이 없습니다.
         </div>
       ) : (
         <ul className="space-y-10">
@@ -252,7 +327,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                       <span className="text-[10px] font-black text-gray-400 uppercase">{task.category}</span>
                       <h4 className="text-xl font-black text-gray-900 mt-1">{task.title}</h4>
                       <p className="text-gray-500 mt-1">{task.description}</p>
-                      <p className="text-emerald-600 font-black text-lg mt-2">+{task.reward.toLocaleString()} P</p>
+                      <p className="text-emerald-600 font-black text-lg mt-2">+{task.reward.toLocaleString()}원</p>
                     </div>
                     <Link to={`/part-time/${task.id}`} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm hover:bg-gray-200">
                       상세 페이지에서 관리 →
