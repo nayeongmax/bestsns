@@ -115,12 +115,12 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
 
   const handleModalConfirm = () => {
     setShowModal(false);
-    if (fromAlba) navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'alba' } });
+    if (fromAlba) navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
     else navigate('/part-time');
   };
 
   const handleBack = () => {
-    if (fromAlba) navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'alba' } });
+    if (fromAlba) navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
     else navigate('/part-time');
   };
 
@@ -130,7 +130,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
     const requests = getPartTimeJobRequests().filter((r) => r.id !== editRequest.id);
     setPartTimeJobRequests(requests);
     alert('삭제되었습니다.');
-    if (fromAlba) navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'alba' } });
+    if (fromAlba) navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
     else navigate('/part-time');
   };
 
@@ -277,9 +277,13 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           </div>
         </div>
 
-        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-3">
           <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">수수료 (20% + 수수료의 부가세 10% 자동계산)</label>
           <p className="text-2xl font-black text-emerald-700">{fee.toLocaleString()}원</p>
+          <div className="pt-3 border-t border-gray-200">
+            <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-1">총합금액 (단가×갯수+수수료)</label>
+            <p className="text-2xl font-black text-gray-900">{(adAmount + fee).toLocaleString()}원</p>
+          </div>
         </div>
 
         <div className="p-6 rounded-2xl bg-blue-50 border border-blue-100">
@@ -318,9 +322,9 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
             <div className="text-emerald-600 text-4xl">✓</div>
             <div className="space-y-2">
               <p className="font-black text-gray-900 text-base">{editRequest ? '수정하여 재신청되었습니다.' : '신청완료되었습니다.'}</p>
-              <p className="text-gray-700 text-base">곧 운영자가 연락드릴 예정입니다.</p>
-              <p className="text-gray-700 text-base">조금만 기다려주세요.</p>
-              <p className="text-gray-700 text-base">구매자 대시보드 - 알바의뢰(광고주한정)탭에서 결제해주시면 작업이 바로 진행됩니다.</p>
+              <p className="text-gray-700 text-base">적합한 작업인지 확인 후 승인해드리겠습니다.</p>
+              <p className="text-gray-700 text-base">승인되면, 프리랜서 워크페이스 → 알바의뢰 (광고주한정) 탭에서 결제해주세요.</p>
+              <p className="text-gray-700 text-base">결제완료되면 프리랜서 모집글이 업로드 됩니다.</p>
             </div>
             <button
               onClick={handleModalConfirm}
