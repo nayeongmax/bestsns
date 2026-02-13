@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import FreelancerRegistrationModal from './FreelancerRegistrationModal';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -19,11 +18,12 @@ import {
 interface Props {
   user: UserProfile;
   onUpdate: (updated: UserProfile) => void;
+  onApplyFreelancer?: () => void;
 }
 
-const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
+const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelancer }) => {
   const [balance, setBalance] = useState(0);
-  const [showRegModal, setShowRegModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [history, setHistory] = useState<ReturnType<typeof getFreelancerHistory>>([]);
   const [withdrawing, setWithdrawing] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
@@ -82,7 +82,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
     setSelectedTasks(mySelected);
   }, [user.id]);
 
-  const handleWithdraw = () => {
+  const handleWithdrawClick = () => {
     if (balance < MIN_WITHDRAW_FREELANCER) {
       alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()}원입니다.`);
       return;
@@ -97,7 +97,12 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
       );
       return;
     }
-    if (!confirm(`수익통장 전액 ${balance.toLocaleString()}원을 등록된 통장(${bankInfo.bankName} ${bankInfo.accountNo})으로 출금 신청하시겠습니까?`)) return;
+    setShowWithdrawModal(true);
+  };
+
+  const handleWithdrawConfirm = () => {
+    if (!bankInfo) return;
+    setShowWithdrawModal(false);
     setWithdrawing(true);
     const result = withdrawFreelancerEarnings(user.id, balance);
     if (result.success) {
@@ -109,10 +114,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
         accountNo: bankInfo.accountNo,
         ownerName: bankInfo.ownerName || user.nickname,
       });
-      setBalance(result.newBalance);
+      setBalance(getFreelancerBalance(user.id));
       refresh();
       alert(
-        `출금 신청이 완료되었습니다.\n${balance.toLocaleString()}원이 ${bankInfo.bankName} ${bankInfo.accountNo} (${bankInfo.ownerName || user.nickname})으로 입금 처리됩니다.`
+        `출금 신청이 완료되었습니다.\n출금일 기준 익일~3일 이내 신청한 계좌(${bankInfo.bankName} ${bankInfo.accountNo})로 입금됩니다.`
       );
     } else {
       alert('출금 처리에 실패했습니다.');
@@ -128,11 +133,6 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
   const isFreelancerApproved = user.freelancerStatus === 'approved';
   const isFreelancerPending = user.freelancerStatus === 'pending';
 
-  const handleFreelancerRegSubmit = (app: import('@/types').FreelancerApplication) => {
-    onUpdate({ ...user, freelancerStatus: 'pending', freelancerApplication: app });
-    setShowRegModal(false);
-  };
-
   if (!isFreelancerApproved && !isFreelancerPending) {
     return (
       <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
@@ -144,19 +144,18 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
           <p className="text-gray-600 font-bold mb-6 text-center">프리랜서 자격으로 누구나알바에 신청하려면<br />프리랜서 등록을 해주세요.</p>
           <button
             type="button"
-            onClick={() => setShowRegModal(true)}
+            onClick={() => {
+              if (onApplyFreelancer) {
+                onApplyFreelancer();
+              } else {
+                alert('전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.');
+              }
+            }}
             className="px-12 py-4 rounded-xl bg-emerald-600 text-white font-black text-lg hover:bg-emerald-700 shadow-lg transition-all"
           >
             프리랜서 등록하기
           </button>
         </div>
-        {showRegModal && (
-          <FreelancerRegistrationModal
-            user={user}
-            onClose={() => setShowRegModal(false)}
-            onSubmit={handleFreelancerRegSubmit}
-          />
-        )}
       </div>
     );
   }
@@ -213,7 +212,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
           )}
           <button
             type="button"
-            onClick={handleWithdraw}
+            onClick={handleWithdrawClick}
             disabled={!canWithdraw || withdrawing}
             className={`mt-4 w-full py-3 rounded-xl font-black text-sm transition-all ${
               canWithdraw && !withdrawing
@@ -439,6 +438,36 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
               </div>
             </div>
             <button onClick={() => setWorkConfirmModal(null)} className="w-full py-4 rounded-xl bg-gray-900 text-white font-black">확인</button>
+          </div>
+        </div>
+      )}
+
+      {/* 출금 신청 확인 모달 */}
+      {showWithdrawModal && bankInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setShowWithdrawModal(false)}>
+          <div className="bg-white rounded-[24px] p-8 max-w-md w-full shadow-2xl border border-gray-100" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-black text-gray-900 mb-6">출금 신청 확인</h3>
+            <div className="space-y-4 mb-6">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-1">은행명</p>
+                <p className="font-bold text-gray-800">{bankInfo.bankName}</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-1">계좌번호</p>
+                <p className="font-bold text-gray-800">{bankInfo.accountNo}</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-1">출금 금액</p>
+                <p className="font-black text-emerald-600 text-xl">{balance.toLocaleString()}원</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 bg-amber-50 rounded-xl p-4 border border-amber-100 mb-6">
+              출금일 기준 익일~3일 이내 신청한 계좌로 입금됩니다.
+            </p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setShowWithdrawModal(false)} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">취소</button>
+              <button type="button" onClick={handleWithdrawConfirm} className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">확인</button>
+            </div>
           </div>
         </div>
       )}
