@@ -124,9 +124,14 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
 
   const handleSelect = (task: PartTimeTask, userId: string) => {
     const applicant = task.applicants.find((a) => a.userId === userId);
-    const next = tasks.map((t) =>
-      t.id !== task.id ? t : { ...t, applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, selected: true } : a)) }
-    );
+    let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true } : a)) };
+    if (task.applicantUserId && !task.jobRequestId) {
+      const jobReqs = getPartTimeJobRequests().filter((jr) => jr.applicantUserId === task.applicantUserId && (jr.paid || jr.status === 'pending'));
+      const linkedIds = new Set(getPartTimeTasks().filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
+      const unlinked = jobReqs.find((jr) => !linkedIds.has(jr.id));
+      if (unlinked) updatedTask = { ...updatedTask, jobRequestId: unlinked.id };
+    }
+    const next = tasks.map((t) => (t.id !== task.id ? t : updatedTask));
     saveTasks(next);
     if (applicant && addNotif) {
       addNotif(userId, 'freelancer', '프리랜서 선정', `[${task.title}]에 선정되었습니다. 작업 완료 후 작업 링크를 제출해 주세요.`, '작업 완료 후 작업 링크를 제출해 주세요.');
