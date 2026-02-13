@@ -5,7 +5,6 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
  * Fixed: Imported missing NotificationType
  */
 import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType, GradeConfig, getUserGrade } from '../types';
-import GradeBadge from '@/components/GradeBadge';
 import UserInfoSection from '@/components/mypage/UserInfoSection';
 import BuyerDashboard from '@/components/mypage/BuyerDashboard';
 import SellerDashboard from '@/components/mypage/SellerDashboard';
@@ -127,7 +126,7 @@ const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, 
                   <span className="text-[14px] opacity-30 group-hover:opacity-100 transition-opacity">✏️</span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                   <GradeBadge user={user} gradeConfigs={gradeConfigs} size="sm" />
+                   {(() => { const g = getUserGrade(user, gradeConfigs); return g ? <span className={`${g.color} text-white text-[10px] font-black px-2.5 py-0.5 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
                    {(!gradeConfigs.length || !getUserGrade(user, gradeConfigs)) && <span className="text-[11px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Standard Member</span>}
                    {user.sellerStatus === 'approved' && <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Expert ✓</span>}
                 </div>
