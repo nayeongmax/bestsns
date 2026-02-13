@@ -14,6 +14,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   const [balance, setBalance] = useState(0);
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
   const [selectedDate, setSelectedDate] = useState('');
+  const [weekOffset, setWeekOffset] = useState(0);
 
   useEffect(() => {
     processAutoApprovals();
@@ -40,6 +41,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   const weekDates = useMemo(() => {
     const arr: string[] = [];
     const base = new Date(todayStrVal);
+    base.setDate(base.getDate() + weekOffset * 7);
     for (let i = 0; i < 7; i++) {
       const d = new Date(base);
       d.setDate(base.getDate() + i);
@@ -48,7 +50,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
       );
     }
     return arr;
-  }, [todayStrVal]);
+  }, [todayStrVal, weekOffset]);
 
   const dateCounts = useMemo(() => {
     const map: Record<string, { total: number; done: number }> = {};
@@ -87,7 +89,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
               누구나<span className="text-emerald-600">알바</span>
             </h2>
             <p className="text-gray-700 font-black mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
-            <p className="text-gray-700 font-black mt-1">프리랜서 작업이 필요하시면 고객센터로 문의주세요.</p>
+            <p className="text-gray-700 font-black mt-1">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {user?.role === 'admin' && (
                 <button
@@ -124,7 +126,9 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         </div>
 
         <div className="grid gap-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors" aria-label="이전 주">←</button>
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {weekDates.map((d) => {
               const c = dateCounts[d] || { total: 0, done: 0 };
               const isSelected = effectiveDate === d;
@@ -146,6 +150,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                 </button>
               );
             })}
+            </div>
+            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors" aria-label="다음 주">→</button>
           </div>
 
           <h3 className="text-xl font-black text-gray-800">작업목록</h3>
