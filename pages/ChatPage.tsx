@@ -33,7 +33,8 @@ interface ChatRoom {
 
 const CHAT_META_KEY = 'chat_room_meta_v2';
 const CHAT_ROOMS_FALLBACK_KEY = (userId: string) => `chat_rooms_fallback_${userId}`;
-const PROHIBITED_KEYWORDS = ['휴대폰', '폰번호', '직거래', '계좌', '이체', '010', '전화번호', '카톡', '연락처', '입금', '현금', '계좌번호'];
+const PROHIBITED_KEYWORDS = ['휴대폰', '폰번호', '직거래', '계좌', '이체', '010', '전화번호', '카톡', '연락처', '입금', '현금', '계좌번호', '따로'];
+const DIRECT_TRADE_WARNING = '직접 거래 시도는 약관에 따라 거래액 10배의 위약벌 대상이 될 수 있습니다. 모든 거래는 플랫폼을 통해야 안전하게 보호받습니다.';
 
 const formatRelativeTime = (isoString: string) => {
   const date = new Date(isoString);
@@ -303,10 +304,11 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
         const newCount = violationCount + 1;
         setViolationCount(newCount);
         localStorage.setItem(`violation_${user.id}`, newCount.toString());
-        addNotif(user.id, 'prohibited', '🚨 금지 키워드 감지 경고', `채팅 중 직거래 유도 키워드가 감지되었습니다: [${detected.join(', ')}]. 운영정책 위반 ${newCount}회째입니다.`);
+        addNotif(user.id, 'prohibited', '🚨 금지 키워드 감지 경고', DIRECT_TRADE_WARNING);
+        alert(DIRECT_TRADE_WARNING);
         const warningMsg: ChatMessageExtended = {
           id: `warn_${Date.now()}`, senderId: 'system', senderNickname: 'THEBESTSNS 보안팀', senderImage: '',
-          content: `🚨 직거래 키워드가 감지되었습니다: [${detected.join(', ')}]\n직거래 유도 5회 적발 시 판매 중지, 7회 적발 시 수익 창출 금지 및 계정 탈퇴 처리가 진행됩니다.\n(현재 누적 위반: ${newCount}회)`,
+          content: `🚨 ${DIRECT_TRADE_WARNING}\n(감지된 키워드: [${detected.join(', ')}])\n(현재 누적 위반: ${newCount}회)`,
           timestamp, dateStr: todayStr, type: 'warning',
         };
         setMessages(prev => [...prev, warningMsg]);
