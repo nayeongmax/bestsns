@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '@/types';
-import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals } from '@/constants';
+import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals, getPartTimeJobRequests } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -247,8 +247,17 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const [workStart, setWorkStart] = useState(todayStr());
   const [workEnd, setWorkEnd] = useState(todayStr());
   const [applicantUserId, setApplicantUserId] = useState('');
-  const [jobRequestId, setJobRequestId] = useState('');
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  /** 승인된 작업의뢰(광고의뢰)의 광고주 ID 목록 (드롭다운용) */
+  const approvedAdvertiserIds = useMemo(() => {
+    const reqs = getPartTimeJobRequests().filter((jr) => jr.status === 'pending' || jr.paid);
+    const ids = new Set<string>();
+    reqs.forEach((jr) => {
+      if (jr.applicantUserId?.trim()) ids.add(jr.applicantUserId.trim());
+    });
+    return Array.from(ids).sort();
+  }, []);
 
   const addSection = (type: SectionItemType) => {
     const item: SectionItem = {
@@ -324,25 +333,35 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
     const commentList: string[] = [];
     const workLinkList: string[] = [];
 
+    const sectionOrder: Array<{ type: '게시글' | '댓글' | '작업링크'; index: number }> = [];
     sectionItems.forEach((item) => {
       if (item.type === '제목' && item.value?.trim()) sectionsOut.제목 = item.value.trim();
       else if (item.type === '내용' && item.value?.trim()) sectionsOut.내용 = item.value.trim();
       else if (item.type === '게시글' && item.postBlock && (item.postBlock.제목?.trim() || item.postBlock.내용?.trim())) {
+        const idx = postBlocksOut.length;
         postBlocksOut.push({ 제목: item.postBlock.제목.trim(), 내용: item.postBlock.내용.trim() });
-      } else if (item.type === '댓글' && item.value?.trim()) commentList.push(item.value.trim());
-      else if (item.type === '키워드' && item.value?.trim()) sectionsOut.키워드 = item.value.trim();
+        sectionOrder.push({ type: '게시글', index: idx });
+      } else if (item.type === '댓글' && item.value?.trim()) {
+        const idx = commentList.length;
+        commentList.push(item.value.trim());
+        sectionOrder.push({ type: '댓글', index: idx });
+      } else if (item.type === '키워드' && item.value?.trim()) sectionsOut.키워드 = item.value.trim();
       else if (item.type === '이미지') {
         if (item.value?.trim()) sectionsOut.이미지 = item.value.trim();
         if (item.images?.length) sectionsOut.이미지목록 = item.images;
       } else if (item.type === '동영상' && item.value?.trim()) sectionsOut.동영상 = item.value.trim();
       else if (item.type === 'gif' && item.value?.trim()) sectionsOut.gif = item.value.trim();
-      else if (item.type === '작업링크' && item.value?.trim()) workLinkList.push(item.value.trim());
-      else if (item.type === '작업안내' && item.value?.trim()) sectionsOut.작업안내 = item.value.trim();
+      else if (item.type === '작업링크' && item.value?.trim()) {
+        const idx = workLinkList.length;
+        workLinkList.push(item.value.trim());
+        sectionOrder.push({ type: '작업링크', index: idx });
+      } else if (item.type === '작업안내' && item.value?.trim()) sectionsOut.작업안내 = item.value.trim();
     });
 
     if (postBlocksOut.length) sectionsOut.게시글목록 = postBlocksOut;
     if (commentList.length) sectionsOut.댓글목록 = commentList;
     if (workLinkList.length) sectionsOut.작업링크목록 = workLinkList;
+    if (sectionOrder.length) sectionsOut.sectionOrder = sectionOrder;
     const newTask: PartTimeTask = {
       id: `t_${Date.now()}`,
       title: title.trim(),
@@ -359,7 +378,6 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
       pointPaid: false,
       paidUserIds: [],
       ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
-      ...(jobRequestId.trim() ? { jobRequestId: jobRequestId.trim() } : {}),
     };
     setPartTimeTasks([newTask, ...tasks]);
     alert('작업이 등록되었습니다.');
@@ -402,25 +420,25 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
         </section>
         <section className="space-y-6">
           <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">2. 모집 인원 · 신청기간 · 작업기간</h3></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">광고주 ID (작업의뢰 링크용, 선택)</label>
-              <input value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} placeholder="광고주 userId" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업의뢰 ID (선택)</label>
-              <input value={jobRequestId} onChange={(e) => setJobRequestId(e.target.value)} placeholder="jobRequestId" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
-            </div>
+          <div>
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">광고주 ID (광고의뢰 승인 건에서 선택)</label>
+            <select value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} className="w-full max-w-xs px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-bold">
+              <option value="">선택 안 함</option>
+              {approvedAdvertiserIds.map((id) => (
+                <option key={id} value={id}>{id}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">작업의뢰 ID는 프리랜서 선정 후 자동으로 연결됩니다.</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">모집 인원</label>
-              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
+              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full min-w-[140px] px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
             </div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div className="min-w-[160px]"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm min-w-[160px]" /></div>
+            <div className="min-w-[160px]"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm min-w-[160px]" /></div>
+            <div className="min-w-[160px]"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm min-w-[160px]" /></div>
+            <div className="min-w-[160px]"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm min-w-[160px]" /></div>
           </div>
         </section>
         <section className="space-y-6">
