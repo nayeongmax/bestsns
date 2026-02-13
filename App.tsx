@@ -73,7 +73,7 @@ function ContainerRoutes(props: {
       <Route path="/ebooks/register" element={props.user ? <EbookRegistration user={props.user} setEbooks={props.setEbooks} /> : <Navigate to="/login" />} />
       <Route path="/part-time" element={<PartTimePage user={props.user} onUpdateUser={props.handleGlobalUserUpdate} />} />
       <Route path="/part-time/register" element={<PartTimeTaskRegister user={props.user} />} />
-      <Route path="/part-time/request" element={<PartTimeJobRequestPage />} />
+      <Route path="/part-time/request" element={props.user ? <PartTimeJobRequestPage user={props.user} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={props.user} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} />} />
       <Route path="/ai" element={<AIConsulting />} />
       <Route path="/board" element={<FreeBoard posts={props.posts} notices={props.notices} members={props.members} gradeConfigs={props.gradeConfigs} />} />
