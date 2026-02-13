@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import type { PartTimeTask } from '@/types';
+import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests } from '@/constants';
 
 interface Props {
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
@@ -10,10 +10,32 @@ interface Props {
 
 const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
+  const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>(() => getPartTimeJobRequests());
 
   useEffect(() => {
     setTasks(getPartTimeTasks());
   }, []);
+
+  const pendingReviews = jobRequests.filter((jr) => jr.status === 'pending_review');
+
+  const handleApproveJobRequest = (jr: PartTimeJobRequest) => {
+    const next = jobRequests.map((r) =>
+      r.id === jr.id ? { ...r, status: 'pending' as const } : r
+    );
+    setPartTimeJobRequests(next);
+    setJobRequests(next);
+    alert('누구나알바 페이지에 업로드되었습니다.');
+  };
+
+  const handleRejectJobRequest = (jr: PartTimeJobRequest) => {
+    if (!confirm('이 신청을 거절하시겠습니까? (미선정 처리됩니다)')) return;
+    const next = jobRequests.map((r) =>
+      r.id === jr.id ? { ...r, status: 'not_selected' as const } : r
+    );
+    setPartTimeJobRequests(next);
+    setJobRequests(next);
+    alert('거절 처리되었습니다.');
+  };
 
   const tasksWithSelected = tasks.filter(
     (t) => !t.pointPaid && t.applicants.some((a) => a.selected)
@@ -48,9 +70,56 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
   };
 
   return (
-    <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
-      <h3 className="text-xl font-black text-gray-900 mb-2">누구나알바 · 프리랜서 작업 관리</h3>
-      <p className="text-sm text-gray-500 mb-6">선정된 프리랜서의 작업 링크를 확인한 후, 작업이 잘 되었으면 포인트 지급 버튼을 눌러 수익통장에 적립해 주세요.</p>
+    <div className="space-y-10">
+      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+        <h3 className="text-xl font-black text-gray-900 mb-1">누구나알바 · 작업의뢰 검토</h3>
+        <p className="text-sm text-gray-500 mb-6">광고주 신청 폼을 검토한 후, 금액·내용이 적절하면 승인하여 누구나알바 페이지에 업로드해 주세요.</p>
+
+        {pendingReviews.length === 0 ? (
+          <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
+            검토 대기 중인 작업의뢰가 없습니다.
+          </div>
+        ) : (
+          <ul className="space-y-6">
+            {pendingReviews.map((jr) => (
+              <li key={jr.id} className="p-6 rounded-2xl border border-amber-200 bg-amber-50/50 space-y-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                    <p className="text-gray-600 mt-2 whitespace-pre-wrap">{jr.workContent}</p>
+                    <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                      <span><strong>연락처:</strong> {jr.contact}</span>
+                      {jr.platformLink && <span><strong>플랫폼:</strong> <a href={jr.platformLink} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">{jr.platformLink}</a></span>}
+                      <span><strong>작업기간:</strong> {jr.workPeriodStart} ~ {jr.workPeriodEnd}</span>
+                      <span><strong>광고금액:</strong> {jr.adAmount.toLocaleString()} P · 수수료 {jr.fee.toLocaleString()} P</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleApproveJobRequest(jr)}
+                      className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all"
+                    >
+                      승인 후 업로드
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRejectJobRequest(jr)}
+                      className="px-6 py-3 rounded-xl bg-gray-200 text-gray-700 font-black hover:bg-gray-300 transition-all"
+                    >
+                      거절
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+        <h3 className="text-xl font-black text-gray-900 mb-2">프리랜서 작업 · 포인트 지급</h3>
+        <p className="text-sm text-gray-500 mb-6">선정된 프리랜서의 작업 링크를 확인한 후, 작업이 잘 되었으면 포인트 지급 버튼을 눌러 수익통장에 적립해 주세요.</p>
 
       {tasksWithSelected.length === 0 ? (
         <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
@@ -103,6 +172,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
           })}
         </ul>
       )}
+      </div>
     </div>
   );
 };
