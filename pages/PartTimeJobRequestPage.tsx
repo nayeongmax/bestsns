@@ -90,7 +90,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
               부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 불법게시물 작업을 엄격히 제한합니다.
             </p>
             <p className="text-amber-300/90 font-bold text-sm mt-3">
-              의뢰신청하기 이전에 작업결과물로 인한 법적인 부분의 책임은 광고주에게 있습니다.
+              작업결과물로 인한 법적인 부분의 책임은 광고주에게 있습니다.
             </p>
           </div>
         </div>
