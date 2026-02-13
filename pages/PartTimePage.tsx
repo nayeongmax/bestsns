@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '@/types';
-import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals, getPartTimeJobRequests } from '@/constants';
+import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals, getPartTimeJobRequests, generateProjectNo } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -394,6 +394,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
       applicants: [],
       pointPaid: false,
       paidUserIds: [],
+      projectNo: generateProjectNo(),
       ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
     };
     setPartTimeTasks([newTask, ...tasks]);
