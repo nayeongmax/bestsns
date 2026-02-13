@@ -339,10 +339,19 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
     const commentList: string[] = [];
     const workLinkList: string[] = [];
 
-    const sectionOrder: Array<{ type: '게시글' | '댓글' | '작업링크'; index: number }> = [];
+    const titleList: string[] = [];
+    const contentList: string[] = [];
+    const sectionOrder: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용'; index: number }> = [];
     sectionItems.forEach((item) => {
-      if (item.type === '제목' && item.value?.trim()) sectionsOut.제목 = item.value.trim();
-      else if (item.type === '내용' && item.value?.trim()) sectionsOut.내용 = item.value.trim();
+      if (item.type === '제목' && item.value?.trim()) {
+        const idx = titleList.length;
+        titleList.push(item.value.trim());
+        sectionOrder.push({ type: '제목', index: idx });
+      } else if (item.type === '내용' && item.value?.trim()) {
+        const idx = contentList.length;
+        contentList.push(item.value.trim());
+        sectionOrder.push({ type: '내용', index: idx });
+      }
       else if (item.type === '게시글' && item.postBlock && (item.postBlock.제목?.trim() || item.postBlock.내용?.trim())) {
         const idx = postBlocksOut.length;
         postBlocksOut.push({ 제목: item.postBlock.제목.trim(), 내용: item.postBlock.내용.trim() });
@@ -367,6 +376,8 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
     if (postBlocksOut.length) sectionsOut.게시글목록 = postBlocksOut;
     if (commentList.length) sectionsOut.댓글목록 = commentList;
     if (workLinkList.length) sectionsOut.작업링크목록 = workLinkList;
+    if (titleList.length) sectionsOut.제목목록 = titleList;
+    if (contentList.length) sectionsOut.내용목록 = contentList;
     if (sectionOrder.length) sectionsOut.sectionOrder = sectionOrder;
     const newTask: PartTimeTask = {
       id: `t_${Date.now()}`,
@@ -436,15 +447,15 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
             </select>
             <p className="text-xs text-gray-500 mt-1">작업의뢰 ID는 프리랜서 선정 후 자동으로 연결됩니다.</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div>
+          <div className="flex flex-wrap gap-4">
+            <div className="min-w-[120px]">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">모집 인원</label>
-              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full min-w-[140px] px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
+              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
             </div>
-            <div className="min-w-[160px]"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm min-w-[160px]" /></div>
-            <div className="min-w-[160px]"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm min-w-[160px]" /></div>
-            <div className="min-w-[160px]"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm min-w-[160px]" /></div>
-            <div className="min-w-[160px]"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm min-w-[160px]" /></div>
+            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
           </div>
         </section>
         <section className="space-y-6">
