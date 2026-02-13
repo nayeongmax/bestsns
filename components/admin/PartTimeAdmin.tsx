@@ -37,7 +37,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
     setPartTimeJobRequests(next);
     setJobRequests(next);
     if (jr.applicantUserId && addNotif) {
-      addNotif(jr.applicantUserId, 'approval', '작업의뢰 승인', `[${jr.title}] 작업의뢰가 승인되었습니다. 구매자 대시보드 > 알바의뢰 탭에서 결제를 진행해 주세요.`, '구매자 대시보드 > 알바의뢰 탭에서 결제를 진행해 주세요.');
+      addNotif(jr.applicantUserId, 'approval', '작업의뢰 승인', `[${jr.title}] 작업의뢰가 승인되었습니다. 프리랜서 워크페이스 → 알바의뢰 (광고주한정) 탭에서 결제를 진행해 주세요.`, '프리랜서 워크페이스 → 알바의뢰 탭에서 결제를 진행해 주세요.');
     }
     alert('승인되었습니다. 신청자에게 알림이 전송되었습니다.');
   };
