@@ -40,10 +40,14 @@ export interface PartTimeApplicant {
   comment: string;
   selected: boolean;
   appliedAt: string;
+  /** 프리랜서 연락처 (급할 때 연락용) */
+  contact?: string;
   /** 선정된 사람이 작업 완료 후 제출하는 작업 링크 (하위 호환) */
   workLink?: string;
   /** 작업 링크 여러 개 제출 */
   workLinks?: string[];
+  /** 운영자 수정요청 내용 (수정 요청 시 입력) */
+  revisionRequest?: string;
 }
 
 /** 게시글 한 건 (제목+내용) - 여러 개 넣을 때 사용 */
@@ -96,8 +100,12 @@ export interface PartTimeJobRequest {
   adAmount: number;
   /** 수수료 (15% + 부가세 10%) */
   fee: number;
+  /** 신청자 userId (로그인 필수, 알림/구매자 대시보드용) */
+  applicantUserId?: string;
   /** pending_review=운영자 검토대기, pending=작업의뢰(승인됨), selected=신청완료, not_selected=미선정/거절 */
   status: 'pending_review' | 'pending' | 'selected' | 'not_selected';
+  /** 결제 완료 여부 (구매자 PG 결제 후) */
+  paid?: boolean;
   createdAt: string;
 }
 
