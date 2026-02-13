@@ -208,7 +208,30 @@ const todayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-const ALL_SECTION_KEYS: (keyof PartTimeTaskSections)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
+type SectionItemType = '제목' | '내용' | '게시글' | '댓글' | '키워드' | '이미지' | '동영상' | 'gif' | '작업링크' | '작업안내';
+
+interface SectionItem {
+  id: string;
+  type: SectionItemType;
+  value?: string;
+  postBlock?: PartTimePostBlock;
+  images?: string[];
+}
+
+const SECTION_TYPES: { key: SectionItemType; label: string }[] = [
+  { key: '제목', label: '제목' },
+  { key: '내용', label: '내용' },
+  { key: '게시글', label: '게시글(제목+내용)' },
+  { key: '댓글', label: '댓글' },
+  { key: '키워드', label: '키워드' },
+  { key: '이미지', label: '이미지' },
+  { key: '동영상', label: '동영상' },
+  { key: 'gif', label: 'gif' },
+  { key: '작업링크', label: '작업링크' },
+  { key: '작업안내', label: '작업안내' },
+];
+
+const MAX_IMAGES_PER_SECTION = 10;
 
 export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ user }) => {
   const navigate = useNavigate();
@@ -217,102 +240,108 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const [category, setCategory] = useState(REGISTER_CATEGORIES[0]);
   const [reward, setReward] = useState(300);
   const [maxApplicants, setMaxApplicants] = useState(0);
-  const [selectedSectionKeys, setSelectedSectionKeys] = useState<(keyof PartTimeTaskSections)[]>(['제목', '내용']);
-  const [postBlocks, setPostBlocks] = useState<PartTimePostBlock[]>([{ 제목: '', 내용: '' }]);
-  const [commentBlocks, setCommentBlocks] = useState<string[]>(['']);
-  const [workLinkBlocks, setWorkLinkBlocks] = useState<string[]>(['']);
-  const [sections, setSections] = useState<Record<string, string>>({
-    제목: '', 내용: '', 댓글: '', 키워드: '', 이미지: '', 동영상: '', gif: '', 작업링크: '', 작업안내: '',
-  });
+  const [sectionItems, setSectionItems] = useState<SectionItem[]>([]);
   const [appStart, setAppStart] = useState(todayStr());
   const [appEnd, setAppEnd] = useState(todayStr());
   const [workStart, setWorkStart] = useState(todayStr());
   const [workEnd, setWorkEnd] = useState(todayStr());
-  const [attachedImages, setAttachedImages] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [applicantUserId, setApplicantUserId] = useState('');
+  const [jobRequestId, setJobRequestId] = useState('');
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const MAX_IMAGES = 10;
-
-  const toggleSectionKey = (key: keyof PartTimeTaskSections) => {
-    setSelectedSectionKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+  const addSection = (type: SectionItemType) => {
+    const item: SectionItem = {
+      id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      type,
+      value: '',
+      ...(type === '게시글' ? { postBlock: { 제목: '', 내용: '' } } : {}),
+    };
+    setSectionItems((prev) => [...prev, item]);
   };
 
-  const usePostBlocks = selectedSectionKeys.includes('제목') && selectedSectionKeys.includes('내용');
-  const addPostBlock = () => setPostBlocks((p) => [...p, { 제목: '', 내용: '' }]);
-  const removePostBlock = (index: number) => setPostBlocks((p) => (p.length <= 1 ? p : p.filter((_, i) => i !== index)));
-  const updatePostBlock = (index: number, field: '제목' | '내용', value: string) =>
-    setPostBlocks((p) => p.map((b, i) => (i === index ? { ...b, [field]: value } : b)));
+  const removeSection = (id: string) => setSectionItems((prev) => prev.filter((s) => s.id !== id));
 
-  const useCommentBlocks = selectedSectionKeys.includes('댓글');
-  const addCommentBlock = () => setCommentBlocks((c) => [...c, '']);
-  const removeCommentBlock = (index: number) => setCommentBlocks((c) => (c.length <= 1 ? c : c.filter((_, i) => i !== index)));
-  const updateCommentBlock = (index: number, value: string) => setCommentBlocks((c) => c.map((v, i) => (i === index ? value : v)));
+  const moveSection = (id: string, dir: 'up' | 'down') => {
+    setSectionItems((prev) => {
+      const idx = prev.findIndex((s) => s.id === id);
+      if (idx < 0) return prev;
+      const next = prev.slice();
+      const target = dir === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  };
 
-  const useWorkLinkBlocks = selectedSectionKeys.includes('작업링크');
-  const addWorkLinkBlock = () => setWorkLinkBlocks((w) => [...w, '']);
-  const removeWorkLinkBlock = (index: number) => setWorkLinkBlocks((w) => (w.length <= 1 ? w : w.filter((_, i) => i !== index)));
-  const updateWorkLinkBlock = (index: number, value: string) => setWorkLinkBlocks((w) => w.map((v, i) => (i === index ? value : v)));
+  const updateSection = (id: string, upd: Partial<SectionItem>) => {
+    setSectionItems((prev) => prev.map((s) => (s.id === id ? { ...s, ...upd } : s)));
+  };
 
   if (!user || user.role !== 'admin') {
     navigate('/part-time', { replace: true });
     return null;
   }
 
-  const handleSectionChange = (key: string, value: string) => setSections((s) => ({ ...s, [key]: value }));
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (sectionId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
-    const remaining = MAX_IMAGES - attachedImages.length;
-    const toAdd = Math.min(remaining, files.length);
+    const item = sectionItems.find((s) => s.id === sectionId);
+    if (!item || item.type !== '이미지') return;
+    const current = item.images?.length ?? 0;
+    const toAdd = Math.min(MAX_IMAGES_PER_SECTION - current, files.length);
     if (toAdd <= 0) {
-      alert(`이미지는 최대 ${MAX_IMAGES}개까지 첨부할 수 있습니다.`);
+      alert(`이미지는 최대 ${MAX_IMAGES_PER_SECTION}개까지 첨부할 수 있습니다.`);
       e.target.value = '';
       return;
     }
-    Array.from(files).slice(0, toAdd).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => setAttachedImages((prev) => [...prev, reader.result as string].slice(0, MAX_IMAGES));
-      reader.readAsDataURL(file);
-    });
+    const newImages = await Promise.all(
+      Array.from(files).slice(0, toAdd).map(
+        (file: File) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+    updateSection(sectionId, { images: [...(item.images ?? []), ...newImages].slice(0, MAX_IMAGES_PER_SECTION) });
     e.target.value = '';
   };
-  const removeAttachedImage = (index: number) => setAttachedImages((prev) => prev.filter((_, i) => i !== index));
+
+  const removeSectionImage = (sectionId: string, imgIdx: number) => {
+    const item = sectionItems.find((s) => s.id === sectionId);
+    if (!item?.images) return;
+    updateSection(sectionId, { images: item.images.filter((_, i) => i !== imgIdx) });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) { alert('게시글 제목을 입력해 주세요.'); return; }
-    if (usePostBlocks && !postBlocks.some((b) => b.제목?.trim() || b.내용?.trim())) {
-      alert('게시글을 1개 이상 입력해 주세요.');
-      return;
-    }
     const tasks = getPartTimeTasks();
     const sectionsOut: PartTimeTaskSections = {};
-    if (usePostBlocks && postBlocks.some((b) => b.제목?.trim() || b.내용?.trim())) {
-      sectionsOut.게시글목록 = postBlocks.filter((b) => b.제목?.trim() || b.내용?.trim()).map((b) => ({ 제목: b.제목.trim(), 내용: b.내용.trim() }));
-    }
-    selectedSectionKeys.forEach((key) => {
-      if (key === '제목' || key === '내용') {
-        if (usePostBlocks) return;
-        const val = sections[key];
-        if (val != null && String(val).trim()) sectionsOut[key] = String(val).trim();
-      } else if (key === '댓글') {
-        const list = commentBlocks.filter((v) => v?.trim());
-        if (list.length > 0) sectionsOut.댓글목록 = list.map((v) => v.trim());
-        else if (sections.댓글?.trim()) sectionsOut.댓글 = sections.댓글.trim();
-      } else if (key === '작업링크') {
-        const list = workLinkBlocks.filter((v) => v?.trim());
-        if (list.length > 0) sectionsOut.작업링크목록 = list.map((v) => v.trim());
-        else if (sections.작업링크?.trim()) sectionsOut.작업링크 = sections.작업링크.trim();
-      } else if (key === '이미지') {
-        if (sections.이미지?.trim()) sectionsOut.이미지 = sections.이미지.trim();
-        if (attachedImages.length) sectionsOut.이미지목록 = attachedImages;
-      } else {
-        const val = sections[key];
-        if (val != null && String(val).trim()) sectionsOut[key] = String(val).trim();
-      }
+    const postBlocksOut: PartTimePostBlock[] = [];
+    const commentList: string[] = [];
+    const workLinkList: string[] = [];
+
+    sectionItems.forEach((item) => {
+      if (item.type === '제목' && item.value?.trim()) sectionsOut.제목 = item.value.trim();
+      else if (item.type === '내용' && item.value?.trim()) sectionsOut.내용 = item.value.trim();
+      else if (item.type === '게시글' && item.postBlock && (item.postBlock.제목?.trim() || item.postBlock.내용?.trim())) {
+        postBlocksOut.push({ 제목: item.postBlock.제목.trim(), 내용: item.postBlock.내용.trim() });
+      } else if (item.type === '댓글' && item.value?.trim()) commentList.push(item.value.trim());
+      else if (item.type === '키워드' && item.value?.trim()) sectionsOut.키워드 = item.value.trim();
+      else if (item.type === '이미지') {
+        if (item.value?.trim()) sectionsOut.이미지 = item.value.trim();
+        if (item.images?.length) sectionsOut.이미지목록 = item.images;
+      } else if (item.type === '동영상' && item.value?.trim()) sectionsOut.동영상 = item.value.trim();
+      else if (item.type === 'gif' && item.value?.trim()) sectionsOut.gif = item.value.trim();
+      else if (item.type === '작업링크' && item.value?.trim()) workLinkList.push(item.value.trim());
+      else if (item.type === '작업안내' && item.value?.trim()) sectionsOut.작업안내 = item.value.trim();
     });
+
+    if (postBlocksOut.length) sectionsOut.게시글목록 = postBlocksOut;
+    if (commentList.length) sectionsOut.댓글목록 = commentList;
+    if (workLinkList.length) sectionsOut.작업링크목록 = workLinkList;
     const newTask: PartTimeTask = {
       id: `t_${Date.now()}`,
       title: title.trim(),
@@ -328,6 +357,8 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
       applicants: [],
       pointPaid: false,
       paidUserIds: [],
+      ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
+      ...(jobRequestId.trim() ? { jobRequestId: jobRequestId.trim() } : {}),
     };
     setPartTimeTasks([newTask, ...tasks]);
     alert('작업이 등록되었습니다.');
@@ -349,7 +380,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
           <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">1. 포인트 금액 · 게시글 제목 · 내용</h3></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">보상 포인트 (P)</label>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">보상 금액 (원)</label>
               <input type="number" min={0} value={reward} onChange={(e) => setReward(Number(e.target.value) || 0)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold" />
             </div>
             <div>
@@ -370,158 +401,144 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
         </section>
         <section className="space-y-6">
           <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">2. 모집 인원 · 신청기간 · 작업기간</h3></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">모집 인원 (0=제한없음)</label>
-              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold" />
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">광고주 ID (작업의뢰 링크용, 선택)</label>
+              <input value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} placeholder="광고주 userId" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
             </div>
-            <div><label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">신청기간 시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none" /></div>
-            <div><label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">신청기간 종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none" /></div>
-            <div className="sm:col-span-2 lg:col-span-1" />
-            <div><label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">작업기간 시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none" /></div>
-            <div><label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">작업기간 종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none" /></div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업의뢰 ID (선택)</label>
+              <input value={jobRequestId} onChange={(e) => setJobRequestId(e.target.value)} placeholder="jobRequestId" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">모집 인원</label>
+              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
+            </div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
           </div>
         </section>
         <section className="space-y-6">
-          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용 (필요한 섹션만 선택)</h3></div>
-          <p className="text-sm text-gray-500">필요한 항목만 체크하세요. 예: 게시글 5개만 필요하면 제목·내용만 선택하면 됩니다.</p>
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용</h3></div>
+          <p className="text-sm text-gray-500">아래 항목을 클릭하면 순서대로 섹션이 추가됩니다. 원하는 만큼 추가하고 위치를 이동할 수 있습니다.</p>
           <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100">
-            {ALL_SECTION_KEYS.map((key) => (
-              <label key={key} className="inline-flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedSectionKeys.includes(key)}
-                  onChange={() => toggleSectionKey(key)}
-                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span className="text-sm font-bold text-gray-700">{key}</span>
-              </label>
+            {SECTION_TYPES.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => addSection(key)}
+                className="px-4 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 font-black text-sm hover:bg-emerald-50 hover:border-emerald-400 transition-all"
+              >
+                + {label}
+              </button>
             ))}
           </div>
-          {usePostBlocks && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-black text-gray-700">게시글 (제목 + 내용) — 원하는 개수만큼 추가</span>
-                <button type="button" onClick={addPostBlock} className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
-                  + 게시글 추가
-                </button>
-              </div>
-              {postBlocks.map((block, idx) => (
-                <div key={idx} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-gray-500 uppercase">게시글 {idx + 1}</span>
-                    {postBlocks.length > 1 && (
-                      <button type="button" onClick={() => removePostBlock(idx)} className="text-red-500 text-sm font-bold hover:underline">삭제</button>
-                    )}
+          <div className="space-y-4">
+            {sectionItems.map((item, idx) => (
+              <div key={item.id} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3 relative">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-emerald-700 uppercase bg-emerald-100 px-2 py-1 rounded-lg">
+                    {SECTION_TYPES.find((t) => t.key === item.type)?.label ?? item.type} {idx + 1}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => moveSection(item.id, 'up')} disabled={idx === 0} className="p-1.5 rounded-lg bg-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-300 text-sm">▲</button>
+                    <button type="button" onClick={() => moveSection(item.id, 'down')} disabled={idx === sectionItems.length - 1} className="p-1.5 rounded-lg bg-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-300 text-sm">▼</button>
+                    <button type="button" onClick={() => removeSection(item.id)} className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 text-sm font-black">삭제</button>
                   </div>
+                </div>
+                {item.type === '제목' && (
                   <input
-                    type="text"
-                    value={block.제목}
-                    onChange={(e) => updatePostBlock(idx, '제목', e.target.value)}
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
                     placeholder="제목"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
                   />
+                )}
+                {item.type === '내용' && (
                   <textarea
-                    value={block.내용}
-                    onChange={(e) => updatePostBlock(idx, '내용', e.target.value)}
-                    placeholder="내용 (긴 글 가능)"
-                    rows={6}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y min-h-[120px]"
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                    placeholder="내용"
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
                   />
-                </div>
-              ))}
-            </div>
-          )}
-          {useCommentBlocks && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-black text-gray-700">댓글 — 원하는 개수만큼 추가</span>
-                <button type="button" onClick={addCommentBlock} className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
-                  + 댓글 추가
-                </button>
-              </div>
-              {commentBlocks.map((value, idx) => (
-                <div key={idx} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-gray-500 uppercase">댓글 {idx + 1}</span>
-                    {commentBlocks.length > 1 && (
-                      <button type="button" onClick={() => removeCommentBlock(idx)} className="text-red-500 text-sm font-bold hover:underline">삭제</button>
-                    )}
+                )}
+                {item.type === '게시글' && item.postBlock && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.postBlock.제목}
+                      onChange={(e) => updateSection(item.id, { postBlock: { ...item.postBlock!, 제목: e.target.value } })}
+                      placeholder="제목"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    />
+                    <textarea
+                      value={item.postBlock.내용}
+                      onChange={(e) => updateSection(item.id, { postBlock: { ...item.postBlock!, 내용: e.target.value } })}
+                      placeholder="내용"
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                    />
                   </div>
+                )}
+                {(item.type === '댓글' || item.type === '키워드' || item.type === '작업링크') && (
                   <input
-                    type="text"
-                    value={value}
-                    onChange={(e) => updateCommentBlock(idx, e.target.value)}
-                    placeholder="댓글 지시사항 (예: 공유 인증 댓글 작성)"
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                    placeholder={item.type === '댓글' ? '댓글 지시사항' : item.type === '키워드' ? '키워드' : 'URL 또는 링크 안내'}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
                   />
-                </div>
-              ))}
-            </div>
-          )}
-          {useWorkLinkBlocks && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-black text-gray-700">작업링크 — 원하는 개수만큼 추가</span>
-                <button type="button" onClick={addWorkLinkBlock} className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
-                  + 작업링크 추가
-                </button>
-              </div>
-              {workLinkBlocks.map((value, idx) => (
-                <div key={idx} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-gray-500 uppercase">작업링크 {idx + 1}</span>
-                    {workLinkBlocks.length > 1 && (
-                      <button type="button" onClick={() => removeWorkLinkBlock(idx)} className="text-red-500 text-sm font-bold hover:underline">삭제</button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    value={value}
-                    onChange={(e) => updateWorkLinkBlock(idx, e.target.value)}
-                    placeholder="URL 또는 작업링크 안내 (예: https://... 또는 제출할 링크 1)"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="space-y-4">
-            {selectedSectionKeys.filter((k) => {
-              if (usePostBlocks && (k === '제목' || k === '내용')) return false;
-              if (k === '댓글' || k === '작업링크') return false;
-              return true;
-            }).map((key) => (
-              <div key={key}>
-                <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{key}</label>
-                {key === '이미지' ? (
-                  <div className="flex flex-col gap-2">
-                    <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={attachedImages.length >= MAX_IMAGES} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm disabled:opacity-50">
-                      이미지 업로드 (참고용, 최대 {MAX_IMAGES}개) {attachedImages.length > 0 && `(${attachedImages.length}/${MAX_IMAGES})`}
+                )}
+                {item.type === '이미지' && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.value ?? ''}
+                      onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                      placeholder="이미지 지시사항 (선택)"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    />
+                    <input
+                      ref={(el) => { fileInputRefs.current[item.id] = el; }}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => handleImageUpload(item.id, e)}
+                      className="hidden"
+                    />
+                    <button type="button" onClick={() => fileInputRefs.current[item.id]?.click()} disabled={(item.images?.length ?? 0) >= MAX_IMAGES_PER_SECTION} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs disabled:opacity-50">
+                      이미지 업로드 (최대 {MAX_IMAGES_PER_SECTION}개) {(item.images?.length ?? 0) > 0 && `(${item.images?.length})`}
                     </button>
-                    {attachedImages.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {attachedImages.map((src, i) => (
+                    {item.images && item.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.images.map((src, i) => (
                           <div key={i} className="relative">
-                            <img src={src} alt={`참고 ${i + 1}`} className="w-20 h-20 rounded-lg object-cover border border-gray-200" />
-                            <button type="button" onClick={() => removeAttachedImage(i)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-black leading-none">×</button>
+                            <img src={src} alt={`참고 ${i + 1}`} className="w-16 h-16 rounded-lg object-cover border border-gray-200" />
+                            <button type="button" onClick={() => removeSectionImage(item.id, i)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-black leading-none">×</button>
                           </div>
                         ))}
                       </div>
                     )}
-                    <input type="text" value={sections.이미지 ?? ''} onChange={(e) => handleSectionChange('이미지', e.target.value)} placeholder="이미지 관련 지시사항 텍스트 (선택)" className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
                   </div>
-                ) : key === '내용' || key === '작업안내' ? (
-                  <textarea
-                    value={sections[key] ?? ''}
-                    onChange={(e) => handleSectionChange(key, e.target.value)}
-                    placeholder={key === '작업안내' ? '전체 작업 가이드 (긴 글 가능)' : '예: 내용 관련 지시사항 (긴 글 가능)'}
-                    rows={8}
-                    className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y min-h-[180px]"
+                )}
+                {(item.type === '동영상' || item.type === 'gif') && (
+                  <input
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                    placeholder={item.type === '동영상' ? '동영상 지시사항' : 'gif 지시사항'}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
                   />
-                ) : (
-                  <input type="text" value={sections[key] ?? ''} onChange={(e) => handleSectionChange(key, e.target.value)} placeholder={`예: ${key} 관련 지시사항`} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
+                )}
+                {item.type === '작업안내' && (
+                  <textarea
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                    placeholder="전체 작업 가이드"
+                    rows={6}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                  />
                 )}
               </div>
             ))}
