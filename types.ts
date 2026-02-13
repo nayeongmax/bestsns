@@ -83,6 +83,10 @@ export interface PartTimePostBlock {
 export interface PartTimeTaskSections {
   제목?: string;
   내용?: string;
+  /** 제목 여러 개 (순서 유지) */
+  제목목록?: string[];
+  /** 내용 여러 개 (순서 유지) */
+  내용목록?: string[];
   /** 게시글 여러 개 (제목+내용 쌍). 있으면 단일 제목/내용 대신 사용 */
   게시글목록?: PartTimePostBlock[];
   /** 댓글 지시 1개. 댓글목록이 있으면 댓글목록 사용 */
@@ -103,7 +107,7 @@ export interface PartTimeTaskSections {
   /** 작업 안내 (전체 가이드) */
   작업안내?: string;
   /** 섹션 표시 순서 (등록 시 넣은 순서 유지) [{ type, index }] */
-  sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크'; index: number }>;
+  sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용'; index: number }>;
 }
 
 /** 누구나알바 작업의뢰 (광고주→운영진 신청) */
