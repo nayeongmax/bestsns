@@ -267,6 +267,32 @@ export function setPartTimeTasks(tasks: PartTimeTask[]): void {
   localStorage.setItem(PARTTIME_TASKS_KEY, JSON.stringify(tasks));
 }
 
+/** 3일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급 */
+export function processAutoApprovals(): boolean {
+  const tasks = getPartTimeTasks();
+  const now = Date.now();
+  let changed = false;
+  const next = tasks.map((t) => {
+    const selectedWithLink = t.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!(a.workLink || '').trim()));
+    if (selectedWithLink.length === 0) return t;
+    const updated = { ...t };
+    for (const a of selectedWithLink) {
+      if (!a.autoApproveAt || t.paidUserIds?.includes(a.userId)) continue;
+      const at = new Date(a.autoApproveAt).getTime();
+      if (at <= now) {
+        addFreelancerEarning(a.userId, t.reward, t.title);
+        updated.paidUserIds = [...(updated.paidUserIds || []), a.userId];
+        const allSelected = updated.applicants.filter((ap) => ap.selected && ((ap.workLinks?.length ?? 0) > 0 || !!(ap.workLink || '').trim()));
+        updated.pointPaid = allSelected.every((ap) => updated.paidUserIds?.includes(ap.userId));
+        changed = true;
+      }
+    }
+    return updated;
+  });
+  if (changed) setPartTimeTasks(next);
+  return changed;
+}
+
 // ----- 누구나알바 작업의뢰 (광고주→운영진) -----
 const PARTTIME_JOB_REQUESTS_KEY = 'parttime_job_requests_v1';
 
@@ -285,9 +311,9 @@ export function setPartTimeJobRequests(requests: PartTimeJobRequest[]): void {
   localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(requests));
 }
 
-/** 광고금액 기준 수수료 계산: 15% + 부가세 10% */
+/** 광고금액 기준 수수료 계산: 20% + 수수료의 부가세 10% */
 export function calcJobRequestFee(adAmount: number): number {
-  const baseFee = Math.round(adAmount * 0.15);
+  const baseFee = Math.round(adAmount * 0.2);
   const vat = Math.round(baseFee * 0.1);
   return baseFee + vat;
 }
