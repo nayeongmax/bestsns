@@ -96,8 +96,8 @@ export interface PartTimeJobRequest {
   adAmount: number;
   /** 수수료 (15% + 부가세 10%) */
   fee: number;
-  /** pending=작업의뢰, selected=신청완료, not_selected=미선정 */
-  status: 'pending' | 'selected' | 'not_selected';
+  /** pending_review=운영자 검토대기, pending=작업의뢰(승인됨), selected=신청완료, not_selected=미선정/거절 */
+  status: 'pending_review' | 'pending' | 'selected' | 'not_selected';
   createdAt: string;
 }
 
