@@ -31,7 +31,7 @@ const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
 
 const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = () => {} }) => {
   const navigate = useNavigate();
-  const [activeSubTab, setActiveSubTab] = useState<'list' | 'seller' | 'grades'>('list');
+  const [activeSubTab, setActiveSubTab] = useState<'list' | 'seller' | 'freelancer' | 'grades'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'buyer' | 'seller'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('none');
@@ -65,6 +65,16 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
   const pendingRequests = useMemo(() => 
     members.filter(m => m.sellerStatus === 'pending' || !!m.pendingApplication), 
   [members]);
+
+  const pendingFreelancers = useMemo(() => 
+    members.filter(m => m.freelancerStatus === 'pending'), 
+  [members]);
+
+  const handleApproveFreelancer = (userId: string) => {
+    setMembers(prev => prev.map(m => m.id === userId ? { ...m, freelancerStatus: 'approved' as const } : m));
+    addNotif(userId, 'approval', '프리랜서 승인', '프리랜서 등록이 승인되었습니다. 누구나알바에 신청할 수 있습니다.');
+    alert('프리랜서 승인이 완료되었습니다.');
+  };
 
   const memberPurchaseHistory = useMemo(() => {
     if (!editingMember) return [];
@@ -118,6 +128,7 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
       <div className="bg-white p-2 rounded-[24px] flex gap-2 w-fit border border-gray-100 shadow-sm mx-4">
         <button onClick={() => setActiveSubTab('list')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'list' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>전체 회원 데이터</button>
         <button onClick={() => setActiveSubTab('seller')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'seller' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>판매자 승인 대기 ({pendingRequests.length})</button>
+        <button onClick={() => setActiveSubTab('freelancer')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'freelancer' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>프리랜서 승인 대기 ({pendingFreelancers.length})</button>
         <button onClick={() => setActiveSubTab('grades')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'grades' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>등급 관리</button>
       </div>
 
@@ -169,6 +180,71 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                  ))}
                </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'freelancer' && (
+        <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-50">
+            <h3 className="text-xl font-black text-gray-900">프리랜서 승인 대기</h3>
+            <p className="text-[13px] text-gray-500 font-bold mt-1">실명, 연락처, 통장정보, 신분증/통장 이미지를 확인한 뒤 승인해 주세요.</p>
+          </div>
+          <div className="p-8 space-y-8">
+            {pendingFreelancers.length === 0 ? (
+              <p className="text-gray-400 font-bold text-center py-16">승인 대기 중인 프리랜서가 없습니다.</p>
+            ) : (
+              pendingFreelancers.map(m => {
+                const app = m.freelancerApplication;
+                return (
+                  <div key={m.id} className="border border-emerald-200 rounded-[24px] p-8 bg-emerald-50/30 space-y-6">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <img src={m.profileImage} className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow" alt="" />
+                        <div>
+                          <p className="text-[18px] font-black text-gray-900">{m.nickname}</p>
+                          <p className="text-[12px] text-gray-500 font-bold">@{m.id}</p>
+                          {app?.appliedAt && <p className="text-[11px] text-emerald-600 font-bold mt-1">신청일: {app.appliedAt}</p>}
+                        </div>
+                      </div>
+                      <button onClick={() => handleApproveFreelancer(m.id)} className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-[14px] hover:bg-emerald-700 transition-all shadow-lg">승인</button>
+                    </div>
+                    {app && (
+                      <div className="space-y-6 pt-4 border-t border-emerald-100">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <p className="text-[11px] font-black text-gray-400 uppercase">개인 정보</p>
+                            <p className="font-bold text-gray-800">실명: {app.name}</p>
+                            <p className="font-bold text-gray-800">연락처: {app.contact}</p>
+                            <p className="font-bold text-gray-800">주민등록번호: {app.residentNumber}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-[11px] font-black text-gray-400 uppercase">통장 정보</p>
+                            <p className="font-bold text-gray-800">은행: {app.bankName}</p>
+                            <p className="font-bold text-gray-800">계좌: {app.accountNo}</p>
+                            <p className="font-bold text-gray-800">예금주: {app.ownerName}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          {app.idCardImage && (
+                            <div>
+                              <p className="text-[11px] font-black text-gray-400 uppercase mb-2">신분증</p>
+                              <img src={app.idCardImage} alt="신분증" className="max-h-48 rounded-xl border object-contain" />
+                            </div>
+                          )}
+                          {app.bankbookImage && (
+                            <div>
+                              <p className="text-[11px] font-black text-gray-400 uppercase mb-2">통장</p>
+                              <img src={app.bankbookImage} alt="통장" className="max-h-48 rounded-xl border object-contain" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
