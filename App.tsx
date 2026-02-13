@@ -122,7 +122,7 @@ const App: React.FC = () => {
   const [gradeConfigs, setGradeConfigs] = useState<GradeConfig[]>(() => {
     const saved = localStorage.getItem('grade_configs_v2');
     if (!saved) return [
-      { id: 'g1', name: 'Basic', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-gray-400', sortOrder: 0 },
+      { id: 'g1', name: 'STANDARD', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-gray-400', sortOrder: 0 },
       { id: 'g2', name: 'Prime', target: 'seller', minSales: 10000000, minPurchase: 0, color: 'bg-amber-500', sortOrder: 10 },
       { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
     ];
