@@ -172,20 +172,26 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       alert('작업 링크를 1개 이상 입력해 주세요.');
       return;
     }
+    const now = new Date().toISOString();
     const next = tasks.map((t) =>
       t.id !== task.id
         ? t
         : {
             ...t,
             applicants: t.applicants.map((a) =>
-              a.userId === user.id ? { ...a, workLinks: links, workLink: links[0] } : a
+              a.userId === user.id
+                ? { ...a, workLinks: links, workLink: links[0], revisionRequest: undefined, workLinkSubmittedAt: now }
+                : a
             ),
           }
     );
     saveTasks(next);
     setWorkLinks(['']);
+    if (addNotif) {
+      addNotif(user.id, 'freelancer', '링크 제출 완료', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다. 수고많으셨습니다.', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.');
+    }
     if (task.applicantUserId && addNotif) {
-      addNotif(task.applicantUserId, 'freelancer', '작업 완료', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 작업확인서를 확인해 주세요.`, '작업 링크가 제출되었습니다. 작업확인서를 확인해 주세요.');
+      addNotif(task.applicantUserId, 'freelancer', '작업 완료', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 작업확정서를 확인 후 작업완료를 눌러 주세요.`, '작업 링크가 제출되었습니다.');
     }
     alert('작업링크가 제출되었습니다.\n제대로 작업이 되었는지 확인 후 수익통장에 충전됩니다.\n수고많으셨습니다.');
   };
