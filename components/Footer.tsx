@@ -11,11 +11,11 @@ const Footer: React.FC = () => {
           <div className="space-y-1">
             <p className="text-sm font-black text-gray-800">THEBEST<span className="text-blue-600">SNS</span></p>
             <div className="text-xs text-gray-600 space-y-0.5">
-              <p><strong>상호</strong> THEBESTSNS (示例)</p>
-              <p><strong>대표자</strong> 示例</p>
-              <p><strong>주소</strong> 示例</p>
-              <p><strong>사업자번호</strong> 000-00-00000</p>
-              <p><strong>통신판매업 신고번호</strong> 제0000-서울강남-00000호</p>
+              <p><strong>상호</strong> THEBESTSNS </p>
+              <p><strong>대표자</strong> 김나영 </p>
+              <p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p>
+              <p><strong>사업자번호</strong> 409-30-51469 </p>
+              <p><strong>통신판매업 신고번호</strong> 2022-대구달성-0164</p>
             </div>
           </div>
           <div className="flex flex-col gap-2">
