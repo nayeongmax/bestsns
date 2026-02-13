@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { getMarketingConsultation } from '../services/geminiService';
 
 const AIConsulting: React.FC = () => {
@@ -75,10 +76,30 @@ const AIConsulting: React.FC = () => {
 
         {messages.map((m, idx) => (
           <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-            <div className={`max-w-[70%] px-8 py-5 rounded-[32px] text-[15px] font-bold shadow-sm leading-relaxed whitespace-pre-wrap ${
-              m.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-700 border border-gray-100 rounded-bl-none'
+            <div className={`max-w-[70%] px-8 py-5 rounded-[32px] text-[15px] shadow-sm leading-relaxed overflow-hidden ${
+              m.role === 'user' ? 'bg-blue-600 text-white rounded-br-none font-bold' : 'bg-white text-gray-700 border border-gray-100 rounded-bl-none'
             }`}>
-              {m.text}
+              {m.role === 'user' ? (
+                m.text
+              ) : (
+                <div className="ai-response [&_p]:mb-3 [&_ul]:list-disc [&_ul]:list-inside [&_ul]:mb-3 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:list-inside [&_ol]:mb-3 [&_ol]:space-y-1 [&_li]:ml-2 [&_strong]:font-bold [&_strong]:text-gray-800 [&_h3]:font-bold [&_h3]:text-gray-900 [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-base [&_h4]:font-semibold [&_h4]:text-gray-800 [&_h4]:mt-3 [&_h4]:mb-1.5">
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-3">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1.5">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1.5">{children}</ol>,
+                      li: ({ children }) => <li className="ml-1">{children}</li>,
+                      strong: ({ children }) => <strong className="font-bold text-gray-800">{children}</strong>,
+                      h2: ({ children }) => <h2 className="font-bold text-gray-900 mt-4 mb-2 text-base block border-b border-gray-200 pb-1">{children}</h2>,
+                      h3: ({ children }) => <h3 className="font-bold text-gray-900 mt-4 mb-2 text-[15px] block">{children}</h3>,
+                      h4: ({ children }) => <h4 className="font-semibold text-gray-800 mt-3 mb-1.5 text-[14px] block">{children}</h4>,
+                      a: ({ href, children }) => <a href={href || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">{children}</a>,
+                    }}
+                  >
+                    {m.text}
+                  </ReactMarkdown>
+                </div>
+              )}
             </div>
           </div>
         ))}
