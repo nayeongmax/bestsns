@@ -21,6 +21,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
   const [applyContact, setApplyContact] = useState('');
   const [workLinks, setWorkLinks] = useState<string[]>(['']);
   const [revisionModal, setRevisionModal] = useState<{ userId: string; nickname: string; text: string } | null>(null);
+  const [agreeReconsignment, setAgreeReconsignment] = useState(false);
 
   const task = tasks.find((t) => t.id === taskId);
 
@@ -70,8 +71,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
 
   const handleApply = () => {
     if (!user || !task) return;
+    if (user.freelancerStatus !== 'approved') {
+      if (window.confirm('누구나알바에 신청하려면 프리랜서 등록이 필요합니다.\n프리랜서 워크페이스에서 등록을 먼저 진행해 주세요.\n\n마이페이지로 이동할까요?')) {
+        navigate('/mypage', { state: { activeTab: 'freelancer' } as any });
+      }
+      return;
+    }
     if (task.applicants.some((a) => a.userId === user.id)) {
       alert('이미 신청하셨습니다.');
+      return;
+    }
+    if (!agreeReconsignment) {
+      alert('재위탁 계약에 동의해 주세요.');
       return;
     }
     const next = tasks.map((t) =>
@@ -109,6 +120,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
         `[${task.title}]에 선정되었습니다. 작업 완료 후 작업 링크를 제출해 주세요.`,
         '작업 완료 후 작업 링크를 제출해 주세요.'
       );
+    }
+    if (task.applicantUserId && addNotif) {
+      addNotif(task.applicantUserId, 'approval', '프리랜서 선정', `[${task.title}]에 프리랜서가 선정되었습니다.`, '프리랜서 선정이 완료되었습니다.');
     }
   };
 
@@ -157,6 +171,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     );
     saveTasks(next);
     setWorkLinks(['']);
+    if (task.applicantUserId && addNotif) {
+      addNotif(task.applicantUserId, 'freelancer', '작업 완료', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 작업확인서를 확인해 주세요.`, '작업 링크가 제출되었습니다. 작업확인서를 확인해 주세요.');
+    }
     alert('작업 링크가 제출되었습니다. 운영자 확인 후 포인트가 지급됩니다.');
   };
 
@@ -365,6 +382,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                   placeholder="010-0000-0000 또는 이메일"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
                 />
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" checked={agreeReconsignment} onChange={(e) => setAgreeReconsignment(e.target.checked)} className="mt-1 rounded" />
+                    <span className="text-sm">플랫폼의 재위탁 수행자로서 작업을 진행하는 데 동의합니다. 광고주와 직접 계약 관계가 아니며, 플랫폼이 용역 계약의 당사자입니다.</span>
+                  </label>
+                </div>
                 <button
                   type="button"
                   onClick={handleApply}
