@@ -411,7 +411,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
         <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-emerald-500 underline-offset-8">프리랜서 작업 등록</h2>
         <div className="w-20" />
       </div>
-      <form onSubmit={handleSubmit} className="bg-white p-8 md:p-12 rounded-[48px] shadow-xl border border-gray-100 space-y-12">
+      <form onSubmit={handleSubmit} formNoValidate className="bg-white p-8 md:p-12 rounded-[48px] shadow-xl border border-gray-100 space-y-12">
         <section className="space-y-6">
           <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">1. 포인트 금액 · 게시글 제목 · 내용</h3></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
