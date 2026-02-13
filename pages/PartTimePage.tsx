@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
-import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock, PartTimeJobRequest } from '@/types';
-import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, getPartTimeJobRequests } from '@/constants';
+import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '@/types';
+import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -13,17 +13,23 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
-  const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>(() => getPartTimeJobRequests());
   const [selectedDate, setSelectedDate] = useState('');
 
   useEffect(() => {
     setTasks(getPartTimeTasks());
-    setJobRequests(getPartTimeJobRequests());
   }, []);
 
   useEffect(() => {
     if (user?.id) setBalance(getFreelancerBalance(user.id));
   }, [user?.id]);
+
+  const completedIds = useMemo(() => {
+    const raw = localStorage.getItem('parttime_completed_v1');
+    return raw ? new Set<string>(JSON.parse(raw)) : new Set<string>();
+  }, [tasks]);
+
+  const isTaskDone = (task: PartTimeTask) =>
+    completedIds.has(task.id) || (task.paidUserIds && user?.id && task.paidUserIds.includes(user.id));
 
   const todayStrVal = useMemo(() => {
     const d = new Date();
@@ -43,37 +49,31 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
     return arr;
   }, [todayStrVal]);
 
-  const approvedRequests = useMemo(() =>
-    jobRequests.filter((jr) => jr.status !== 'pending_review'),
-    [jobRequests]
-  );
-
   const dateCounts = useMemo(() => {
-    const map: Record<string, { pending: number; selected: number; not_selected: number }> = {};
+    const map: Record<string, { total: number; done: number }> = {};
     weekDates.forEach((d) => {
-      map[d] = { pending: 0, selected: 0, not_selected: 0 };
+      map[d] = { total: 0, done: 0 };
     });
-    approvedRequests.forEach((jr) => {
-      const key = jr.workPeriodStart;
+    tasks.forEach((t) => {
+      const key = t.workPeriod?.start || t.applicationPeriod?.start;
       if (map[key]) {
-        if (jr.status === 'pending') map[key].pending++;
-        else if (jr.status === 'selected') map[key].selected++;
-        else map[key].not_selected++;
+        map[key].total++;
+        if (t.pointPaid) map[key].done++;
       }
     });
     return map;
-  }, [approvedRequests, weekDates]);
+  }, [tasks, weekDates]);
 
   const effectiveDate = selectedDate || todayStrVal;
-  const requestsForDate = useMemo(() => {
-    const list = approvedRequests.filter((jr) => jr.workPeriodStart === effectiveDate);
-    const pending = list.filter((j) => j.status === 'pending');
-    const notSel = list.filter((j) => j.status === 'not_selected');
-    const selected = list.filter((j) => j.status === 'selected');
-    return [...pending, ...notSel, ...selected];
-  }, [approvedRequests, effectiveDate]);
+  const tasksForDate = useMemo(() => {
+    return tasks.filter((t) => (t.workPeriod?.start || t.applicationPeriod?.start) === effectiveDate);
+  }, [tasks, effectiveDate]);
 
-  const statusLabel = (s: string) => (s === 'pending' ? '작업의뢰' : s === 'selected' ? '신청완료' : '미선정');
+  const sortedTasks = useMemo(() => {
+    const incomplete = tasksForDate.filter((t) => !isTaskDone(t));
+    const complete = tasksForDate.filter((t) => isTaskDone(t));
+    return [...incomplete, ...complete];
+  }, [tasksForDate, isTaskDone]);
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700">
@@ -125,7 +125,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         <div className="grid gap-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {weekDates.map((d) => {
-              const c = dateCounts[d] || { pending: 0, selected: 0, not_selected: 0 };
+              const c = dateCounts[d] || { total: 0, done: 0 };
               const isSelected = effectiveDate === d;
               const dayLabel = d.slice(5);
               return (
@@ -140,9 +140,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                   }`}
                 >
                   <p className="text-sm font-black text-gray-600">{dayLabel}</p>
-                  <p className="text-xs text-gray-500 mt-2 font-semibold">작업의뢰 {c.pending}</p>
-                  <p className="text-xs text-emerald-600 font-semibold">신청완료 {c.selected}</p>
-                  <p className="text-xs text-gray-500 font-semibold">미선정 {c.not_selected}</p>
+                  <p className="text-xs text-gray-500 mt-2 font-semibold">작업 {c.total}건</p>
+                  <p className="text-xs text-emerald-600 font-semibold">완료 {c.done}건</p>
                 </button>
               );
             })}
@@ -150,32 +149,37 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
 
           <h3 className="text-xl font-black text-gray-800">작업목록</h3>
 
-          {requestsForDate.length === 0 ? (
+          {sortedTasks.length === 0 ? (
             <p className="text-gray-500 text-center py-10 text-base">해당 날짜의 작업이 없습니다.</p>
           ) : (
             <div className="space-y-4">
-              {requestsForDate.map((jr) => (
-                <div
-                  key={jr.id}
-                  className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border ${
-                    jr.status === 'selected' ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
-                  }`}
-                >
-                  <div className="flex-1">
-                    <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{statusLabel(jr.status)}</span>
-                    <h4 className="font-black text-gray-900 text-base">{jr.title}</h4>
-                    <p className="text-base text-gray-500 mt-1 line-clamp-2">{jr.workContent}</p>
-                  </div>
-                  <div className="flex items-center gap-4 shrink-0">
-                    <span className="font-black text-emerald-600 text-base">{jr.adAmount.toLocaleString()} P</span>
-                    <span className={`px-4 py-2 rounded-xl text-sm font-black ${
-                      jr.status === 'selected' ? 'bg-gray-200 text-gray-500' : 'bg-emerald-100 text-emerald-700'
-                    }`}>
-                      {statusLabel(jr.status)}
-                    </span>
-                  </div>
-                </div>
-              ))}
+              {sortedTasks.map((task) => {
+                const done = isTaskDone(task);
+                return (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => navigate(`/part-time/${task.id}`)}
+                    className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
+                      done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
+                      <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
+                      <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="font-black text-emerald-600 text-base">+{task.reward.toLocaleString()} P</span>
+                      {done ? (
+                        <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
+                      ) : (
+                        <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-sm font-black">상세보기 →</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
