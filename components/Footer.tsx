@@ -6,19 +6,19 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="mt-auto border-t border-gray-200 bg-gray-50">
-      <div className="container mx-auto max-w-[1550px] px-4 py-10">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-6">
-          <div className="space-y-4">
+      <div className="container mx-auto max-w-[1550px] px-4 py-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="space-y-1">
             <p className="text-sm font-black text-gray-800">THEBEST<span className="text-blue-600">SNS</span></p>
-            <div className="text-xs text-gray-600 space-y-1">
-              <p><strong>상호</strong> 더베스트마케팅 </p>
-              <p><strong>대표자</strong> 김나영 </p>
-              <p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5 </p>
-              <p><strong>사업자번호</strong> 409-30-51469</p>
-              <p><strong>통신판매업 신고번호</strong> 2022-대구달성-0164</p>
+            <div className="text-xs text-gray-600 space-y-0.5">
+              <p><strong>상호</strong> THEBESTSNS (示例)</p>
+              <p><strong>대표자</strong> 示例</p>
+              <p><strong>주소</strong> 示例</p>
+              <p><strong>사업자번호</strong> 000-00-00000</p>
+              <p><strong>통신판매업 신고번호</strong> 제0000-서울강남-00000호</p>
             </div>
           </div>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <button type="button" onClick={() => { setShowTerms(!showTerms); setShowPrivacy(false); }} className="text-left text-sm font-bold text-blue-600 hover:underline">
               이용약관
             </button>
@@ -26,10 +26,13 @@ const Footer: React.FC = () => {
               개인정보 처리방침
             </button>
           </div>
+          <div className="text-xs text-gray-400 md:text-right">
+            © THEBESTSNS. All rights reserved.
+          </div>
         </div>
 
         {showTerms && (
-          <div className="mt-8 p-6 rounded-2xl bg-white border border-gray-200 text-sm max-h-[60vh] overflow-y-auto">
+          <div className="mt-6 p-6 rounded-2xl bg-white border border-gray-200 text-sm max-h-[60vh] overflow-y-auto">
             <h4 className="font-black text-gray-900 mb-4">THEBESTSNS 서비스 이용약관 (통합본)</h4>
             <p className="text-gray-600 mb-4">이 약관은 플랫폼 이용 규칙과 각 서비스별 특이사항을 담고 있습니다.</p>
             <div className="space-y-4 text-gray-700">
@@ -60,7 +63,7 @@ const Footer: React.FC = () => {
         )}
 
         {showPrivacy && (
-          <div className="mt-8 p-6 rounded-2xl bg-white border border-gray-200 text-sm max-h-[60vh] overflow-y-auto">
+          <div className="mt-6 p-6 rounded-2xl bg-white border border-gray-200 text-sm max-h-[60vh] overflow-y-auto">
             <h4 className="font-black text-gray-900 mb-4">THEBESTSNS 개인정보 처리방침</h4>
             <p className="text-gray-600 mb-4">이 방침은 사용자의 소중한 정보를 어떻게 보호하고 관리하는지를 설명합니다.</p>
             <div className="space-y-4 text-gray-700">
@@ -69,7 +72,7 @@ const Footer: React.FC = () => {
                 <p>수집 항목: 이름(닉네임), 연락처, 이메일, 계좌정보(정산용), 사업자 정보(필요시). 목적: 서비스 제공, 대금 결제 및 정산, 고객 상담 및 분쟁 해결.</p>
               </div>
               <div>
-                <p className="font-black text-gray-900">제2조 (보관 기간 안내: 5년)</p>
+                <p className="font-black text-gray-900">제2조 (보관 기간: 왜 5년인가?)</p>
                 <p>회사는 법적 의무에 따라 이용자의 거래 기록을 안전하게 보관합니다.</p>
                 <ul className="mt-2 space-y-1">
                   <li><strong>5년 보관:</strong> 계약, 결제, 대금 지급 관련 기록 (세무 및 전자상거래법 준수)</li>
@@ -95,8 +98,6 @@ const Footer: React.FC = () => {
             </div>
           </div>
         )}
-
-        <p className="mt-8 text-xs text-gray-400">© THEBESTSNS. All rights reserved.</p>
       </div>
     </footer>
   );
