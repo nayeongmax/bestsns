@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { EbookProduct, UserProfile, WishlistItem, StoreType } from '@/types';
+import { EbookProduct, UserProfile, WishlistItem, StoreType, GradeConfig } from '@/types';
 import { EBOOK_CATEGORIES, MARKETING_CATEGORIES } from '@/constants';
+import GradeBadge from '@/components/GradeBadge';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -10,6 +11,8 @@ interface Props {
   user: UserProfile;
   wishlist: WishlistItem[];
   onToggleWishlist: (item: WishlistItem) => void;
+  members?: UserProfile[];
+  gradeConfigs?: GradeConfig[];
 }
 
 type StoreTypeFilter = StoreType | 'all';
@@ -23,7 +26,7 @@ const STORE_TABS: { id: StoreTypeFilter; label: string; icon: string; color: str
   { id: 'ebook', label: '전자책', icon: '📖', color: 'orange' },
 ];
 
-const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onToggleWishlist }) => {
+const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onToggleWishlist, members = [], gradeConfigs = [] }) => {
   const [activeStoreType, setActiveStoreType] = useState<StoreTypeFilter>('all');
   const [activeCategory, setActiveCategory] = useState('전체');
   const [activeSubCategory, setActiveSubCategory] = useState('전체');
@@ -223,7 +226,10 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                   <div className="flex justify-between items-end border-t border-gray-50 pt-3 gap-2 min-w-0">
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
-                      <span className="text-[11px] font-black text-gray-600 italic truncate">{ebook.author}</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[11px] font-black text-gray-600 italic truncate">{ebook.author}</span>
+                        <GradeBadge user={members.find(m => m.id === ebook.authorId || m.nickname === ebook.author)} gradeConfigs={gradeConfigs} size="sm" />
+                      </div>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest italic">Price</span>
