@@ -1,8 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Post, Notice, UserProfile, GradeConfig } from '../types';
-import GradeBadge from '../components/GradeBadge';
+import { Post, Notice, UserProfile, GradeConfig, getUserGrade } from '../types';
 
 interface Props {
   posts: Post[];
@@ -174,7 +173,7 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <span className="text-[14px] font-black text-gray-600 italic truncate">{post.author}</span>
-                        <GradeBadge user={members.find(m => String(m.id) === String(post.authorId) || m.nickname === post.author)} gradeConfigs={gradeConfigs} size="sm" />
+                        {(() => { const u = members.find(m => String(m.id) === String(post.authorId) || m.nickname === post.author); const g = getUserGrade(u, gradeConfigs); return g ? <span className={`${g.color} text-white text-[10px] font-black px-2.5 py-0.5 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-center text-[13px] font-bold text-gray-400 italic whitespace-nowrap uppercase tracking-tighter">{post.date}</td>
