@@ -10,6 +10,7 @@ import {
   getFreelancerBalance,
   getFreelancerHistory,
   withdrawFreelancerEarnings,
+  addFreelancerWithdrawRequest,
   MIN_WITHDRAW_FREELANCER,
   getPartTimeTasks,
 } from '@/constants';
@@ -80,18 +81,33 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
 
   const handleWithdraw = () => {
     if (balance < MIN_WITHDRAW_FREELANCER) {
-      alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()} P입니다.`);
+      alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()}원입니다.`);
       return;
     }
-    if (!confirm(`수익통장의 전액 ${balance.toLocaleString()} P를 포인트로 출금하시겠습니까?`)) return;
+    const bankInfo = user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo;
+    if (!bankInfo?.bankName?.trim() || !bankInfo?.accountNo?.trim()) {
+      alert(
+        '출금을 위해 전문가정보에 통장 정보를 먼저 등록해 주세요.\n마이페이지 → 전문가정보에서 은행/계좌를 등록하시면 PortOne을 통해 해당 통장으로 입금됩니다.'
+      );
+      return;
+    }
+    if (!confirm(`수익통장 전액 ${balance.toLocaleString()}원을 등록된 통장(${bankInfo.bankName} ${bankInfo.accountNo})으로 출금 신청하시겠습니까?`)) return;
     setWithdrawing(true);
     const result = withdrawFreelancerEarnings(user.id, balance);
     if (result.success) {
+      addFreelancerWithdrawRequest({
+        userId: user.id,
+        nickname: user.nickname,
+        amount: balance,
+        bankName: bankInfo.bankName,
+        accountNo: bankInfo.accountNo,
+        ownerName: bankInfo.ownerName || user.nickname,
+      });
       setBalance(result.newBalance);
       refresh();
-      const newPoints = (user.points ?? 0) + balance;
-      onUpdate({ ...user, points: newPoints });
-      alert(`${balance.toLocaleString()} P가 포인트로 출금되었습니다.`);
+      alert(
+        `출금 신청이 완료되었습니다.\n${balance.toLocaleString()}원이 ${bankInfo.bankName} ${bankInfo.accountNo} (${bankInfo.ownerName || user.nickname})으로 입금 처리됩니다.`
+      );
     } else {
       alert('출금 처리에 실패했습니다.');
     }
@@ -99,6 +115,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
   };
 
   const canWithdraw = balance >= MIN_WITHDRAW_FREELANCER;
+  const hasBankInfo = !!(user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo)?.bankName?.trim() &&
+    !!(user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo)?.accountNo?.trim();
 
   return (
     <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
@@ -123,12 +141,18 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
             </div>
             <div>
               <p className="text-xs font-black text-gray-500 uppercase italic">수익통장</p>
-              <p className="text-2xl font-black text-gray-900 italic">{balance.toLocaleString()} P</p>
+              <p className="text-2xl font-black text-gray-900 italic">{balance.toLocaleString()}원</p>
             </div>
           </div>
           <p className="text-[11px] text-gray-500 mt-3">
-            {MIN_WITHDRAW_FREELANCER.toLocaleString()} P 이상 모이면 포인트로 출금할 수 있습니다.
+            {MIN_WITHDRAW_FREELANCER.toLocaleString()}원 이상 모이면 등록된 통장으로 출금 신청할 수 있습니다.
+            전문가정보에 통장을 등록하시면 PortOne을 통해 해당 계좌로 입금됩니다.
           </p>
+          {canWithdraw && !hasBankInfo && (
+            <p className="text-xs text-amber-600 mt-2 font-bold">
+              출금 전 <Link to="/mypage" state={{ activeTab: 'settings', openExpert: true } as any} className="underline hover:text-amber-700">전문가정보</Link>에서 통장(은행/계좌번호)을 등록해 주세요.
+            </p>
+          )}
           <button
             type="button"
             onClick={handleWithdraw}
@@ -139,7 +163,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            {withdrawing ? '처리 중...' : canWithdraw ? `전액 ${balance.toLocaleString()} P 출금하기` : '5,000 P 이상 시 출금 가능'}
+            {withdrawing ? '처리 중...' : canWithdraw ? `전액 ${balance.toLocaleString()}원 출금 신청` : '5,000원 이상 시 출금 가능'}
           </button>
         </div>
       </div>
@@ -147,13 +171,13 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
       {selectedTasks.length > 0 && (
         <div>
           <h4 className="font-black text-gray-800 mb-3">선정된 작업</h4>
-          <p className="text-sm text-gray-500 mb-3">작업 완료 후 링크를 제출하면 운영자 확인 후 수익통장에 포인트가 적립됩니다.</p>
+          <p className="text-sm text-gray-500 mb-3">작업 완료 후 링크를 제출하면 운영자 확인 후 수익통장에 알바비가 적립됩니다.</p>
           <ul className="space-y-2">
             {selectedTasks.map((t) => {
               const me = t.applicants.find((a) => a.userId === user.id);
               const hasLink = (me?.workLinks?.length ?? 0) > 0 || !!me?.workLink;
               const status = t.paidUserIds?.includes(user.id)
-                ? '포인트 지급됨'
+                ? '알바비 지급됨'
                 : hasLink
                   ? '링크 제출됨 (확인 대기)'
                   : '링크 미제출';
@@ -161,7 +185,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                 <li key={t.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-emerald-200">
                   <div>
                     <p className="font-black text-gray-900">{t.title}</p>
-                    <p className="text-xs text-gray-500">+{t.reward.toLocaleString()} P · {status}</p>
+                    <p className="text-xs text-gray-500">+{t.reward.toLocaleString()}원 · {status}</p>
                   </div>
                   <Link
                     to={`/part-time/${t.id}`}
@@ -219,7 +243,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
                   <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
-                  <Tooltip formatter={(val: number) => [`${val.toLocaleString()} P`, '알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
+                  <Tooltip formatter={(val: number) => [`${val.toLocaleString()}원`, '알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
                   <Area type="monotone" dataKey="금액" stroke="#059669" strokeWidth={4} fillOpacity={1} fill="url(#colorAlbaAmount)" />
                 </AreaChart>
               ) : (
@@ -227,7 +251,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
                   <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
-                  <Tooltip cursor={{ fill: '#f8fafc', radius: 8 }} formatter={(val: number) => [`${val.toLocaleString()} P`, '월간 알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
+                  <Tooltip cursor={{ fill: '#f8fafc', radius: 8 }} formatter={(val: number) => [`${val.toLocaleString()}원`, '월간 알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
                   <Bar dataKey="금액" radius={[8, 8, 0, 0]}>
                     {chartData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={index === new Date().getMonth() ? '#059669' : '#d1fae5'} />
@@ -257,7 +281,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                   <tr>
                     <th className="px-6 py-4">입금날짜</th>
                     <th className="px-6 py-4">작업내역</th>
-                    <th className="px-6 py-4 text-right">금액 (P)</th>
+                    <th className="px-6 py-4 text-right">금액 (원)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -273,7 +297,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                         })}
                       </td>
                       <td className="px-6 py-4 font-black text-gray-900">{entry.label}</td>
-                      <td className="px-6 py-4 text-right font-black text-emerald-600">+{entry.amount.toLocaleString()} P</td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-600">+{entry.amount.toLocaleString()}원</td>
                     </tr>
                   ))}
                 </tbody>
@@ -305,7 +329,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                     </div>
                   </div>
                   <span className={`font-black ${entry.amount >= 0 ? 'text-emerald-600' : 'text-gray-500'}`}>
-                    {entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()} P
+                    {entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}원
                   </span>
                 </li>
               ))}
