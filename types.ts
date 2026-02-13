@@ -77,6 +77,30 @@ export interface PartTimeTaskSections {
   작업안내?: string;
 }
 
+/** 누구나알바 작업의뢰 (광고주→운영진 신청) */
+export interface PartTimeJobRequest {
+  id: string;
+  /** 알바광고 신청제목 */
+  title: string;
+  /** 작업내용 */
+  workContent: string;
+  /** 플랫폼링크 */
+  platformLink: string;
+  /** 연락처 */
+  contact: string;
+  /** 작업기간 시작 (YYYY-MM-DD) */
+  workPeriodStart: string;
+  /** 작업기간 종료 (YYYY-MM-DD) */
+  workPeriodEnd: string;
+  /** 광고금액 (프리랜서 지급) */
+  adAmount: number;
+  /** 수수료 (15% + 부가세 10%) */
+  fee: number;
+  /** pending=작업의뢰, selected=신청완료, not_selected=미선정 */
+  status: 'pending' | 'selected' | 'not_selected';
+  createdAt: string;
+}
+
 /** 누구나알바 작업 */
 export interface PartTimeTask {
   id: string;
