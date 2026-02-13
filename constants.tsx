@@ -273,19 +273,41 @@ export function setPartTimeTasks(tasks: PartTimeTask[]): void {
   localStorage.setItem(PARTTIME_TASKS_KEY, JSON.stringify(tasks));
 }
 
-/** 3일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급 */
+/** 새 작업번호 생성 (ALBA-00123 형식) */
+export function generateProjectNo(): string {
+  const tasks = getPartTimeTasks();
+  let maxN = 0;
+  for (const t of tasks) {
+    const pn = t.projectNo;
+    if (pn && /^ALBA-\d+$/.test(pn)) {
+      const n = parseInt(pn.replace('ALBA-', ''), 10);
+      if (n > maxN) maxN = n;
+    }
+  }
+  return `ALBA-${String(maxN + 1).padStart(5, '0')}`;
+}
+
+/** 3일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. 광고주 작업의 경우 workLinkSubmittedAt + 3일 후 미확인 시 자동 지급 */
 export function processAutoApprovals(): boolean {
   const tasks = getPartTimeTasks();
   const now = Date.now();
+  const threeDaysMs = 72 * 60 * 60 * 1000;
   let changed = false;
   const next = tasks.map((t) => {
     const selectedWithLink = t.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!(a.workLink || '').trim()));
     if (selectedWithLink.length === 0) return t;
     const updated = { ...t };
     for (const a of selectedWithLink) {
-      if (!a.autoApproveAt || t.paidUserIds?.includes(a.userId)) continue;
-      const at = new Date(a.autoApproveAt).getTime();
-      if (at <= now) {
+      if (t.paidUserIds?.includes(a.userId)) continue;
+      let shouldPay = false;
+      if (a.autoApproveAt) {
+        const at = new Date(a.autoApproveAt).getTime();
+        if (at <= now) shouldPay = true;
+      } else if (t.applicantUserId && a.workLinkSubmittedAt) {
+        const submittedAt = new Date(a.workLinkSubmittedAt).getTime();
+        if (now >= submittedAt + threeDaysMs) shouldPay = true;
+      }
+      if (shouldPay) {
         addFreelancerEarning(a.userId, t.reward, t.title);
         updated.paidUserIds = [...(updated.paidUserIds || []), a.userId];
         const allSelected = updated.applicants.filter((ap) => ap.selected && ((ap.workLinks?.length ?? 0) > 0 || !!(ap.workLink || '').trim()));
