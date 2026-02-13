@@ -35,6 +35,7 @@ interface Props {
   setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
   reviews?: Review[];
   setReviews?: React.Dispatch<React.SetStateAction<Review[]>>;
+  onUpdateUser?: (u: UserProfile) => void;
 }
 
 /**
@@ -44,7 +45,7 @@ const AdminPanel: React.FC<Props> = ({
   user, ebooks, setEbooks, channels, setChannels, setNotifications,
   smmProviders, setSmmProviders, smmProducts, setSmmProducts, smmOrders,
   members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
-  gradeConfigs, setGradeConfigs, reviews = [], setReviews
+  gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
@@ -128,6 +129,8 @@ const AdminPanel: React.FC<Props> = ({
             reviews={reviews}
             setReviews={setReviews}
             addNotif={addNotif}
+            currentUser={user}
+            onUpdateUser={onUpdateUser}
           />
         )}
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
