@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 /**
  * Fixed: Removed .ts extension from import
  */
-import { EbookProduct, ChannelProduct, SiteNotification, SMMProvider, SMMProduct, SMMOrder, UserProfile, ChannelOrder, StoreOrder, Coupon, NotificationType } from '../types';
+import { EbookProduct, ChannelProduct, SiteNotification, SMMProvider, SMMProduct, SMMOrder, UserProfile, ChannelOrder, StoreOrder, Coupon, NotificationType, GradeConfig } from '../types';
 import SnsAdmin from '../components/admin/SnsAdmin.tsx';
 import ChannelAdmin from '../components/admin/ChannelAdmin.tsx';
 import StoreAdmin from '../components/admin/StoreAdmin.tsx';
@@ -31,6 +31,8 @@ interface Props {
   /** 회원 목록(profiles) 다시 불러오기 - 판매자 승인 대기 목록 갱신용 */
   onRefreshMembers?: () => void;
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+  gradeConfigs: GradeConfig[];
+  setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
 }
 
 /**
@@ -39,7 +41,8 @@ interface Props {
 const AdminPanel: React.FC<Props> = ({ 
   user, ebooks, setEbooks, channels, setChannels, setNotifications,
   smmProviders, setSmmProviders, smmProducts, setSmmProducts, smmOrders,
-  members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif
+  members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
+  gradeConfigs, setGradeConfigs
 }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
@@ -117,6 +120,8 @@ const AdminPanel: React.FC<Props> = ({
             storeOrders={storeOrders}
             ebooks={ebooks}
             channels={channels}
+            gradeConfigs={gradeConfigs}
+            setGradeConfigs={setGradeConfigs}
           />
         )}
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
