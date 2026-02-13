@@ -172,11 +172,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
       alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
       return;
     }
-    if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()} P를 지급합니다.`)) return;
+    if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
     target.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
     if (addNotif) {
       target.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()} P가 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()} P가 적립되었습니다.`)
+        addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
       );
     }
     const paidIds = target.map((a) => a.userId);
@@ -187,7 +187,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
       t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }
     );
     saveTasks(next);
-    alert('포인트가 지급되었습니다.');
+    alert('알바비가 지급되었습니다.');
     if (!userId) navigate('/part-time');
   };
 
@@ -231,7 +231,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
             <h1 className="text-2xl font-black text-gray-900 mt-1">{task.title}</h1>
             <p className="text-gray-500 mt-1">{task.description}</p>
-            <p className="text-emerald-600 font-black text-lg mt-2">+{task.reward.toLocaleString()} P</p>
+            <p className="text-emerald-600 font-black text-lg mt-2">+{task.reward.toLocaleString()}원</p>
           </div>
           <button onClick={() => navigate('/part-time')} className="shrink-0 text-gray-500 hover:text-gray-800 font-bold text-sm">
             ← 목록
