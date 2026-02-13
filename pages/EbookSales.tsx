@@ -1,9 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { EbookProduct, UserProfile, WishlistItem, StoreType, GradeConfig } from '@/types';
+import { EbookProduct, UserProfile, WishlistItem, StoreType, GradeConfig, getUserGrade } from '@/types';
 import { EBOOK_CATEGORIES, MARKETING_CATEGORIES } from '@/constants';
-import GradeBadge from '@/components/GradeBadge';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -228,7 +227,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-[11px] font-black text-gray-600 italic truncate">{ebook.author}</span>
-                        <GradeBadge user={members.find(m => m.id === ebook.authorId || m.nickname === ebook.author)} gradeConfigs={gradeConfigs} size="sm" />
+                        {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? <span className={`${g.color} text-white text-[10px] font-black px-2.5 py-0.5 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
                       </div>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
