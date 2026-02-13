@@ -24,7 +24,7 @@ interface Props {
 type SortKey = 'none' | 'purchase' | 'sales' | 'violations' | 'points' | 'join';
 
 const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
-  { id: 'g1', name: 'Basic', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-gray-400', sortOrder: 0 },
+  { id: 'g1', name: 'STANDARD', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-gray-400', sortOrder: 0 },
   { id: 'g2', name: 'Prime', target: 'seller', minSales: 10000000, minPurchase: 0, color: 'bg-amber-500', sortOrder: 10 },
   { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
 ];
