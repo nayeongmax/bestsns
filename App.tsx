@@ -8,6 +8,7 @@ import {
 
 // Page and Component Imports (루트 기준 @/ 사용 - Netlify 빌드 시 해석 기준 오류 방지)
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import LiveNotification from '@/components/LiveNotification';
 import SNSActivation from '@/pages/SNSActivation';
 import ChannelSales from '@/pages/ChannelSales';
@@ -227,10 +228,10 @@ const App: React.FC = () => {
   const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
 
   const content = (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
       <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
       <LiveNotification />
-      <div className="container mx-auto py-10 px-4">
+      <div className="container mx-auto py-10 px-4 flex-1">
         <ContainerRoutes
             ebooks={ebooks}
             setEbooks={setEbooks}
@@ -268,6 +269,7 @@ const App: React.FC = () => {
             setGradeConfigs={setGradeConfigs}
           />
       </div>
+      <Footer />
     </div>
   );
 
