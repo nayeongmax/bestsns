@@ -35,7 +35,7 @@ export const CHANNEL_CATEGORIES = [
 ];
 
 // ----- 프리랜서 수익통장 (누구나알바) -----
-import type { FreelancerEarningEntry, PartTimeTask } from '@/types';
+import type { FreelancerEarningEntry, PartTimeTask, PartTimeJobRequest } from '@/types';
 
 const PARTTIME_TASKS_KEY = 'parttime_tasks_v1';
 
@@ -220,4 +220,29 @@ export function getPartTimeTasks(): PartTimeTask[] {
 
 export function setPartTimeTasks(tasks: PartTimeTask[]): void {
   localStorage.setItem(PARTTIME_TASKS_KEY, JSON.stringify(tasks));
+}
+
+// ----- 누구나알바 작업의뢰 (광고주→운영진) -----
+const PARTTIME_JOB_REQUESTS_KEY = 'parttime_job_requests_v1';
+
+export function getPartTimeJobRequests(): PartTimeJobRequest[] {
+  try {
+    const raw = localStorage.getItem(PARTTIME_JOB_REQUESTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+export function setPartTimeJobRequests(requests: PartTimeJobRequest[]): void {
+  localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(requests));
+}
+
+/** 광고금액 기준 수수료 계산: 15% + 부가세 10% */
+export function calcJobRequestFee(adAmount: number): number {
+  const baseFee = Math.round(adAmount * 0.15);
+  const vat = Math.round(baseFee * 0.1);
+  return baseFee + vat;
 }
