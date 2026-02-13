@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabase';
+import { getUserGrade } from '../../utils/gradeUtils';
 
 interface Props {
   members: UserProfile[];
@@ -12,12 +13,20 @@ interface Props {
   storeOrders: StoreOrder[];
   ebooks: EbookProduct[];
   channels: ChannelProduct[];
+  gradeConfigs: GradeConfig[];
+  setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
 }
 
 type AdminEditTab = 'account' | 'proofs' | 'buyer' | 'seller';
 type SortKey = 'none' | 'purchase' | 'sales' | 'violations' | 'points' | 'join';
 
-const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, channels }) => {
+const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
+  { id: 'g1', name: 'Basic', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-gray-400', sortOrder: 0 },
+  { id: 'g2', name: 'Prime', target: 'seller', minSales: 10000000, minPurchase: 0, color: 'bg-amber-500', sortOrder: 10 },
+  { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
+];
+
+const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, channels, gradeConfigs, setGradeConfigs }) => {
   const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState<'list' | 'seller' | 'grades'>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,26 +37,7 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
   const [activeEditTab, setActiveEditTab] = useState<AdminEditTab>('account');
   const [zoomImage, setZoomImage] = useState<string | null>(null);
 
-  const [gradeConfigs, setGradeConfigs] = useState<GradeConfig[]>(() => {
-    const saved = localStorage.getItem('grade_configs_v1');
-    return saved ? JSON.parse(saved) : [
-      { id: 'g1', name: 'lv.1', minSales: 5000000, color: 'bg-blue-500' },
-      { id: 'g2', name: 'lv.2', minSales: 10000000, color: 'bg-indigo-500' },
-      { id: 'g3', name: 'lv.3', minSales: 30000000, color: 'bg-purple-600' },
-      { id: 'g4', name: 'MASTER', minSales: 50000000, color: 'bg-gray-900' },
-    ];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('grade_configs_v1', JSON.stringify(gradeConfigs));
-  }, [gradeConfigs]);
-
-  const getUserGrade = (m: UserProfile) => {
-    if (m.manualGrade) return gradeConfigs.find(g => g.name === m.manualGrade) || null;
-    const sales = m.totalSalesAmount || 0;
-    const sortedConfigs = [...gradeConfigs].sort((a, b) => b.minSales - a.minSales);
-    return sortedConfigs.find(g => sales >= g.minSales) || null;
-  };
+  const resolveGrade = (m: UserProfile) => getUserGrade(m, gradeConfigs);
 
   const filteredMembers = useMemo(() => {
     let result = members.filter(m => 
@@ -106,9 +96,17 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
     if (editingMember?.id === userId) setEditingMember(null);
   };
 
-  const handleUpdateMemberInfo = () => {
+  const handleUpdateMemberInfo = async () => {
     if (!editingMember) return;
     setMembers(prev => prev.map(m => m.id === editingMember.id ? editingMember : m));
+    try {
+      await supabase.from('profiles').update({
+        role: editingMember.role,
+        points: editingMember.points ?? 0,
+        manual_grade: editingMember.manualGrade || null,
+        updated_at: new Date().toISOString()
+      }).eq('id', editingMember.id);
+    } catch (_) {}
     alert('회원 정보 업데이트가 적용되었습니다.');
     setEditingMember(null);
   };
@@ -156,7 +154,7 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                         </div>
                      </td>
                      <td className="px-8 py-4 text-center">
-                        <span className="bg-blue-500 text-white text-[10px] font-black px-3 py-1 rounded-full">{getUserGrade(m)?.name || 'Basic'}</span>
+                        <span className={`${resolveGrade(m)?.color || 'bg-gray-400'} text-white text-[10px] font-black px-3 py-1 rounded-full`}>{resolveGrade(m)?.name || 'Basic'}</span>
                      </td>
                      <td className="px-8 py-4 text-right text-orange-600">₩{(m.totalSalesAmount || 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-right text-blue-600">{(m.points || 0).toLocaleString()}P</td>
@@ -245,6 +243,54 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
         </div>
       )}
 
+      {activeSubTab === 'grades' && (
+        <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-50">
+            <h3 className="text-xl font-black text-gray-900">등급 관리</h3>
+            <p className="text-[13px] text-gray-500 font-bold mt-1">구매자/판매자별 등급을 만들고, 기준을 설정하면 마이페이지·N잡스토어·자유게시판 등에서 뱃지로 표시됩니다.</p>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="flex justify-end">
+              <button onClick={() => setGradeConfigs(prev => [...prev, { id: `g_${Date.now()}`, name: '새등급', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-blue-500', sortOrder: prev.length }])} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-[13px]">+ 등급 추가</button>
+            </div>
+            <div className="space-y-4">
+              {gradeConfigs.map((g, idx) => (
+                <div key={g.id} className="flex flex-wrap items-center gap-4 p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <span className={`${g.color} text-white text-xs font-black px-3 py-1.5 rounded-full`}>{g.name}</span>
+                    <select value={g.target} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, target: e.target.value as any } : c))} className="px-3 py-2 rounded-xl font-bold text-[12px]">
+                      <option value="both">구매자·판매자 둘 다</option>
+                      <option value="seller">판매자 전용</option>
+                      <option value="buyer">구매자 전용</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-black text-gray-500">판매액 기준 (원)</label>
+                    <input type="number" value={g.minSales || ''} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, minSales: Number(e.target.value) || 0 } : c))} placeholder="0=수동만" className="w-32 px-3 py-2 rounded-xl font-bold text-[12px]" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-black text-gray-500">구매액 기준 (원)</label>
+                    <input type="number" value={g.minPurchase || ''} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, minPurchase: Number(e.target.value) || 0 } : c))} placeholder="0=미사용" className="w-32 px-3 py-2 rounded-xl font-bold text-[12px]" />
+                  </div>
+                  <input type="text" value={g.name} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, name: e.target.value } : c))} className="w-24 px-3 py-2 rounded-xl font-black text-[12px]" placeholder="등급명" />
+                  <select value={g.color} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, color: e.target.value } : c))} className="px-3 py-2 rounded-xl font-bold text-[12px]">
+                    <option value="bg-gray-400">회색</option>
+                    <option value="bg-blue-500">파랑</option>
+                    <option value="bg-amber-500">골드(Prime)</option>
+                    <option value="bg-purple-600">보라</option>
+                    <option value="bg-gray-900">블랙(MASTER)</option>
+                    <option value="bg-emerald-500">에메랄드</option>
+                    <option value="bg-rose-500">로즈</option>
+                  </select>
+                  <button onClick={() => setGradeConfigs(prev => prev.filter(c => c.id !== g.id))} className="px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl font-black text-[12px]">삭제</button>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-gray-400 font-bold">· 수동 등급: 회원 관리에서 해당 회원의 등급을 직접 지정할 수 있습니다.</p>
+          </div>
+        </div>
+      )}
+
       {editingMember && (
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
            <div className="bg-white w-full max-w-6xl rounded-[56px] shadow-2xl overflow-hidden flex flex-col h-[90vh]">
@@ -273,6 +319,13 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                             <div className="space-y-2">
                                <label className="text-[11px] font-black text-blue-600">포인트 조정</label>
                                <input type="number" value={editingMember.points || 0} onChange={e => setEditingMember({...editingMember, points: Number(e.target.value)})} className="w-full p-5 bg-blue-50 rounded-2xl font-black" />
+                            </div>
+                            <div className="space-y-2 col-span-2">
+                               <label className="text-[11px] font-black text-amber-600">수동 등급 지정 (비워두면 판매액/구매액 기준 자동 적용)</label>
+                               <select value={editingMember.manualGrade || ''} onChange={e => setEditingMember({...editingMember, manualGrade: e.target.value || undefined})} className="w-full p-5 bg-white rounded-2xl font-black">
+                                  <option value="">자동 (기준에 따라)</option>
+                                  {gradeConfigs.map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
+                               </select>
                             </div>
                          </div>
                       </div>
