@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Post, Notice } from '../types';
+import { Post, Notice, UserProfile, GradeConfig } from '../types';
+import GradeBadge from '../components/GradeBadge';
 
 interface Props {
   posts: Post[];
@@ -11,7 +12,7 @@ interface Props {
 const CATEGORIES = ['전체', '공지', '유튜브', '수익화', '마케팅', '자유'];
 const POSTS_PER_PAGE = 15;
 
-const FreeBoard: React.FC<Props> = ({ posts, notices }) => {
+const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs = [] }) => {
   const [activeCategory, setActiveCategory] = useState('전체');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -170,7 +171,12 @@ const FreeBoard: React.FC<Props> = ({ posts, notices }) => {
                         </div>
                       </Link>
                     </td>
-                    <td className="px-4 py-4 text-center text-[14px] font-black text-gray-600 italic truncate whitespace-nowrap">{post.author}</td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="text-[14px] font-black text-gray-600 italic truncate">{post.author}</span>
+                        <GradeBadge user={members.find(m => String(m.id) === String(post.authorId) || m.nickname === post.author)} gradeConfigs={gradeConfigs} size="sm" />
+                      </div>
+                    </td>
                     <td className="px-4 py-4 text-center text-[13px] font-bold text-gray-400 italic whitespace-nowrap uppercase tracking-tighter">{post.date}</td>
                     <td className="px-4 py-4 text-center text-[14px] font-bold text-gray-400 italic whitespace-nowrap">{post.views.toLocaleString()}</td>
                     <td className={`px-4 py-4 text-center text-[16px] font-black italic tracking-tighter whitespace-nowrap ${post.likes > 0 ? 'text-green-500' : 'text-gray-300'}`}>
