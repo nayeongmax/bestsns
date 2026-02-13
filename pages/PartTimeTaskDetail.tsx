@@ -49,13 +49,13 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     if (start === twoDaysStr && !localStorage.getItem(key2day)) {
       localStorage.setItem(key2day, '1');
       selected.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '작업일 안내', `[${task.title}] 작업일까지 이틀 전입니다. 기한 내에 완료해 주세요.`, task.id)
+        addNotif(a.userId, 'freelancer', '작업일 안내', `[${task.title}] 작업일까지 이틀 전입니다. 기한 내에 완료해 주세요.`, '작업일까지 이틀 전입니다. 기한 내에 완료해 주세요.')
       );
     }
     if (start === todayStr && !localStorage.getItem(keyDay)) {
       localStorage.setItem(keyDay, '1');
       selected.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '작업당일', `[${task.title}] 오늘이 작업일입니다. 완료 후 링크를 제출해 주세요.`, task.id)
+        addNotif(a.userId, 'freelancer', '작업당일', `[${task.title}] 오늘이 작업일입니다. 완료 후 링크를 제출해 주세요.`, '오늘이 작업일입니다. 완료 후 링크를 제출해 주세요.')
       );
     }
   }, [task, addNotif]);
@@ -107,7 +107,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
         'freelancer',
         '프리랜서 선정',
         `[${task.title}]에 선정되었습니다. 작업 완료 후 작업 링크를 제출해 주세요.`,
-        task.id
+        '작업 완료 후 작업 링크를 제출해 주세요.'
       );
     }
   };
@@ -128,7 +128,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
         'freelancer',
         '선정 취소',
         `[${task.title}] 작업에서 선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.`,
-        task.id
+        '선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.'
       );
     }
   };
@@ -176,7 +176,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     target.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
     if (addNotif) {
       target.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()} P가 수익통장에 적립되었습니다.`, task.id)
+        addNotif(a.userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()} P가 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()} P가 적립되었습니다.`)
       );
     }
     const paidIds = target.map((a) => a.userId);
@@ -204,7 +204,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     );
     saveTasks(next);
     if (addNotif) {
-      addNotif(userId, 'revision', '작업 수정요청', `[${task.title}] 운영자가 수정을 요청했습니다. ${text.trim()}`, task.id);
+      addNotif(userId, 'revision', '작업 수정요청', `[${task.title}] 운영자가 수정을 요청했습니다. ${text.trim()}`, text.trim());
     }
     setRevisionModal(null);
     alert('수정요청 알림이 전송되었습니다.');
@@ -339,7 +339,6 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                 <li key={a.userId} className="flex items-start gap-2 py-2 px-3 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="font-black text-gray-800 shrink-0">{a.nickname}</span>
                   <span className="text-gray-600 text-sm">{a.comment || '신청합니다'}</span>
-                  {a.contact && <span className="text-xs text-blue-600">연락처: {a.contact}</span>}
                 </li>
               ))}
             </ul>
