@@ -23,7 +23,7 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
     return (
       <div className="max-w-2xl mx-auto py-20 px-4 text-center">
         <p className="text-gray-600 font-bold mb-4">결제할 작업의뢰를 찾을 수 없습니다.</p>
-        <button onClick={() => navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'alba' } })} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black">
+        <button onClick={() => navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } })} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black">
           마이페이지로
         </button>
       </div>
@@ -64,7 +64,7 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
         setPartTimeJobRequests(next);
         addNotif?.(user.id, 'payment', '알바의뢰 결제 완료', `[${jobRequest.title}] 결제가 완료되었습니다. 운영자가 곧 연락드리겠습니다.`);
         alert('결제가 정상적으로 완료되었습니다.');
-        navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'alba' } });
+        navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
       } else {
         alert(`결제가 취소되었습니다: ${response.message || '사용자 취소'}`);
       }
