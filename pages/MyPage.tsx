@@ -44,7 +44,8 @@ const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, 
   }, [onRefetchProfile]);
 
   const [activeMainTab, setActiveMainTab] = useState<MainTab>(() => {
-    return (location.state as any)?.activeTab || 'settings';
+    const s = location.state as { activeTab?: MainTab } | null;
+    return (s?.activeTab && ['buyer', 'seller', 'freelancer', 'settings'].includes(s.activeTab)) ? s.activeTab : 'settings';
   });
   
   const [settingsSubTab, setSettingsSubTab] = useState<'profile' | 'expert' | 'notif' | 'pw' | 'quit'>(() => {
@@ -192,7 +193,7 @@ const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, 
             addNotif={addNotif}
           />
         )}
-        {activeMainTab === 'buyer' && <BuyerDashboard user={user} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} ebooks={ebooks} onAddReview={onAddReview} />}
+        {activeMainTab === 'buyer' && <BuyerDashboard user={user} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} ebooks={ebooks} onAddReview={onAddReview} initialSubTab={(location.state as any)?.buyerSubTab} />}
         {activeMainTab === 'freelancer' && <FreelancerDashboard user={user} onUpdate={onUpdate} />}
         {activeMainTab === 'seller' && (
           <SellerDashboard 
