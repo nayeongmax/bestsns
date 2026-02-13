@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, processAutoApprovals } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, processAutoApprovals, getPartTimeJobRequests } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -105,15 +105,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     alert('신청되었습니다.');
   };
 
-  /** 운영자: 신청자 선정 → 선정자에게 알림 */
+  /** 운영자: 신청자 선정 → 선정자에게 알림, jobRequestId 자동 연결 */
   const handleSelect = (userId: string) => {
     if (!task) return;
     const applicant = task.applicants.find((a) => a.userId === userId);
-    const next = tasks.map((t) =>
-      t.id !== task.id
-        ? t
-        : { ...t, applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, selected: true } : a)) }
-    );
+    let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true } : a)) };
+    if (task.applicantUserId && !task.jobRequestId) {
+      const jobReqs = getPartTimeJobRequests().filter((jr) => jr.applicantUserId === task!.applicantUserId && (jr.paid || jr.status === 'pending'));
+      const linkedIds = new Set(getPartTimeTasks().filter((t) => t.jobRequestId).map((t) => t.jobRequestId));
+      const unlinked = jobReqs.find((jr) => !linkedIds.has(jr.id));
+      if (unlinked) updatedTask = { ...updatedTask, jobRequestId: unlinked.id };
+    }
+    const next = tasks.map((t) => (t.id !== task.id ? t : updatedTask));
     saveTasks(next);
     if (applicant && addNotif) {
       addNotif(
@@ -284,44 +287,89 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
 
         <div className="grid gap-4">
           <h3 className="text-sm font-black text-gray-500 uppercase">작업 내용 (작업자가 할 일)</h3>
-          {sections.게시글목록 && sections.게시글목록.length > 0 && (
-            <div className="space-y-4">
-              {sections.게시글목록.map((block, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {i + 1}</p>
-                  {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
-                  {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
-                </div>
-              ))}
-            </div>
-          )}
-          {sections.댓글목록 && sections.댓글목록.length > 0 && (
-            <div className="space-y-4">
-              {sections.댓글목록.map((text, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
-                  <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          {sections.작업링크목록 && sections.작업링크목록.length > 0 && (
-            <div className="space-y-4">
-              {sections.작업링크목록.map((text, i) => {
-                const isUrl = text.startsWith('http://') || text.startsWith('https://');
-                return (
-                  <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                    <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {i + 1}</p>
-                    {isUrl ? (
-                      <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
-                    ) : (
+          {(() => {
+            const order = sections.sectionOrder;
+            if (order && order.length > 0) {
+              return order.map(({ type, index }, i) => {
+                if (type === '게시글' && sections.게시글목록?.[index]) {
+                  const block = sections.게시글목록[index];
+                  return (
+                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {index + 1}</p>
+                      {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
+                      {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
+                    </div>
+                  );
+                }
+                if (type === '댓글' && sections.댓글목록?.[index]) {
+                  const text = sections.댓글목록[index];
+                  return (
+                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {index + 1}</p>
                       <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
-                    )}
+                    </div>
+                  );
+                }
+                if (type === '작업링크' && sections.작업링크목록?.[index]) {
+                  const text = sections.작업링크목록[index];
+                  const isUrl = text.startsWith('http://') || text.startsWith('https://');
+                  return (
+                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {index + 1}</p>
+                      {isUrl ? (
+                        <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
+                      ) : (
+                        <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              });
+            }
+            return (
+              <>
+                {sections.게시글목록 && sections.게시글목록.length > 0 && (
+                  <div className="space-y-4">
+                    {sections.게시글목록.map((block, i) => (
+                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {i + 1}</p>
+                        {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
+                        {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
+                      </div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                )}
+                {sections.댓글목록 && sections.댓글목록.length > 0 && (
+                  <div className="space-y-4">
+                    {sections.댓글목록.map((text, i) => (
+                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
+                        <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {sections.작업링크목록 && sections.작업링크목록.length > 0 && (
+                  <div className="space-y-4">
+                    {sections.작업링크목록.map((text, i) => {
+                      const isUrl = text.startsWith('http://') || text.startsWith('https://');
+                      return (
+                        <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {i + 1}</p>
+                          {isUrl ? (
+                            <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
+                          ) : (
+                            <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
           {SECTIONS_ORDER.filter((key) => key !== '제목' && key !== '내용').map(
             (key) => {
               const hasImageList = key === '이미지' && sections.이미지목록?.length;
