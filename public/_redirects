@@ -1,2 +1,4 @@
+/.netlify/functions/* /.netlify/functions/:splat  200
+/api/ping /.netlify/functions/ping  200
 /api/ai-consult /.netlify/functions/ai-consult  200
 /* /index.html  200
