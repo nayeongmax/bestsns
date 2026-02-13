@@ -135,19 +135,19 @@ const FreelancerRegistrationModal: React.FC<Props> = ({ user, onClose, onSubmit 
             <div className="space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
-                <span className="text-sm">프리랜서계약이 가능한 자만 신청하며, 위 내용이 사실과 다를 경우 책임을 질 것에 동의합니다.</span>
+                <span className="text-sm">(필수) 프리랜서계약이 가능한 자만 신청가능합니다. 위 내용이 사실과 다를 경우 책임을 질 것에 동의합니다.</span>
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
-                <span className="text-sm">작업이 완료된 후 대금 지급 절차를 위한 용도로만 개인정보를 수집하고 있습니다.</span>
+                <span className="text-sm">(필수) 본 건은 플랫폼으로부터 위탁받은 업무임을 인지합니다.</span>
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
-                <span className="text-sm">(필수) 본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</span>
+                <span className="text-sm">(필수) 작업이 완료된 후 대금 지급 절차를 위한 용도로만 개인정보를 수집하고 있습니다.</span>
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree4} onChange={(e) => setAgree4(e.target.checked)} className="mt-1 rounded" />
-                <span className="text-sm">(필수) 본 작업과 관련된 게시글 및 대화 기록은 임의로 삭제할 수 없음에 동의합니다.</span>
+                <span className="text-sm">(필수) 본 작업과 관련된 작업결과물 및 게시글 및 대화 기록은 삭제할 수 없음에 동의합니다.</span>
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree5} onChange={(e) => setAgree5(e.target.checked)} className="mt-1 rounded" />
