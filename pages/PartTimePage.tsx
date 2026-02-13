@@ -43,12 +43,17 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
     return arr;
   }, [todayStrVal]);
 
+  const approvedRequests = useMemo(() =>
+    jobRequests.filter((jr) => jr.status !== 'pending_review'),
+    [jobRequests]
+  );
+
   const dateCounts = useMemo(() => {
     const map: Record<string, { pending: number; selected: number; not_selected: number }> = {};
     weekDates.forEach((d) => {
       map[d] = { pending: 0, selected: 0, not_selected: 0 };
     });
-    jobRequests.forEach((jr) => {
+    approvedRequests.forEach((jr) => {
       const key = jr.workPeriodStart;
       if (map[key]) {
         if (jr.status === 'pending') map[key].pending++;
@@ -57,16 +62,16 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
       }
     });
     return map;
-  }, [jobRequests, weekDates]);
+  }, [approvedRequests, weekDates]);
 
   const effectiveDate = selectedDate || todayStrVal;
   const requestsForDate = useMemo(() => {
-    const list = jobRequests.filter((jr) => jr.workPeriodStart === effectiveDate);
+    const list = approvedRequests.filter((jr) => jr.workPeriodStart === effectiveDate);
     const pending = list.filter((j) => j.status === 'pending');
     const notSel = list.filter((j) => j.status === 'not_selected');
     const selected = list.filter((j) => j.status === 'selected');
     return [...pending, ...notSel, ...selected];
-  }, [jobRequests, effectiveDate]);
+  }, [approvedRequests, effectiveDate]);
 
   const statusLabel = (s: string) => (s === 'pending' ? '작업의뢰' : s === 'selected' ? '신청완료' : '미선정');
 
@@ -117,8 +122,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           )}
         </div>
 
-        <div className="grid gap-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+        <div className="grid gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {weekDates.map((d) => {
               const c = dateCounts[d] || { pending: 0, selected: 0, not_selected: 0 };
               const isSelected = effectiveDate === d;
@@ -128,14 +133,16 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                   key={d}
                   type="button"
                   onClick={() => setSelectedDate(d)}
-                  className={`p-4 rounded-2xl border text-left transition-all ${
-                    isSelected ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200' : 'border-gray-100 hover:border-gray-200 bg-white'
+                  className={`p-5 rounded-xl border text-left transition-all duration-200 ${
+                    isSelected
+                      ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
+                      : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
                   }`}
                 >
-                  <p className="text-xs font-black text-gray-500 uppercase">{dayLabel}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">작업의뢰 {c.pending}</p>
-                  <p className="text-[10px] text-emerald-600">신청완료 {c.selected}</p>
-                  <p className="text-[10px] text-gray-400">미선정 {c.not_selected}</p>
+                  <p className="text-sm font-black text-gray-600">{dayLabel}</p>
+                  <p className="text-xs text-gray-500 mt-2 font-semibold">작업의뢰 {c.pending}</p>
+                  <p className="text-xs text-emerald-600 font-semibold">신청완료 {c.selected}</p>
+                  <p className="text-xs text-gray-500 font-semibold">미선정 {c.not_selected}</p>
                 </button>
               );
             })}
@@ -144,23 +151,23 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           <h3 className="text-xl font-black text-gray-800">작업목록</h3>
 
           {requestsForDate.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">해당 날짜의 작업이 없습니다.</p>
+            <p className="text-gray-500 text-center py-10 text-base">해당 날짜의 작업이 없습니다.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {requestsForDate.map((jr) => (
                 <div
                   key={jr.id}
-                  className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border ${
+                  className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border ${
                     jr.status === 'selected' ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
                   }`}
                 >
                   <div className="flex-1">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{statusLabel(jr.status)}</span>
-                    <h4 className="font-black text-gray-900">{jr.title}</h4>
-                    <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{jr.workContent}</p>
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{statusLabel(jr.status)}</span>
+                    <h4 className="font-black text-gray-900 text-base">{jr.title}</h4>
+                    <p className="text-base text-gray-500 mt-1 line-clamp-2">{jr.workContent}</p>
                   </div>
                   <div className="flex items-center gap-4 shrink-0">
-                    <span className="font-black text-emerald-600">{jr.adAmount.toLocaleString()} P</span>
+                    <span className="font-black text-emerald-600 text-base">{jr.adAmount.toLocaleString()} P</span>
                     <span className={`px-4 py-2 rounded-xl text-sm font-black ${
                       jr.status === 'selected' ? 'bg-gray-200 text-gray-500' : 'bg-emerald-100 text-emerald-700'
                     }`}>
@@ -174,7 +181,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         </div>
 
         <div className="bg-blue-50/80 p-6 rounded-2xl border border-blue-100">
-          <p className="text-blue-800 font-bold">
+          <p className="text-blue-800 font-bold text-base">
             💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.
             <br />
             수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()} P</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
