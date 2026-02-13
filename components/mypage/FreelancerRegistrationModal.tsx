@@ -24,6 +24,9 @@ const FreelancerRegistrationModal: React.FC<Props> = ({ user, onClose, onSubmit 
   });
   const [agree1, setAgree1] = useState(false);
   const [agree2, setAgree2] = useState(false);
+  const [agree3, setAgree3] = useState(false);
+  const [agree4, setAgree4] = useState(false);
+  const [agree5, setAgree5] = useState(false);
 
   const handleImage = (field: 'idCardImage' | 'bankbookImage', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,7 +51,7 @@ const FreelancerRegistrationModal: React.FC<Props> = ({ user, onClose, onSubmit 
       alert('신분증과 통장 이미지를 모두 첨부해 주세요.');
       return;
     }
-    if (!agree1 || !agree2) {
+    if (!agree1 || !agree2 || !agree3 || !agree4 || !agree5) {
       alert('필수 동의 항목에 모두 체크해 주세요.');
       return;
     }
@@ -80,10 +83,8 @@ const FreelancerRegistrationModal: React.FC<Props> = ({ user, onClose, onSubmit 
         <div className="space-y-6">
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
             <p className="font-black text-amber-800 text-sm">⚠️ 프리랜서계약이 가능한 분만 신청하세요.</p>
-            <p className="text-amber-700 text-sm mt-2">투잡이 불가한 직업을 가진 프리랜서이신 분은 신중히 고민하시고 신청하세요. 추후 투잡이 불가능한데 투잡을 하고 문제가 생기는 법적인 부분은 전적으로 직접 계약한 프리랜서에게 있습니다.</p>
-          </div>
-          <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-            <p className="text-sm text-blue-800">개인정보 수집 용도는 프리랜서 알바비를 지급받기 위한 용도로만 이용됩니다.</p>
+            <p className="text-amber-700 text-sm mt-2">투잡이 불가한 직업을 가진 프리랜서이신 분은 신중히 고민하시고 신청하세요.</p>
+            <p className="text-amber-700 text-sm mt-1">투잡이 불가능한데 투잡을 하여 생기는 법적인 문제에 대해서는 전적으로 프리랜서에게 있습니다.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -138,7 +139,19 @@ const FreelancerRegistrationModal: React.FC<Props> = ({ user, onClose, onSubmit 
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
-                <span className="text-sm">개인정보가 알바비 지급 목적으로만 수집·이용되는 것에 동의합니다.</span>
+                <span className="text-sm">작업이 완료된 후 대금 지급 절차를 위한 용도로만 개인정보를 수집하고 있습니다.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
+                <span className="text-sm">(필수) 본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={agree4} onChange={(e) => setAgree4(e.target.checked)} className="mt-1 rounded" />
+                <span className="text-sm">(필수) 본 작업과 관련된 게시글 및 대화 기록은 임의로 삭제할 수 없음에 동의합니다.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={agree5} onChange={(e) => setAgree5(e.target.checked)} className="mt-1 rounded" />
+                <span className="text-sm">(필수) 직거래 시도 시 거래액의 10배 위약벌 청구 및 영구 제명 조치에 동의합니다.</span>
               </label>
             </div>
             <div className="flex gap-4 pt-4">
