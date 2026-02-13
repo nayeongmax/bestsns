@@ -1,9 +1,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '../../types';
 import { getPartTimeJobRequests, setPartTimeJobRequests, getPartTimeTasks, processAutoApprovals } from '@/constants';
-import type { PartTimeTask } from '../../types';
+import type { PartTimeTask, PartTimeJobRequest } from '../../types';
 
 interface Props {
   user: UserProfile;
@@ -37,11 +37,11 @@ interface OrderItem {
 }
 
 const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, ebooks, onAddReview, initialSubTab }) => {
+  const navigate = useNavigate();
   // 기본값: 구매내역(SNS) 탭. 알바의뢰는 PartTimeJobRequest 등에서 명시적으로 올 때만
   const [activeTab, setActiveTab] = useState<BuyerSubTab>(() => initialSubTab ?? 'sns');
   const [jobRequests, setJobRequests] = useState(() => getPartTimeJobRequests());
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
-  const [pgModal, setPgModal] = useState<{ jrId: string; amount: number; title: string } | null>(null);
   const [workConfirmModal, setWorkConfirmModal] = useState<PartTimeTask | null>(null);
 
   useEffect(() => {
@@ -139,20 +139,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     return activeTab === 'alba' ? base : base.filter(o => o.type === activeTab);
   }, [smmOrders, channelOrders, storeOrders, user.id, activeTab]);
 
-  const handlePayJobRequest = (jr: { id: string; adAmount: number; fee: number; title: string }) => {
-    const total = jr.adAmount + jr.fee;
-    setPgModal({ jrId: jr.id, amount: total, title: jr.title });
-  };
-
-  const confirmPgPayment = () => {
-    if (!pgModal) return;
-    const next = jobRequests.map((r) =>
-      r.id === pgModal.jrId ? { ...r, paid: true } : r
-    );
-    setPartTimeJobRequests(next);
-    setJobRequests(next);
-    setPgModal(null);
-    alert('결제가 완료되었습니다. 운영자가 곧 연락드리겠습니다.');
+  const handlePayJobRequest = (jr: PartTimeJobRequest) => {
+    navigate('/payment/alba', { state: { jobRequest: jr } });
   };
 
   const handleConfirmOrder = (order: OrderItem, e: React.MouseEvent) => {
@@ -218,7 +206,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
           { id: 'sns', label: 'SNS 활성화 내역' }, 
           { id: 'channel', label: '채널 구매 내역' }, 
           { id: 'store', label: 'N잡 스토어 내역' },
-          { id: 'alba', label: '알바의뢰' }
+          { id: 'alba', label: '알바의뢰 (광고주한정)' }
         ].map(tab => (
           <button 
             key={tab.id} 
@@ -560,7 +548,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
               </div>
               <div>
                 <p className="text-xs font-black text-gray-400 uppercase mb-2">3. 취소 및 환불 규정</p>
-                <p className="text-gray-700 leading-relaxed text-sm">작업 시작 전: 언제든 전액 환불 가능합니다.<br />작업 시작 후: 나눠서 할 수 있는 작업(예: 10건 중 3건만 완료)은 아직 안 한 부분만 환불 가능하고, 한 번에 끝내는 작업(예: 영상 1편 편집)은 시작 후엔 환불이 어렵습니다.<br />최종 확정 후: 양측 협의에 따릅니다.</p>
+                <p className="text-gray-700 leading-relaxed text-sm">작업 시작 전: 언제든 전액 취소·환불 가능합니다.<br />작업 시작 후: 프리랜서 선정이 끝난 경우 작업내용 전달이 되어 환불이 어렵습니다.</p>
               </div>
               <div>
                 <p className="text-xs font-black text-gray-400 uppercase mb-2">4. 검수 및 A/S 규정</p>
@@ -585,27 +573,6 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
               </div>
             </div>
             <button onClick={() => setWorkConfirmModal(null)} className="w-full py-4 rounded-xl bg-gray-900 text-white font-black">확인</button>
-          </div>
-        </div>
-      )}
-
-      {pgModal && (
-        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-[48px] p-10 shadow-2xl space-y-8 text-center">
-            <h3 className="text-2xl font-black text-gray-900">PG 결제</h3>
-            <div>
-              <p className="text-gray-500 font-bold">{pgModal.title}</p>
-              <p className="text-3xl font-black text-emerald-600 mt-2">{(pgModal.amount).toLocaleString()} P</p>
-              <p className="text-xs text-gray-400 mt-1">(실제 PG 연동 시 결제창으로 이동합니다)</p>
-            </div>
-            <div className="flex gap-4">
-              <button onClick={() => setPgModal(null)} className="flex-1 py-4 rounded-xl bg-gray-100 text-gray-700 font-black">
-                취소
-              </button>
-              <button onClick={confirmPgPayment} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">
-                결제 완료
-              </button>
-            </div>
           </div>
         </div>
       )}
