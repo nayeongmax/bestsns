@@ -4,7 +4,9 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 /**
  * Fixed: Imported missing NotificationType
  */
-import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType } from '../types';
+import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType, GradeConfig } from '../types';
+import GradeBadge from '../components/GradeBadge';
+import { getUserGrade } from '../utils/gradeUtils';
 import UserInfoSection from '@/components/mypage/UserInfoSection';
 import BuyerDashboard from '@/components/mypage/BuyerDashboard';
 import SellerDashboard from '@/components/mypage/SellerDashboard';
@@ -25,6 +27,7 @@ interface Props {
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
   /** 마이페이지 진입 시 로그인 사용자 프로필 재조회 (승인 직후 판매자 워크스페이스 즉시 반영) */
   onRefetchProfile?: () => void;
+  gradeConfigs?: GradeConfig[];
 }
 
 type MainTab = 'buyer' | 'seller' | 'freelancer' | 'settings';
@@ -33,7 +36,7 @@ type NicknameStatus = 'idle' | 'available' | 'unavailable';
 /**
  * Fixed: Added addNotif to component destructuring
  */
-const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, onAddReview, onUpdateReview, reviews, addNotif, onRefetchProfile }) => {
+const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, onAddReview, onUpdateReview, reviews, addNotif, onRefetchProfile, gradeConfigs = [] }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,8 +127,9 @@ const MyPage: React.FC<Props> = ({ user, onUpdate, ebooks, setEbooks, channels, 
                   <h2 className="text-2xl font-black text-gray-900 group-hover:text-blue-600 transition-colors italic">{user.nickname}</h2>
                   <span className="text-[14px] opacity-30 group-hover:opacity-100 transition-opacity">✏️</span>
                 </div>
-                <div className="flex items-center gap-2">
-                   <span className="text-[11px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Standard Member</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                   <GradeBadge user={user} gradeConfigs={gradeConfigs} size="sm" />
+                   {(!gradeConfigs.length || !getUserGrade(user, gradeConfigs)) && <span className="text-[11px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Standard Member</span>}
                    {user.sellerStatus === 'approved' && <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Expert ✓</span>}
                 </div>
               </button>
