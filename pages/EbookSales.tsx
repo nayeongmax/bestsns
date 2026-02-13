@@ -219,6 +219,13 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                   <div className="flex gap-1 mb-2 min-w-0">
                     <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{ebook.category}</span>
                   </div>
+                  {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? (
+                    <div className="mb-3">
+                      <span className={`inline-flex items-center ${g.color} text-white text-[14px] font-black px-5 py-2 rounded-2xl italic uppercase tracking-widest border border-white/50 bg-gradient-to-b from-white/35 to-transparent`} style={{ boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.15)' }}>
+                        {g.name}
+                      </span>
+                    </div>
+                  ) : null; })()}
                   <h3 className={`font-black text-gray-900 mb-4 transition-colors line-clamp-1 text-[14px] italic tracking-tight truncate ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
                     {ebook.title}
                   </h3>
@@ -227,7 +234,6 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-[11px] font-black text-gray-600 italic truncate">{ebook.author}</span>
-                        {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? <span className={`${g.color} text-white text-[10px] font-black px-2.5 py-0.5 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
                       </div>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
