@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Post, UserProfile, BoardComment } from '../types';
+import { Post, UserProfile, BoardComment, GradeConfig } from '../types';
+import GradeBadge from '../components/GradeBadge';
 
 interface Props {
   user: UserProfile;
@@ -9,7 +10,7 @@ interface Props {
   setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
 }
 
-const FreeBoardDetail: React.FC<Props> = ({ user, posts, setPosts }) => {
+const FreeBoardDetail: React.FC<Props> = ({ user, posts, setPosts, members = [], gradeConfigs = [] }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [commentInput, setCommentInput] = useState('');
@@ -178,7 +179,10 @@ const FreeBoardDetail: React.FC<Props> = ({ user, posts, setPosts }) => {
                   <img src={post.authorImage || 'https://picsum.photos/seed/user/200/200'} alt="author" className="w-full h-full object-cover" />
                </div>
                <div className="flex flex-col gap-1">
-                  <p className="font-black text-gray-900 text-3xl tracking-tight">{post.author}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-black text-gray-900 text-3xl tracking-tight">{post.author}</p>
+                    <GradeBadge user={members.find(m => String(m.id) === String(post.authorId) || m.nickname === post.author)} gradeConfigs={gradeConfigs} size="md" />
+                  </div>
                   <p className="text-[13px] font-bold text-gray-400 italic uppercase tracking-[0.2em]">{post.date}</p>
                </div>
              </div>
