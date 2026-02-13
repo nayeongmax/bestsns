@@ -17,6 +17,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
   const [withdrawRequests, setWithdrawRequests] = useState(() => getFreelancerWithdrawRequests());
   const [rejectModal, setRejectModal] = useState<{ jr: PartTimeJobRequest; reason: string } | null>(null);
   const [revisionModal, setRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string; text: string } | null>(null);
+  const [parttimeDateOffset, setParttimeDateOffset] = useState(0);
 
   useEffect(() => {
     processAutoApprovals();
@@ -27,7 +28,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
 
   const refreshWithdrawRequests = () => setWithdrawRequests(getFreelancerWithdrawRequests());
 
-  const pendingReviews = jobRequests.filter((jr) => jr.status === 'pending_review');
+  const pendingReviewsBase = jobRequests.filter((jr) => jr.status === 'pending_review');
 
   const handleApproveJobRequest = (jr: PartTimeJobRequest) => {
     const next = jobRequests.map((r) =>
@@ -64,8 +65,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
     alert('거절 처리되었습니다. 신청자에게 알림이 전송되었습니다.');
   };
 
-  const tasksWithSelected = tasks.filter(
+  const parttimeViewDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + parttimeDateOffset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  const pendingReviews = parttimeDateOffset === 0 ? pendingReviewsBase : pendingReviewsBase.filter((jr) => jr.workPeriodStart === parttimeViewDate);
+  const tasksWithSelectedBase = tasks.filter(
     (t) => !t.pointPaid && t.applicants.some((a) => a.selected)
+  );
+  const tasksWithSelected = tasksWithSelectedBase.filter(
+    (t) => (t.workPeriod?.start || t.applicationPeriod?.start) === parttimeViewDate
   );
 
   const saveTasks = (next: PartTimeTask[]) => {
@@ -240,8 +250,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       </div>
 
       <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-black text-gray-900 mb-1">누구나알바 · 작업의뢰 검토</h3>
-        <p className="text-sm text-gray-500 mb-6">광고주 신청 폼을 검토한 후, 금액·내용이 적절하면 승인하여 누구나알바 페이지에 업로드해 주세요.</p>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-xl font-black text-gray-900 mb-1">누구나알바 · 작업의뢰 검토</h3>
+            <p className="text-sm text-gray-500">광고주 신청 폼을 검토한 후, 금액·내용이 적절하면 승인하여 누구나알바 페이지에 업로드해 주세요.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button type="button" onClick={() => setParttimeDateOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">←</button>
+            <span className="text-sm font-black text-gray-600 min-w-[100px] text-center">{parttimeViewDate}</span>
+            <button type="button" onClick={() => setParttimeDateOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">→</button>
+          </div>
+        </div>
 
         {pendingReviews.length === 0 ? (
           <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
@@ -265,11 +284,19 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                   </div>
                   <div>
                     <p className="text-xs font-black text-gray-500 uppercase mb-1">플랫폼링크</p>
-                    {jr.platformLink ? (
-                      <a href={jr.platformLink} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold hover:underline break-all">{jr.platformLink}</a>
-                    ) : (
-                      <p className="text-gray-400">-</p>
-                    )}
+                    {(() => {
+                      const links = jr.platformLinks?.length ? jr.platformLinks : (jr.platformLink ? jr.platformLink.split(',').map((s) => s.trim()).filter(Boolean) : []);
+                      if (!links.length) return <p className="text-gray-400">-</p>;
+                      return (
+                        <div className="space-y-2">
+                          {links.map((url, i) => (
+                            <a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="block text-emerald-600 font-bold hover:underline break-all text-sm">
+                              {i + 1}. {url}
+                            </a>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div>
                     <p className="text-xs font-black text-gray-500 uppercase mb-1">연락처</p>
@@ -333,8 +360,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       </div>
 
       <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-black text-gray-900 mb-2">프리랜서 작업 · 알바비 지급</h3>
-        <p className="text-sm text-gray-500 mb-6">작업 상세와 선정된 프리랜서 목록을 확인한 후, 링크를 클릭해 검토하고 수정요청 또는 포인트 지급해 주세요.</p>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">프리랜서 작업 · 알바비 지급</h3>
+            <p className="text-sm text-gray-500">작업 상세와 선정된 프리랜서 목록을 확인한 후, 링크를 클릭해 검토하고 수정요청 또는 포인트 지급해 주세요.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button type="button" onClick={() => setParttimeDateOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">←</button>
+            <span className="text-sm font-black text-gray-600 min-w-[100px] text-center">{parttimeViewDate}</span>
+            <button type="button" onClick={() => setParttimeDateOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">→</button>
+          </div>
+        </div>
 
       {tasksWithSelected.length === 0 ? (
         <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
