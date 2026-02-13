@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, processAutoApprovals } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -21,11 +21,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
   const [applyContact, setApplyContact] = useState('');
   const [workLinks, setWorkLinks] = useState<string[]>(['']);
   const [revisionModal, setRevisionModal] = useState<{ userId: string; nickname: string; text: string } | null>(null);
-  const [agreeReconsignment, setAgreeReconsignment] = useState(false);
+  const [agree1, setAgree1] = useState(false);
+  const [agree2, setAgree2] = useState(false);
+  const [agree3, setAgree3] = useState(false);
 
   const task = tasks.find((t) => t.id === taskId);
 
   useEffect(() => {
+    processAutoApprovals();
     setTasks(getPartTimeTasks());
   }, [taskId]);
 
@@ -81,8 +84,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
       alert('이미 신청하셨습니다.');
       return;
     }
-    if (!agreeReconsignment) {
-      alert('재위탁 계약에 동의해 주세요.');
+    if (!agree1 || !agree2 || !agree3) {
+      alert('필수 동의 항목에 모두 체크해 주세요.');
       return;
     }
     const next = tasks.map((t) =>
@@ -177,9 +180,31 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     alert('작업 링크가 제출되었습니다. 운영자 확인 후 포인트가 지급됩니다.');
   };
 
-  /** 운영자: 개별 포인트 지급 */
+  /** 운영자: 통과 (3일 후 자동 지급) */
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
     (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
+  const handleApprovePass = (userId: string) => {
+    if (!task) return;
+    const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
+    if (!a) return;
+    const now = new Date();
+    const autoAt = new Date(now.getTime() + 72 * 60 * 60 * 1000);
+    const next = tasks.map((t) =>
+      t.id !== task.id ? t : {
+        ...t,
+        applicants: t.applicants.map((ap) =>
+          ap.userId === userId ? { ...ap, deliveryAt: now.toISOString(), autoApproveAt: autoAt.toISOString() } : ap
+        ),
+      }
+    );
+    saveTasks(next);
+    if (addNotif) {
+      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 3일 후 수익통장에 ${task.reward.toLocaleString()}원이 자동 적립됩니다.`, '3일 후 수익통장에 자동 적립됩니다.');
+    }
+    alert('통과 처리되었습니다. 3일 후 자동으로 수익통장에 지급됩니다.');
+  };
+
+  /** 운영자: 즉시 지급 (기존 포인트 지급) */
   const handlePayPoints = (userId?: string) => {
     if (!task) return;
     const target = userId
@@ -189,7 +214,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
       alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
       return;
     }
-    if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
+    if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 즉시 지급합니다.`)) return;
     target.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
     if (addNotif) {
       target.forEach((a) =>
@@ -241,16 +266,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
   const sections = task.sections || {};
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-4 animate-in fade-in duration-300">
-      <div className="bg-white rounded-[32px] p-8 shadow-xl border border-gray-100 space-y-8">
-        <div className="flex items-start justify-between gap-4">
+    <div className="max-w-6xl mx-auto py-12 px-4 md:px-8 animate-in fade-in duration-300">
+      <div className="bg-white rounded-[32px] p-8 md:p-10 shadow-xl border border-gray-100 space-y-8">
+        <div className="flex items-start justify-between gap-4 pb-6 border-b border-gray-100">
           <div>
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
-            <h1 className="text-2xl font-black text-gray-900 mt-1">{task.title}</h1>
-            <p className="text-gray-500 mt-1">{task.description}</p>
-            <p className="text-emerald-600 font-black text-lg mt-2">+{task.reward.toLocaleString()}원</p>
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black text-emerald-600 bg-emerald-50 uppercase tracking-wider">{task.category}</span>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 mt-2 tracking-tight">{task.title}</h1>
+            <p className="text-gray-500 mt-2 leading-relaxed">{task.description}</p>
+            <div className="mt-4 flex items-center gap-3">
+              <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-black text-lg">+{task.reward.toLocaleString()}원</span>
+            </div>
           </div>
-          <button onClick={() => navigate('/part-time')} className="shrink-0 text-gray-500 hover:text-gray-800 font-bold text-sm">
+          <button onClick={() => navigate('/part-time')} className="shrink-0 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-bold text-sm transition-colors">
             ← 목록
           </button>
         </div>
@@ -332,14 +359,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-            <p className="text-[10px] font-black text-blue-600 uppercase">신청기간</p>
-            <p className="text-gray-800 font-bold">{task.applicationPeriod.start} ~ {task.applicationPeriod.end}</p>
+        <div className="flex flex-wrap gap-3">
+          <div className="inline-flex items-center gap-2 bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
+            <span className="text-[10px] font-black text-blue-600 uppercase">신청기간</span>
+            <span className="text-gray-800 font-bold">{task.applicationPeriod.start} ~ {task.applicationPeriod.end}</span>
           </div>
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="text-[10px] font-black text-amber-600 uppercase">작업기간</p>
-            <p className="text-gray-800 font-bold">{task.workPeriod.start} ~ {task.workPeriod.end}</p>
+          <div className="inline-flex items-center gap-2 bg-amber-50 rounded-xl px-4 py-3 border border-amber-100">
+            <span className="text-[10px] font-black text-amber-600 uppercase">작업기간</span>
+            <span className="text-gray-800 font-bold">{task.workPeriod.start} ~ {task.workPeriod.end}</span>
           </div>
         </div>
 
@@ -382,10 +409,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                   placeholder="010-0000-0000 또는 이메일"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
                 />
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
+                <div className="space-y-3 p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
                   <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={agreeReconsignment} onChange={(e) => setAgreeReconsignment(e.target.checked)} className="mt-1 rounded" />
-                    <span className="text-sm">플랫폼의 재위탁 수행자로서 작업을 진행하는 데 동의합니다. 광고주와 직접 계약 관계가 아니며, 플랫폼이 용역 계약의 당사자입니다.</span>
+                    <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
+                    <span className="text-sm">(필수) 본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</span>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
+                    <span className="text-sm">(필수) 본 작업과 관련된 게시글 및 대화 기록은 임의로 삭제할 수 없음에 동의합니다.</span>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
+                    <span className="text-sm">(필수) 직거래 시도 시 거래액의 10배 위약벌 청구 및 영구 제명 조치에 동의합니다.</span>
                   </label>
                 </div>
                 <button
@@ -506,13 +541,26 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                             <p className="text-amber-600 font-bold">작업 링크 미제출</p>
                           )}
                           {links.length > 0 && !paid && (
-                            <div className="flex gap-2 flex-wrap">
+                            <div className="flex gap-2 flex-wrap items-center">
                               <button type="button" onClick={() => setRevisionModal({ userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200">
                                 수정요청
                               </button>
-                              <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
-                                포인트 지급
-                              </button>
+                              {a.deliveryAt && a.autoApproveAt ? (
+                                new Date(a.autoApproveAt) > new Date() ? (
+                                  <span className="text-blue-600 font-bold text-xs">3일 후 자동 지급 예정 ({new Date(a.autoApproveAt).toLocaleString('ko-KR')})</span>
+                                ) : (
+                                  <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중...</span>
+                                )
+                              ) : (
+                                <>
+                                  <button type="button" onClick={() => handleApprovePass(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">
+                                    통과
+                                  </button>
+                                  <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
+                                    즉시 지급
+                                  </button>
+                                </>
+                              )}
                             </div>
                           )}
                           {paid && <span className="text-gray-500 font-bold text-xs">✓ 지급 완료</span>}
