@@ -427,7 +427,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
               </div>
               <div>
                 <p className="text-xs font-black text-gray-400 uppercase mb-2">3. 취소 및 환불 규정</p>
-                <p className="text-gray-700 leading-relaxed">용역 제공 개시 전: 전액 취소 및 환불 가능.<br />용역 제공 개시 후: 가분적 용역은 미수행 범위 환불 가능, 불가분적 용역은 원칙 환불 불가.</p>
+                <p className="text-gray-700 leading-relaxed text-sm">작업 시작 전: 언제든 전액 환불 가능합니다.<br />작업 시작 후: 나눠서 할 수 있는 작업(예: 10건 중 3건만 완료)은 아직 안 한 부분만 환불 가능하고, 한 번에 끝내는 작업(예: 영상 1편 편집)은 시작 후엔 환불이 어렵습니다.<br />최종 확정 후: 양측 협의에 따릅니다.</p>
               </div>
               <div>
                 <p className="text-xs font-black text-gray-400 uppercase mb-2">4. 검수 및 A/S 규정</p>
