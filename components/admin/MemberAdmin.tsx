@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder, getUserGrade } from '../../types';
+import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder, getUserGrade, Review, NotificationType } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabase';
+import MyPage from '@/pages/MyPage';
 
 interface Props {
   members: UserProfile[];
@@ -11,12 +12,15 @@ interface Props {
   channelOrders: ChannelOrder[];
   storeOrders: StoreOrder[];
   ebooks: EbookProduct[];
+  setEbooks: React.Dispatch<React.SetStateAction<EbookProduct[]>>;
   channels: ChannelProduct[];
   gradeConfigs: GradeConfig[];
   setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
+  reviews?: Review[];
+  setReviews?: React.Dispatch<React.SetStateAction<Review[]>>;
+  addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
 }
 
-type AdminEditTab = 'account' | 'proofs' | 'buyer' | 'seller';
 type SortKey = 'none' | 'purchase' | 'sales' | 'violations' | 'points' | 'join';
 
 const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
@@ -25,7 +29,7 @@ const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
   { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
 ];
 
-const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, channels, gradeConfigs, setGradeConfigs }) => {
+const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = () => {} }) => {
   const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState<'list' | 'seller' | 'grades'>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,7 +37,6 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
   const [sortKey, setSortKey] = useState<SortKey>('none');
   
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null);
-  const [activeEditTab, setActiveEditTab] = useState<AdminEditTab>('account');
   const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   const resolveGrade = (m: UserProfile) => getUserGrade(m, gradeConfigs);
@@ -137,9 +140,10 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase">
                  <tr>
                    <th className="px-8 py-5">회원정보</th>
-                   <th className="px-8 py-5 text-center">등급</th>
+                   <th className="px-8 py-5 text-center">등급뱃지</th>
+                   <th className="px-8 py-5 text-right">총 구매액</th>
                    <th className="px-8 py-5 text-right">총 판매액</th>
-                   <th className="px-8 py-5 text-right">포인트</th>
+                   <th className="px-8 py-5 text-right">포인트보유</th>
                    <th className="px-8 py-5 text-center">관리</th>
                  </tr>
                </thead>
@@ -153,12 +157,13 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                         </div>
                      </td>
                      <td className="px-8 py-4 text-center">
-                        <span className={`${resolveGrade(m)?.color || 'bg-gray-400'} text-white text-[10px] font-black px-3 py-1 rounded-full`}>{resolveGrade(m)?.name || 'Basic'}</span>
+                        <span className={`${resolveGrade(m)?.color || 'bg-gray-400'} text-white text-[10px] font-black px-3 py-1 rounded-full`}>{resolveGrade(m)?.name || '-'}</span>
                      </td>
+                     <td className="px-8 py-4 text-right text-blue-600">₩{(m.totalPurchaseAmount || 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-right text-orange-600">₩{(m.totalSalesAmount || 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-right text-blue-600">{(m.points || 0).toLocaleString()}P</td>
                      <td className="px-8 py-4 text-center">
-                        <button onClick={() => { setEditingMember({ ...m }); setActiveEditTab('account'); }} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black">관리</button>
+                        <button onClick={() => setEditingMember({ ...m })} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black">관리</button>
                      </td>
                    </tr>
                  ))}
@@ -250,13 +255,13 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
           </div>
           <div className="p-8 space-y-6">
             <div className="flex justify-end">
-              <button onClick={() => setGradeConfigs(prev => [...prev, { id: `g_${Date.now()}`, name: '새등급', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-blue-500', sortOrder: prev.length }])} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-[13px]">+ 등급 추가</button>
+              <button onClick={() => setGradeConfigs(prev => [...prev, { id: `g_${Date.now()}`, name: '', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-blue-500', sortOrder: prev.length }])} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-[13px]">+ 등급 추가</button>
             </div>
             <div className="space-y-4">
               {gradeConfigs.map((g, idx) => (
                 <div key={g.id} className="flex flex-wrap items-center gap-4 p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <div className="flex items-center gap-3">
-                    <span className={`${g.color} text-white text-xs font-black px-3 py-1.5 rounded-full`}>{g.name}</span>
+                    <span className={`${g.color || 'bg-gray-400'} text-white text-xs font-black px-3 py-1.5 rounded-full`}>{g.name || '등급명 입력'}</span>
                     <select value={g.target} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, target: e.target.value as any } : c))} className="px-3 py-2 rounded-xl font-bold text-[12px]">
                       <option value="both">구매자·판매자 둘 다</option>
                       <option value="seller">판매자 전용</option>
@@ -271,7 +276,7 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                     <label className="text-[11px] font-black text-gray-500">구매액 기준 (원)</label>
                     <input type="number" value={g.minPurchase || ''} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, minPurchase: Number(e.target.value) || 0 } : c))} placeholder="0=미사용" className="w-32 px-3 py-2 rounded-xl font-bold text-[12px]" />
                   </div>
-                  <input type="text" value={g.name} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, name: e.target.value } : c))} className="w-24 px-3 py-2 rounded-xl font-black text-[12px]" placeholder="등급명" />
+                  <input type="text" value={g.name} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, name: e.target.value.trim() || '' } : c))} className="w-32 px-3 py-2 rounded-xl font-black text-[12px] border-2 border-amber-200 focus:border-amber-500" placeholder="뱃지에 표시할 문구" />
                   <select value={g.color} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, color: e.target.value } : c))} className="px-3 py-2 rounded-xl font-bold text-[12px]">
                     <option value="bg-gray-400">회색</option>
                     <option value="bg-blue-500">파랑</option>
@@ -291,50 +296,52 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
       )}
 
       {editingMember && (
-        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
-           <div className="bg-white w-full max-w-6xl rounded-[56px] shadow-2xl overflow-hidden flex flex-col h-[90vh]">
-              <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-900 text-white">
-                 <h3 className="text-2xl font-black italic">회원 정보 제어: {editingMember.nickname}</h3>
-                 <button onClick={() => setEditingMember(null)} className="bg-white/10 px-6 py-3 rounded-2xl font-black">닫기</button>
-              </div>
-              <div className="flex flex-1 overflow-hidden">
-                 <div className="w-[260px] bg-gray-50 border-r p-6 space-y-2">
-                    {['account', 'proofs', 'buyer', 'seller'].map(t => (
-                       <button key={t} onClick={() => setActiveEditTab(t as any)} className={`w-full text-left px-6 py-4 rounded-2xl text-[14px] font-black ${activeEditTab === t ? 'bg-blue-600 text-white shadow-xl' : 'text-gray-400'}`}>{t.toUpperCase()}</button>
-                    ))}
-                 </div>
-                 <div className="flex-1 overflow-y-auto p-12 bg-white">
-                    {activeEditTab === 'account' && (
-                      <div className="space-y-12">
-                         <h4 className="text-xl font-black">계정 설정</h4>
-                         <div className="grid grid-cols-2 gap-8 bg-gray-50 p-10 rounded-[40px]">
-                            <div className="space-y-2">
-                               <label className="text-[11px] font-black text-gray-400">시스템 권한</label>
-                               <select value={editingMember.role} onChange={e => setEditingMember({...editingMember, role: e.target.value as any})} className="w-full p-5 bg-white rounded-2xl font-black">
-                                  <option value="user">일반 회원</option>
-                                  <option value="admin">최고 관리자</option>
-                               </select>
-                            </div>
-                            <div className="space-y-2">
-                               <label className="text-[11px] font-black text-blue-600">포인트 조정</label>
-                               <input type="number" value={editingMember.points || 0} onChange={e => setEditingMember({...editingMember, points: Number(e.target.value)})} className="w-full p-5 bg-blue-50 rounded-2xl font-black" />
-                            </div>
-                            <div className="space-y-2 col-span-2">
-                               <label className="text-[11px] font-black text-amber-600">수동 등급 지정 (비워두면 판매액/구매액 기준 자동 적용)</label>
-                               <select value={editingMember.manualGrade || ''} onChange={e => setEditingMember({...editingMember, manualGrade: e.target.value || undefined})} className="w-full p-5 bg-white rounded-2xl font-black">
-                                  <option value="">자동 (기준에 따라)</option>
-                                  {gradeConfigs.map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
-                               </select>
-                            </div>
-                         </div>
-                      </div>
-                    )}
-                 </div>
-              </div>
-              <div className="p-8 border-t flex gap-6 bg-gray-50">
-                 <button onClick={() => setEditingMember(null)} className="flex-1 py-6 bg-white border rounded-[28px] font-black">취소</button>
-                 <button onClick={handleUpdateMemberInfo} className="flex-[3] py-6 bg-blue-600 text-white rounded-[28px] font-black text-2xl shadow-2xl">업데이트 적용 💾</button>
-              </div>
+        <div className="fixed inset-0 z-[200] bg-[#F8FAFC] flex flex-col animate-in fade-in overflow-hidden">
+           <div className="flex-none p-4 md:p-6 border-b border-gray-200 bg-white shadow-sm flex flex-wrap justify-between items-center gap-4">
+             <h3 className="text-xl font-black text-gray-900">회원 마이페이지: {editingMember.nickname} (관리자 보기)</h3>
+             <div className="flex gap-3 flex-wrap">
+               <button onClick={handleUpdateMemberInfo} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-[13px] shadow-lg">저장 적용 💾</button>
+               <button onClick={() => setEditingMember(null)} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-2xl font-black">닫기</button>
+             </div>
+           </div>
+           <div className="flex-none p-4 bg-amber-50 border-b border-amber-100 flex flex-wrap gap-4 items-center">
+             <span className="text-[11px] font-black text-amber-700 uppercase">관리자 전용 조정</span>
+             <select value={editingMember.role} onChange={e => setEditingMember({...editingMember, role: e.target.value as any})} className="px-3 py-2 rounded-xl font-bold text-[12px] border border-amber-200">
+               <option value="user">일반 회원</option>
+               <option value="admin">최고 관리자</option>
+             </select>
+             <div className="flex items-center gap-2">
+               <label className="text-[11px] font-black text-amber-700">포인트</label>
+               <input type="number" value={editingMember.points || 0} onChange={e => setEditingMember({...editingMember, points: Number(e.target.value)})} className="w-24 px-3 py-2 rounded-xl font-bold text-[12px] border border-amber-200" />
+             </div>
+             <div className="flex items-center gap-2">
+               <label className="text-[11px] font-black text-amber-700">수동 등급</label>
+               <select value={editingMember.manualGrade || ''} onChange={e => setEditingMember({...editingMember, manualGrade: e.target.value || undefined})} className="px-3 py-2 rounded-xl font-bold text-[12px] border border-amber-200">
+                 <option value="">자동 (기준에 따라)</option>
+                 {gradeConfigs.filter(g => (g.name || '').trim()).map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
+               </select>
+             </div>
+           </div>
+           <div className="flex-1 overflow-y-auto p-4 md:p-6">
+             <MyPage
+               user={editingMember}
+               onUpdate={(u) => { setEditingMember(u); setMembers(prev => prev.map(m => m.id === u.id ? u : m)); }}
+               ebooks={ebooks}
+               setEbooks={setEbooks}
+               channels={channels}
+               smmOrders={smmOrders}
+               channelOrders={channelOrders}
+               storeOrders={storeOrders}
+               onAddReview={setReviews ? (r) => setReviews(prev => [r, ...prev]) : () => {}}
+               onUpdateReview={setReviews ? (r) => setReviews(prev => prev.map(i => i.id === r.id ? r : i)) : () => {}}
+               reviews={reviews}
+               addNotif={addNotif}
+               gradeConfigs={gradeConfigs}
+             />
+           </div>
+           <div className="flex-none p-4 border-t bg-white flex gap-4 justify-end">
+             <button onClick={() => setEditingMember(null)} className="px-8 py-4 bg-gray-100 text-gray-700 rounded-2xl font-black">취소</button>
+             <button onClick={handleUpdateMemberInfo} className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl">업데이트 적용 💾</button>
            </div>
         </div>
       )}
