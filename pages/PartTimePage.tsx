@@ -31,10 +31,27 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   const isTaskDone = (task: PartTimeTask) =>
     completedIds.has(task.id) || (task.paidUserIds && user?.id && task.paidUserIds.includes(user.id));
 
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
   const dateKeys = useMemo(() => {
     const set = new Set(tasks.map((t) => t.applicationPeriod.start));
-    return Array.from(set).sort();
-  }, [tasks]);
+    const arr = Array.from(set).sort();
+    const todayIdx = arr.indexOf(todayStr);
+    if (todayIdx >= 0 && todayIdx !== 0) {
+      const out = [...arr];
+      const [removed] = out.splice(todayIdx, 1);
+      out.unshift(removed);
+      return out;
+    }
+    if (todayIdx < 0 && arr.length > 0) {
+      arr.unshift(todayStr);
+      return arr;
+    }
+    return arr;
+  }, [tasks, todayStr]);
 
   const currentDate = dateKeys[dateIndex] ?? dateKeys[0] ?? '';
   const tasksForDate = useMemo(() => {
