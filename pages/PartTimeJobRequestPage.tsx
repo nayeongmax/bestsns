@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { UserProfile } from '@/types';
+import type { NotificationType } from '@/types';
 import { getPartTimeJobRequests, setPartTimeJobRequests, calcJobRequestFee } from '@/constants';
 
 const todayStr = () => {
@@ -7,7 +9,12 @@ const todayStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const PartTimeJobRequestPage: React.FC = () => {
+interface Props {
+  user: UserProfile;
+  addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+}
+
+const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [workContent, setWorkContent] = useState('');
@@ -45,7 +52,9 @@ const PartTimeJobRequestPage: React.FC = () => {
       workPeriodEnd,
       adAmount,
       fee,
+      applicantUserId: user.id,
       status: 'pending_review' as const,
+      paid: false,
       createdAt: new Date().toISOString(),
     };
     setPartTimeJobRequests([newRequest, ...requests]);
@@ -73,9 +82,15 @@ const PartTimeJobRequestPage: React.FC = () => {
       <form onSubmit={handleSubmit} className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-6 py-5 border border-slate-600/50 shadow-lg">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 to-transparent" />
-          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="relative space-y-2">
             <p className="text-white/95 font-semibold text-base leading-relaxed">
-              광고주님의 만족스런 결과를 위해 맞춤형 프리랜서로 선정됩니다. · 부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 게시물 불법 작업 사용을 엄격히 제한합니다.
+              광고주님의 만족스런 결과를 위해 맞춤형 프리랜서로 선정됩니다.
+            </p>
+            <p className="text-white/95 font-semibold text-base leading-relaxed">
+              부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 불법게시물 작업을 엄격히 제한합니다.
+            </p>
+            <p className="text-amber-300/90 font-bold text-sm mt-3">
+              의뢰신청하기 이전에 작업결과물로 인한 법적인 부분의 책임은 광고주에게 있습니다.
             </p>
           </div>
         </div>
