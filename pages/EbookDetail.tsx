@@ -1,8 +1,7 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig } from '../types';
-import GradeBadge from '../components/GradeBadge';
+import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade } from '../types';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -149,7 +148,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h4 className="font-black text-4xl text-gray-900 italic tracking-tighter">{displayAuthor}</h4>
-                        <GradeBadge user={expertProfile} gradeConfigs={gradeConfigs} size="md" />
+                        {(() => { const g = getUserGrade(expertProfile, gradeConfigs); return g ? <span className={`${g.color} text-white text-xs font-black px-3 py-1 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
                       </div>
                    </div>
                 </div>
