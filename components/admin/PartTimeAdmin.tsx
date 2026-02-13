@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus, processAutoApprovals } from '@/constants';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
@@ -19,6 +19,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
   const [revisionModal, setRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string; text: string } | null>(null);
 
   useEffect(() => {
+    processAutoApprovals();
     setTasks(getPartTimeTasks());
     setJobRequests(getPartTimeJobRequests());
     setWithdrawRequests(getFreelancerWithdrawRequests());
@@ -52,7 +53,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       return;
     }
     const next = jobRequests.map((r) =>
-      r.id === jr.id ? { ...r, status: 'not_selected' as const } : r
+      r.id === jr.id ? { ...r, status: 'not_selected' as const, rejectReason: reason.trim() } : r
     );
     setPartTimeJobRequests(next);
     setJobRequests(next);
@@ -74,6 +75,26 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
 
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
     (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
+
+  const handleApprovePass = (task: PartTimeTask, userId: string) => {
+    const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
+    if (!a) return;
+    const now = new Date();
+    const autoAt = new Date(now.getTime() + 72 * 60 * 60 * 1000);
+    const next = tasks.map((t) =>
+      t.id !== task.id ? t : {
+        ...t,
+        applicants: t.applicants.map((ap) =>
+          ap.userId === userId ? { ...ap, deliveryAt: now.toISOString(), autoApproveAt: autoAt.toISOString() } : ap
+        ),
+      }
+    );
+    saveTasks(next);
+    if (addNotif) {
+      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 3일 후 수익통장에 ${task.reward.toLocaleString()}원이 자동 적립됩니다.`, '3일 후 수익통장에 자동 적립됩니다.');
+    }
+    alert('통과 처리되었습니다. 3일 후 자동으로 수익통장에 지급됩니다.');
+  };
 
   const handlePayPoints = (task: PartTimeTask, userId?: string) => {
     const target = userId
@@ -256,7 +277,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                     </div>
                     <div>
                       <p className="text-xs font-black text-gray-500 uppercase mb-1">광고금액 · 수수료</p>
-                      <p className="font-bold text-gray-800">{jr.adAmount.toLocaleString()}원 / 수수료 {jr.fee.toLocaleString()}원</p>
+                      <p className="font-bold text-gray-800">{jr.unitPrice != null && jr.quantity != null ? `단가 ${jr.unitPrice.toLocaleString()}원 × ${jr.quantity}개` : jr.adAmount.toLocaleString() + '원'} / 수수료 {jr.fee.toLocaleString()}원</p>
                     </div>
                   </div>
                 </div>
@@ -435,13 +456,26 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                                     <p className="text-amber-600 font-bold">작업 링크 미제출</p>
                                   )}
                                   {links.length > 0 && !paid && (
-                                    <div className="flex gap-2 flex-wrap">
+                                    <div className="flex gap-2 flex-wrap items-center">
                                       <button type="button" onClick={() => setRevisionModal({ task, userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200">
                                         수정요청
                                       </button>
-                                      <button type="button" onClick={() => handlePayPoints(task, a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
-                                        포인트 지급
-                                      </button>
+                                      {a.deliveryAt && a.autoApproveAt ? (
+                                        new Date(a.autoApproveAt) > new Date() ? (
+                                          <span className="text-blue-600 font-bold text-xs">3일 후 자동 지급 ({new Date(a.autoApproveAt).toLocaleString('ko-KR')})</span>
+                                        ) : (
+                                          <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중</span>
+                                        )
+                                      ) : (
+                                        <>
+                                          <button type="button" onClick={() => handleApprovePass(task, a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">
+                                            통과
+                                          </button>
+                                          <button type="button" onClick={() => handlePayPoints(task, a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
+                                            즉시 지급
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
                                   )}
                                   {paid && <span className="text-gray-500 font-bold text-xs">✓ 지급 완료</span>}
