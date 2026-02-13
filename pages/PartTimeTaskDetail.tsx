@@ -18,7 +18,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
   const [applyComment, setApplyComment] = useState('');
+  const [applyContact, setApplyContact] = useState('');
   const [workLinks, setWorkLinks] = useState<string[]>(['']);
+  const [revisionModal, setRevisionModal] = useState<{ userId: string; nickname: string; text: string } | null>(null);
 
   const task = tasks.find((t) => t.id === taskId);
 
@@ -79,12 +81,13 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
             ...t,
             applicants: [
               ...t.applicants,
-              { userId: user.id, nickname: user.nickname, comment: applyComment.trim() || '신청합니다', selected: false, appliedAt: new Date().toISOString() },
+              { userId: user.id, nickname: user.nickname, comment: applyComment.trim() || '신청합니다', contact: applyContact.trim() || undefined, selected: false, appliedAt: new Date().toISOString() },
             ],
           }
     );
     saveTasks(next);
     setApplyComment('');
+    setApplyContact('');
     alert('신청되었습니다.');
   };
 
@@ -157,30 +160,54 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
     alert('작업 링크가 제출되었습니다. 운영자 확인 후 포인트가 지급됩니다.');
   };
 
-  /** 운영자: 작업링크 확인 후 포인트 지급 (작업링크 제출한 선정자만) → 수익통장 적립 + 알림 */
+  /** 운영자: 개별 포인트 지급 */
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
     (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
-  const handlePayPoints = () => {
+  const handlePayPoints = (userId?: string) => {
     if (!task) return;
-    const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
-    if (selectedWithLink.length === 0) {
-      alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다. 선정 후 작업자가 링크를 제출하면 지급할 수 있습니다.');
+    const target = userId
+      ? task.applicants.filter((a) => a.userId === userId && a.selected && hasWorkLink(a))
+      : task.applicants.filter((a) => a.selected && hasWorkLink(a));
+    if (target.length === 0) {
+      alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
       return;
     }
-    if (!confirm(`작업 링크를 확인하셨나요? ${selectedWithLink.length}명에게 각 ${task.reward.toLocaleString()} P를 지급합니다.`)) return;
-    selectedWithLink.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
+    if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()} P를 지급합니다.`)) return;
+    target.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
     if (addNotif) {
-      selectedWithLink.forEach((a) =>
+      target.forEach((a) =>
         addNotif(a.userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()} P가 수익통장에 적립되었습니다.`, task.id)
       );
     }
-    const paidIds = selectedWithLink.map((a) => a.userId);
+    const paidIds = target.map((a) => a.userId);
+    const allPaid = [...(task.paidUserIds || []), ...paidIds];
+    const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
+    const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
     const next = tasks.map((t) =>
-      t.id !== task.id ? t : { ...t, pointPaid: true, paidUserIds: [...(t.paidUserIds || []), ...paidIds] }
+      t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }
     );
     saveTasks(next);
     alert('포인트가 지급되었습니다.');
-    navigate('/part-time');
+    if (!userId) navigate('/part-time');
+  };
+
+  /** 운영자: 수정요청 → 프리랜서에게 알림 */
+  const handleRevisionRequest = (userId: string, text: string) => {
+    if (!task || !text.trim()) return;
+    const next = tasks.map((t) =>
+      t.id !== task.id ? t : {
+        ...t,
+        applicants: t.applicants.map((a) =>
+          a.userId === userId ? { ...a, revisionRequest: text.trim() } : a
+        ),
+      }
+    );
+    saveTasks(next);
+    if (addNotif) {
+      addNotif(userId, 'revision', '작업 수정요청', `[${task.title}] 운영자가 수정을 요청했습니다. ${text.trim()}`, task.id);
+    }
+    setRevisionModal(null);
+    alert('수정요청 알림이 전송되었습니다.');
   };
 
   if (!task) {
@@ -299,10 +326,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
           </div>
         </div>
 
-        {/* 신청 댓글 — 누구나 볼 수 있음 (닉네임 + 댓글만, 선정/링크/포인트 없음) */}
+        {/* 신청 댓글 — 운영자만 상세 목록 확인 가능 */}
         <div className="border-t border-gray-100 pt-6">
           <h3 className="text-lg font-black text-gray-800 mb-3">신청 댓글</h3>
-          {task.applicants.length === 0 ? (
+          {!isOperator ? (
+            <p className="text-gray-500 py-3">신청자 {task.applicants.length}명 · 운영자만 신청 목록을 확인할 수 있습니다.</p>
+          ) : task.applicants.length === 0 ? (
             <p className="text-gray-500 py-3">아직 신청한 사람이 없습니다.</p>
           ) : (
             <ul className="space-y-2">
@@ -310,6 +339,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                 <li key={a.userId} className="flex items-start gap-2 py-2 px-3 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="font-black text-gray-800 shrink-0">{a.nickname}</span>
                   <span className="text-gray-600 text-sm">{a.comment || '신청합니다'}</span>
+                  {a.contact && <span className="text-xs text-blue-600">연락처: {a.contact}</span>}
                 </li>
               ))}
             </ul>
@@ -326,7 +356,15 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                   value={applyComment}
                   onChange={(e) => setApplyComment(e.target.value)}
                   placeholder="신청합니다"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
+                />
+                <p className="text-sm font-bold text-gray-700 mb-2">연락처 (급할 때 연락 가능)</p>
+                <input
+                  type="text"
+                  value={applyContact}
+                  onChange={(e) => setApplyContact(e.target.value)}
+                  placeholder="010-0000-0000 또는 이메일"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
                 />
                 <button
                   type="button"
@@ -399,13 +437,17 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                 {task.applicants.length === 0 ? (
                   <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
                 ) : (
-                <ul className="space-y-3">
-                  {task.applicants.map((a) => (
-                    <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-2">
+                <ul className="space-y-4">
+                  {task.applicants.map((a) => {
+                    const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
+                    const paid = task.paidUserIds?.includes(a.userId);
+                    return (
+                    <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
                           <p className="font-black text-gray-800">{a.nickname}</p>
                           <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
+                          {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           {a.selected ? (
@@ -430,34 +472,35 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                         </div>
                       </div>
                       {a.selected && (
-                        <div className="text-sm">
-                          {(a.workLinks?.length ?? 0) > 0 ? (
-                            <div className="space-y-1">
-                              <p className="text-gray-700 font-bold">작업 링크 ({a.workLinks!.length}개):</p>
-                              {a.workLinks!.map((url, i) => (
+                        <div className="text-sm space-y-2">
+                          {links.length > 0 ? (
+                            <div>
+                              <p className="text-gray-700 font-bold">작업 링크 ({links.length}개):</p>
+                              {links.map((url, i) => (
                                 <p key={i}><a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{url}</a></p>
                               ))}
                             </div>
-                          ) : a.workLink ? (
-                            <p className="text-gray-700">작업 링크: <a href={a.workLink} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{a.workLink}</a></p>
                           ) : (
                             <p className="text-amber-600 font-bold">작업 링크 미제출</p>
                           )}
+                          {links.length > 0 && !paid && (
+                            <div className="flex gap-2 flex-wrap">
+                              <button type="button" onClick={() => setRevisionModal({ userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200">
+                                수정요청
+                              </button>
+                              <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
+                                포인트 지급
+                              </button>
+                            </div>
+                          )}
+                          {paid && <span className="text-gray-500 font-bold text-xs">✓ 지급 완료</span>}
                         </div>
                       )}
                     </li>
-                  ))}
+                  );})}
                 </ul>
                 )}
-                <p className="text-sm text-gray-500 mt-3">선정된 프리랜서가 작업 링크를 제출한 후, 확인하시고 포인트를 지급해 주세요.</p>
-                <button
-                  type="button"
-                  onClick={handlePayPoints}
-                  disabled={!task.applicants.some((a) => a.selected && hasWorkLink(a))}
-                  className="mt-4 px-6 py-3 rounded-xl bg-amber-500 text-white font-black hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  포인트 지급하기
-                </button>
+                <p className="text-sm text-gray-500 mt-3">링크를 클릭해 확인 후, 수정요청이 필요하면 수정요청 버튼으로 알림을 보내거나 포인트 지급해 주세요.</p>
               </div>
             )}
           </>
@@ -471,6 +514,30 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
           <p className="text-center text-gray-500 font-bold">로그인 후 신청할 수 있습니다.</p>
         )}
       </div>
+
+      {revisionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
+            <h4 className="font-black text-gray-900 text-lg">수정요청 보내기 · {revisionModal.nickname}</h4>
+            <p className="text-sm text-gray-500">수정 요청 내용은 프리랜서에게 알림으로 전달됩니다.</p>
+            <textarea
+              value={revisionModal.text}
+              onChange={(e) => setRevisionModal({ ...revisionModal, text: e.target.value })}
+              placeholder="예: 제목을 더 구체적으로 수정해 주세요 / 이미지 링크가 열리지 않습니다"
+              rows={4}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setRevisionModal(null)} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">
+                취소
+              </button>
+              <button onClick={() => handleRevisionRequest(revisionModal.userId, revisionModal.text)} className="flex-1 py-3 rounded-xl bg-orange-500 text-white font-black hover:bg-orange-600">
+                수정요청 전송
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
