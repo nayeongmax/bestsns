@@ -58,6 +58,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
   const [settingsSubTab, setSettingsSubTab] = useState<'profile' | 'expert' | 'notif' | 'pw' | 'quit'>(() => {
     return (location.state as any)?.openExpert ? 'expert' : 'profile';
   });
+  const [expertRegistrationFor, setExpertRegistrationFor] = useState<'seller' | 'freelancer' | null>(null);
 
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [editNicknameValue, setEditNicknameValue] = useState(() => effectiveUser.nickname);
@@ -101,7 +102,8 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
     alert('닉네임이 성공적으로 변경되었습니다.');
   };
 
-  const goToExpertRegistration = () => {
+  const goToExpertRegistration = (from?: 'seller' | 'freelancer') => {
+    if (from) setExpertRegistrationFor(from);
     setActiveMainTab('settings');
     setSettingsSubTab('expert');
   };
@@ -194,14 +196,13 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
             onUpdate={onUpdate} 
             forcedTab={settingsSubTab} 
             onTabChange={(tab) => setSettingsSubTab(tab as any)}
-            /**
-             * Fixed: Passed addNotif down to UserInfoSection
-             */
+            expertRegistrationFor={expertRegistrationFor}
+            onExpertRegistrationDone={() => setExpertRegistrationFor(null)}
             addNotif={addNotif}
           />
         )}
         {activeMainTab === 'buyer' && <BuyerDashboard user={effectiveUser} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} ebooks={ebooks} onAddReview={onAddReview} initialSubTab={(location.state as any)?.buyerSubTab} />}
-        {activeMainTab === 'freelancer' && <FreelancerDashboard user={effectiveUser} onUpdate={onUpdate} />}
+        {activeMainTab === 'freelancer' && <FreelancerDashboard user={effectiveUser} onUpdate={onUpdate} onApplyFreelancer={() => goToExpertRegistration('freelancer')} />}
         {activeMainTab === 'seller' && (
           <SellerDashboard 
             user={effectiveUser} 
@@ -209,7 +210,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
             setEbooks={setEbooks}
             channels={channels} 
             storeOrders={storeOrders}
-            onApplySeller={goToExpertRegistration}
+            onApplySeller={() => goToExpertRegistration('seller')}
             reviews={reviews}
             onUpdateReview={onUpdateReview}
           />
