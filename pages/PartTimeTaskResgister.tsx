@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeTaskSections } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, generateProjectNo } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -89,6 +89,7 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
       applicants: [],
       pointPaid: false,
       paidUserIds: [],
+      projectNo: generateProjectNo(),
     };
     setPartTimeTasks([newTask, ...tasks]);
     alert('작업이 등록되었습니다.');
