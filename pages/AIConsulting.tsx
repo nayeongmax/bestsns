@@ -75,7 +75,7 @@ const AIConsulting: React.FC = () => {
 
         {messages.map((m, idx) => (
           <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-            <div className={`max-w-[70%] px-8 py-5 rounded-[32px] text-[15px] font-bold shadow-sm leading-relaxed ${
+            <div className={`max-w-[70%] px-8 py-5 rounded-[32px] text-[15px] font-bold shadow-sm leading-relaxed whitespace-pre-wrap ${
               m.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-700 border border-gray-100 rounded-bl-none'
             }`}>
               {m.text}
