@@ -286,8 +286,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           <p className="text-sm font-black text-blue-800 mb-2">취소/환불 규정</p>
           <p className="text-sm text-blue-900 leading-relaxed">
             <strong>작업 시작 전:</strong> 언제든 전액 취소·환불 가능합니다.<br />
-            <strong>작업 시작 후:</strong> 단계별로 나눌 수 있는 작업(예: 10건 중 3건만 완료)은 아직 하지 않은 부분만 환불 가능하고, 한 번에 끝내는 작업(예: 영상 1편 편집)은 시작 후에는 환불이 어렵습니다.<br />
-            <strong>최종 확정 후:</strong> 양측 협의가 필요합니다.
+            <strong>작업 시작 후:</strong> 프리랜서 선정이 끝난 경우 작업내용 전달이 되어 환불이 어렵습니다.
           </p>
           <label className="flex items-start gap-3 cursor-pointer mt-4">
             <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
@@ -318,10 +317,10 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
             <div className="text-emerald-600 text-4xl">✓</div>
             <div className="space-y-2">
-              <p className="font-black text-gray-900 text-lg">{editRequest ? '수정하여 재신청되었습니다.' : '신청완료되었습니다.'}</p>
-              <p className="text-gray-700">곧 운영자가 연락드리겠습니다.</p>
-              <p className="text-gray-700">만족스런 작업결과물로 보답드리겠습니다.</p>
-              <p className="text-gray-600 text-sm">조금만 기다려주세요.</p>
+              <p className="font-black text-gray-900 text-base">{editRequest ? '수정하여 재신청되었습니다.' : '신청완료되었습니다.'}</p>
+              <p className="text-gray-700 text-base">곧 운영자가 연락드릴 예정입니다.</p>
+              <p className="text-gray-700 text-base">조금만 기다려주세요.</p>
+              <p className="text-gray-700 text-base">구매자 대시보드 - 알바의뢰(광고주한정)탭에서 결제해주시면 작업이 바로 진행됩니다.</p>
             </div>
             <button
               onClick={handleModalConfirm}
