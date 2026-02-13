@@ -1,5 +1,11 @@
 import React from 'react';
 
+/** 법적 거래 보관 기간 (전자상거래법 등 준수) */
+export const TRADE_RETENTION_YEARS = 5;
+export const DISPUTE_RETENTION_YEARS = 3;
+export const LOG_RETENTION_MONTHS = 3;
+/** 보관 대상: SNS활성화, 채널판매, N잡스토어, 누구나알바 거래내역 */
+
 export const PROHIBITED_WORDS = ['계좌이체', '010', '입금', '전화번호', '핸드폰', '휴대폰'];
 
 export const SNS_PLATFORMS = [
