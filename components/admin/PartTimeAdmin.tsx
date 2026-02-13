@@ -11,9 +11,11 @@ interface Props {
 const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>(() => getPartTimeJobRequests());
+  const [rejectModal, setRejectModal] = useState<{ jr: PartTimeJobRequest; reason: string } | null>(null);
 
   useEffect(() => {
     setTasks(getPartTimeTasks());
+    setJobRequests(getPartTimeJobRequests());
   }, []);
 
   const pendingReviews = jobRequests.filter((jr) => jr.status === 'pending_review');
@@ -24,17 +26,33 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
     );
     setPartTimeJobRequests(next);
     setJobRequests(next);
-    alert('누구나알바 페이지에 업로드되었습니다.');
+    if (jr.applicantUserId && addNotif) {
+      addNotif(jr.applicantUserId, 'approval', '작업의뢰 승인', `[${jr.title}] 작업의뢰가 승인되었습니다. 구매자 대시보드 > 알바의뢰 탭에서 결제를 진행해 주세요.`, jr.id);
+    }
+    alert('승인되었습니다. 신청자에게 알림이 전송되었습니다.');
   };
 
   const handleRejectJobRequest = (jr: PartTimeJobRequest) => {
-    if (!confirm('이 신청을 거절하시겠습니까? (미선정 처리됩니다)')) return;
+    setRejectModal({ jr, reason: '' });
+  };
+
+  const confirmReject = () => {
+    if (!rejectModal) return;
+    const { jr, reason } = rejectModal;
+    if (!reason.trim()) {
+      alert('거절 사유를 입력해 주세요.');
+      return;
+    }
     const next = jobRequests.map((r) =>
       r.id === jr.id ? { ...r, status: 'not_selected' as const } : r
     );
     setPartTimeJobRequests(next);
     setJobRequests(next);
-    alert('거절 처리되었습니다.');
+    if (jr.applicantUserId && addNotif) {
+      addNotif(jr.applicantUserId, 'revision', '작업의뢰 거절', `[${jr.title}] 작업의뢰가 거절되었습니다. 사유: ${reason.trim()}`, jr.id);
+    }
+    setRejectModal(null);
+    alert('거절 처리되었습니다. 신청자에게 알림이 전송되었습니다.');
   };
 
   const tasksWithSelected = tasks.filter(
@@ -80,40 +98,87 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
             검토 대기 중인 작업의뢰가 없습니다.
           </div>
         ) : (
-          <ul className="space-y-6">
+          <ul className="space-y-8">
             {pendingReviews.map((jr) => (
-              <li key={jr.id} className="p-6 rounded-2xl border border-amber-200 bg-amber-50/50 space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
-                    <p className="text-gray-600 mt-2 whitespace-pre-wrap">{jr.workContent}</p>
-                    <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                      <span><strong>연락처:</strong> {jr.contact}</span>
-                      {jr.platformLink && <span><strong>플랫폼:</strong> <a href={jr.platformLink} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">{jr.platformLink}</a></span>}
-                      <span><strong>작업기간:</strong> {jr.workPeriodStart} ~ {jr.workPeriodEnd}</span>
-                      <span><strong>광고금액:</strong> {jr.adAmount.toLocaleString()} P · 수수료 {jr.fee.toLocaleString()} P</span>
+              <li key={jr.id} className="rounded-2xl border border-amber-200 bg-white overflow-hidden shadow-sm">
+                <div className="bg-amber-50 px-6 py-3 border-b border-amber-100">
+                  <span className="text-xs font-black text-amber-700 uppercase">신청자가 작성한 작업의뢰신청 폼</span>
+                </div>
+                <div className="p-8 space-y-6">
+                  <div>
+                    <p className="text-xs font-black text-gray-500 uppercase mb-1">알바광고 신청제목</p>
+                    <p className="text-lg font-black text-gray-900">{jr.title}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-gray-500 uppercase mb-1">작업내용</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">{jr.workContent}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-gray-500 uppercase mb-1">플랫폼링크</p>
+                    {jr.platformLink ? (
+                      <a href={jr.platformLink} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold hover:underline break-all">{jr.platformLink}</a>
+                    ) : (
+                      <p className="text-gray-400">-</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-gray-500 uppercase mb-1">연락처</p>
+                    <p className="font-bold text-gray-800">{jr.contact}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-black text-gray-500 uppercase mb-1">작업기간</p>
+                      <p className="font-bold text-gray-800">{jr.workPeriodStart} ~ {jr.workPeriodEnd}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-gray-500 uppercase mb-1">광고금액 · 수수료</p>
+                      <p className="font-bold text-gray-800">{jr.adAmount.toLocaleString()} P / 수수료 {jr.fee.toLocaleString()} P</p>
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleApproveJobRequest(jr)}
-                      className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all"
-                    >
-                      승인 후 업로드
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRejectJobRequest(jr)}
-                      className="px-6 py-3 rounded-xl bg-gray-200 text-gray-700 font-black hover:bg-gray-300 transition-all"
-                    >
-                      거절
-                    </button>
-                  </div>
+                </div>
+                <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleApproveJobRequest(jr)}
+                    className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all"
+                  >
+                    승인
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRejectJobRequest(jr)}
+                    className="px-8 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200 transition-all"
+                  >
+                    거절
+                  </button>
                 </div>
               </li>
             ))}
           </ul>
+        )}
+
+        {rejectModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
+              <h4 className="font-black text-gray-900 text-lg">거절 사유 입력</h4>
+              <p className="text-sm text-gray-500">거절 사유는 신청자에게 알림으로 전달됩니다.</p>
+              <textarea
+                value={rejectModal.reason}
+                onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
+                placeholder="예: 금액이 부적절합니다 / 불법적인 내용이 포함되어 있습니다"
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-200 outline-none text-sm"
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setRejectModal(null)} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">
+                  취소
+                </button>
+                <button onClick={confirmReject} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-black hover:bg-red-700">
+                  거절 확정
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
