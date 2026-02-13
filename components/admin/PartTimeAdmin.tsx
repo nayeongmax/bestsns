@@ -183,7 +183,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       {/* 프리랜서 출금 신청 목록 */}
       <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
         <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
-        <p className="text-sm text-gray-500 mb-6">수익통장에서 출금을 신청한 프리랜서 목록입니다. 전문가정보에 등록된 통장으로 PortOne을 통해 입금 처리해 주세요.</p>
+        <p className="text-sm text-gray-500 mb-6">수익통장에서 출금을 신청한 프리랜서 목록입니다. 신청일 기준 익일에 출금됩니다. 전문가정보에 등록된 통장으로 PortOne을 통해 입금 처리해 주세요.</p>
         {pendingWithdrawals.length === 0 ? (
           <div className="py-8 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
             대기 중인 출금 신청이 없습니다.
@@ -194,6 +194,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
               <thead className="bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-wider">
                 <tr>
                   <th className="px-6 py-4">신청일시</th>
+                  <th className="px-6 py-4">출금 예정일 (익일)</th>
                   <th className="px-6 py-4">프리랜서</th>
                   <th className="px-6 py-4 text-right">금액 (원)</th>
                   <th className="px-6 py-4">입금 계좌</th>
@@ -201,10 +202,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {pendingWithdrawals.map((r) => (
+                {pendingWithdrawals.map((r) => {
+                  const reqDate = new Date(r.requestedAt);
+                  const nextDay = new Date(reqDate);
+                  nextDay.setDate(reqDate.getDate() + 1);
+                  return (
                   <tr key={r.id} className="hover:bg-emerald-50/20">
                     <td className="px-6 py-4 font-bold text-sm text-gray-700">
                       {new Date(r.requestedAt).toLocaleString('ko-KR')}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-sm text-emerald-600">
+                      {nextDay.toLocaleDateString('ko-KR')}
                     </td>
                     <td className="px-6 py-4 font-black text-gray-900">{r.nickname}</td>
                     <td className="px-6 py-4 text-right font-black text-emerald-600">{r.amount.toLocaleString()}원</td>
@@ -242,7 +250,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
