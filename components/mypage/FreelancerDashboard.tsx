@@ -28,6 +28,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
   const [withdrawing, setWithdrawing] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
   const [chartTab, setChartTab] = useState<'daily' | 'monthly'>('daily');
+  const [workConfirmModal, setWorkConfirmModal] = useState<PartTimeTask | null>(null);
 
   /** 입금 내역 (작업 완료 후 지급된 알바비만) */
   const depositEntries = useMemo(
@@ -244,12 +245,21 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
                     <p className="font-black text-gray-900">{t.title}</p>
                     <p className="text-xs text-gray-500">+{t.reward.toLocaleString()}원 · {status}</p>
                   </div>
-                  <Link
-                    to={`/part-time/${t.id}`}
-                    className="shrink-0 px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200"
-                  >
-                    상세/링크 제출
-                  </Link>
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setWorkConfirmModal(t)}
+                      className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200"
+                    >
+                      작업확정서
+                    </button>
+                    <Link
+                      to={`/part-time/${t.id}`}
+                      className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200"
+                    >
+                      상세/링크 제출
+                    </Link>
+                  </div>
                 </li>
               );
             })}
@@ -394,6 +404,44 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
           )}
         </div>
       </div>
+
+      {workConfirmModal && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-[48px] p-10 shadow-2xl space-y-6 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-black text-gray-900">📂 프로젝트 작업확정서</h3>
+              <button onClick={() => setWorkConfirmModal(null)} className="text-gray-400 hover:text-gray-800 text-2xl font-bold">×</button>
+            </div>
+            <p className="text-xs text-gray-500">본 문서의 내용은 이용약관에 의거하여 결제 시점부터 법적 효력이 발생합니다.</p>
+            <div className="space-y-6 text-sm">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">1. 계약 기본 정보</p>
+                <p className="font-bold text-gray-800">프로젝트: {workConfirmModal.title}</p>
+                <p className="text-gray-600 mt-1">재위탁 수행자: {workConfirmModal.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">2. 업무 범위 및 단가</p>
+                <p className="font-bold text-gray-800">과업 내용: {workConfirmModal.description}</p>
+                <p className="text-gray-600 mt-1">최종 납기: {workConfirmModal.workPeriod?.end ?? '-'}</p>
+                <p className="text-emerald-600 font-black mt-1">총 계약 금액: ₩{workConfirmModal.reward.toLocaleString()} (VAT 포함)</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">3. 취소 및 환불 규정</p>
+                <p className="text-gray-700 leading-relaxed">용역 제공 개시 전: 전액 취소 및 환불 가능.<br />용역 제공 개시 후: 가분적 용역은 미수행 범위 환불 가능, 불가분적 용역은 원칙 환불 불가.</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">4. 검수 및 A/S 규정</p>
+                <p className="text-gray-700 leading-relaxed">A/S 요청 기한: 결과물 전달일로부터 3일 이내. 해당 기간 내 이의없으면 자동 승인 및 대금 지급.</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-2">5. 강력 법적 조치</p>
+                <p className="text-gray-700 leading-relaxed">직거래 시도 시 거래액 10배 위약벌 청구 및 영구 제명. 게시글/대화 기록 임의 삭제 불가.</p>
+              </div>
+            </div>
+            <button onClick={() => setWorkConfirmModal(null)} className="w-full py-4 rounded-xl bg-gray-900 text-white font-black">확인</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
