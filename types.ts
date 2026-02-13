@@ -71,6 +71,8 @@ export interface PartTimeApplicant {
   deliveryAt?: string;
   /** 자동 승인 시각 (deliveryAt + 72h). 이 시각 지나면 자동 지급 */
   autoApproveAt?: string;
+  /** 프리랜서가 작업 링크를 제출한 시각 (ISO). 3일 후 광고주 미확인 시 자동 지급 */
+  workLinkSubmittedAt?: string;
 }
 
 /** 게시글 한 건 (제목+내용) - 여러 개 넣을 때 사용 */
@@ -172,6 +174,8 @@ export interface PartTimeTask {
   applicantUserId?: string;
   /** 작업의뢰 ID (링크용) */
   jobRequestId?: string;
+  /** 작업번호 (예: ALBA-00123) */
+  projectNo?: string;
 }
 
 export interface SellerApplication {
