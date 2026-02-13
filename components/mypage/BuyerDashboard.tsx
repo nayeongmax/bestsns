@@ -12,6 +12,7 @@ interface Props {
   storeOrders: StoreOrder[];
   ebooks: EbookProduct[];
   onAddReview: (review: Review) => void;
+  initialSubTab?: 'sns' | 'channel' | 'store' | 'alba';
 }
 
 type BuyerSubTab = 'sns' | 'channel' | 'store' | 'alba';
@@ -35,8 +36,8 @@ interface OrderItem {
   downloadUrl?: string; 
 }
 
-const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, ebooks, onAddReview }) => {
-  const [activeTab, setActiveTab] = useState<BuyerSubTab>('sns');
+const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, ebooks, onAddReview, initialSubTab }) => {
+  const [activeTab, setActiveTab] = useState<BuyerSubTab>(initialSubTab || 'sns');
   const [jobRequests, setJobRequests] = useState(() => getPartTimeJobRequests());
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
   const [pgModal, setPgModal] = useState<{ jrId: string; amount: number; title: string } | null>(null);
@@ -240,6 +241,24 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                     <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
                     <span className="inline-block mt-3 px-3 py-1 rounded-lg bg-amber-200 text-amber-800 text-xs font-black">운영자 검토 중</span>
                   </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">
+                      수정하기
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!confirm('정말 삭제하시겠습니까?')) return;
+                        const next = jobRequests.filter((r) => r.id !== jr.id);
+                        setPartTimeJobRequests(next);
+                        setJobRequests(next);
+                        alert('삭제되었습니다.');
+                      }}
+                      className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -260,9 +279,24 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                       </div>
                     )}
                   </div>
-                  <Link to="/part-time/request" className="inline-flex items-center gap-2 text-red-600 font-black hover:underline">
-                    수정 후 재신청 →
-                  </Link>
+                  <div className="flex gap-2 flex-wrap">
+                    <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">
+                      수정하기
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!confirm('정말 삭제하시겠습니까?')) return;
+                        const next = jobRequests.filter((r) => r.id !== jr.id);
+                        setPartTimeJobRequests(next);
+                        setJobRequests(next);
+                        alert('삭제되었습니다.');
+                      }}
+                      className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
