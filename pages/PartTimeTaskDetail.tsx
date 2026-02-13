@@ -187,7 +187,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     if (task.applicantUserId && addNotif) {
       addNotif(task.applicantUserId, 'freelancer', '작업 완료', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 작업확인서를 확인해 주세요.`, '작업 링크가 제출되었습니다. 작업확인서를 확인해 주세요.');
     }
-    alert('작업 링크가 제출되었습니다. 운영자 확인 후 포인트가 지급됩니다.');
+    alert('작업링크가 제출되었습니다.\n제대로 작업이 되었는지 확인 후 수익통장에 충전됩니다.\n수고많으셨습니다.');
   };
 
   /** 운영자: 통과 (3일 후 자동 지급) */
@@ -494,10 +494,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 />
                 <p className="text-sm font-bold text-gray-700 mb-2">연락처 (급할 때 연락 가능)</p>
                 <input
-                  type="text"
+                  type="tel"
                   value={applyContact}
                   onChange={(e) => setApplyContact(e.target.value)}
-                  placeholder="010-0000-0000 또는 이메일"
+                  placeholder="010-0000-0000"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
                 />
                 <div className="space-y-3 p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
