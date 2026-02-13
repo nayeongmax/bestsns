@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '@/types';
-import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks } from '@/constants';
+import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -16,6 +16,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   const [selectedDate, setSelectedDate] = useState('');
 
   useEffect(() => {
+    processAutoApprovals();
     setTasks(getPartTimeTasks());
   }, []);
 
