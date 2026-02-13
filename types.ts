@@ -67,6 +67,10 @@ export interface PartTimeApplicant {
   workLinks?: string[];
   /** 운영자 수정요청 내용 (수정 요청 시 입력) */
   revisionRequest?: string;
+  /** 운영자가 통과 누른 시각 (ISO). 있으면 3일 후 자동 지급 대상 */
+  deliveryAt?: string;
+  /** 자동 승인 시각 (deliveryAt + 72h). 이 시각 지나면 자동 지급 */
+  autoApproveAt?: string;
 }
 
 /** 게시글 한 건 (제목+내용) - 여러 개 넣을 때 사용 */
@@ -115,14 +119,20 @@ export interface PartTimeJobRequest {
   workPeriodStart: string;
   /** 작업기간 종료 (YYYY-MM-DD) */
   workPeriodEnd: string;
-  /** 광고금액 (프리랜서 지급) */
+  /** 광고금액 (프리랜서 지급) = unitPrice * quantity */
   adAmount: number;
-  /** 수수료 (15% + 부가세 10%) */
+  /** 단가 (개당, 원). 있으면 단가/갯수로 표시 */
+  unitPrice?: number;
+  /** 갯수. 있으면 단가/갯수로 표시 */
+  quantity?: number;
+  /** 수수료 (20% + 수수료의 부가세 10%) */
   fee: number;
   /** 신청자 userId (로그인 필수, 알림/구매자 대시보드용) */
   applicantUserId?: string;
   /** pending_review=운영자 검토대기, pending=작업의뢰(승인됨), selected=신청완료, not_selected=미선정/거절 */
   status: 'pending_review' | 'pending' | 'selected' | 'not_selected';
+  /** 거절 시 사유 (not_selected일 때) */
+  rejectReason?: string;
   /** 결제 완료 여부 (구매자 PG 결제 후) */
   paid?: boolean;
   createdAt: string;
