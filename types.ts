@@ -409,9 +409,20 @@ export interface ChatMessage {
   dateStr?: string;
 }
 
+/** 등급 기준: 구매자/판매자/둘 다 적용 */
+export type GradeTarget = 'buyer' | 'seller' | 'both';
+
 export interface GradeConfig {
   id: string;
   name: string;
+  /** 적용 대상: buyer=구매자, seller=판매자, both=둘 다 */
+  target: GradeTarget;
+  /** 판매자 등급: 총 판매액 기준 (원). 0이면 자동 부여 안 함(수동만) */
   minSales: number;
+  /** 구매자 등급: 총 구매액 기준 (원). 0이면 자동 부여 안 함 */
+  minPurchase: number;
+  /** 뱃지 배경색 Tailwind 클래스 (예: bg-amber-500, bg-purple-600) */
   color: string;
+  /** 정렬 순서 (높을수록 상위 등급) */
+  sortOrder: number;
 }
