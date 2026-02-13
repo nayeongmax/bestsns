@@ -19,6 +19,8 @@ interface Props {
   reviews?: Review[];
   setReviews?: React.Dispatch<React.SetStateAction<Review[]>>;
   addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+  currentUser?: UserProfile | null;
+  onUpdateUser?: (u: UserProfile) => void;
 }
 
 type SortKey = 'none' | 'purchase' | 'sales' | 'violations' | 'points' | 'join';
@@ -29,7 +31,7 @@ const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
   { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
 ];
 
-const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = () => {} }) => {
+const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = () => {}, currentUser, onUpdateUser }) => {
   const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState<'list' | 'seller' | 'freelancer' | 'grades'>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,8 +73,12 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
   [members]);
 
   const handleApproveFreelancer = (userId: string) => {
-    setMembers(prev => prev.map(m => m.id === userId ? { ...m, freelancerStatus: 'approved' as const } : m));
+    const updated = members.find(m => m.id === userId);
+    if (!updated) return;
+    const approvedProfile = { ...updated, freelancerStatus: 'approved' as const };
+    setMembers(prev => prev.map(m => m.id === userId ? approvedProfile : m));
     addNotif(userId, 'approval', '프리랜서 승인', '프리랜서 등록이 승인되었습니다. 누구나알바에 신청할 수 있습니다.');
+    if (currentUser?.id === userId && onUpdateUser) onUpdateUser(approvedProfile);
     alert('프리랜서 승인이 완료되었습니다.');
   };
 
