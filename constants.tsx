@@ -85,6 +85,51 @@ export function getFreelancerHistory(userId: string): FreelancerEarningEntry[] {
   }
 }
 
+/** 프리랜서 출금 신청 한 건 (PortOne 계좌 입금 대상) */
+export interface FreelancerWithdrawRequest {
+  id: string;
+  userId: string;
+  nickname: string;
+  amount: number;
+  bankName: string;
+  accountNo: string;
+  ownerName: string;
+  requestedAt: string;
+  status: 'pending' | 'completed' | 'failed';
+}
+
+const FREELANCER_WITHDRAW_REQUESTS_KEY = 'freelancer_withdraw_requests_v1';
+
+export function getFreelancerWithdrawRequests(): FreelancerWithdrawRequest[] {
+  try {
+    const raw = localStorage.getItem(FREELANCER_WITHDRAW_REQUESTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addFreelancerWithdrawRequest(req: Omit<FreelancerWithdrawRequest, 'id' | 'requestedAt' | 'status'>): void {
+  const list = getFreelancerWithdrawRequests();
+  const entry: FreelancerWithdrawRequest = {
+    ...req,
+    id: `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    requestedAt: new Date().toISOString(),
+    status: 'pending',
+  };
+  localStorage.setItem(FREELANCER_WITHDRAW_REQUESTS_KEY, JSON.stringify([entry, ...list]));
+}
+
+export function updateFreelancerWithdrawRequestStatus(
+  id: string,
+  status: 'pending' | 'completed' | 'failed'
+): void {
+  const list = getFreelancerWithdrawRequests().map((r) =>
+    r.id === id ? { ...r, status } : r
+  );
+  localStorage.setItem(FREELANCER_WITHDRAW_REQUESTS_KEY, JSON.stringify(list));
+}
+
 export function withdrawFreelancerEarnings(userId: string, amount: number): { success: boolean; newBalance: number } {
   const cur = getFreelancerBalance(userId);
   if (amount < MIN_WITHDRAW_FREELANCER || amount > cur) {
@@ -96,7 +141,7 @@ export function withdrawFreelancerEarnings(userId: string, amount: number): { su
     id: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     type: 'withdraw',
     amount: -amount,
-    label: '출금',
+    label: '출금 신청',
     at: new Date().toISOString(),
   };
   const history = getFreelancerHistory(userId);
