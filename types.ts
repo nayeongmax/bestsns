@@ -22,6 +22,25 @@ export interface UserProfile {
   manualGrade?: string;
   /** 프리랜서 수익통장 잔액 (누구나알바 작업으로 쌓인 포인트) */
   freelancerEarnings?: number;
+  /** 프리랜서 등록 상태 */
+  freelancerStatus?: 'none' | 'pending' | 'approved';
+  /** 프리랜서 등록 신청 정보 (최초 1회, 승인 후에는 통장 등 수정 가능) */
+  freelancerApplication?: FreelancerApplication;
+}
+
+/** 프리랜서 등록 신청 (최초 1회) */
+export interface FreelancerApplication {
+  appliedAt: string;
+  name: string;
+  contact: string;
+  residentNumber: string;
+  bankName: string;
+  accountNo: string;
+  ownerName: string;
+  /** 신분증 이미지 data URL */
+  idCardImage?: string;
+  /** 통장 이미지 data URL */
+  bankbookImage?: string;
 }
 
 /** 프리랜서 수익통장 내역 한 건 */
@@ -131,6 +150,10 @@ export interface PartTimeTask {
   pointPaid: boolean;
   /** 포인트를 받은 작업자 userId 목록 */
   paidUserIds?: string[];
+  /** 광고주 userId (작업의뢰에서 생성된 경우) */
+  applicantUserId?: string;
+  /** 작업의뢰 ID (링크용) */
+  jobRequestId?: string;
 }
 
 export interface SellerApplication {
