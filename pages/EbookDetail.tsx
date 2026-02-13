@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder } from '../types';
+import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig } from '../types';
+import GradeBadge from '../components/GradeBadge';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -11,9 +12,10 @@ interface Props {
   reviews: Review[];
   storeOrders: StoreOrder[];
   members: UserProfile[];
+  gradeConfigs?: GradeConfig[];
 }
 
-const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user, reviews, storeOrders, members }) => {
+const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user, reviews, storeOrders, members, gradeConfigs = [] }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTierIdx, setSelectedTierIdx] = useState(0);
@@ -145,8 +147,10 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                       <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl shadow-lg border-4 border-white">✓</div>
                    </div>
                    <div className="space-y-1">
-                      <h4 className="font-black text-4xl text-gray-900 italic tracking-tighter">{displayAuthor}</h4>
-                      {/* Certified Premium Partner 문구 삭제 완료 */}
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-4xl text-gray-900 italic tracking-tighter">{displayAuthor}</h4>
+                        <GradeBadge user={expertProfile} gradeConfigs={gradeConfigs} size="md" />
+                      </div>
                    </div>
                 </div>
                 <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="bg-gray-900 text-white px-12 py-5 rounded-[28px] font-black text-xl hover:bg-blue-600 transition-all shadow-xl italic tracking-widest uppercase active:scale-95">전문가 문의하기</button>
