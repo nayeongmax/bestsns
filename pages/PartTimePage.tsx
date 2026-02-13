@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
-import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '@/types';
-import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks } from '@/constants';
+import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock, PartTimeJobRequest } from '@/types';
+import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, getPartTimeJobRequests } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -13,59 +13,62 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
-  const [dateIndex, setDateIndex] = useState(0);
+  const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>(() => getPartTimeJobRequests());
+  const [selectedDate, setSelectedDate] = useState('');
 
   useEffect(() => {
     setTasks(getPartTimeTasks());
+    setJobRequests(getPartTimeJobRequests());
   }, []);
 
   useEffect(() => {
     if (user?.id) setBalance(getFreelancerBalance(user.id));
   }, [user?.id]);
 
-  const completedIds = useMemo(() => {
-    const raw = localStorage.getItem('parttime_completed_v1');
-    return raw ? new Set<string>(JSON.parse(raw)) : new Set<string>();
-  }, [tasks]);
-
-  const isTaskDone = (task: PartTimeTask) =>
-    completedIds.has(task.id) || (task.paidUserIds && user?.id && task.paidUserIds.includes(user.id));
-
-  const todayStr = useMemo(() => {
+  const todayStrVal = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }, []);
 
-  const dateKeys = useMemo(() => {
-    const set = new Set(tasks.map((t) => t.applicationPeriod.start));
-    const arr = Array.from(set).sort();
-    const todayIdx = arr.indexOf(todayStr);
-    if (todayIdx >= 0 && todayIdx !== 0) {
-      const out = [...arr];
-      const [removed] = out.splice(todayIdx, 1);
-      out.unshift(removed);
-      return out;
-    }
-    if (todayIdx < 0 && arr.length > 0) {
-      arr.unshift(todayStr);
-      return arr;
+  const weekDates = useMemo(() => {
+    const arr: string[] = [];
+    const base = new Date(todayStrVal);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      arr.push(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      );
     }
     return arr;
-  }, [tasks, todayStr]);
+  }, [todayStrVal]);
 
-  const currentDate = dateKeys[dateIndex] ?? dateKeys[0] ?? '';
-  const tasksForDate = useMemo(() => {
-    return tasks.filter((t) => t.applicationPeriod.start === currentDate);
-  }, [tasks, currentDate]);
+  const dateCounts = useMemo(() => {
+    const map: Record<string, { pending: number; selected: number; not_selected: number }> = {};
+    weekDates.forEach((d) => {
+      map[d] = { pending: 0, selected: 0, not_selected: 0 };
+    });
+    jobRequests.forEach((jr) => {
+      const key = jr.workPeriodStart;
+      if (map[key]) {
+        if (jr.status === 'pending') map[key].pending++;
+        else if (jr.status === 'selected') map[key].selected++;
+        else map[key].not_selected++;
+      }
+    });
+    return map;
+  }, [jobRequests, weekDates]);
 
-  const sortedTasks = useMemo(() => {
-    const incomplete = tasksForDate.filter((t) => !isTaskDone(t));
-    const complete = tasksForDate.filter((t) => isTaskDone(t));
-    return [...incomplete, ...complete];
-  }, [tasksForDate, isTaskDone]);
+  const effectiveDate = selectedDate || todayStrVal;
+  const requestsForDate = useMemo(() => {
+    const list = jobRequests.filter((jr) => jr.workPeriodStart === effectiveDate);
+    const pending = list.filter((j) => j.status === 'pending');
+    const notSel = list.filter((j) => j.status === 'not_selected');
+    const selected = list.filter((j) => j.status === 'selected');
+    return [...pending, ...notSel, ...selected];
+  }, [jobRequests, effectiveDate]);
 
-  const canGoPrev = dateIndex > 0;
-  const canGoNext = dateIndex < dateKeys.length - 1;
+  const statusLabel = (s: string) => (s === 'pending' ? '작업의뢰' : s === 'selected' ? '신청완료' : '미선정');
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700">
@@ -79,14 +82,22 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             </h2>
             <p className="text-gray-700 font-black mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
             <p className="text-gray-700 font-black mt-1">프리랜서 작업이 필요하시면 고객센터로 문의주세요.</p>
-            {user?.role === 'admin' && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => navigate('/part-time/register')}
+                  className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-emerald-700 transition-all"
+                >
+                  작업 등록
+                </button>
+              )}
               <button
-                onClick={() => navigate('/part-time/register')}
-                className="mt-4 px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-emerald-700 transition-all"
+                onClick={() => navigate('/part-time/request')}
+                className="px-5 py-3 rounded-xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 transition-all"
               >
-                작업 등록
+                작업의뢰
               </button>
-            )}
+            </div>
           </div>
           {user ? (
             <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 min-w-[200px]">
@@ -107,63 +118,58 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         </div>
 
         <div className="grid gap-4">
-          <div className="flex items-center justify-between gap-4">
-            <h3 className="text-xl font-black text-gray-800">진행 가능한 작업</h3>
-            {dateKeys.length > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDateIndex((i) => Math.max(0, i - 1))}
-                  disabled={!canGoPrev}
-                  className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed font-black text-gray-600"
-                >
-                  ←
-                </button>
-                <span className="text-sm font-bold text-gray-600 min-w-[100px] text-center">
-                  {currentDate || '-'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setDateIndex((i) => Math.min(dateKeys.length - 1, i + 1))}
-                  disabled={!canGoNext}
-                  className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed font-black text-gray-600"
-                >
-                  →
-                </button>
-              </div>
-            )}
-          </div>
-
-          {sortedTasks.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">해당 날짜의 작업이 없습니다.</p>
-          ) : (
-            sortedTasks.map((task) => {
-              const done = isTaskDone(task);
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+            {weekDates.map((d) => {
+              const c = dateCounts[d] || { pending: 0, selected: 0, not_selected: 0 };
+              const isSelected = effectiveDate === d;
+              const dayLabel = d.slice(5);
               return (
                 <button
-                  key={task.id}
+                  key={d}
                   type="button"
-                  onClick={() => navigate(`/part-time/${task.id}`)}
-                  className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border transition-all ${
-                    done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-sm'
+                  onClick={() => setSelectedDate(d)}
+                  className={`p-4 rounded-2xl border text-left transition-all ${
+                    isSelected ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200' : 'border-gray-100 hover:border-gray-200 bg-white'
+                  }`}
+                >
+                  <p className="text-xs font-black text-gray-500 uppercase">{dayLabel}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">작업의뢰 {c.pending}</p>
+                  <p className="text-[10px] text-emerald-600">신청완료 {c.selected}</p>
+                  <p className="text-[10px] text-gray-400">미선정 {c.not_selected}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          <h3 className="text-xl font-black text-gray-800">작업목록</h3>
+
+          {requestsForDate.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">해당 날짜의 작업이 없습니다.</p>
+          ) : (
+            <div className="space-y-3">
+              {requestsForDate.map((jr) => (
+                <div
+                  key={jr.id}
+                  className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border ${
+                    jr.status === 'selected' ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100'
                   }`}
                 >
                   <div className="flex-1">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
-                    <h4 className="font-black text-gray-900">{task.title}</h4>
-                    <p className="text-sm text-gray-500 mt-0.5">{task.description}</p>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{statusLabel(jr.status)}</span>
+                    <h4 className="font-black text-gray-900">{jr.title}</h4>
+                    <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{jr.workContent}</p>
                   </div>
                   <div className="flex items-center gap-4 shrink-0">
-                    <span className="font-black text-emerald-600">+{task.reward.toLocaleString()} P</span>
-                    {done ? (
-                      <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
-                    ) : (
-                      <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-sm font-black">상세보기 →</span>
-                    )}
+                    <span className="font-black text-emerald-600">{jr.adAmount.toLocaleString()} P</span>
+                    <span className={`px-4 py-2 rounded-xl text-sm font-black ${
+                      jr.status === 'selected' ? 'bg-gray-200 text-gray-500' : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {statusLabel(jr.status)}
+                    </span>
                   </div>
-                </button>
-              );
-            })
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
