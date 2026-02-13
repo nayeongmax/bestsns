@@ -11,6 +11,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/ping"
+  to = "/.netlify/functions/ping"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/ai-consult"
   to = "/.netlify/functions/ai-consult"
   status = 200
