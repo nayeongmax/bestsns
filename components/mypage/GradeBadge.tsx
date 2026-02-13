@@ -1,6 +1,5 @@
 import React from 'react';
-import { UserProfile, GradeConfig } from '../types';
-import { getUserGrade } from '../utils/gradeUtils';
+import { UserProfile, GradeConfig, getUserGrade } from '../types';
 
 interface Props {
   user: UserProfile | null | undefined;
