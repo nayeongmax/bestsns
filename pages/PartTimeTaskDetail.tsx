@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
@@ -7,13 +7,19 @@ import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, processAutoAp
 
 interface Props {
   user: UserProfile | null;
+  members?: UserProfile[];
   onUpdateUser?: (updated: UserProfile) => void;
   addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
 }
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
-const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
+const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) => {
+  const displayUser = useMemo(() => {
+    if (!user) return null;
+    const m = members.find((x) => x.id === user.id);
+    return m ? { ...user, ...m } : user;
+  }, [user, members]);
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
@@ -74,7 +80,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
 
   const handleApply = () => {
     if (!user || !task) return;
-    if (user.freelancerStatus !== 'approved') {
+    const effectiveUser = displayUser || user;
+    if (effectiveUser.freelancerStatus !== 'approved') {
       if (window.confirm('누구나알바에 신청하려면 프리랜서 등록이 필요합니다.\n프리랜서 워크페이스에서 등록을 먼저 진행해 주세요.\n\n마이페이지로 이동할까요?')) {
         navigate('/mypage', { state: { activeTab: 'freelancer' } as any });
       }
@@ -324,6 +331,22 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                     </div>
                   );
                 }
+                if (type === '제목' && sections.제목목록?.[index]) {
+                  return (
+                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">제목 {index + 1}</p>
+                      <p className="font-black text-gray-800">{sections.제목목록[index]}</p>
+                    </div>
+                  );
+                }
+                if (type === '내용' && sections.내용목록?.[index]) {
+                  return (
+                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {index + 1}</p>
+                      <p className="text-gray-800 whitespace-pre-wrap text-sm">{sections.내용목록[index]}</p>
+                    </div>
+                  );
+                }
                 return null;
               });
             }
@@ -346,6 +369,26 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, addNotif }) => {
                       <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                         <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
                         <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {sections.제목목록 && sections.제목목록.length > 0 && (
+                  <div className="space-y-4">
+                    {sections.제목목록.map((text, i) => (
+                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">제목 {i + 1}</p>
+                        <p className="font-black text-gray-800">{text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {sections.내용목록 && sections.내용목록.length > 0 && (
+                  <div className="space-y-4">
+                    {sections.내용목록.map((text, i) => (
+                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {i + 1}</p>
+                        <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
                       </div>
                     ))}
                   </div>
