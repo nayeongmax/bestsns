@@ -217,28 +217,26 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                 </div>
                 <div className="p-5">
                   <div className="flex gap-1 mb-2 min-w-0">
-                    <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{ebook.category}</span>
+                    <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{STORE_TABS.find(t => t.id === (ebook.storeType || 'ebook'))?.label || '전자책'}</span>
                   </div>
                   <h3 className={`font-black text-gray-900 mb-3 transition-colors line-clamp-1 text-[14px] italic tracking-tight truncate ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
                     {ebook.title}
                   </h3>
-                  {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? (
-                    <div className="mb-3 flex justify-start">
-                      <span className={`inline-flex items-center shrink-0 whitespace-nowrap ${g.color} text-white text-[14px] font-black px-5 py-2 rounded-2xl italic uppercase tracking-widest border border-white/50 bg-gradient-to-b from-white/35 to-transparent`} style={{ boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.15)' }}>
-                        {g.name}
-                      </span>
-                    </div>
-                  ) : null; })()}
-                  <div className="flex justify-between items-end border-t border-gray-50 pt-3 gap-2 min-w-0">
-                    <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex justify-between items-end gap-3 border-t border-gray-50 pt-3 min-w-0">
+                    <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
-                      <div className="flex items-center min-w-0">
-                        <span className="text-[11px] font-black text-gray-600 italic truncate">{ebook.author}</span>
-                      </div>
+                      <span className="text-[11px] font-black text-gray-600 italic break-words">{ebook.author}</span>
                     </div>
-                    <div className="flex flex-col items-end shrink-0">
-                      <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest italic">Price</span>
-                      <span className="text-lg font-black text-gray-900 italic tracking-tighter whitespace-nowrap">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
+                    <div className="flex flex-col items-end shrink-0 gap-1">
+                      {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? (
+                        <span className={`inline-flex items-center shrink-0 whitespace-nowrap ${g.color} text-white text-[10px] font-black px-2.5 py-1 rounded-lg italic uppercase tracking-wider border border-white/40 bg-gradient-to-b from-white/30 to-transparent`} style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.1)' }}>
+                          {g.name}
+                        </span>
+                      ) : null; })()}
+                      <div className="flex flex-col items-end">
+                        <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest italic">Price</span>
+                        <span className="text-lg font-black text-gray-900 italic tracking-tighter whitespace-nowrap">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
