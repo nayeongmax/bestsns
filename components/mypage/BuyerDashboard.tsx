@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '../../types';
-import { getPartTimeJobRequests, setPartTimeJobRequests } from '@/constants';
+import { getPartTimeJobRequests, setPartTimeJobRequests, getPartTimeTasks } from '@/constants';
+import type { PartTimeTask } from '../../types';
 
 interface Props {
   user: UserProfile;
@@ -37,16 +38,27 @@ interface OrderItem {
 const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, ebooks, onAddReview }) => {
   const [activeTab, setActiveTab] = useState<BuyerSubTab>('sns');
   const [jobRequests, setJobRequests] = useState(() => getPartTimeJobRequests());
+  const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
   const [pgModal, setPgModal] = useState<{ jrId: string; amount: number; title: string } | null>(null);
+  const [workConfirmModal, setWorkConfirmModal] = useState<PartTimeTask | null>(null);
 
   useEffect(() => {
     setJobRequests(getPartTimeJobRequests());
+    setTasks(getPartTimeTasks());
   }, [activeTab]);
 
   const myApprovedRequests = useMemo(() =>
     jobRequests.filter((jr) => jr.applicantUserId === user.id && jr.status === 'pending' && !jr.paid),
     [jobRequests, user.id]
   );
+
+  const myTasksAsApplicant = useMemo(() =>
+    tasks.filter((t) => t.applicantUserId === user.id),
+    [tasks, user.id]
+  );
+
+  const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
+    (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // 리뷰 모달 상태
@@ -200,32 +212,64 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       </div>
 
       {activeTab === 'alba' ? (
-        <div className="space-y-4">
-          {myApprovedRequests.length === 0 ? (
+        <div className="space-y-8">
+          {myApprovedRequests.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="font-black text-gray-900">승인된 의뢰 · 결제 대기</h4>
+              {myApprovedRequests.map((jr) => (
+                <div key={jr.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-10">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                    <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
+                    <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                      <span className="font-bold text-gray-700">광고금액: {jr.adAmount.toLocaleString()}원</span>
+                      <span className="font-bold text-gray-700">수수료: {jr.fee.toLocaleString()}원</span>
+                      <span className="font-black text-emerald-600">총 결제: {(jr.adAmount + jr.fee).toLocaleString()}원</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handlePayJobRequest(jr)}
+                    className="px-10 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shrink-0"
+                  >
+                    결제하기
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {myTasksAsApplicant.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="font-black text-gray-900">의뢰 진행 현황</h4>
+              {myTasksAsApplicant.map((t) => {
+                const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
+                const canShowConfirm = selectedWithLink.length > 0;
+                return (
+                  <div key={t.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-10">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-black text-gray-900 text-lg">{t.title}</h4>
+                      <p className="text-gray-500 mt-2 line-clamp-2">{t.description}</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        작업기간: {t.workPeriod?.start ?? '-'} ~ {t.workPeriod?.end ?? '-'}
+                      </p>
+                    </div>
+                    {canShowConfirm && (
+                      <button
+                        onClick={() => setWorkConfirmModal(t)}
+                        className="px-10 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all shrink-0"
+                      >
+                        작업확인서
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {myApprovedRequests.length === 0 && myTasksAsApplicant.length === 0 && (
             <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-gray-100">
               <p className="text-gray-300 font-black italic">승인된 알바의뢰 내역이 없습니다.</p>
               <Link to="/part-time" className="inline-block mt-4 text-emerald-600 font-black hover:underline">작업의뢰 신청하러 가기 →</Link>
             </div>
-          ) : (
-            myApprovedRequests.map((jr) => (
-              <div key={jr.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-10">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
-                  <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
-                  <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                    <span className="font-bold text-gray-700">광고금액: {jr.adAmount.toLocaleString()} P</span>
-                    <span className="font-bold text-gray-700">수수료: {jr.fee.toLocaleString()} P</span>
-                    <span className="font-black text-emerald-600">총 결제: {(jr.adAmount + jr.fee).toLocaleString()} P</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handlePayJobRequest(jr)}
-                  className="px-10 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shrink-0"
-                >
-                  결제하기
-                </button>
-              </div>
-            ))
           )}
         </div>
       ) : activeTab === 'sns' ? (
@@ -364,6 +408,41 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
               );
             })
           )}
+        </div>
+      )}
+
+      {workConfirmModal && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-[48px] p-10 shadow-2xl space-y-6 my-8">
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-black text-gray-900">작업확인서</h3>
+              <button onClick={() => setWorkConfirmModal(null)} className="text-gray-400 hover:text-gray-800 text-2xl font-bold">×</button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-1">작업내용</p>
+                <p className="font-bold text-gray-800">{workConfirmModal.title}</p>
+                <p className="text-sm text-gray-500 mt-1">{workConfirmModal.description}</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-1">작업기간</p>
+                <p className="font-bold text-gray-800">{workConfirmModal.workPeriod?.start ?? '-'} ~ {workConfirmModal.workPeriod?.end ?? '-'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase mb-1">작업링크</p>
+                <div className="space-y-2 mt-2">
+                  {workConfirmModal.applicants
+                    .filter((a) => a.selected && hasWorkLink(a))
+                    .flatMap((a) => (a.workLinks ?? (a.workLink ? [a.workLink] : [])))
+                    .filter(Boolean)
+                    .map((link, i) => (
+                      <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="block text-blue-600 font-bold hover:underline break-all">{link}</a>
+                    ))}
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setWorkConfirmModal(null)} className="w-full py-4 rounded-xl bg-gray-900 text-white font-black">확인</button>
+          </div>
         </div>
       )}
 
