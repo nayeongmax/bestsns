@@ -45,6 +45,7 @@ function ContainerRoutes(props: {
   handleGlobalUserUpdate: (u: UserProfile) => void; handleLoginSuccess: (u: UserProfile) => void;
   setSmmProviders: React.Dispatch<React.SetStateAction<any[]>>; setSmmProducts: React.Dispatch<React.SetStateAction<any[]>>; setNotices: React.Dispatch<React.SetStateAction<Notice[]>>;
   handleMassIssueCoupons: () => void;
+  gradeConfigs: GradeConfig[]; setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
 }) {
   const location = useLocation();
   const pathname = location.pathname || '';
@@ -56,34 +57,36 @@ function ContainerRoutes(props: {
         user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }}
         wishlist={props.wishlist}
         onToggleWishlist={props.wishlistToggle}
+        members={props.members}
+        gradeConfigs={props.gradeConfigs}
       />
     );
   }
   return (
     <Routes>
-      <Route path="/ebooks" element={<EbookSales ebooks={props.ebooks} setEbooks={props.setEbooks} user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} />} />
+      <Route path="/ebooks" element={<EbookSales ebooks={props.ebooks} setEbooks={props.setEbooks} user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} members={props.members} gradeConfigs={props.gradeConfigs} />} />
       <Route path="/sns" element={<SNSActivation smmProducts={props.smmProducts} providers={props.smmProviders} user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={props.notices} onOrderComplete={(o) => { props.setSmmOrders(prev => [o, ...prev]); if (props.user) props.addNotif(props.user.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={props.handleLogout} />} />
       <Route path="/channels" element={<ChannelSales channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} />} />
       <Route path="/channels/:id" element={<ChannelDetail channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} reviews={props.reviews} members={props.members} />} />
-      <Route path="/ebooks/:id" element={props.user ? <EbookDetail ebooks={props.ebooks} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} user={props.user} reviews={props.reviews} storeOrders={props.storeOrders} members={props.members} /> : <Navigate to="/login" />} />
+      <Route path="/ebooks/:id" element={props.user ? <EbookDetail ebooks={props.ebooks} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} user={props.user} reviews={props.reviews} storeOrders={props.storeOrders} members={props.members} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/ebooks/register" element={props.user ? <EbookRegistration user={props.user} setEbooks={props.setEbooks} /> : <Navigate to="/login" />} />
       <Route path="/part-time" element={<PartTimePage user={props.user} onUpdateUser={props.handleGlobalUserUpdate} />} />
       <Route path="/part-time/register" element={<PartTimeTaskRegister user={props.user} />} />
       <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={props.user} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} />} />
       <Route path="/ai" element={<AIConsulting />} />
-      <Route path="/board" element={<FreeBoard posts={props.posts} notices={props.notices} />} />
-      <Route path="/board/:id" element={props.user ? <FreeBoardDetail user={props.user} posts={props.posts} setPosts={props.setPosts} /> : <Navigate to="/login" />} />
+      <Route path="/board" element={<FreeBoard posts={props.posts} notices={props.notices} members={props.members} gradeConfigs={props.gradeConfigs} />} />
+      <Route path="/board/:id" element={props.user ? <FreeBoardDetail user={props.user} posts={props.posts} setPosts={props.setPosts} members={props.members} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/board/write" element={props.user ? <FreeBoardWrite user={props.user} posts={props.posts} setPosts={props.setPosts} /> : <Navigate to="/login" />} />
       <Route path="/revenue" element={props.user ? <RevenueManagement /> : <Navigate to="/login" />} />
       <Route path="/profit-mgmt" element={props.user ? <ProfitManagement user={props.user} storeOrders={props.storeOrders} /> : <Navigate to="/login" />} />
       <Route path="/chat" element={props.user ? <ChatPage user={props.user} members={props.members} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
-      <Route path="/mypage" element={props.user ? <MyPage user={props.user} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={() => {}} /> : <Navigate to="/login" />} />
+      <Route path="/mypage" element={props.user ? <MyPage user={props.user} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={() => {}} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/notifications" element={props.user ? <NotificationsPage notifications={props.notifications} setNotifications={props.setNotifications} user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/wishlist" element={<WishlistPage wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channels={props.channels} ebooks={props.ebooks} />} />
       <Route path="/coupons" element={props.user ? <CouponBox user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
-      <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
+      <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/notices" element={<NoticePage notices={props.notices} setNotices={props.setNotices} user={props.user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
       <Route path="/login" element={<AuthPage onLoginSuccess={props.handleLoginSuccess} />} />
       <Route path="/" element={<Navigate to="/sns" />} />
@@ -116,7 +119,25 @@ const App: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>(() => safeStorage('site_reviews_v2', []));
   const [notices, setNotices] = useState<Notice[]>(() => safeStorage('site_notices_v2', []));
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [gradeConfigs, setGradeConfigs] = useState<GradeConfig[]>(() => {
+    const saved = localStorage.getItem('grade_configs_v2');
+    if (!saved) return [
+      { id: 'g1', name: 'Basic', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-gray-400', sortOrder: 0 },
+      { id: 'g2', name: 'Prime', target: 'seller', minSales: 10000000, minPurchase: 0, color: 'bg-amber-500', sortOrder: 10 },
+      { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
+    ];
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.map((g: any) => ({
+        ...g,
+        target: g.target || 'both',
+        minPurchase: g.minPurchase ?? 0,
+        sortOrder: g.sortOrder ?? 0,
+      })) : parsed;
+    } catch { return []; }
+  });
 
+  useEffect(() => { localStorage.setItem('grade_configs_v2', JSON.stringify(gradeConfigs)); }, [gradeConfigs]);
   useEffect(() => { localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members]);
   useEffect(() => { localStorage.setItem('user_profile_v2', JSON.stringify(user)); }, [user]);
   useEffect(() => { localStorage.setItem('site_notifications_v2', JSON.stringify(notifications)); }, [notifications]);
@@ -241,6 +262,8 @@ const App: React.FC = () => {
             setSmmProducts={setSmmProducts}
             setNotices={setNotices}
             handleMassIssueCoupons={handleMassIssueCoupons}
+            gradeConfigs={gradeConfigs}
+            setGradeConfigs={setGradeConfigs}
           />
       </div>
     </div>
