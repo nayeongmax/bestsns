@@ -4,9 +4,8 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 /**
  * Fixed: Imported missing NotificationType
  */
-import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType, GradeConfig } from '../types';
-import GradeBadge from '../components/GradeBadge';
-import { getUserGrade } from '../utils/gradeUtils';
+import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType, GradeConfig, getUserGrade } from '../types';
+import GradeBadge from '@/components/GradeBadge';
 import UserInfoSection from '@/components/mypage/UserInfoSection';
 import BuyerDashboard from '@/components/mypage/BuyerDashboard';
 import SellerDashboard from '@/components/mypage/SellerDashboard';
