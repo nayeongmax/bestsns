@@ -427,7 +427,7 @@ export interface GradeConfig {
   sortOrder: number;
 }
 
-/** 회원의 등급 계산 (수동 지정 우선, 없으면 판매액/구매액 기준). name이 비어 있는 등급은 무시. */
+/** 회원의 등급 계산 (수동 지정 우선, 없으면 판매액/구매액 기준). name이 비어 있는 등급은 무시. 미달성 시 기본 등급(STANDARD/Basic 등) 반환. */
 export function getUserGrade(user: UserProfile | null | undefined, configs: GradeConfig[]): GradeConfig | null {
   if (!user || !configs?.length) return null;
   const validConfigs = configs.filter((g) => (g.name || '').trim());
@@ -445,5 +445,7 @@ export function getUserGrade(user: UserProfile | null | undefined, configs: Grad
     const forBuyer = (g.target === 'buyer' || g.target === 'both') && g.minPurchase > 0 && purchase >= g.minPurchase;
     if (forSeller || forBuyer) return g;
   }
-  return null;
+  const baseGrade = validConfigs.find((g) => (g.minSales === 0 || g.minSales == null) && (g.minPurchase === 0 || g.minPurchase == null))
+    || [...validConfigs].sort((a, b) => a.sortOrder - b.sortOrder)[0];
+  return baseGrade ?? null;
 }
