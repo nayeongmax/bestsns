@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 /**
  * Fixed: Removed .ts extension from import
  */
-import { EbookProduct, ChannelProduct, SiteNotification, SMMProvider, SMMProduct, SMMOrder, UserProfile, ChannelOrder, StoreOrder, Coupon, NotificationType, GradeConfig } from '../types';
+import { EbookProduct, ChannelProduct, SiteNotification, SMMProvider, SMMProduct, SMMOrder, UserProfile, ChannelOrder, StoreOrder, Coupon, NotificationType, GradeConfig, Review } from '../types';
 import SnsAdmin from '../components/admin/SnsAdmin.tsx';
 import ChannelAdmin from '../components/admin/ChannelAdmin.tsx';
 import StoreAdmin from '../components/admin/StoreAdmin.tsx';
@@ -33,6 +33,8 @@ interface Props {
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
   gradeConfigs: GradeConfig[];
   setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
+  reviews?: Review[];
+  setReviews?: React.Dispatch<React.SetStateAction<Review[]>>;
 }
 
 /**
@@ -42,7 +44,7 @@ const AdminPanel: React.FC<Props> = ({
   user, ebooks, setEbooks, channels, setChannels, setNotifications,
   smmProviders, setSmmProviders, smmProducts, setSmmProducts, smmOrders,
   members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
-  gradeConfigs, setGradeConfigs
+  gradeConfigs, setGradeConfigs, reviews = [], setReviews
 }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
@@ -119,9 +121,13 @@ const AdminPanel: React.FC<Props> = ({
             channelOrders={channelOrders}
             storeOrders={storeOrders}
             ebooks={ebooks}
+            setEbooks={setEbooks}
             channels={channels}
             gradeConfigs={gradeConfigs}
             setGradeConfigs={setGradeConfigs}
+            reviews={reviews}
+            setReviews={setReviews}
+            addNotif={addNotif}
           />
         )}
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
