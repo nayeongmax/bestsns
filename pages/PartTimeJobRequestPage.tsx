@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
-import type { NotificationType } from '@/types';
+import type { NotificationType, PartTimeJobRequest } from '@/types';
 import { getPartTimeJobRequests, setPartTimeJobRequests, calcJobRequestFee } from '@/constants';
 
 const todayStr = () => {
@@ -16,6 +16,9 @@ interface Props {
 
 const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editRequest = (location.state as { editJobRequest?: PartTimeJobRequest; fromAlba?: boolean })?.editJobRequest;
+  const fromAlba = (location.state as { fromAlba?: boolean })?.fromAlba;
   const [title, setTitle] = useState('');
   const [workContent, setWorkContent] = useState('');
   const [platformLink, setPlatformLink] = useState('');
@@ -31,6 +34,20 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const [agree3, setAgree3] = useState(false);
 
   const fee = calcJobRequestFee(adAmount);
+
+  useEffect(() => {
+    if (editRequest && editRequest.applicantUserId === user.id) {
+      setTitle(editRequest.title);
+      setWorkContent(editRequest.workContent);
+      setPlatformLink(editRequest.platformLink || '');
+      setContact(editRequest.contact || '');
+      setWorkPeriodStart(editRequest.workPeriodStart);
+      setWorkPeriodEnd(editRequest.workPeriodEnd);
+      const qty = editRequest.quantity ?? 1;
+      setQuantity(qty);
+      setUnitPrice(editRequest.unitPrice ?? (qty > 0 ? Math.floor(editRequest.adAmount / qty) : editRequest.adAmount));
+    }
+  }, [editRequest?.id, user.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,43 +68,86 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       return;
     }
     const requests = getPartTimeJobRequests();
-    const newRequest = {
-      id: `jr_${Date.now()}`,
-      title: title.trim(),
-      workContent: workContent.trim(),
-      platformLink: platformLink.trim(),
-      contact: contact.trim(),
-      workPeriodStart,
-      workPeriodEnd,
-      adAmount,
-      unitPrice: unitPrice || undefined,
-      quantity: quantity || 1,
-      fee,
-      applicantUserId: user.id,
-      status: 'pending_review' as const,
-      paid: false,
-      createdAt: new Date().toISOString(),
-    };
-    setPartTimeJobRequests([newRequest, ...requests]);
-    setShowModal(true);
+    if (editRequest && editRequest.applicantUserId === user.id) {
+      const updated = {
+        ...editRequest,
+        title: title.trim(),
+        workContent: workContent.trim(),
+        platformLink: platformLink.trim(),
+        contact: contact.trim(),
+        workPeriodStart,
+        workPeriodEnd,
+        adAmount,
+        unitPrice: unitPrice || undefined,
+        quantity: quantity || 1,
+        fee,
+        status: 'pending_review' as const,
+        rejectReason: undefined,
+      };
+      setPartTimeJobRequests(requests.map((r) => (r.id === editRequest.id ? updated : r)));
+      setShowModal(true);
+    } else {
+      const newRequest = {
+        id: `jr_${Date.now()}`,
+        title: title.trim(),
+        workContent: workContent.trim(),
+        platformLink: platformLink.trim(),
+        contact: contact.trim(),
+        workPeriodStart,
+        workPeriodEnd,
+        adAmount,
+        unitPrice: unitPrice || undefined,
+        quantity: quantity || 1,
+        fee,
+        applicantUserId: user.id,
+        status: 'pending_review' as const,
+        paid: false,
+        createdAt: new Date().toISOString(),
+      };
+      setPartTimeJobRequests([newRequest, ...requests]);
+      setShowModal(true);
+    }
   };
 
   const handleModalConfirm = () => {
     setShowModal(false);
-    navigate('/part-time');
+    if (fromAlba) navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'alba' } });
+    else navigate('/part-time');
+  };
+
+  const handleBack = () => {
+    if (fromAlba) navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'alba' } });
+    else navigate('/part-time');
+  };
+
+  const handleDelete = () => {
+    if (!editRequest || editRequest.applicantUserId !== user.id) return;
+    if (!confirm('정말 이 의뢰를 삭제하시겠습니까?')) return;
+    const requests = getPartTimeJobRequests().filter((r) => r.id !== editRequest.id);
+    setPartTimeJobRequests(requests);
+    alert('삭제되었습니다.');
+    if (fromAlba) navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'alba' } });
+    else navigate('/part-time');
   };
 
   return (
     <div className="max-w-5xl mx-auto py-12 px-4 md:px-6">
       <div className="flex items-center justify-between mb-8">
-        <button onClick={() => navigate('/part-time')} className="flex items-center gap-2 text-gray-500 font-bold text-base hover:text-gray-900 transition-colors">
+        <button onClick={handleBack} className="flex items-center gap-2 text-gray-500 font-bold text-base hover:text-gray-900 transition-colors">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           돌아가기
         </button>
         <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-emerald-500 underline-offset-8">
-          작업의뢰 신청
+          {editRequest ? '작업의뢰 수정' : '작업의뢰 신청'}
         </h2>
-        <div className="w-24" />
+        <div className="flex gap-2">
+          {editRequest && (
+            <button type="button" onClick={handleDelete} className="px-4 py-2 rounded-xl bg-red-100 text-red-700 font-black text-sm hover:bg-red-200">
+              삭제
+            </button>
+          )}
+          <div className="w-16" />
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
@@ -131,12 +191,12 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">플랫폼링크</label>
+          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">플랫폼링크 (작업 대상 SNS/채널 주소)</label>
           <input
             type="url"
             value={platformLink}
             onChange={(e) => setPlatformLink(e.target.value)}
-            placeholder="https://..."
+            placeholder="https://instagram.com/... 또는 https://youtube.com/..."
             className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-base"
           />
         </div>
@@ -204,14 +264,19 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           <p className="text-2xl font-black text-emerald-700">{fee.toLocaleString()}원</p>
         </div>
 
+        <div className="p-6 rounded-2xl bg-blue-50 border border-blue-100">
+          <p className="text-sm font-black text-blue-800 mb-2">취소/환불 규정</p>
+          <p className="text-sm text-blue-900 leading-relaxed">작업 개시 전: 전액 취소 및 환불 가능.<br />작업 개시 후: 가분적 용역은 미수행 범위만 환불 가능, 불가분적 용역은 원칙 환불 불가. 최종 확정 후에는 협의에 따릅니다.</p>
+          <label className="flex items-start gap-3 cursor-pointer mt-4">
+            <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
+            <span className="text-sm font-bold">(필수) 취소/환불 규정을 확인하였으며 이에 동의합니다.</span>
+          </label>
+        </div>
+
         <div className="space-y-3 p-4 rounded-2xl bg-amber-50 border border-amber-200">
           <label className="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
             <span className="text-sm">(필수) 결제와 동시에 플랫폼과 귀하 사이의 용역 공급 계약이 성립됨에 동의합니다.</span>
-          </label>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
-            <span className="text-sm">(필수) 취소/환불 규정(개시 전 전액, 개시 후 범위 제한)을 확인하였으며 이에 동의합니다.</span>
           </label>
           <label className="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
@@ -222,7 +287,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           type="submit"
           className="w-full py-5 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all text-lg"
         >
-          의뢰 신청
+          {editRequest ? '수정하여 재신청' : '의뢰 신청'}
         </button>
       </form>
 
@@ -231,7 +296,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
             <div className="text-emerald-600 text-4xl">✓</div>
             <div className="space-y-2">
-              <p className="font-black text-gray-900 text-lg">신청완료되었습니다.</p>
+              <p className="font-black text-gray-900 text-lg">{editRequest ? '수정하여 재신청되었습니다.' : '신청완료되었습니다.'}</p>
               <p className="text-gray-700">곧 운영자가 연락드리겠습니다.</p>
               <p className="text-gray-700">만족스런 작업결과물로 보답드리겠습니다.</p>
               <p className="text-gray-600 text-sm">조금만 기다려주세요.</p>
