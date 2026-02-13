@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import FreelancerRegistrationModal from './FreelancerRegistrationModal';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -22,6 +23,7 @@ interface Props {
 
 const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
   const [balance, setBalance] = useState(0);
+  const [showRegModal, setShowRegModal] = useState(false);
   const [history, setHistory] = useState<ReturnType<typeof getFreelancerHistory>>([]);
   const [withdrawing, setWithdrawing] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
@@ -84,10 +86,13 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
       alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()}원입니다.`);
       return;
     }
-    const bankInfo = user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo;
+    const bank = user.freelancerStatus === 'approved' && user.freelancerApplication
+      ? { bankName: user.freelancerApplication.bankName, accountNo: user.freelancerApplication.accountNo, ownerName: user.freelancerApplication.ownerName }
+      : (user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo);
+    const bankInfo = bank;
     if (!bankInfo?.bankName?.trim() || !bankInfo?.accountNo?.trim()) {
       alert(
-        '출금을 위해 전문가정보에 통장 정보를 먼저 등록해 주세요.\n마이페이지 → 전문가정보에서 은행/계좌를 등록하시면 PortOne을 통해 해당 통장으로 입금됩니다.'
+        '출금을 위해 전문가정보에 통장 정보를 먼저 등록해 주세요.\n마이페이지 → 전문가정보에서 은행/계좌를 등록해 주세요.'
       );
       return;
     }
@@ -115,8 +120,60 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
   };
 
   const canWithdraw = balance >= MIN_WITHDRAW_FREELANCER;
-  const hasBankInfo = !!(user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo)?.bankName?.trim() &&
-    !!(user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo)?.accountNo?.trim();
+  const bankInfo = user.freelancerStatus === 'approved' && user.freelancerApplication
+    ? { bankName: user.freelancerApplication.bankName, accountNo: user.freelancerApplication.accountNo, ownerName: user.freelancerApplication.ownerName }
+    : (user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo);
+  const hasBankInfo = !!(bankInfo?.bankName?.trim() && bankInfo?.accountNo?.trim());
+  const isFreelancerApproved = user.freelancerStatus === 'approved';
+  const isFreelancerPending = user.freelancerStatus === 'pending';
+
+  const handleFreelancerRegSubmit = (app: import('@/types').FreelancerApplication) => {
+    onUpdate({ ...user, freelancerStatus: 'pending', freelancerApplication: app });
+    setShowRegModal(false);
+  };
+
+  if (!isFreelancerApproved && !isFreelancerPending) {
+    return (
+      <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
+        <div>
+          <h3 className="text-2xl font-black text-gray-900 italic">프리랜서 워크페이스</h3>
+          <p className="text-sm text-gray-500 mt-1">누구나알바에 신청하려면 프리랜서 등록을 먼저 완료해 주세요.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[24px] border border-emerald-100">
+          <p className="text-gray-600 font-bold mb-6 text-center">프리랜서 자격으로 누구나알바에 신청하려면<br />프리랜서 등록을 해주세요.</p>
+          <button
+            type="button"
+            onClick={() => setShowRegModal(true)}
+            className="px-12 py-4 rounded-xl bg-emerald-600 text-white font-black text-lg hover:bg-emerald-700 shadow-lg transition-all"
+          >
+            프리랜서 등록하기
+          </button>
+        </div>
+        {showRegModal && (
+          <FreelancerRegistrationModal
+            user={user}
+            onClose={() => setShowRegModal(false)}
+            onSubmit={handleFreelancerRegSubmit}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (isFreelancerPending) {
+    return (
+      <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
+        <div>
+          <h3 className="text-2xl font-black text-gray-900 italic">프리랜서 워크페이스</h3>
+          <p className="text-sm text-gray-500 mt-1">프리랜서 등록 신청이 접수되었습니다.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 bg-amber-50 rounded-[24px] border border-amber-200">
+          <p className="text-amber-800 font-black text-lg mb-2">승인 대기 중</p>
+          <p className="text-amber-700 text-sm text-center">운영자가 정보를 확인한 후 승인됩니다.<br />2~3일 정도 소요될 수 있습니다.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
@@ -146,7 +203,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate }) => {
           </div>
           <p className="text-[11px] text-gray-500 mt-3">
             {MIN_WITHDRAW_FREELANCER.toLocaleString()}원 이상 모이면 등록된 통장으로 출금 신청할 수 있습니다.
-            전문가정보에 통장을 등록하시면 PortOne을 통해 해당 계좌로 입금됩니다.
+            전문가정보에 통장을 등록해 주시면 출금 신청 시 해당 계좌로 입금됩니다.
           </p>
           {canWithdraw && !hasBankInfo && (
             <p className="text-xs text-amber-600 mt-2 font-bold">
