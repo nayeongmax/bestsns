@@ -23,6 +23,7 @@ import {
   processAutoApprovals,
 } from '@/constants';
 import type { NotificationType } from '@/types';
+import { jsPDF } from 'jspdf';
 
 interface Props {
   user: UserProfile;
@@ -698,29 +699,27 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         };
 
         const handlePdfDownload = () => {
-          import('jspdf').then(({ jsPDF }) => {
-            const doc = new jsPDF();
-            const title = `프로젝트 작업확정서 ${isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}`;
-            doc.setFontSize(16);
-            doc.text(title, 14, 20);
-            doc.setFontSize(9);
-            let y = 30;
-            doc.text(`프로젝트번호: ${task.projectNo || '-'}`, 14, y); y += 6;
-            doc.text(`프로젝트명: ${task.title}`, 14, y); y += 6;
-            doc.text(`재위탁 수행자: ${task.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}`, 14, y); y += 10;
-            doc.text(`과업 내용: ${task.description}`, 14, y); y += 6;
-            doc.text(`최종 납기: ${task.workPeriod?.end ?? '-'}`, 14, y); y += 6;
-            doc.text(`총 계약 금액: ₩${task.reward.toLocaleString()}`, 14, y); y += 6;
-            if (!isAdvertiserView) { doc.text(`지급대금 (정산5%+원천징수3.3% 차감): ₩${deductedReward.toLocaleString()}`, 14, y); y += 6; }
+          const doc = new jsPDF();
+          const title = `프로젝트 작업확정서 ${isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}`;
+          doc.setFontSize(16);
+          doc.text(title, 14, 20);
+          doc.setFontSize(9);
+          let y = 30;
+          doc.text(`프로젝트번호: ${task.projectNo || '-'}`, 14, y); y += 6;
+          doc.text(`프로젝트명: ${task.title}`, 14, y); y += 6;
+          doc.text(`재위탁 수행자: ${task.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}`, 14, y); y += 10;
+          doc.text(`과업 내용: ${task.description}`, 14, y); y += 6;
+          doc.text(`최종 납기: ${task.workPeriod?.end ?? '-'}`, 14, y); y += 6;
+          doc.text(`총 계약 금액: ₩${task.reward.toLocaleString()}`, 14, y); y += 6;
+          if (!isAdvertiserView) { doc.text(`지급대금 (정산5%+원천징수3.3% 차감): ₩${deductedReward.toLocaleString()}`, 14, y); y += 6; }
+          y += 4;
+          if (workLinksList.length > 0) {
+            doc.text('작업 링크:', 14, y); y += 6;
+            workLinksList.forEach((url) => { doc.text(url.substring(0, 80), 20, y); y += 6; });
             y += 4;
-            if (workLinksList.length > 0) {
-              doc.text('작업 링크:', 14, y); y += 6;
-              workLinksList.forEach((url) => { doc.text(url.substring(0, 80), 20, y); y += 6; });
-              y += 4;
-            }
-            const filename = `작업확정서_${task.projectNo || task.id}_${new Date().toISOString().slice(0, 10)}.pdf`;
-            doc.save(filename);
-          });
+          }
+          const filename = `작업확정서_${task.projectNo || task.id}_${new Date().toISOString().slice(0, 10)}.pdf`;
+          doc.save(filename);
         };
 
         if (isCheckStep) {
