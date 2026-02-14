@@ -223,6 +223,8 @@ interface SectionItem {
   value?: string;
   postBlock?: PartTimePostBlock;
   images?: string[];
+  videoFile?: string;
+  gifFile?: string;
 }
 
 const SECTION_TYPES: { key: SectionItemType; label: string }[] = [
@@ -364,8 +366,13 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
       else if (item.type === '이미지') {
         if (item.value?.trim()) sectionsOut.이미지 = item.value.trim();
         if (item.images?.length) sectionsOut.이미지목록 = item.images;
-      } else if (item.type === '동영상' && item.value?.trim()) sectionsOut.동영상 = item.value.trim();
-      else if (item.type === 'gif' && item.value?.trim()) sectionsOut.gif = item.value.trim();
+      } else if (item.type === '동영상') {
+        if (item.videoFile) sectionsOut.동영상 = item.videoFile;
+        else if (item.value?.trim()) sectionsOut.동영상 = item.value.trim();
+      } else if (item.type === 'gif') {
+        if (item.gifFile) sectionsOut.gif = item.gifFile;
+        else if (item.value?.trim()) sectionsOut.gif = item.value.trim();
+      }
       else if (item.type === '작업링크' && item.value?.trim()) {
         const idx = workLinkList.length;
         workLinkList.push(item.value.trim());
@@ -560,13 +567,71 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
                     )}
                   </div>
                 )}
-                {(item.type === '동영상' || item.type === 'gif') && (
-                  <input
-                    value={item.value ?? ''}
-                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
-                    placeholder={item.type === '동영상' ? '동영상 지시사항' : 'gif 지시사항'}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
-                  />
+                {item.type === '동영상' && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.value ?? ''}
+                      onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                      placeholder="동영상 지시사항 (선택)"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    />
+                    <input
+                      ref={(el) => { fileInputRefs.current[`${item.id}_video`] = el; }}
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const r = new FileReader();
+                        r.onload = () => updateSection(item.id, { videoFile: r.result as string });
+                        r.readAsDataURL(f);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <button type="button" onClick={() => fileInputRefs.current[`${item.id}_video`]?.click()} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs">
+                      동영상 업로드
+                    </button>
+                    {item.videoFile && (
+                      <div className="flex items-center gap-2">
+                        <video src={item.videoFile} className="max-h-24 rounded-lg border border-gray-200" controls />
+                        <button type="button" onClick={() => updateSection(item.id, { videoFile: undefined })} className="px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-black">삭제</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {item.type === 'gif' && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.value ?? ''}
+                      onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                      placeholder="gif 지시사항 (선택)"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    />
+                    <input
+                      ref={(el) => { fileInputRefs.current[`${item.id}_gif`] = el; }}
+                      type="file"
+                      accept="image/gif"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const r = new FileReader();
+                        r.onload = () => updateSection(item.id, { gifFile: r.result as string });
+                        r.readAsDataURL(f);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <button type="button" onClick={() => fileInputRefs.current[`${item.id}_gif`]?.click()} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs">
+                      GIF 업로드
+                    </button>
+                    {item.gifFile && (
+                      <div className="flex items-center gap-2">
+                        <img src={item.gifFile} alt="GIF" className="max-h-24 rounded-lg border border-gray-200" />
+                        <button type="button" onClick={() => updateSection(item.id, { gifFile: undefined })} className="px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-black">삭제</button>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {item.type === '작업안내' && (
                   <textarea
