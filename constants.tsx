@@ -49,6 +49,10 @@ const FREELANCER_BALANCE_KEY = (userId: string) => `freelancer_earnings_v1_${use
 const FREELANCER_HISTORY_KEY = (userId: string) => `freelancer_earnings_history_v1_${userId}`;
 
 export const MIN_WITHDRAW_FREELANCER = 5000;
+/** 에이전시형 수수료: 프리랜서 정산 수수료 5% + 원천징수 3.3% = 8.3% */
+export const FREELANCER_SETTLEMENT_FEE_RATE = 0.05;
+export const FREELANCER_WITHHOLDING_RATE = 0.033;
+export const FREELANCER_FEE_RATE = FREELANCER_SETTLEMENT_FEE_RATE + FREELANCER_WITHHOLDING_RATE;
 
 export function getFreelancerBalance(userId: string): number {
   try {
@@ -64,14 +68,16 @@ function setFreelancerBalance(userId: string, amount: number): void {
   localStorage.setItem(FREELANCER_BALANCE_KEY(userId), String(value));
 }
 
-export function addFreelancerEarning(userId: string, amount: number, label: string): number {
+/** grossAmount: 받는 대금, netAmount: 3.3% 제외 실지급 (수익통장 적립) */
+export function addFreelancerEarning(userId: string, grossAmount: number, label: string): number {
+  const netAmount = Math.round(grossAmount * (1 - FREELANCER_FEE_RATE));
   const cur = getFreelancerBalance(userId);
-  const next = cur + Math.max(0, Math.round(amount));
+  const next = cur + Math.max(0, netAmount);
   setFreelancerBalance(userId, next);
   const entry: FreelancerEarningEntry = {
     id: `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     type: 'task',
-    amount,
+    amount: grossAmount,
     label,
     at: new Date().toISOString(),
   };
@@ -134,6 +140,23 @@ export function updateFreelancerWithdrawRequestStatus(
     r.id === id ? { ...r, status } : r
   );
   localStorage.setItem(FREELANCER_WITHDRAW_REQUESTS_KEY, JSON.stringify(list));
+}
+
+/** 출금 실패 시 수익통장에 금액 환급 (이미 net 금액이므로 수수료 없이 그대로 충전) */
+export function refundFreelancerWithdrawal(userId: string, netAmount: number, label: string): number {
+  const cur = getFreelancerBalance(userId);
+  const next = cur + Math.max(0, netAmount);
+  setFreelancerBalance(userId, next);
+  const entry: FreelancerEarningEntry = {
+    id: `refund_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    type: 'task',
+    amount: netAmount,
+    label,
+    at: new Date().toISOString(),
+  };
+  const history = getFreelancerHistory(userId);
+  localStorage.setItem(FREELANCER_HISTORY_KEY(userId), JSON.stringify([entry, ...history].slice(0, 100)));
+  return next;
 }
 
 export function withdrawFreelancerEarnings(userId: string, amount: number): { success: boolean; newBalance: number } {
