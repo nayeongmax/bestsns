@@ -28,13 +28,19 @@ interface Props {
   user: UserProfile;
   onUpdate: (updated: UserProfile) => void;
   onApplyFreelancer?: () => void;
-  initialSubTab?: 'main' | 'alba';
+  initialSubTab?: 'main' | 'tasks' | 'settlement' | 'alba';
   addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
 }
 
 const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelancer, initialSubTab, addNotif }) => {
   const navigate = useNavigate();
-  const [freelancerTab, setFreelancerTab] = useState<'main' | 'alba'>(() => initialSubTab ?? 'main');
+  const [freelancerTab, setFreelancerTab] = useState<'tasks' | 'settlement' | 'alba'>(() => (initialSubTab === 'main' ? 'tasks' : initialSubTab ?? 'tasks'));
+  const [settlementMonth, setSettlementMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [showFreelancerSettlementModal, setShowFreelancerSettlementModal] = useState(false);
+  const [showAdvertiserSettlementModal, setShowAdvertiserSettlementModal] = useState(false);
   const [balance, setBalance] = useState(0);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [history, setHistory] = useState<ReturnType<typeof getFreelancerHistory>>([]);
@@ -53,7 +59,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) => (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
 
   useEffect(() => {
-    if (initialSubTab && (initialSubTab === 'main' || initialSubTab === 'alba')) setFreelancerTab(initialSubTab);
+    if (initialSubTab === 'main') setFreelancerTab('tasks');
+    else if (initialSubTab === 'tasks' || initialSubTab === 'settlement' || initialSubTab === 'alba') setFreelancerTab(initialSubTab);
   }, [initialSubTab]);
 
   useEffect(() => {
@@ -229,8 +236,9 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
       <div className="flex gap-2 p-2 bg-gray-100/50 rounded-[32px] w-full shadow-inner">
         {[
-          { id: 'main' as const, label: '메인' },
-          { id: 'alba' as const, label: '알바의뢰 (광고주한정)' },
+          { id: 'tasks' as const, label: '작업내역' },
+          { id: 'settlement' as const, label: '정산내역' },
+          { id: 'alba' as const, label: '알바의뢰 (광고주전용)' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -242,8 +250,245 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         ))}
       </div>
 
-      {freelancerTab === 'alba' ? (
+      {freelancerTab === 'tasks' ? (
         <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h4 className="font-black text-gray-900">작업내역</h4>
+            <Link to="/part-time" className="text-emerald-600 font-black text-sm hover:underline">누구나알바에서 작업하기 →</Link>
+          </div>
+      {selectedTasks.length > 0 && (
+        <div>
+          <h4 className="font-black text-gray-800 mb-3">선정된 작업</h4>
+          <p className="text-sm text-gray-500 mb-3">작업 완료 후 링크를 제출하면 광고주 또는 운영자 확인 후 수익통장에 알바비가 적립됩니다.</p>
+          <ul className="space-y-2">
+            {selectedTasks.map((t) => {
+              const me = t.applicants.find((a) => a.userId === user.id);
+              const hasLink = (me?.workLinks?.length ?? 0) > 0 || !!me?.workLink;
+              const hasRevision = !!me?.revisionRequest;
+              const status = t.paidUserIds?.includes(user.id)
+                ? '알바비 지급됨'
+                : hasRevision
+                  ? '작업에 수정필요'
+                  : hasLink
+                    ? '링크 제출됨 (확인 대기)'
+                    : '링크 미제출';
+              const statusDesc = hasLink && !t.paidUserIds?.includes(user.id) && !hasRevision
+                ? '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.'
+                : null;
+              return (
+                <li key={t.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-emerald-200">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-black text-gray-900">{t.title}</p>
+                      {t.projectNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t.projectNo}</span>}
+                    </div>
+                    <p className="text-xs text-gray-500">+{t.reward.toLocaleString()}원 · {status}</p>
+                    {hasRevision && me?.revisionRequest && (
+                      <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-100">
+                        <p className="text-xs font-black text-amber-700 uppercase">운영자 수정 요청</p>
+                        <p className="text-sm text-amber-900 mt-0.5">{me.revisionRequest}</p>
+                        <p className="text-xs text-amber-600 mt-1">아래 링크 수정 버튼으로 수정 후 재제출해 주세요.</p>
+                      </div>
+                    )}
+                    {statusDesc && <p className="text-xs text-emerald-600 mt-1 font-bold">{statusDesc}</p>}
+                  </div>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {hasRevision && (
+                      <Link
+                        to={`/part-time/${t.id}`}
+                        state={{ focusWorkLink: true } as any}
+                        className="px-4 py-2 rounded-lg bg-amber-500 text-white font-black text-sm hover:bg-amber-600"
+                      >
+                        링크 수정 · 재승인 요청
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: false })}
+                      className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200"
+                    >
+                      작업확정서
+                    </button>
+                    {!hasRevision && (
+                      <Link
+                        to={`/part-time/${t.id}`}
+                        className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200"
+                      >
+                        상세/링크 제출
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+      {selectedTasks.length === 0 && (
+        <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-gray-100">
+          <p className="text-gray-400 font-bold">선정된 작업이 없습니다.</p>
+          <Link to="/part-time" className="inline-block mt-4 text-emerald-600 font-black hover:underline">누구나알바에서 작업 보기 →</Link>
+        </div>
+      )}
+        </div>
+      ) : freelancerTab === 'settlement' ? (
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h4 className="font-black text-gray-900">정산내역</h4>
+            <button
+              onClick={() => setShowFreelancerSettlementModal(true)}
+              className="px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200"
+            >
+              정산안내
+            </button>
+          </div>
+
+          <div className="max-w-md">
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[24px] p-8 border border-emerald-100">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm">🏦</div>
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase italic">정산수익통장 (실지급)</p>
+                  <p className="text-2xl font-black text-gray-900 italic">{balance.toLocaleString()}원</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">정산 수수료·원천징수 제외 실지급액</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-3">
+                {MIN_WITHDRAW_FREELANCER.toLocaleString()}원 이상 모이면 출금 신청할 수 있습니다.
+              </p>
+              {canWithdraw && !hasBankInfo && (
+                <p className="text-xs text-amber-600 mt-2 font-bold">
+                  출금 전 <Link to="/mypage" state={{ activeTab: 'settings', openExpert: true } as any} className="underline">전문가정보</Link>에서 통장을 등록해 주세요.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={handleWithdrawClick}
+                disabled={!canWithdraw || withdrawing}
+                className={`mt-4 w-full py-3 rounded-xl font-black text-sm ${canWithdraw && !withdrawing ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+              >
+                {withdrawing ? '처리 중...' : canWithdraw ? `전액 ${balance.toLocaleString()}원 출금 신청` : '5,000원 이상 시 출금 가능'}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h5 className="font-black text-gray-800 mb-3">알바비 관리</h5>
+            <div className="bg-white p-6 rounded-[24px] border border-gray-100 mb-6">
+              <div className="flex p-1.5 bg-gray-100 rounded-full w-fit mb-4">
+                <button type="button" onClick={() => setChartTab('daily')} className={`px-5 py-2 rounded-full text-xs font-black ${chartTab === 'daily' ? 'bg-emerald-600 text-white' : 'text-gray-400'}`}>일별</button>
+                <button type="button" onClick={() => setChartTab('monthly')} className={`px-5 py-2 rounded-full text-xs font-black ${chartTab === 'monthly' ? 'bg-emerald-600 text-white' : 'text-gray-400'}`}>월별</button>
+              </div>
+              <div className="h-[220px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartTab === 'daily' ? (
+                    <AreaChart data={chartData}>
+                      <defs><linearGradient id="colorAlbaAmount" x1="0" x2="0" y2="1"><stop offset="5%" stopColor="#059669" stopOpacity={0.3} /><stop offset="95%" stopColor="#059669" stopOpacity={0} /></linearGradient></defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                      <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => v.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                      <Tooltip formatter={(v: number) => [`${v.toLocaleString()}원`, '알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
+                      <Area type="monotone" dataKey="금액" stroke="#059669" strokeWidth={3} fillOpacity={1} fill="url(#colorAlbaAmount)" />
+                    </AreaChart>
+                  ) : (
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                      <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => v.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                      <Tooltip cursor={{ fill: '#f8fafc', radius: 8 }} formatter={(v: number) => [`${v.toLocaleString()}원`, '월간 알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
+                      <Bar dataKey="금액" radius={[8, 8, 0, 0]}>{chartData.map((_, i) => <Cell key={i} fill={i === new Date().getMonth() ? '#059669' : '#d1fae5'} />)}</Bar>
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h5 className="font-black text-gray-800 mb-2">입금 내역</h5>
+            <div className="flex items-center gap-2 mb-3">
+              <select value={settlementMonth} onChange={(e) => setSettlementMonth(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
+                {Array.from({ length: 24 }, (_, i) => {
+                  const d = new Date();
+                  d.setMonth(d.getMonth() - i);
+                  const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  return <option key={v} value={v}>{d.getFullYear()}년 {d.getMonth() + 1}월</option>;
+                })}
+              </select>
+            </div>
+            <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white">
+              {depositEntries.filter((e) => e.at.startsWith(settlementMonth)).length === 0 ? (
+                <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 입금 내역이 없습니다.</div>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50 text-xs font-black text-gray-500 uppercase">
+                    <tr><th className="px-5 py-3">날짜</th><th className="px-5 py-3">작업내역</th><th className="px-5 py-3 text-right">금액</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {depositEntries.filter((e) => e.at.startsWith(settlementMonth)).map((entry) => (
+                      <tr key={entry.id} className="hover:bg-emerald-50/30">
+                        <td className="px-5 py-3 font-bold text-gray-700">{new Date(entry.at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td className="px-5 py-3 font-black text-gray-900">{entry.label}</td>
+                        <td className="px-5 py-3 text-right font-black text-emerald-600">+{getNetAmount(entry).toLocaleString()}원</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h5 className="font-black text-gray-800 mb-2">수익통장 내역 (전체)</h5>
+            <div className="flex items-center gap-2 mb-3">
+              <select value={settlementMonth} onChange={(e) => setSettlementMonth(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
+                {Array.from({ length: 24 }, (_, i) => {
+                  const d = new Date();
+                  d.setMonth(d.getMonth() - i);
+                  const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  return <option key={v} value={v}>{d.getFullYear()}년 {d.getMonth() + 1}월</option>;
+                })}
+              </select>
+            </div>
+            <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white">
+              {history.filter((e) => e.at.startsWith(settlementMonth)).length === 0 ? (
+                <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 내역이 없습니다.</div>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {history.filter((e) => e.at.startsWith(settlementMonth)).map((entry) => {
+                    const isRefund = entry.label?.includes('환급');
+                    const isTaskEarn = entry.type === 'task' && entry.amount > 0 && !isRefund;
+                    const netAmount = isTaskEarn ? Math.round(entry.amount * (1 - FREELANCER_FEE_RATE)) : entry.amount;
+                    return (
+                      <li key={entry.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
+                          <div>
+                            <p className="font-bold text-gray-800">{entry.label}</p>
+                            <p className="text-[11px] text-gray-400">{new Date(entry.at).toLocaleString('ko-KR')}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {isTaskEarn ? (
+                            <p className="font-black text-emerald-600">받는 {entry.amount.toLocaleString()}원 / 실지급 {netAmount.toLocaleString()}원</p>
+                          ) : (
+                            <p className={`font-black ${entry.amount >= 0 ? 'text-emerald-600' : 'text-gray-500'}`}>{entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}원</p>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h4 className="font-black text-gray-900">알바의뢰 (광고주전용)</h4>
+            <button onClick={() => setShowAdvertiserSettlementModal(true)} className="px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200">정산안내</button>
+          </div>
           {myPendingReviewRequests.length > 0 && (
             <div className="space-y-4">
               <h4 className="font-black text-gray-900">검토 대기</h4>
@@ -350,326 +595,6 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             </div>
           )}
         </div>
-      ) : (
-        <>
-      <div className="max-w-md">
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[24px] p-8 border border-emerald-100">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm">
-              🏦
-            </div>
-            <div>
-              <p className="text-xs font-black text-gray-500 uppercase italic">수익통장 (실지급)</p>
-              <p className="text-2xl font-black text-gray-900 italic">{balance.toLocaleString()}원</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">정산 수수료·원천징수 제외 실지급액</p>
-            </div>
-          </div>
-          <p className="text-[11px] text-gray-500 mt-3">
-            {MIN_WITHDRAW_FREELANCER.toLocaleString()}원 이상 모이면 등록된 통장으로 출금 신청할 수 있습니다.
-            전문가정보에 통장을 등록해 주시면 출금 신청 시 해당 계좌로 입금됩니다.
-          </p>
-          {canWithdraw && !hasBankInfo && (
-            <p className="text-xs text-amber-600 mt-2 font-bold">
-              출금 전 <Link to="/mypage" state={{ activeTab: 'settings', openExpert: true } as any} className="underline hover:text-amber-700">전문가정보</Link>에서 통장(은행/계좌번호)을 등록해 주세요.
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={handleWithdrawClick}
-            disabled={!canWithdraw || withdrawing}
-            className={`mt-4 w-full py-3 rounded-xl font-black text-sm transition-all ${
-              canWithdraw && !withdrawing
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {withdrawing ? '처리 중...' : canWithdraw ? `전액 ${balance.toLocaleString()}원 출금 신청` : '5,000원 이상 시 출금 가능'}
-          </button>
-        </div>
-      </div>
-
-      {/* 수수료 정산안내 */}
-      <div className="bg-white rounded-[24px] p-6 md:p-8 shadow-sm border border-gray-100">
-        <h4 className="font-black text-gray-900 mb-1 flex items-center gap-2">
-          <span className="text-xl">📋</span> 수수료 · 정산 안내
-        </h4>
-        <p className="text-sm text-gray-500 mb-4">
-          에이전시형 플랫폼입니다. 초기 거래 품질 관리·리뷰 확보·클레임 운영 비용을 반영한 수수료 체계를 적용합니다.
-        </p>
-        <div className="space-y-5 text-sm">
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="font-black text-gray-800 mb-3">플랫폼 수수료 기준 (전체)</p>
-            <ul className="space-y-2 text-gray-700">
-              <li>· <strong>광고주 수수료 25%</strong> – 작업 의뢰 시 (광고주 부담)</li>
-              <li>· <strong>프리랜서 정산 수수료 5%</strong> – 플랫폼 이용·품질관리 비용</li>
-              <li>· <strong>프리랜서 원천징수 3.3%</strong> – 세법상 원천징수 의무</li>
-              <li>· <strong>결제망 수수료 3.3%</strong> – PG 결제 수수료</li>
-              <li>· <strong>부가세 10%</strong> – 수수료·결제망수수료에 대한 부가세</li>
-            </ul>
-          </div>
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="font-black text-amber-800 mb-2">프리랜서 실지급액 계산</p>
-            <p className="text-gray-700 mb-2">작업 계약금액에서 <strong>정산 수수료 5%</strong>와 <strong>원천징수 3.3%</strong>가 차감됩니다.</p>
-            <p className="text-gray-800 font-black">실지급액 = 계약금액 × 91.7% (8.3% 차감)</p>
-          </div>
-          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-            <p className="font-black text-emerald-800 mb-3">💰 정산 예시 (프리랜서 기준)</p>
-            <div className="space-y-4">
-              <div>
-                <p className="text-gray-700 font-bold mb-1">예시 1) 10,000원 작업 완료 시</p>
-                <ul className="space-y-0.5 text-gray-700 pl-2">
-                  <li>계약금액: 10,000원</li>
-                  <li>정산 수수료 5%: -500원</li>
-                  <li>원천징수 3.3%: -330원</li>
-                  <li className="font-black text-emerald-700 pt-1">→ 수익통장 적립: 9,170원</li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-gray-700 font-bold mb-1">예시 2) 50,000원 작업 완료 시</p>
-                <ul className="space-y-0.5 text-gray-700 pl-2">
-                  <li>계약금액: 50,000원</li>
-                  <li>정산 수수료 5%: -2,500원</li>
-                  <li>원천징수 3.3%: -1,650원</li>
-                  <li className="font-black text-emerald-700 pt-1">→ 수익통장 적립: 45,850원</li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-gray-700 font-bold mb-1">예시 3) 100,000원 작업 완료 시</p>
-                <ul className="space-y-0.5 text-gray-700 pl-2">
-                  <li>계약금액: 100,000원</li>
-                  <li>정산 수수료 5%: -5,000원</li>
-                  <li>원천징수 3.3%: -3,300원</li>
-                  <li className="font-black text-emerald-700 pt-1">→ 수익통장 적립: 91,700원</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 border-t border-gray-100 pt-3">
-            ※ 수익통장에 적립되는 금액은 실지급액(91.7%) 기준입니다. 출금 신청 시 추가 수수료는 없습니다.
-          </p>
-        </div>
-      </div>
-
-      {selectedTasks.length > 0 && (
-        <div>
-          <h4 className="font-black text-gray-800 mb-3">선정된 작업</h4>
-          <p className="text-sm text-gray-500 mb-3">작업 완료 후 링크를 제출하면 광고주 또는 운영자 확인 후 수익통장에 알바비가 적립됩니다.</p>
-          <ul className="space-y-2">
-            {selectedTasks.map((t) => {
-              const me = t.applicants.find((a) => a.userId === user.id);
-              const hasLink = (me?.workLinks?.length ?? 0) > 0 || !!me?.workLink;
-              const hasRevision = !!me?.revisionRequest;
-              const status = t.paidUserIds?.includes(user.id)
-                ? '알바비 지급됨'
-                : hasRevision
-                  ? '작업에 수정필요'
-                  : hasLink
-                    ? '링크 제출됨 (확인 대기)'
-                    : '링크 미제출';
-              const statusDesc = hasLink && !t.paidUserIds?.includes(user.id) && !hasRevision
-                ? '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.'
-                : null;
-              return (
-                <li key={t.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-emerald-200">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-black text-gray-900">{t.title}</p>
-                      {t.projectNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t.projectNo}</span>}
-                    </div>
-                    <p className="text-xs text-gray-500">+{t.reward.toLocaleString()}원 · {status}</p>
-                    {hasRevision && me?.revisionRequest && (
-                      <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-100">
-                        <p className="text-xs font-black text-amber-700 uppercase">운영자 수정 요청</p>
-                        <p className="text-sm text-amber-900 mt-0.5">{me.revisionRequest}</p>
-                        <p className="text-xs text-amber-600 mt-1">아래 링크 수정 버튼으로 수정 후 재제출해 주세요.</p>
-                      </div>
-                    )}
-                    {statusDesc && <p className="text-xs text-emerald-600 mt-1 font-bold">{statusDesc}</p>}
-                  </div>
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    {hasRevision && (
-                      <Link
-                        to={`/part-time/${t.id}`}
-                        state={{ focusWorkLink: true } as any}
-                        className="px-4 py-2 rounded-lg bg-amber-500 text-white font-black text-sm hover:bg-amber-600"
-                      >
-                        링크 수정 · 재승인 요청
-                      </Link>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: false })}
-                      className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200"
-                    >
-                      작업확정서
-                    </button>
-                    {!hasRevision && (
-                      <Link
-                        to={`/part-time/${t.id}`}
-                        className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200"
-                      >
-                        상세/링크 제출
-                      </Link>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      {/* 알바비 관리 - 입금 내역 + 일별/월별 그래프 */}
-      <div className="border-t border-gray-100 pt-10">
-        <h4 className="font-black text-gray-800 mb-1 flex items-center gap-2">
-          <span className="text-xl">📊</span> 알바비 관리
-        </h4>
-        <p className="text-sm text-gray-500 mb-6">
-          작업 완료 후 입금된 내역과 수익 현황을 확인하세요. 시시비비 가리지 않고 한눈에 확인!
-        </p>
-
-        {/* 일별/월별 그래프 */}
-        <div className="bg-white p-6 md:p-8 rounded-[32px] border border-gray-100 shadow-sm mb-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-            <h5 className="font-black text-gray-900">알바비 수익 현황</h5>
-            <div className="flex p-1.5 bg-gray-100 rounded-full shadow-inner border border-gray-200/50">
-              <button
-                type="button"
-                onClick={() => setChartTab('daily')}
-                className={`px-6 py-2.5 rounded-full text-xs font-black transition-all ${chartTab === 'daily' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400'}`}
-              >
-                일별
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartTab('monthly')}
-                className={`px-6 py-2.5 rounded-full text-xs font-black transition-all ${chartTab === 'monthly' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400'}`}
-              >
-                월별
-              </button>
-            </div>
-          </div>
-          <div className="h-[280px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {chartTab === 'daily' ? (
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorAlbaAmount" x1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#059669" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
-                  <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
-                  <Tooltip formatter={(val: number) => [`${val.toLocaleString()}원`, '알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
-                  <Area type="monotone" dataKey="금액" stroke="#059669" strokeWidth={4} fillOpacity={1} fill="url(#colorAlbaAmount)" />
-                </AreaChart>
-              ) : (
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
-                  <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
-                  <Tooltip cursor={{ fill: '#f8fafc', radius: 8 }} formatter={(val: number) => [`${val.toLocaleString()}원`, '월간 알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
-                  <Bar dataKey="금액" radius={[8, 8, 0, 0]}>
-                    {chartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={index === new Date().getMonth() ? '#059669' : '#d1fae5'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* 입금 내역 테이블 */}
-        <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm mb-6">
-          <div className="px-6 py-4 bg-gray-50/80 border-b border-gray-100">
-            <h5 className="font-black text-gray-800 text-sm">입금 내역 (작업 완료 후 지급)</h5>
-            <p className="text-xs text-gray-500 mt-0.5">입금날짜, 작업내역, 금액을 상세히 확인할 수 있습니다.</p>
-          </div>
-          {depositEntries.length === 0 ? (
-            <div className="p-10 text-center text-gray-400 font-bold">
-              아직 입금 내역이 없습니다.<br />
-              <Link to="/part-time" className="text-emerald-600 hover:underline mt-2 inline-block font-black">누구나알바</Link>에서 작업을 완료하면 여기에 입금 내역이 쌓입니다.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-4">입금날짜</th>
-                    <th className="px-6 py-4">작업내역</th>
-                    <th className="px-6 py-4 text-right">금액 (원)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {depositEntries.slice(0, 50).map((entry) => (
-                    <tr key={entry.id} className="hover:bg-emerald-50/30 transition-colors">
-                      <td className="px-6 py-4 font-bold text-gray-700 text-sm">
-                        {new Date(entry.at).toLocaleDateString('ko-KR', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
-                      <td className="px-6 py-4 font-black text-gray-900">{entry.label}</td>
-                      <td className="px-6 py-4 text-right font-black text-emerald-600">+{entry.amount.toLocaleString()}원</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <h4 className="font-black text-gray-800 mb-4">수익통장 내역 (전체)</h4>
-        <div className="rounded-2xl border border-gray-100 overflow-hidden">
-          {history.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 font-bold">
-              아직 내역이 없습니다.<br />
-              <Link to="/part-time" className="text-blue-600 hover:underline mt-2 inline-block">누구나알바</Link>에서 작업을 완료하면 여기에 쌓입니다.
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {history.slice(0, 20).map((entry) => {
-                const isRefund = entry.label?.includes('환급');
-                const isTaskEarn = entry.type === 'task' && entry.amount > 0 && !isRefund;
-                const netAmount = isTaskEarn ? Math.round(entry.amount * (1 - FREELANCER_FEE_RATE)) : entry.amount;
-                return (
-                  <li key={entry.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
-                      <div>
-                        <p className="font-bold text-gray-800">{entry.label}</p>
-                        <p className="text-[11px] text-gray-400">
-                          {new Date(entry.at).toLocaleString('ko-KR')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      {isTaskEarn ? (
-                        <p className="font-black text-emerald-600">
-                          받는 대금 {entry.amount.toLocaleString()}원 / 실지급 {netAmount.toLocaleString()}원
-                        </p>
-                      ) : (
-                        <p className={`font-black ${entry.amount >= 0 ? 'text-emerald-600' : 'text-gray-500'}`}>
-                          {entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}원
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-        </>
       )}
 
       {workConfirmModal && (() => {
@@ -826,6 +751,88 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
           </div>
         );
       })()}
+
+      {/* 프리랜서 정산안내 모달 (영수증 스타일) */}
+      {showFreelancerSettlementModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowFreelancerSettlementModal(false)}>
+          <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl border-2 border-gray-200 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 px-8 py-6 border-b-2 border-dashed border-emerald-200">
+              <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <span>📋</span> 프리랜서 정산 안내
+              </h3>
+              <p className="text-xs text-gray-600 mt-1">에이전시형 플랫폼 · 수익통장 실지급 기준</p>
+            </div>
+            <div className="p-8 space-y-6 text-sm">
+              <div className="space-y-2">
+                <p className="text-xs font-black text-gray-400 uppercase">수수료 구조</p>
+                <ul className="space-y-1.5 text-gray-700">
+                  <li className="flex justify-between"><span>정산 수수료</span><strong>5%</strong></li>
+                  <li className="flex justify-between"><span>원천징수</span><strong>3.3%</strong></li>
+                  <li className="flex justify-between pt-1 border-t border-gray-100"><span className="font-black">차감 합계</span><strong>8.3%</strong></li>
+                </ul>
+              </div>
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                <p className="text-xs font-black text-emerald-800 mb-2">실지급액 계산</p>
+                <p className="font-black text-gray-900">계약금액 × 91.7% = 수익통장 적립액</p>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-black text-gray-400 uppercase">정산 예시</p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[10px] text-gray-500">10,000원</p>
+                    <p className="font-black text-emerald-600">9,170원</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[10px] text-gray-500">50,000원</p>
+                    <p className="font-black text-emerald-600">45,850원</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[10px] text-gray-500">100,000원</p>
+                    <p className="font-black text-emerald-600">91,700원</p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-500">※ 출금 신청 시 추가 수수료 없음</p>
+            </div>
+            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
+              <button onClick={() => setShowFreelancerSettlementModal(false)} className="w-full py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">확인</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 광고주 정산안내 모달 (영수증 스타일) */}
+      {showAdvertiserSettlementModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowAdvertiserSettlementModal(false)}>
+          <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl border-2 border-gray-200 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 px-8 py-6 border-b-2 border-dashed border-amber-200">
+              <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <span>📋</span> 광고주 정산 안내
+              </h3>
+              <p className="text-xs text-gray-600 mt-1">알바의뢰 · 결제 시 적용되는 수수료</p>
+            </div>
+            <div className="p-8 space-y-6 text-sm">
+              <div className="space-y-2">
+                <p className="text-xs font-black text-gray-400 uppercase">광고주 부담 수수료</p>
+                <ul className="space-y-1.5 text-gray-700">
+                  <li className="flex justify-between"><span>광고주 수수료</span><strong>25%</strong></li>
+                  <li className="flex justify-between"><span>결제망 수수료</span><strong>3.3%</strong></li>
+                  <li className="flex justify-between"><span>부가세 (10%)</span><strong>약 2.8%</strong></li>
+                  <li className="flex justify-between pt-1 border-t border-gray-100"><span className="font-black">총 부담</span><strong>약 31%</strong></li>
+                </ul>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                <p className="text-xs font-black text-amber-800 mb-2">결제금액 예시 (광고비 100,000원)</p>
+                <p className="text-gray-700">광고비 100,000원 + 수수료 약 31,000원 ≈ <strong className="text-amber-800">131,000원</strong></p>
+              </div>
+              <p className="text-[11px] text-gray-500">※ 작업 의뢰 시 광고주가 부담하는 수수료입니다.</p>
+            </div>
+            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
+              <button onClick={() => setShowAdvertiserSettlementModal(false)} className="w-full py-3 rounded-xl bg-amber-600 text-white font-black hover:bg-amber-700">확인</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 출금 신청 확인 모달 */}
       {showWithdrawModal && bankInfo && (
