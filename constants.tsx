@@ -49,9 +49,15 @@ const FREELANCER_BALANCE_KEY = (userId: string) => `freelancer_earnings_v1_${use
 const FREELANCER_HISTORY_KEY = (userId: string) => `freelancer_earnings_history_v1_${userId}`;
 
 export const MIN_WITHDRAW_FREELANCER = 5000;
-/** 에이전시형 수수료: 프리랜서 정산 수수료 5% + 원천징수 3.3% = 8.3% */
-export const FREELANCER_SETTLEMENT_FEE_RATE = 0.05;
-export const FREELANCER_WITHHOLDING_RATE = 0.033;
+
+/** 에이전시형 수수료 체계 (플랫폼 기준) */
+export const ADVERTISER_FEE_RATE = 0.25;        // 광고주 수수료 25%
+export const FREELANCER_SETTLEMENT_FEE_RATE = 0.05;  // 프리랜서 정산 수수료 5%
+export const FREELANCER_WITHHOLDING_RATE = 0.033;   // 프리랜서 원천징수 3.3%
+export const PAYMENT_GATEWAY_FEE_RATE = 0.033;      // 결제망 수수료 3.3%
+export const VAT_RATE = 0.1;                        // 부가세 10% (수수료+결제망에 대한)
+
+/** 프리랜서 실지급액 = 계약금액 × (1 - 5% - 3.3%) = 91.7% */
 export const FREELANCER_FEE_RATE = FREELANCER_SETTLEMENT_FEE_RATE + FREELANCER_WITHHOLDING_RATE;
 
 export function getFreelancerBalance(userId: string): number {
