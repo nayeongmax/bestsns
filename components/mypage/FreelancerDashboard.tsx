@@ -265,6 +265,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               const me = t.applicants.find((a) => a.userId === user.id);
               const hasLink = (me?.workLinks?.length ?? 0) > 0 || !!me?.workLink;
               const hasRevision = !!me?.revisionRequest;
+              const hasAutoApprove = !!me?.autoApproveAt && !t.paidUserIds?.includes(user.id);
               const status = t.paidUserIds?.includes(user.id)
                 ? '알바비 지급됨'
                 : hasRevision
@@ -291,29 +292,25 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                       </div>
                     )}
                     {statusDesc && <p className="text-xs text-emerald-600 mt-1 font-bold">{statusDesc}</p>}
+                    {hasAutoApprove && me?.autoApproveAt && (
+                      <p className="text-xs text-blue-600 font-bold mt-1">
+                        {new Date(me.autoApproveAt) > new Date()
+                          ? `${Math.ceil((new Date(me.autoApproveAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000))}일 후 자동 지급 예정 (${new Date(me.autoApproveAt).toLocaleString('ko-KR')})`
+                          : '자동 지급 대기 중'}
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
-                    {hasRevision && (
-                      <Link
-                        to={`/part-time/${t.id}`}
-                        state={{ focusWorkLink: true } as any}
-                        className="px-4 py-2 rounded-lg bg-amber-500 text-white font-black text-sm hover:bg-amber-600"
-                      >
-                        링크 수정 · 재승인 요청
+                    {(hasRevision || hasLink) && (
+                      <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true } as any} className={`px-4 py-2 rounded-lg font-black text-sm ${hasRevision ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'}`}>
+                        수정
                       </Link>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: false })}
-                      className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200"
-                    >
+                    <button type="button" onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: false })} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200">
                       작업확정서
                     </button>
-                    {!hasRevision && (
-                      <Link
-                        to={`/part-time/${t.id}`}
-                        className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200"
-                      >
+                    {!hasLink && (
+                      <Link to={`/part-time/${t.id}`} className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
                         상세/링크 제출
                       </Link>
                     )}
@@ -337,9 +334,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             <h4 className="font-black text-gray-900">정산내역</h4>
             <button
               onClick={() => setShowFreelancerSettlementModal(true)}
-              className="px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-indigo-50 text-indigo-600 font-black text-sm hover:bg-indigo-100 border border-indigo-100 shadow-sm"
             >
-              정산안내
+              정산 정책 안내
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
             </button>
           </div>
 
@@ -487,7 +485,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         <div className="space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h4 className="font-black text-gray-900">알바의뢰 (광고주전용)</h4>
-            <button onClick={() => setShowAdvertiserSettlementModal(true)} className="px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200">정산안내</button>
+            <button onClick={() => setShowAdvertiserSettlementModal(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-indigo-50 text-indigo-600 font-black text-sm hover:bg-indigo-100 border border-indigo-100 shadow-sm">
+              정산 정책 안내
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+            </button>
           </div>
           {myPendingReviewRequests.length > 0 && (
             <div className="space-y-4">
@@ -752,83 +753,94 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         );
       })()}
 
-      {/* 프리랜서 정산안내 모달 (영수증 스타일) */}
+      {/* 프리랜서 정산정책안내 모달 (n잡스토어 스타일) */}
       {showFreelancerSettlementModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowFreelancerSettlementModal(false)}>
-          <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl border-2 border-gray-200 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 px-8 py-6 border-b-2 border-dashed border-emerald-200">
-              <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                <span>📋</span> 프리랜서 정산 안내
-              </h3>
-              <p className="text-xs text-gray-600 mt-1">에이전시형 플랫폼 · 수익통장 실지급 기준</p>
+          <div className="bg-white w-full max-w-lg rounded-[24px] shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="px-8 py-6 border-b border-gray-100">
+              <h3 className="text-xl font-black text-indigo-600 text-center">수익금 정산 정책 가이드</h3>
+              <p className="text-xs text-gray-500 mt-1 text-center">프리랜서 · 수익통장 실지급 기준</p>
             </div>
-            <div className="p-8 space-y-6 text-sm">
-              <div className="space-y-2">
-                <p className="text-xs font-black text-gray-400 uppercase">수수료 구조</p>
-                <ul className="space-y-1.5 text-gray-700">
-                  <li className="flex justify-between"><span>정산 수수료</span><strong>5%</strong></li>
-                  <li className="flex justify-between"><span>원천징수</span><strong>3.3%</strong></li>
-                  <li className="flex justify-between pt-1 border-t border-gray-100"><span className="font-black">차감 합계</span><strong>8.3%</strong></li>
+            <div className="p-6 space-y-5">
+              <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-lg">🏢</span>
+                  <div><p className="text-[10px] font-black text-gray-500 uppercase">정산 수수료</p><p className="text-sm font-black text-indigo-600">5%</p></div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-lg">📄</span>
+                  <div><p className="text-[10px] font-black text-gray-500 uppercase">원천징수</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-lg">💳</span>
+                  <div><p className="text-[10px] font-black text-gray-500 uppercase">결제망 수수료</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-lg">📋</span>
+                  <div><p className="text-[10px] font-black text-gray-500 uppercase">부가세</p><p className="text-sm font-black text-indigo-600">10%</p></div>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
+                <p className="text-sm font-black text-gray-800">예시: 50,000원 작업 완료 시</p>
+                <ul className="text-sm text-gray-700 space-y-0.5">
+                  <li>· 정산 수수료 (5%): - ₩2,500</li>
+                  <li>· 원천징수 (3.3%): - ₩1,650</li>
+                  <li className="pt-1 font-black text-indigo-600">최종 통장 수령 금액: ₩45,850</li>
                 </ul>
               </div>
-              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-                <p className="text-xs font-black text-emerald-800 mb-2">실지급액 계산</p>
-                <p className="font-black text-gray-900">계약금액 × 91.7% = 수익통장 적립액</p>
-              </div>
-              <div className="space-y-3">
-                <p className="text-xs font-black text-gray-400 uppercase">정산 예시</p>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-[10px] text-gray-500">10,000원</p>
-                    <p className="font-black text-emerald-600">9,170원</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-[10px] text-gray-500">50,000원</p>
-                    <p className="font-black text-emerald-600">45,850원</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-[10px] text-gray-500">100,000원</p>
-                    <p className="font-black text-emerald-600">91,700원</p>
-                  </div>
-                </div>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
+                <p className="text-sm font-black text-gray-800">예시: 100,000원 작업 완료 시</p>
+                <ul className="text-sm text-gray-700 space-y-0.5">
+                  <li>· 정산 수수료 (5%): - ₩5,000</li>
+                  <li>· 원천징수 (3.3%): - ₩3,300</li>
+                  <li className="pt-1 font-black text-indigo-600">최종 통장 수령 금액: ₩91,700</li>
+                </ul>
               </div>
               <p className="text-[11px] text-gray-500">※ 출금 신청 시 추가 수수료 없음</p>
             </div>
-            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
-              <button onClick={() => setShowFreelancerSettlementModal(false)} className="w-full py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">확인</button>
+            <div className="px-8 py-4 bg-gray-100 border-t border-gray-200">
+              <button onClick={() => setShowFreelancerSettlementModal(false)} className="w-full py-3 rounded-xl bg-gray-800 text-white font-black hover:bg-gray-900">내용을 모두 확인했습니다</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 광고주 정산안내 모달 (영수증 스타일) */}
+      {/* 광고주 정산정책안내 모달 (n잡스토어 스타일) */}
       {showAdvertiserSettlementModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowAdvertiserSettlementModal(false)}>
-          <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl border-2 border-gray-200 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 px-8 py-6 border-b-2 border-dashed border-amber-200">
-              <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                <span>📋</span> 광고주 정산 안내
-              </h3>
-              <p className="text-xs text-gray-600 mt-1">알바의뢰 · 결제 시 적용되는 수수료</p>
+          <div className="bg-white w-full max-w-lg rounded-[24px] shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="px-8 py-6 border-b border-gray-100">
+              <h3 className="text-xl font-black text-indigo-600 text-center">수익금 정산 정책 가이드</h3>
+              <p className="text-xs text-gray-500 mt-1 text-center">알바의뢰 · 광고주 부담 수수료</p>
             </div>
-            <div className="p-8 space-y-6 text-sm">
-              <div className="space-y-2">
-                <p className="text-xs font-black text-gray-400 uppercase">광고주 부담 수수료</p>
-                <ul className="space-y-1.5 text-gray-700">
-                  <li className="flex justify-between"><span>광고주 수수료</span><strong>25%</strong></li>
-                  <li className="flex justify-between"><span>결제망 수수료</span><strong>3.3%</strong></li>
-                  <li className="flex justify-between"><span>부가세 (10%)</span><strong>약 2.8%</strong></li>
-                  <li className="flex justify-between pt-1 border-t border-gray-100"><span className="font-black">총 부담</span><strong>약 31%</strong></li>
-                </ul>
+            <div className="p-6 space-y-5">
+              <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-lg">🏢</span>
+                  <div><p className="text-[10px] font-black text-gray-500 uppercase">광고주 수수료</p><p className="text-sm font-black text-indigo-600">25%</p></div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-lg">💳</span>
+                  <div><p className="text-[10px] font-black text-gray-500 uppercase">결제망 수수료</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-lg">📋</span>
+                  <div><p className="text-[10px] font-black text-gray-500 uppercase">부가세</p><p className="text-sm font-black text-indigo-600">10%</p></div>
+                </div>
               </div>
-              <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-                <p className="text-xs font-black text-amber-800 mb-2">결제금액 예시 (광고비 100,000원)</p>
-                <p className="text-gray-700">광고비 100,000원 + 수수료 약 31,000원 ≈ <strong className="text-amber-800">131,000원</strong></p>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
+                <p className="text-sm font-black text-gray-800">예시: 광고비 100,000원 결제 시</p>
+                <ul className="text-sm text-gray-700 space-y-0.5">
+                  <li>· 광고주 수수료 (25%): - ₩25,000</li>
+                  <li>· 결제망 수수료 (3.3%): - ₩3,300</li>
+                  <li>· 부가세 (수수료의 10%): - ₩2,830</li>
+                  <li className="pt-1 font-black text-indigo-600">총 결제 금액: 약 ₩131,000</li>
+                </ul>
               </div>
               <p className="text-[11px] text-gray-500">※ 작업 의뢰 시 광고주가 부담하는 수수료입니다.</p>
             </div>
-            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
-              <button onClick={() => setShowAdvertiserSettlementModal(false)} className="w-full py-3 rounded-xl bg-amber-600 text-white font-black hover:bg-amber-700">확인</button>
+            <div className="px-8 py-4 bg-gray-100 border-t border-gray-200">
+              <button onClick={() => setShowAdvertiserSettlementModal(false)} className="w-full py-3 rounded-xl bg-gray-800 text-white font-black hover:bg-gray-900">내용을 모두 확인했습니다</button>
             </div>
           </div>
         </div>
