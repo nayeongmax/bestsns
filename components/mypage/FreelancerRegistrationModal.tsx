@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, FreelancerApplication } from '@/types';
+import { compressImageForStorage } from '@/utils/imageCompress';
 
 interface Props {
   user: UserProfile;
@@ -28,11 +29,19 @@ const FreelancerRegistrationModal: React.FC<Props> = ({ user, onClose, onSubmit 
   const [agree4, setAgree4] = useState(false);
   const [agree5, setAgree5] = useState(false);
 
-  const handleImage = (field: 'idCardImage' | 'bankbookImage', e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImage = async (field: 'idCardImage' | 'bankbookImage', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file?.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, [field]: reader.result as string }));
+    reader.onload = async () => {
+      const raw = reader.result as string;
+      try {
+        const compressed = await compressImageForStorage(raw);
+        setForm((f) => ({ ...f, [field]: compressed }));
+      } catch {
+        setForm((f) => ({ ...f, [field]: raw }));
+      }
+    };
     reader.readAsDataURL(file);
     e.target.value = '';
   };
