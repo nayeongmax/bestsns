@@ -188,6 +188,8 @@ export interface SellerApplication {
     accountNo: string;
     ownerName: string;
     email: string;
+    /** 개인판매자 주민등록번호 */
+    residentNumber?: string;
   };
   businessInfo?: {
     companyName: string;
