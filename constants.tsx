@@ -375,8 +375,8 @@ export function calcJobRequestFee(adAmount: number): number {
   return baseFee + vat;
 }
 
-/** localStorage 용량 제한(약 5MB) 방지 - 증빙 이미지 압축. 최대 800px, JPEG 0.6 */
-export function compressImageForStorage(dataUrl: string, maxWidth = 800, quality = 0.6): Promise<string> {
+/** localStorage 용량 제한(약 5MB) 방지 - 증빙 이미지 강력 압축. 최대 480px, JPEG 0.45 → 약 30~80KB */
+export function compressImageForStorage(dataUrl: string, maxSize = 480, quality = 0.45): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onerror = () => reject(new Error('이미지 로드 실패'));
@@ -384,9 +384,10 @@ export function compressImageForStorage(dataUrl: string, maxWidth = 800, quality
       try {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
+        if (width > maxSize || height > maxSize) {
+          const ratio = Math.min(maxSize / width, maxSize / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
         }
         canvas.width = width;
         canvas.height = height;
