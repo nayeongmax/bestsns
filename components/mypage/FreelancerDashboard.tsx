@@ -23,7 +23,6 @@ import {
   processAutoApprovals,
 } from '@/constants';
 import type { NotificationType } from '@/types';
-import { jsPDF } from 'jspdf';
 
 interface Props {
   user: UserProfile;
@@ -699,27 +698,41 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         };
 
         const handlePdfDownload = () => {
-          const doc = new jsPDF();
-          const title = `프로젝트 작업확정서 ${isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}`;
-          doc.setFontSize(16);
-          doc.text(title, 14, 20);
-          doc.setFontSize(9);
-          let y = 30;
-          doc.text(`프로젝트번호: ${task.projectNo || '-'}`, 14, y); y += 6;
-          doc.text(`프로젝트명: ${task.title}`, 14, y); y += 6;
-          doc.text(`재위탁 수행자: ${task.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}`, 14, y); y += 10;
-          doc.text(`과업 내용: ${task.description}`, 14, y); y += 6;
-          doc.text(`최종 납기: ${task.workPeriod?.end ?? '-'}`, 14, y); y += 6;
-          doc.text(`총 계약 금액: ₩${task.reward.toLocaleString()}`, 14, y); y += 6;
-          if (!isAdvertiserView) { doc.text(`지급대금 (정산5%+원천징수3.3% 차감): ₩${deductedReward.toLocaleString()}`, 14, y); y += 6; }
-          y += 4;
-          if (workLinksList.length > 0) {
-            doc.text('작업 링크:', 14, y); y += 6;
-            workLinksList.forEach((url) => { doc.text(url.substring(0, 80), 20, y); y += 6; });
-            y += 4;
+          const printContent = document.getElementById('work-confirm-print');
+          if (!printContent) return;
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) {
+            window.print();
+            return;
           }
-          const filename = `작업확정서_${task.projectNo || task.id}_${new Date().toISOString().slice(0, 10)}.pdf`;
-          doc.save(filename);
+          printWindow.document.write(`
+            <!DOCTYPE html><html><head><meta charset="utf-8"><title>작업확정서</title>
+            <style>body{font-family:Malgun Gothic,sans-serif;padding:24px;max-width:600px;margin:0 auto;font-size:14px}
+            h2{margin:0 0 16px;font-size:18px} .section{margin-bottom:16px}
+            .label{font-size:11px;color:#666;font-weight:bold;margin-bottom:4px}
+            .value{color:#333} a{color:#059669;word-break:break-all}
+            </style></head><body>
+            <h2>프로젝트 작업확정서 ${isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}</h2>
+            <p style="font-size:12px;color:#666">본 문서의 내용은 이용약관에 의거하여 결제 시점부터 법적 효력이 발생합니다.</p>
+            <div class="section"><div class="label">1. 프로젝트 번호 및 계약당사자</div>
+            <div class="value">프로젝트번호: ${task.projectNo || '-'}</div>
+            <div class="value">프로젝트명: ${task.title}</div>
+            <div class="value">재위탁 수행자: ${task.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}</div></div>
+            <div class="section"><div class="label">2. 업무 범위 및 단가</div>
+            <div class="value">과업 내용: ${task.description}</div>
+            <div class="value">최종 납기: ${task.workPeriod?.end ?? '-'}</div>
+            <div class="value" style="font-weight:bold;color:#059669">총 계약 금액: ₩${task.reward.toLocaleString()}</div>
+            ${!isAdvertiserView ? `<div class="value">지급대금 (5%+3.3% 차감): ₩${deductedReward.toLocaleString()}</div>` : ''}</div>
+            ${workLinksList.length > 0 ? `<div class="section"><div class="label">3. 작업 링크</div><ul>${workLinksList.map((u) => `<li><a href="${u}">${u}</a></li>`).join('')}</ul></div>` : ''}
+            <div class="section"><div class="label">취소·환불·검수·위약벌</div>
+            <div class="value">작업 시작 전 전액 취소·환불 가능. 결과물 전달일로부터 3일 이내 이의없으면 자동 승인. 직거래 시 거래액 10배 위약벌.</div></div>
+            </body></html>`);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+          }, 250);
         };
 
         if (isCheckStep) {
