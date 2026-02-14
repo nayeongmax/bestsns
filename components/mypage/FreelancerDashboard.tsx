@@ -13,6 +13,7 @@ import {
   addFreelancerWithdrawRequest,
   addFreelancerEarning,
   MIN_WITHDRAW_FREELANCER,
+  FREELANCER_FEE_RATE,
   getPartTimeTasks,
   setPartTimeTasks,
   getPartTimeJobRequests,
@@ -38,7 +39,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const [withdrawing, setWithdrawing] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
   const [chartTab, setChartTab] = useState<'daily' | 'monthly'>('daily');
-  const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean } | null>(null);
+  const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean; step?: 'check' | 'confirmed' } | null>(null);
   const [jobRequests, setJobRequests] = useState(() => getPartTimeJobRequests());
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
 
@@ -65,7 +66,12 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     [history]
   );
 
-  /** 일별/월별 알바비 차트 데이터 */
+  const getNetAmount = (e: (typeof history)[0]) =>
+    e.type === 'task' && e.amount > 0 && !e.label?.includes('환급')
+      ? Math.round(e.amount * (1 - FREELANCER_FEE_RATE))
+      : e.amount;
+
+  /** 일별/월별 알바비 차트 데이터 (실지급 기준) */
   const chartData = useMemo(() => {
     if (chartTab === 'daily') {
       const data: { name: string; 금액: number }[] = [];
@@ -76,7 +82,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         const dateStr = d.toISOString().split('T')[0];
         const daySum = depositEntries
           .filter((e) => e.at.startsWith(dateStr))
-          .reduce((sum, e) => sum + e.amount, 0);
+          .reduce((sum, e) => sum + getNetAmount(e), 0);
         data.push({
           name: `${d.getMonth() + 1}/${d.getDate()}`,
           금액: daySum,
@@ -90,7 +96,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
         const monthSum = depositEntries
           .filter((e) => e.at.startsWith(prefix))
-          .reduce((sum, e) => sum + e.amount, 0);
+          .reduce((sum, e) => sum + getNetAmount(e), 0);
         data.push({ name: `${m + 1}월`, 금액: monthSum });
       }
       return data;
@@ -299,23 +305,6 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                 const hasDelivery = selectedWithLink.some((a) => a.deliveryAt);
                 const allPaid = selectedWithLink.length > 0 && selectedWithLink.every((a) => t.paidUserIds?.includes(a.userId));
                 const statusLabel = t.applicants.length === 0 ? '모집중' : selectedWithLink.length === 0 ? '선정완료' : allPaid ? '대금지급 완료' : hasDelivery ? '3일 이내 자동확정' : '검수중';
-                const canAdvertiserComplete = !allPaid && selectedWithLink.length > 0 && t.applicantUserId === user.id;
-                const handleAdvertiserComplete = () => {
-                  if (!canAdvertiserComplete || !confirm(`작업 결과물을 확인하셨나요? ${selectedWithLink.length}명에게 각 ${t.reward.toLocaleString()}원을 즉시 지급합니다.`)) return;
-                  selectedWithLink.forEach((a) => addFreelancerEarning(a.userId, t.reward, t.title));
-                  if (addNotif) {
-                    selectedWithLink.forEach((a) =>
-                      addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${t.title}] 광고주 확인 후 ${t.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${t.reward.toLocaleString()}원이 적립되었습니다.`)
-                    );
-                  }
-                  const paidIds = [...(t.paidUserIds || []), ...selectedWithLink.map((a) => a.userId)];
-                  const nextTasks = tasks.map((task) =>
-                    task.id !== t.id ? task : { ...task, pointPaid: true, paidUserIds: paidIds }
-                  );
-                  setPartTimeTasks(nextTasks);
-                  setTasks(nextTasks);
-                  alert('작업완료 처리되었습니다. 프리랜서 수익통장에 즉시 적립됩니다.');
-                };
                 return (
                   <div key={t.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col gap-6">
                     <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
@@ -329,13 +318,11 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                         <span className={`inline-block mt-3 px-3 py-1 rounded-lg text-xs font-black ${statusLabel === '모집중' ? 'bg-gray-200 text-gray-700' : statusLabel === '선정완료' ? 'bg-blue-100 text-blue-700' : statusLabel === '검수중' ? 'bg-amber-100 text-amber-700' : statusLabel === '3일 이내 자동확정' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>{statusLabel}</span>
                       </div>
                       <div className="flex flex-wrap gap-2 shrink-0">
-                        {canAdvertiserComplete && (
-                          <button onClick={handleAdvertiserComplete} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all">
-                            작업완료 (즉시 지급)
-                          </button>
+                        {selectedWithLink.length > 0 ? (
+                          <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'check' })} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all">결과물 확인</button>
+                        ) : (
+                          <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'confirmed' })} className="px-6 py-3 rounded-xl bg-gray-800 text-white font-black hover:bg-gray-700 transition-all">작업확정서</button>
                         )}
-                        {selectedWithLink.length > 0 && <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true })} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all">결과물 확인</button>}
-                        <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true })} className="px-6 py-3 rounded-xl bg-gray-800 text-white font-black hover:bg-gray-700 transition-all">작업확정서</button>
                         <Link to="/chat" state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any} className="px-6 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-black hover:bg-gray-100 transition-all">문의요청</Link>
                       </div>
                     </div>
@@ -370,8 +357,9 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               🏦
             </div>
             <div>
-              <p className="text-xs font-black text-gray-500 uppercase italic">수익통장</p>
+              <p className="text-xs font-black text-gray-500 uppercase italic">수익통장 (실지급)</p>
               <p className="text-2xl font-black text-gray-900 italic">{balance.toLocaleString()}원</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">3.3% 수수료 제외 실지급액</p>
             </div>
           </div>
           <p className="text-[11px] text-gray-500 mt-3">
@@ -429,12 +417,21 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                       <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-100">
                         <p className="text-xs font-black text-amber-700 uppercase">운영자 수정 요청</p>
                         <p className="text-sm text-amber-900 mt-0.5">{me.revisionRequest}</p>
-                        <p className="text-xs text-amber-600 mt-1">아래 상세/링크 제출에서 수정 후 재제출해 주세요.</p>
+                        <p className="text-xs text-amber-600 mt-1">아래 링크 수정 버튼으로 수정 후 재제출해 주세요.</p>
                       </div>
                     )}
                     {statusDesc && <p className="text-xs text-emerald-600 mt-1 font-bold">{statusDesc}</p>}
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {hasRevision && (
+                      <Link
+                        to={`/part-time/${t.id}`}
+                        state={{ focusWorkLink: true } as any}
+                        className="px-4 py-2 rounded-lg bg-amber-500 text-white font-black text-sm hover:bg-amber-600"
+                      >
+                        링크 수정 · 재승인 요청
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: false })}
@@ -442,12 +439,14 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     >
                       작업확정서
                     </button>
-                    <Link
-                      to={`/part-time/${t.id}`}
-                      className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200"
-                    >
-                      상세/링크 제출
-                    </Link>
+                    {!hasRevision && (
+                      <Link
+                        to={`/part-time/${t.id}`}
+                        className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200"
+                      >
+                        상세/링크 제출
+                      </Link>
+                    )}
                   </div>
                 </li>
               );
@@ -573,22 +572,35 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {history.slice(0, 20).map((entry) => (
-                <li key={entry.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
-                    <div>
-                      <p className="font-bold text-gray-800">{entry.label}</p>
-                      <p className="text-[11px] text-gray-400">
-                        {new Date(entry.at).toLocaleString('ko-KR')}
-                      </p>
+              {history.slice(0, 20).map((entry) => {
+                const isRefund = entry.label?.includes('환급');
+                const isTaskEarn = entry.type === 'task' && entry.amount > 0 && !isRefund;
+                const netAmount = isTaskEarn ? Math.round(entry.amount * (1 - FREELANCER_FEE_RATE)) : entry.amount;
+                return (
+                  <li key={entry.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50">
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
+                      <div>
+                        <p className="font-bold text-gray-800">{entry.label}</p>
+                        <p className="text-[11px] text-gray-400">
+                          {new Date(entry.at).toLocaleString('ko-KR')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <span className={`font-black ${entry.amount >= 0 ? 'text-emerald-600' : 'text-gray-500'}`}>
-                    {entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}원
-                  </span>
-                </li>
-              ))}
+                    <div className="text-right">
+                      {isTaskEarn ? (
+                        <p className="font-black text-emerald-600">
+                          받는 대금 {entry.amount.toLocaleString()}원 / 실지급 {netAmount.toLocaleString()}원
+                        </p>
+                      ) : (
+                        <p className={`font-black ${entry.amount >= 0 ? 'text-emerald-600' : 'text-gray-500'}`}>
+                          {entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}원
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -597,21 +609,89 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       )}
 
       {workConfirmModal && (() => {
-        const { task, isAdvertiserView } = workConfirmModal;
+        const { task, isAdvertiserView, step = 'confirmed' } = workConfirmModal;
         const selectedWithLink = task.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim()));
         const workLinksList = selectedWithLink.flatMap((a) => a.workLinks ?? (a.workLink ? [a.workLink] : [])).filter(Boolean);
         const deductedReward = Math.round(task.reward * 0.967);
-        const handlePrint = () => {
-          window.print();
+        const isCheckStep = isAdvertiserView && step === 'check';
+
+        const handlePayAndShowConfirm = () => {
+          if (!confirm(`작업 결과물을 확인하셨나요? ${selectedWithLink.length}명에게 각 ${task.reward.toLocaleString()}원을 즉시 지급합니다.`)) return;
+          selectedWithLink.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
+          if (addNotif) {
+            selectedWithLink.forEach((a) =>
+              addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 광고주 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
+            );
+          }
+          const paidIds = [...(task.paidUserIds || []), ...selectedWithLink.map((a) => a.userId)];
+          const nextTasks = tasks.map((t) =>
+            t.id !== task.id ? t : { ...t, pointPaid: true, paidUserIds: paidIds }
+          );
+          setPartTimeTasks(nextTasks);
+          setTasks(nextTasks);
+          setWorkConfirmModal({ task: { ...task, pointPaid: true, paidUserIds: paidIds }, isAdvertiserView: true, step: 'confirmed' });
+          alert('작업완료 처리되었습니다. 아래에서 작업확정서를 PDF로 저장할 수 있습니다.');
         };
+
+        const handlePdfDownload = () => {
+          import('jspdf').then(({ jsPDF }) => {
+            const doc = new jsPDF();
+            const title = `프로젝트 작업확정서 ${isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}`;
+            doc.setFontSize(16);
+            doc.text(title, 14, 20);
+            doc.setFontSize(9);
+            let y = 30;
+            doc.text(`프로젝트번호: ${task.projectNo || '-'}`, 14, y); y += 6;
+            doc.text(`프로젝트명: ${task.title}`, 14, y); y += 6;
+            doc.text(`재위탁 수행자: ${task.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}`, 14, y); y += 10;
+            doc.text(`과업 내용: ${task.description}`, 14, y); y += 6;
+            doc.text(`최종 납기: ${task.workPeriod?.end ?? '-'}`, 14, y); y += 6;
+            doc.text(`총 계약 금액: ₩${task.reward.toLocaleString()}`, 14, y); y += 6;
+            if (!isAdvertiserView) { doc.text(`지급대금 (3.3% 차감): ₩${deductedReward.toLocaleString()}`, 14, y); y += 6; }
+            y += 4;
+            if (workLinksList.length > 0) {
+              doc.text('작업 링크:', 14, y); y += 6;
+              workLinksList.forEach((url) => { doc.text(url.substring(0, 80), 20, y); y += 6; });
+              y += 4;
+            }
+            const filename = `작업확정서_${task.projectNo || task.id}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            doc.save(filename);
+          });
+        };
+
+        if (isCheckStep) {
+          return (
+            <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in overflow-y-auto">
+              <div className="bg-white w-full max-w-2xl rounded-[48px] p-10 shadow-2xl space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-2xl font-black text-gray-900">결과물 확인</h3>
+                  <button onClick={() => setWorkConfirmModal(null)} className="text-gray-400 hover:text-gray-800 text-2xl font-bold">×</button>
+                </div>
+                <p className="text-sm text-gray-600">아래 작업 링크를 확인하고 문제없으면 즉시지급을 눌러 주세요.</p>
+                <div className="space-y-2">
+                  <p className="text-xs font-black text-gray-500 uppercase">작업 링크</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {workLinksList.map((url, i) => (
+                      <li key={i}><a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 break-all hover:underline">{url}</a></li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={handlePayAndShowConfirm} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">즉시지급</button>
+                  <button onClick={() => setWorkConfirmModal(null)} className="flex-1 py-4 rounded-xl bg-gray-200 text-gray-700 font-black">취소</button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in overflow-y-auto">
             <div id="work-confirm-print" className="bg-white w-full max-w-2xl rounded-[48px] p-10 shadow-2xl space-y-6 my-8 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center no-print:flex print:hidden">
+              <div className="flex justify-between items-center">
                 <h3 className="text-2xl font-black text-gray-900">📂 프로젝트 작업확정서 {isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}</h3>
                 <button onClick={() => setWorkConfirmModal(null)} className="text-gray-400 hover:text-gray-800 text-2xl font-bold">×</button>
               </div>
-              <h3 className="text-2xl font-black text-gray-900 print:block hidden">프로젝트 작업확정서 {isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}</h3>
               <p className="text-xs text-gray-500">본 문서의 내용은 이용약관에 의거하여 결제 시점부터 법적 효력이 발생합니다.</p>
               <div className="space-y-6 text-sm">
                 <div>
@@ -645,25 +725,28 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                 </div>
                 <div>
                   <p className="text-xs font-black text-gray-400 uppercase mb-2">{isAdvertiserView ? (workLinksList.length > 0 ? '5' : '4') : '4'}. 검수 및 A/S 규정</p>
-                  <p className="text-gray-700 leading-relaxed">A/S 요청 기한: 결과물 전달일로부터 3일 이내. 해당 기간 내 이의없으면 자동 승인 및 대금 지급.</p>
+                  {isAdvertiserView ? (
+                    <p className="text-gray-700 leading-relaxed">A/S 진행: 결과물 전달일로부터 3일 이내.<br />해당 기간 내 광고주 이의없으면 자동 승인 및 수익통장 적립.</p>
+                  ) : (
+                    <p className="text-gray-700 leading-relaxed">A/S 진행: 결과물 전달일로부터 3일 이내.<br />해당 기간 내 광고주 이의없으면 자동 승인 및 수익통장 적립.</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs font-black text-gray-400 uppercase mb-2">{isAdvertiserView ? (workLinksList.length > 0 ? '6' : '5') : '5'}. 위약벌 및 법적 조치</p>
-                  <p className="text-gray-700 leading-relaxed">직거래 시도 시 거래액 10배 위약벌 청구 및 영구 제명. 게시글/대화 기록 임의 삭제 불가.</p>
+                  <p className="text-gray-700 leading-relaxed">직거래 시도 시 거래액 10배 위약벌 청구 및 영구 제명.<br />작업결과물 삭제불가. 게시글/대화 기록 임의 삭제 불가.</p>
                 </div>
                 {!isAdvertiserView && (
                   <div>
                     <p className="text-xs font-black text-gray-400 uppercase mb-2">6. 정산 시점 및 파트너 준수 사항</p>
-                    <p className="text-gray-700 leading-relaxed">정산 시점: 광고주 또는 운영자 확인 후 4~7일 이내 수익통장에 적립. 본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</p>
+                    <p className="text-gray-700 leading-relaxed">정산 시점: 작업완료일로부터 4~7일 수익통장에 적립.<br />(광고주 작업완료는 프리랜서 작업완료일로부터 최대 3일임을 감안한 일정)<br /><br />본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</p>
                   </div>
                 )}
               </div>
-              <div className="flex gap-3 no-print">
-                <button onClick={handlePrint} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">PDF 저장 / 인쇄</button>
+              <div className="flex gap-3">
+                <button onClick={handlePdfDownload} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">PDF 저장</button>
                 <button onClick={() => setWorkConfirmModal(null)} className="flex-1 py-4 rounded-xl bg-gray-900 text-white font-black">확인</button>
               </div>
             </div>
-            <style>{`@media print { body * { visibility: hidden; } #work-confirm-print, #work-confirm-print * { visibility: visible; } #work-confirm-print { position: absolute; left: 0; top: 0; width: 100%; } .no-print { display: none !important; } .print\\:hidden { display: none !important; } .print\\:block { display: block !important; } }`}</style>
           </div>
         );
       })()}
