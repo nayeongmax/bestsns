@@ -147,7 +147,13 @@ const App: React.FC = () => {
   });
 
   useEffect(() => { localStorage.setItem('grade_configs_v2', JSON.stringify(gradeConfigs)); }, [gradeConfigs]);
-  useEffect(() => { localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('site_members_v2', JSON.stringify(members));
+    } catch {
+      console.warn('회원 목록 저장 실패 (localStorage 용량 초과)');
+    }
+  }, [members]);
   useEffect(() => {
     try {
       localStorage.setItem('user_profile_v2', JSON.stringify(user));
