@@ -148,7 +148,18 @@ const App: React.FC = () => {
 
   useEffect(() => { localStorage.setItem('grade_configs_v2', JSON.stringify(gradeConfigs)); }, [gradeConfigs]);
   useEffect(() => { localStorage.setItem('site_members_v2', JSON.stringify(members)); }, [members]);
-  useEffect(() => { localStorage.setItem('user_profile_v2', JSON.stringify(user)); }, [user]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('user_profile_v2', JSON.stringify(user));
+    } catch (err: unknown) {
+      console.error('프로필 저장 실패 (localStorage 용량 초과 가능):', err);
+      const isQuota = err instanceof DOMException && err.name === 'QuotaExceededError';
+      const isStorage = err instanceof Error && (err.message?.includes('Storage') || err.message?.includes('setItem'));
+      if (isQuota || isStorage) {
+        alert('저장 공간이 부족합니다. 브라우저 데이터를 정리하거나, 통장/신분증 이미지를 더 작은 사진으로 다시 첨부해 주세요.');
+      }
+    }
+  }, [user]);
   useEffect(() => { localStorage.setItem('site_notifications_v2', JSON.stringify(notifications)); }, [notifications]);
   useEffect(() => { localStorage.setItem('smm_orders_v2', JSON.stringify(smmOrders)); }, [smmOrders]);
   useEffect(() => { localStorage.setItem('store_orders_v2', JSON.stringify(storeOrders)); }, [storeOrders]);
