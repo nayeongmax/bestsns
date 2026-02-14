@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, FreelancerApplication } from '@/types';
-import { compressImageForStorage } from '@/utils/imageCompress';
+import { compressImageForStorage } from '@/constants';
 
 interface Props {
   user: UserProfile;
