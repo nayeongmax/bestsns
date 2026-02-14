@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserProfile, SellerApplication, NotificationType } from '../../types';
 import { supabase } from '@/supabase';
-import { compressImageForStorage } from '@/utils/imageCompress';
+import { compressImageForStorage } from '@/constants';
 
 interface Props {
   user: UserProfile;
