@@ -393,38 +393,60 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         <h4 className="font-black text-gray-900 mb-1 flex items-center gap-2">
           <span className="text-xl">📋</span> 수수료 · 정산 안내
         </h4>
-        <p className="text-sm text-gray-500 mb-4">에이전시형 플랫폼입니다. 거래 품질 관리·리뷰·클레임 운영 비용 반영. 작업 완료 시 아래와 같이 정산됩니다.</p>
-        <div className="space-y-4 text-sm">
+        <p className="text-sm text-gray-500 mb-4">
+          에이전시형 플랫폼입니다. 초기 거래 품질 관리·리뷰 확보·클레임 운영 비용을 반영한 수수료 체계를 적용합니다.
+        </p>
+        <div className="space-y-5 text-sm">
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="font-black text-gray-800 mb-2">플랫폼 수수료 체계 (참고)</p>
-            <ul className="space-y-1 text-gray-600 text-xs mb-2">
-              <li>광고주 수수료 25% · 결제망 3.3% · 부가세 10% (광고주 부담)</li>
+            <p className="font-black text-gray-800 mb-3">플랫폼 수수료 기준 (전체)</p>
+            <ul className="space-y-2 text-gray-700">
+              <li>· <strong>광고주 수수료 25%</strong> – 작업 의뢰 시 (광고주 부담)</li>
+              <li>· <strong>프리랜서 정산 수수료 5%</strong> – 플랫폼 이용·품질관리 비용</li>
+              <li>· <strong>프리랜서 원천징수 3.3%</strong> – 세법상 원천징수 의무</li>
+              <li>· <strong>결제망 수수료 3.3%</strong> – PG 결제 수수료</li>
+              <li>· <strong>부가세 10%</strong> – 수수료·결제망수수료에 대한 부가세</li>
             </ul>
-            <p className="font-black text-gray-800 mb-2">프리랜서 정산 수수료 기준</p>
-            <ul className="space-y-1 text-gray-700">
-              <li>· <strong>정산 수수료 5%</strong> – 플랫폼 이용 및 품질 관리 비용</li>
-              <li>· <strong>원천징수 3.3%</strong> – 세법상 원천징수 의무</li>
-              <li>· <strong>실지급액</strong> = 계약금액 × 91.7% (8.3% 차감)</li>
-            </ul>
+          </div>
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+            <p className="font-black text-amber-800 mb-2">프리랜서 실지급액 계산</p>
+            <p className="text-gray-700 mb-2">작업 계약금액에서 <strong>정산 수수료 5%</strong>와 <strong>원천징수 3.3%</strong>가 차감됩니다.</p>
+            <p className="text-gray-800 font-black">실지급액 = 계약금액 × 91.7% (8.3% 차감)</p>
           </div>
           <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-            <p className="font-black text-emerald-800 mb-2">💰 정산 예시</p>
-            <p className="text-gray-700 mb-2"><strong>예시 1</strong> 계약금액 10,000원인 작업 완료 시</p>
-            <ul className="space-y-1 text-gray-700 mb-3">
-              <li>계약금액: 10,000원</li>
-              <li>정산 수수료 5%: -500원</li>
-              <li>원천징수 3.3%: -330원</li>
-              <li className="font-black text-emerald-700">실지급액: 9,170원</li>
-            </ul>
-            <p className="text-gray-700 mb-2"><strong>예시 2</strong> 계약금액 100,000원인 작업 완료 시</p>
-            <ul className="space-y-1 text-gray-700">
-              <li>계약금액: 100,000원</li>
-              <li>정산 수수료 5%: -5,000원</li>
-              <li>원천징수 3.3%: -3,300원</li>
-              <li className="font-black text-emerald-700">실지급액: 91,700원</li>
-            </ul>
+            <p className="font-black text-emerald-800 mb-3">💰 정산 예시 (프리랜서 기준)</p>
+            <div className="space-y-4">
+              <div>
+                <p className="text-gray-700 font-bold mb-1">예시 1) 10,000원 작업 완료 시</p>
+                <ul className="space-y-0.5 text-gray-700 pl-2">
+                  <li>계약금액: 10,000원</li>
+                  <li>정산 수수료 5%: -500원</li>
+                  <li>원천징수 3.3%: -330원</li>
+                  <li className="font-black text-emerald-700 pt-1">→ 수익통장 적립: 9,170원</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-gray-700 font-bold mb-1">예시 2) 50,000원 작업 완료 시</p>
+                <ul className="space-y-0.5 text-gray-700 pl-2">
+                  <li>계약금액: 50,000원</li>
+                  <li>정산 수수료 5%: -2,500원</li>
+                  <li>원천징수 3.3%: -1,650원</li>
+                  <li className="font-black text-emerald-700 pt-1">→ 수익통장 적립: 45,850원</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-gray-700 font-bold mb-1">예시 3) 100,000원 작업 완료 시</p>
+                <ul className="space-y-0.5 text-gray-700 pl-2">
+                  <li>계약금액: 100,000원</li>
+                  <li>정산 수수료 5%: -5,000원</li>
+                  <li>원천징수 3.3%: -3,300원</li>
+                  <li className="font-black text-emerald-700 pt-1">→ 수익통장 적립: 91,700원</li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-gray-500">※ 수익통장에 적립되는 금액은 실지급액 기준이며, 출금 시 추가 수수료는 없습니다.</p>
+          <p className="text-xs text-gray-500 border-t border-gray-100 pt-3">
+            ※ 수익통장에 적립되는 금액은 실지급액(91.7%) 기준입니다. 출금 신청 시 추가 수수료는 없습니다.
+          </p>
         </div>
       </div>
 
