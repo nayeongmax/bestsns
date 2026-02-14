@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus, processAutoApprovals } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus, refundFreelancerWithdrawal, processAutoApprovals } from '@/constants';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
@@ -238,10 +238,12 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
                         <button
                           type="button"
                           onClick={() => {
-                            if (!confirm('입금 실패로 표시하시겠습니까?')) return;
+                            if (!confirm('입금 실패로 표시하시겠습니까? 수익통장에 해당 금액이 다시 충전됩니다.')) return;
+                            refundFreelancerWithdrawal(r.userId, r.amount, '출금 실패 환급');
                             updateFreelancerWithdrawRequestStatus(r.id, 'failed');
                             refreshWithdrawRequests();
-                            alert('실패로 표시했습니다.');
+                            if (addNotif) addNotif(r.userId, 'freelancer', '출금 실패', `출금 신청이 실패하여 ${r.amount.toLocaleString()}원이 수익통장에 환급되었습니다. 통장 정보를 확인 후 다시 출금 신청해 주세요.`);
+                            alert('실패로 표시했습니다. 수익통장에 금액이 환급되었습니다.');
                           }}
                           className="px-4 py-2 rounded-lg bg-red-100 text-red-700 font-black text-xs hover:bg-red-200"
                         >
