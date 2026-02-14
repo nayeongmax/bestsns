@@ -14,6 +14,8 @@ import {
   addFreelancerEarning,
   MIN_WITHDRAW_FREELANCER,
   FREELANCER_FEE_RATE,
+  FREELANCER_SETTLEMENT_FEE_RATE,
+  FREELANCER_WITHHOLDING_RATE,
   getPartTimeTasks,
   setPartTimeTasks,
   getPartTimeJobRequests,
@@ -359,7 +361,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             <div>
               <p className="text-xs font-black text-gray-500 uppercase italic">수익통장 (실지급)</p>
               <p className="text-2xl font-black text-gray-900 italic">{balance.toLocaleString()}원</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">3.3% 수수료 제외 실지급액</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">정산 수수료·원천징수 제외 실지급액</p>
             </div>
           </div>
           <p className="text-[11px] text-gray-500 mt-3">
@@ -383,6 +385,46 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
           >
             {withdrawing ? '처리 중...' : canWithdraw ? `전액 ${balance.toLocaleString()}원 출금 신청` : '5,000원 이상 시 출금 가능'}
           </button>
+        </div>
+      </div>
+
+      {/* 수수료 정산안내 */}
+      <div className="bg-white rounded-[24px] p-6 md:p-8 shadow-sm border border-gray-100">
+        <h4 className="font-black text-gray-900 mb-1 flex items-center gap-2">
+          <span className="text-xl">📋</span> 수수료 · 정산 안내
+        </h4>
+        <p className="text-sm text-gray-500 mb-4">에이전시형 플랫폼입니다. 거래 품질 관리·리뷰·클레임 운영 비용 반영. 작업 완료 시 아래와 같이 정산됩니다.</p>
+        <div className="space-y-4 text-sm">
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <p className="font-black text-gray-800 mb-2">플랫폼 수수료 체계 (참고)</p>
+            <ul className="space-y-1 text-gray-600 text-xs mb-2">
+              <li>광고주 수수료 25% · 결제망 3.3% · 부가세 10% (광고주 부담)</li>
+            </ul>
+            <p className="font-black text-gray-800 mb-2">프리랜서 정산 수수료 기준</p>
+            <ul className="space-y-1 text-gray-700">
+              <li>· <strong>정산 수수료 5%</strong> – 플랫폼 이용 및 품질 관리 비용</li>
+              <li>· <strong>원천징수 3.3%</strong> – 세법상 원천징수 의무</li>
+              <li>· <strong>실지급액</strong> = 계약금액 × 91.7% (8.3% 차감)</li>
+            </ul>
+          </div>
+          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+            <p className="font-black text-emerald-800 mb-2">💰 정산 예시</p>
+            <p className="text-gray-700 mb-2"><strong>예시 1</strong> 계약금액 10,000원인 작업 완료 시</p>
+            <ul className="space-y-1 text-gray-700 mb-3">
+              <li>계약금액: 10,000원</li>
+              <li>정산 수수료 5%: -500원</li>
+              <li>원천징수 3.3%: -330원</li>
+              <li className="font-black text-emerald-700">실지급액: 9,170원</li>
+            </ul>
+            <p className="text-gray-700 mb-2"><strong>예시 2</strong> 계약금액 100,000원인 작업 완료 시</p>
+            <ul className="space-y-1 text-gray-700">
+              <li>계약금액: 100,000원</li>
+              <li>정산 수수료 5%: -5,000원</li>
+              <li>원천징수 3.3%: -3,300원</li>
+              <li className="font-black text-emerald-700">실지급액: 91,700원</li>
+            </ul>
+          </div>
+          <p className="text-xs text-gray-500">※ 수익통장에 적립되는 금액은 실지급액 기준이며, 출금 시 추가 수수료는 없습니다.</p>
         </div>
       </div>
 
@@ -612,7 +654,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         const { task, isAdvertiserView, step = 'confirmed' } = workConfirmModal;
         const selectedWithLink = task.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim()));
         const workLinksList = selectedWithLink.flatMap((a) => a.workLinks ?? (a.workLink ? [a.workLink] : [])).filter(Boolean);
-        const deductedReward = Math.round(task.reward * 0.967);
+        const deductedReward = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
         const isCheckStep = isAdvertiserView && step === 'check';
 
         const handlePayAndShowConfirm = () => {
@@ -647,7 +689,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             doc.text(`과업 내용: ${task.description}`, 14, y); y += 6;
             doc.text(`최종 납기: ${task.workPeriod?.end ?? '-'}`, 14, y); y += 6;
             doc.text(`총 계약 금액: ₩${task.reward.toLocaleString()}`, 14, y); y += 6;
-            if (!isAdvertiserView) { doc.text(`지급대금 (3.3% 차감): ₩${deductedReward.toLocaleString()}`, 14, y); y += 6; }
+            if (!isAdvertiserView) { doc.text(`지급대금 (정산5%+원천징수3.3% 차감): ₩${deductedReward.toLocaleString()}`, 14, y); y += 6; }
             y += 4;
             if (workLinksList.length > 0) {
               doc.text('작업 링크:', 14, y); y += 6;
@@ -706,7 +748,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                   <p className="text-gray-600 mt-1">최종 납기: {task.workPeriod?.end ?? '-'}</p>
                   <p className="text-emerald-600 font-black mt-1">총 계약 금액: ₩{task.reward.toLocaleString()} (VAT 포함)</p>
                   {!isAdvertiserView && (
-                    <p className="text-gray-600 mt-1">지급대금 (3.3% 수수료 차감): ₩{deductedReward.toLocaleString()}</p>
+                    <p className="text-gray-600 mt-1">지급대금 (정산 수수료 5% + 원천징수 3.3% 차감): ₩{deductedReward.toLocaleString()}</p>
                   )}
                 </div>
                 {isAdvertiserView && workLinksList.length > 0 && (
