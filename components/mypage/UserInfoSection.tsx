@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserProfile, SellerApplication, NotificationType } from '../../types';
 import { supabase } from '@/supabase';
+import { compressImageForStorage } from '@/utils/imageCompress';
 
 interface Props {
   user: UserProfile;
@@ -148,12 +149,18 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     }
   }, [individualForm, businessForm, sellerType, savedApp, proofImages, user]);
 
-  const handleProofUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'bankbook' | 'license') => {
+  const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'bankbook' | 'license') => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setProofImages(prev => ({ ...prev, [type]: reader.result as string }));
+    reader.onloadend = async () => {
+      const raw = reader.result as string;
+      try {
+        const compressed = await compressImageForStorage(raw);
+        setProofImages(prev => ({ ...prev, [type]: compressed }));
+      } catch {
+        setProofImages(prev => ({ ...prev, [type]: raw }));
+      }
     };
     reader.readAsDataURL(file);
   };
