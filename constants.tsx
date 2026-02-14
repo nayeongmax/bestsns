@@ -368,9 +368,9 @@ export function setPartTimeJobRequests(requests: PartTimeJobRequest[]): void {
   localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(requests));
 }
 
-/** 광고금액 기준 수수료 계산: 20% + 수수료의 부가세 10% */
+/** 광고금액 기준 수수료 계산: 25% + 수수료의 부가세 10% */
 export function calcJobRequestFee(adAmount: number): number {
-  const baseFee = Math.round(adAmount * 0.2);
+  const baseFee = Math.round(adAmount * ADVERTISER_FEE_RATE); // 25%
   const vat = Math.round(baseFee * 0.1);
   return baseFee + vat;
 }
