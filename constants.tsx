@@ -374,3 +374,34 @@ export function calcJobRequestFee(adAmount: number): number {
   const vat = Math.round(baseFee * 0.1);
   return baseFee + vat;
 }
+
+/** localStorage 용량 제한(약 5MB) 방지 - 증빙 이미지 압축. 최대 800px, JPEG 0.6 */
+export function compressImageForStorage(dataUrl: string, maxWidth = 800, quality = 0.6): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error('이미지 로드 실패'));
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      } catch {
+        resolve(dataUrl);
+      }
+    };
+    img.src = dataUrl;
+  });
+}
