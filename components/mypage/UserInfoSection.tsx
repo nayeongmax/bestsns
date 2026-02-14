@@ -8,13 +8,15 @@ interface Props {
   onUpdate: (updated: UserProfile) => void;
   forcedTab?: 'profile' | 'expert' | 'notif' | 'pw' | 'quit';
   onTabChange?: (tab: string) => void;
+  expertRegistrationFor?: 'seller' | 'freelancer' | null;
+  onExpertRegistrationDone?: () => void;
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
 }
 
 type SettingsTab = 'profile' | 'expert' | 'notif' | 'pw' | 'quit';
 type SellerType = 'individual' | 'business';
 
-const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChange, addNotif }) => {
+const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChange, expertRegistrationFor, onExpertRegistrationDone, addNotif }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>(forcedTab || 'profile');
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [showApplySuccessModal, setShowApplySuccessModal] = useState(false);
@@ -35,13 +37,16 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
 
   // --- 전문가 정보 폼 상태 ---
   const savedApp = user.sellerApplication;
+  const savedFreelancerApp = user.freelancerApplication;
   const [sellerType, setSellerType] = useState<SellerType>(savedApp?.sellerType || 'individual');
   
   const [individualForm, setIndividualForm] = useState({
     email: savedApp?.bankInfo?.email || user.email || '',
-    bankName: savedApp?.bankInfo?.bankName || '',
-    accountNo: savedApp?.bankInfo?.accountNo || '',
-    ownerName: savedApp?.bankInfo?.ownerName || user.nickname || ''
+    bankName: savedApp?.bankInfo?.bankName || savedFreelancerApp?.bankName || '',
+    accountNo: savedApp?.bankInfo?.accountNo || savedFreelancerApp?.accountNo || '',
+    ownerName: savedApp?.bankInfo?.ownerName || savedFreelancerApp?.ownerName || user.nickname || '',
+    residentNumber: savedApp?.bankInfo?.residentNumber || savedFreelancerApp?.residentNumber || '',
+    contact: savedFreelancerApp?.contact || user.phone || ''
   });
 
   const [businessForm, setBusinessForm] = useState({
@@ -119,13 +124,16 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
 
   const isExpertFormChanged = useMemo(() => {
     if (sellerType === 'individual') {
-      return (
+      const base =
         individualForm.email !== (savedApp?.bankInfo?.email || user.email || '') ||
-        individualForm.bankName !== (savedApp?.bankInfo?.bankName || '') ||
-        individualForm.accountNo !== (savedApp?.bankInfo?.accountNo || '') ||
-        individualForm.ownerName !== (savedApp?.bankInfo?.ownerName || user.nickname || '') ||
-        proofImages.bankbook !== savedApp?.proofs?.bankbookImg
-      );
+        individualForm.bankName !== (savedApp?.bankInfo?.bankName || savedFreelancerApp?.bankName || '') ||
+        individualForm.accountNo !== (savedApp?.bankInfo?.accountNo || savedFreelancerApp?.accountNo || '') ||
+        individualForm.ownerName !== (savedApp?.bankInfo?.ownerName || savedFreelancerApp?.ownerName || user.nickname || '') ||
+        proofImages.bankbook !== savedApp?.proofs?.bankbookImg;
+      if (expertRegistrationFor === 'freelancer') {
+        return base || individualForm.residentNumber !== (savedFreelancerApp?.residentNumber || '') || individualForm.contact !== (savedFreelancerApp?.contact || user.phone || '');
+      }
+      return base;
     } else {
       return (
         businessForm.companyName !== (savedApp?.businessInfo?.companyName || '') ||
@@ -151,6 +159,43 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
   };
 
   const handleCertificationRequest = async () => {
+    if (expertRegistrationFor === 'freelancer') {
+      if (sellerType === 'individual') {
+        if (!individualForm.bankName?.trim() || !individualForm.accountNo?.trim() || !individualForm.ownerName?.trim()) {
+          return alert('은행명, 계좌번호, 예금주를 모두 입력해 주세요.');
+        }
+        if (!individualForm.residentNumber?.trim()) {
+          return alert('주민등록번호를 입력해 주세요.');
+        }
+        if (!proofImages.bankbook) {
+          return alert('통장 사본 이미지를 등록해 주세요.');
+        }
+      } else {
+        if (!businessForm.bankName?.trim() || !businessForm.accountNo?.trim() || !businessForm.ownerName?.trim()) {
+          return alert('은행명, 계좌번호, 예금주를 모두 입력해 주세요.');
+        }
+        if (!proofImages.bankbook) return alert('통장 사본 이미지를 등록해 주세요.');
+      }
+      if (!window.confirm('프리랜서 등록 신청을 제출하시겠습니까? 운영자 승인 후 누구나알바에 신청할 수 있습니다.')) return;
+      const freelancerApp: import('../../types').FreelancerApplication = {
+        appliedAt: new Date().toISOString(),
+        name: sellerType === 'individual' ? individualForm.ownerName : businessForm.ownerName,
+        contact: (sellerType === 'individual' ? individualForm.contact || individualForm.email : businessForm.taxEmail) || '',
+        residentNumber: sellerType === 'individual' ? individualForm.residentNumber : '',
+        bankName: sellerType === 'individual' ? individualForm.bankName : businessForm.bankName,
+        accountNo: sellerType === 'individual' ? individualForm.accountNo : businessForm.accountNo,
+        ownerName: sellerType === 'individual' ? individualForm.ownerName : businessForm.ownerName,
+        bankbookImage: proofImages.bankbook,
+      };
+      try {
+        await onUpdate({ ...user, freelancerStatus: 'pending', freelancerApplication: freelancerApp });
+        setShowApplySuccessModal(true);
+        onExpertRegistrationDone?.();
+        alert('프리랜서 등록 신청이 완료되었습니다.\n운영자 승인 후 누구나알바에 신청할 수 있습니다.');
+      } catch (_) {}
+      return;
+    }
+
     if (sellerType === 'individual' && (!individualForm.bankName || !individualForm.accountNo || !proofImages.bankbook)) {
       return alert('정산 계좌 정보와 통장 사본 이미지를 모두 등록해 주세요.');
     }
@@ -161,7 +206,13 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     const newApp: SellerApplication = {
       sellerType,
       appliedAt: savedApp?.appliedAt || new Date().toISOString(),
-      bankInfo: sellerType === 'individual' ? { ...individualForm } : { 
+      bankInfo: sellerType === 'individual' ? { 
+        email: individualForm.email, 
+        bankName: individualForm.bankName, 
+        accountNo: individualForm.accountNo, 
+        ownerName: individualForm.ownerName,
+        residentNumber: individualForm.residentNumber || undefined
+      } : { 
         bankName: businessForm.bankName, 
         accountNo: businessForm.accountNo, 
         ownerName: businessForm.ownerName, 
@@ -331,6 +382,20 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                            <label className="text-[12px] font-bold text-gray-400 italic px-2">예금주명</label>
                            <input value={individualForm.ownerName} onChange={e => setIndividualForm({...individualForm, ownerName: e.target.value})} className="w-full p-5 bg-white border border-gray-100 rounded-2xl font-bold text-[15px] outline-none shadow-sm focus:border-blue-400 transition-all" />
                         </div>
+                        {sellerType === 'individual' && (
+                          <>
+                            <div className="space-y-2">
+                              <label className="text-[12px] font-bold text-gray-400 italic px-2">주민등록번호</label>
+                              <input value={individualForm.residentNumber} onChange={e => setIndividualForm({...individualForm, residentNumber: e.target.value})} placeholder="000000-0000000" className="w-full p-5 bg-white border border-gray-100 rounded-2xl font-bold text-[15px] outline-none shadow-sm focus:border-blue-400 transition-all" />
+                            </div>
+                            {(expertRegistrationFor === 'freelancer' || !!user.freelancerApplication) && (
+                              <div className="space-y-2">
+                                <label className="text-[12px] font-bold text-gray-400 italic px-2">연락처 (급할 때 연락)</label>
+                                <input value={individualForm.contact} onChange={e => setIndividualForm({...individualForm, contact: e.target.value})} placeholder="010-0000-0000" className="w-full p-5 bg-white border border-gray-100 rounded-2xl font-bold text-[15px] outline-none shadow-sm focus:border-blue-400 transition-all" />
+                              </div>
+                            )}
+                          </>
+                        )}
                      </div>
                   </div>
                   <div className="space-y-4">
@@ -423,10 +488,21 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
              <div className="flex justify-end pt-10">
                 <button 
                   onClick={handleCertificationRequest} 
-                  disabled={!isExpertFormChanged && user.sellerStatus !== 'none'} 
-                  className={`px-12 py-5 rounded-[48px] font-black text-[18px] shadow-2xl transition-all italic ${isExpertFormChanged || user.sellerStatus === 'approved' ? 'bg-blue-600 text-white hover:bg-black' : 'bg-[#E4E8ED] text-gray-400 cursor-default'}`}
+                  disabled={
+                    expertRegistrationFor === 'freelancer' 
+                      ? (user.freelancerStatus === 'pending' || (!isExpertFormChanged && user.freelancerStatus !== 'approved'))
+                      : (!isExpertFormChanged && user.sellerStatus !== 'none')
+                  } 
+                  className={`px-12 py-5 rounded-[48px] font-black text-[18px] shadow-2xl transition-all italic ${
+                    expertRegistrationFor === 'freelancer'
+                      ? (isExpertFormChanged || user.freelancerStatus === 'approved' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-[#E4E8ED] text-gray-400 cursor-default')
+                      : (isExpertFormChanged || user.sellerStatus === 'approved' ? 'bg-blue-600 text-white hover:bg-black' : 'bg-[#E4E8ED] text-gray-400 cursor-default')
+                  }`}
                 >
-                  {user.sellerStatus === 'approved' ? '전문가 정보 수정하기' : user.sellerStatus === 'pending' ? '인증 심사 중...' : '판매자 정보 인증 요청'}
+                  {expertRegistrationFor === 'freelancer' 
+                    ? (user.freelancerStatus === 'approved' ? '프리랜서 정보 수정하기' : user.freelancerStatus === 'pending' ? '인증 심사 중...' : '프리랜서 정보 인증 요청')
+                    : (user.sellerStatus === 'approved' ? '전문가 정보 수정하기' : user.sellerStatus === 'pending' ? '인증 심사 중...' : '판매자 정보 인증 요청')
+                  }
                 </button>
              </div>
           </div>
