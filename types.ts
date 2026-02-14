@@ -100,7 +100,9 @@ export interface PartTimeTaskSections {
   이미지?: string;
   /** 참고 이미지 최대 10개 (data URL) */
   이미지목록?: string[];
+  /** 동영상 지시사항 또는 동영상 파일 data URL */
   동영상?: string;
+  /** gif 지시사항 또는 gif 파일 data URL */
   gif?: string;
   /** 작업 링크 관련 안내 1개. 작업링크목록이 있으면 작업링크목록 사용 */
   작업링크?: string;
