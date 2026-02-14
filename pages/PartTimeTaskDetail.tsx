@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
 import { NotificationType } from '@/types';
@@ -22,7 +22,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   }, [user, members]);
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const focusWorkLink = (location.state as { focusWorkLink?: boolean })?.focusWorkLink;
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
+  const [isEditingWorkLinks, setIsEditingWorkLinks] = useState(false);
   const [applyComment, setApplyComment] = useState('');
   const [applyContact, setApplyContact] = useState('');
   const [workLinks, setWorkLinks] = useState<string[]>(['']);
@@ -37,6 +40,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     processAutoApprovals();
     setTasks(getPartTimeTasks());
   }, [taskId]);
+
+  /** 작업 링크 수정 모드: focusWorkLink 또는 수정요청 시 workLinks에 제출된 링크 채우기 */
+  useEffect(() => {
+    if (!task || !user) return;
+    const me = task.applicants.find((a) => a.userId === user.id);
+    if (!me?.selected) return;
+    const submitted = me.workLinks?.length ? me.workLinks : (me.workLink ? [me.workLink] : []);
+    if (submitted.length > 0 && (focusWorkLink || me.revisionRequest)) {
+      setWorkLinks(submitted);
+      setIsEditingWorkLinks(true);
+    }
+  }, [task?.id, user?.id, focusWorkLink, task?.applicants]);
 
   /** 작업일 이틀 전 / 작업당일 알림 (선정된 신청자에게 1회만) */
   useEffect(() => {
@@ -187,6 +202,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     );
     saveTasks(next);
     setWorkLinks(['']);
+    setIsEditingWorkLinks(false);
     if (addNotif) {
       addNotif(user.id, 'freelancer', '링크 제출 완료', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다. 수고많으셨습니다.', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.');
     }
@@ -584,7 +600,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                       <div className="border-t border-gray-100 pt-6 mt-4">
                         <h3 className="text-lg font-black text-gray-800 mb-2">작업 링크 제출</h3>
                         <p className="text-sm text-gray-500 mb-3">작업을 완료한 후 결과 링크를 남겨 주세요. 링크를 여러 개 제출할 수 있습니다. 운영자 확인 후 포인트가 지급됩니다.</p>
-                        {submitted.length > 0 ? (
+                        {submitted.length > 0 && !isEditingWorkLinks ? (
                           <div className="space-y-2">
                             <p className="text-gray-700 font-bold">제출된 링크:</p>
                             {submitted.map((url, i) => (
@@ -592,6 +608,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                                 <a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline break-all">{url}</a>
                               </p>
                             ))}
+                            <button type="button" onClick={() => setIsEditingWorkLinks(true)} className="mt-3 px-4 py-2 rounded-xl bg-amber-500 text-white font-black text-sm hover:bg-amber-600">
+                              수정
+                            </button>
                           </div>
                         ) : (
                           <>
@@ -616,8 +635,13 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                                 + 링크 추가
                               </button>
                               <button type="button" onClick={handleSubmitWorkLink} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all">
-                                작업 링크 제출
+                                {me.revisionRequest ? '재승인 요청' : '작업 링크 제출'}
                               </button>
+                              {submitted.length > 0 && (
+                                <button type="button" onClick={() => setIsEditingWorkLinks(false)} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">
+                                  취소
+                                </button>
+                              )}
                             </div>
                           </>
                         )}
