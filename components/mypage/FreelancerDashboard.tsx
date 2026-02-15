@@ -904,7 +904,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
             <div class="value">과업 내용: ${task.description}</div>
             <div class="value">최종 납기: ${task.workPeriod?.end ?? '-'}</div>
             <div class="value" style="font-weight:bold;color:#059669">총 계약 금액: ₩${task.reward.toLocaleString()}</div>
-            ${!isAdvertiserView ? `<div class="value">지급대금 (5%+3.3% 차감): ₩${deductedReward.toLocaleString()}</div>` : ''}</div>
+            <div class="value">지급대금 (정산 수수료 5% + 원천징수 3.3% 차감): ₩${deductedReward.toLocaleString()}</div></div>
             ${workLinksList.length > 0 ? `<div class="section"><div class="label">3. 작업 링크</div><ul>${workLinksList.map((u) => `<li><a href="${u}">${u}</a></li>`).join('')}</ul></div>` : ''}
             <div class="section"><div class="label">취소·환불·검수·위약벌</div>
             <div class="value">작업 시작 전 전액 취소·환불 가능. 결과물 전달일로부터 3일 이내 이의없으면 자동 승인. 직거래 시 거래액 10배 위약벌.</div></div>
@@ -973,11 +973,9 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                   <p className="font-bold text-gray-800">과업 내용: {task.description}</p>
                   <p className="text-gray-600 mt-1">최종 납기: {task.workPeriod?.end ?? '-'}</p>
                   <p className="text-emerald-600 font-black mt-1">총 계약 금액: ₩{task.reward.toLocaleString()} (VAT 포함)</p>
-                  {!isAdvertiserView && (
-                    <p className="text-gray-600 mt-1">지급대금 (정산 수수료 5% + 원천징수 3.3% 차감): ₩{deductedReward.toLocaleString()}</p>
-                  )}
+                  <p className="text-gray-600 mt-1">지급대금 (정산 수수료 5% + 원천징수 3.3% 차감): ₩{deductedReward.toLocaleString()}</p>
                 </div>
-                {isAdvertiserView && workLinksList.length > 0 && (
+                {workLinksList.length > 0 && (
                   <div>
                     <p className="text-xs font-black text-gray-400 uppercase mb-2">3. 작업 링크</p>
                     <ul className="list-disc pl-4 space-y-1">
@@ -988,27 +986,21 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                   </div>
                 )}
                 <div>
-                  <p className="text-xs font-black text-gray-400 uppercase mb-2">{isAdvertiserView ? (workLinksList.length > 0 ? '4' : '3') : '3'}. 취소 및 환불 규정</p>
+                  <p className="text-xs font-black text-gray-400 uppercase mb-2">{workLinksList.length > 0 ? '4' : '3'}. 취소 및 환불 규정</p>
                   <p className="text-gray-700 leading-relaxed text-sm">작업 시작 전: 언제든 전액 취소·환불 가능합니다. 작업 시작 후: 프리랜서 선정이 끝난 경우 작업내용 전달이 되어 환불이 어렵습니다.</p>
                 </div>
                 <div>
-                  <p className="text-xs font-black text-gray-400 uppercase mb-2">{isAdvertiserView ? (workLinksList.length > 0 ? '5' : '4') : '4'}. 검수 및 A/S 규정</p>
-                  {isAdvertiserView ? (
-                    <p className="text-gray-700 leading-relaxed">A/S 진행: 결과물 전달일로부터 3일 이내.<br />해당 기간 내 광고주 이의없으면 자동 승인 및 수익통장 적립.</p>
-                  ) : (
-                    <p className="text-gray-700 leading-relaxed">A/S 진행: 결과물 전달일로부터 3일 이내.<br />해당 기간 내 광고주 이의없으면 자동 승인 및 수익통장 적립.</p>
-                  )}
+                  <p className="text-xs font-black text-gray-400 uppercase mb-2">{workLinksList.length > 0 ? '5' : '4'}. 검수 및 A/S 규정</p>
+                  <p className="text-gray-700 leading-relaxed">A/S 진행: 결과물 전달일로부터 3일 이내.<br />해당 기간 내 광고주 이의없으면 자동 승인 및 수익통장 적립.</p>
                 </div>
                 <div>
-                  <p className="text-xs font-black text-gray-400 uppercase mb-2">{isAdvertiserView ? (workLinksList.length > 0 ? '6' : '5') : '5'}. 위약벌 및 법적 조치</p>
+                  <p className="text-xs font-black text-gray-400 uppercase mb-2">{workLinksList.length > 0 ? '6' : '5'}. 위약벌 및 법적 조치</p>
                   <p className="text-gray-700 leading-relaxed">직거래 시도 시 거래액 10배 위약벌 청구 및 영구 제명.<br />작업결과물 삭제불가. 게시글/대화 기록 임의 삭제 불가.</p>
                 </div>
-                {!isAdvertiserView && (
-                  <div>
-                    <p className="text-xs font-black text-gray-400 uppercase mb-2">6. 정산 시점 및 파트너 준수 사항</p>
-                    <p className="text-gray-700 leading-relaxed">정산 시점: 작업완료일로부터 4~7일 수익통장에 적립.<br />(광고주 작업완료는 프리랜서 작업완료일로부터 최대 3일임을 감안한 일정)<br /><br />본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase mb-2">{workLinksList.length > 0 ? '7' : '6'}. 정산 시점 및 파트너 준수 사항</p>
+                  <p className="text-gray-700 leading-relaxed">정산 시점: 작업완료일로부터 4~7일 수익통장에 적립.<br />(광고주 작업완료는 프리랜서 작업완료일로부터 최대 3일임을 감안한 일정)<br /><br />본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</p>
+                </div>
               </div>
               <div className="flex gap-3">
                 <button onClick={handlePdfDownload} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">PDF 저장</button>
