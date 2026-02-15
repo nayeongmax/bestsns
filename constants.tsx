@@ -352,10 +352,11 @@ export function processAutoApprovals(): boolean {
 
 // ----- 누구나알바 작업의뢰 (광고주→운영진) -----
 const PARTTIME_JOB_REQUESTS_KEY = 'parttime_job_requests_v1';
+const PARTTIME_JOB_IMAGES_KEY = (id: string) => `parttime_job_images_v1_${id}`;
 
-export function getPartTimeJobRequests(): PartTimeJobRequest[] {
+export function getPartTimeJobRequestImages(id: string): string[] {
   try {
-    const raw = localStorage.getItem(PARTTIME_JOB_REQUESTS_KEY);
+    const raw = localStorage.getItem(PARTTIME_JOB_IMAGES_KEY(id));
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
@@ -364,8 +365,34 @@ export function getPartTimeJobRequests(): PartTimeJobRequest[] {
   return [];
 }
 
+export function setPartTimeJobRequestImages(id: string, images: string[]): void {
+  if (images.length === 0) localStorage.removeItem(PARTTIME_JOB_IMAGES_KEY(id));
+  else localStorage.setItem(PARTTIME_JOB_IMAGES_KEY(id), JSON.stringify(images));
+}
+
+export function getPartTimeJobRequests(): PartTimeJobRequest[] {
+  try {
+    const raw = localStorage.getItem(PARTTIME_JOB_REQUESTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((r: PartTimeJobRequest) => {
+          const imgs = getPartTimeJobRequestImages(r.id);
+          return imgs.length > 0 ? { ...r, exampleImages: imgs } : r;
+        });
+      }
+    }
+  } catch {}
+  return [];
+}
+
 export function setPartTimeJobRequests(requests: PartTimeJobRequest[]): void {
-  localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(requests));
+  const toStore = requests.map((r) => {
+    const { exampleImages, ...rest } = r;
+    setPartTimeJobRequestImages(r.id, exampleImages ?? []);
+    return rest;
+  });
+  localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(toStore));
 }
 
 /** 광고금액 기준 수수료 계산: 25% + 수수료의 부가세 10% */
