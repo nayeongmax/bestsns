@@ -77,6 +77,8 @@ export interface PartTimeApplicant {
   selectedAt?: string;
   /** 광고주가 구매확정한 시각 (ISO). 수익통장 지급 완료 */
   advertiserConfirmedAt?: string;
+  /** 수정요청 후 재제출한 시각 (ISO). 재승인요청 표시용 */
+  reApprovalRequestedAt?: string;
 }
 
 /** 게시글 한 건 (제목+내용) - 여러 개 넣을 때 사용 */
