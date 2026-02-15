@@ -137,25 +137,14 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-6 py-6 border border-slate-600/50 shadow-lg">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 to-transparent" />
-          <div className="relative space-y-3">
-            <p className="text-white text-xl font-black leading-relaxed">
-              최고의 전문가 프리랜서로 선별 매칭합니다.
-            </p>
-            <p className="text-white/95 font-semibold text-base leading-relaxed">
-              부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 불법게시물 작업을 엄격히 제한합니다.
-            </p>
-            <p className="text-amber-300/90 font-bold text-sm">
-              작업결과물로 인한 법적인 부분의 책임은 광고주에게 있습니다.
-            </p>
-            <p className="text-emerald-300 font-bold text-base pt-1">
-              최고의 전문가를 선별 매칭하고, 거품 없는 합리적인 견적을 제안드리겠습니다!
-            </p>
-          </div>
-        </div>
+      <div className="mb-8 text-center">
+        <p className="text-slate-700 text-xl md:text-2xl font-bold tracking-tight">
+          최고의 전문가 프리랜서로 선별 매칭합니다.
+        </p>
+        <div className="mt-3 h-px w-24 mx-auto bg-slate-300/60" />
+      </div>
 
+      <form onSubmit={handleSubmit} className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
         <div>
           <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">알바광고 신청제목 *</label>
           <input
@@ -178,6 +167,12 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
             className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-base resize-y min-h-[160px]"
             required
           />
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-6 py-5 shadow-sm">
+          <p className="text-slate-700 font-semibold text-sm leading-relaxed">
+            부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 불법게시물 작업을 엄격히 제한합니다.
+          </p>
         </div>
 
         <div>
@@ -204,6 +199,10 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
             </button>
           </div>
         </div>
+
+        <p className="text-emerald-700 font-bold text-base text-center py-2 px-4 rounded-xl bg-emerald-50 border border-emerald-100">
+          최고의 전문가를 선별 매칭하고, 거품 없는 합리적인 견적을 제안드리겠습니다!
+        </p>
 
         <div>
           <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">연락처 *</label>
