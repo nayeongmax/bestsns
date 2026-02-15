@@ -242,7 +242,7 @@ const SECTION_TYPES: { key: SectionItemType; label: string }[] = [
 
 const MAX_IMAGES_PER_SECTION = 10;
 
-export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ user }) => {
+export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?: UserProfile[] }> = ({ user, members = [] }) => {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -258,15 +258,18 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  /** 승인된 작업의뢰(광고의뢰)의 광고주 ID 목록 (드롭다운용) */
-  const approvedAdvertiserIds = useMemo(() => {
-    const reqs = getPartTimeJobRequests().filter((jr) => jr.status === 'pending' || jr.paid);
-    const ids = new Set<string>();
-    reqs.forEach((jr) => {
-      if (jr.applicantUserId?.trim()) ids.add(jr.applicantUserId.trim());
-    });
-    return Array.from(ids).sort();
-  }, []);
+  /** 결제 완료된 견적의 광고주 목록 (닉네임 표시, 드롭다운용) */
+  const paidAdvertiserOptions = useMemo(() => {
+    const reqs = getPartTimeJobRequests().filter((jr) => jr.paid && jr.applicantUserId?.trim());
+    const linkedIds = new Set(getPartTimeTasks().filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
+    return reqs
+      .filter((jr) => !linkedIds.has(jr.id))
+      .map((jr) => {
+        const m = members.find((mm) => mm.id === jr.applicantUserId);
+        return { userId: jr.applicantUserId!, nickname: m?.nickname ?? '광고주', title: jr.title };
+      })
+      .sort((a, b) => a.nickname.localeCompare(b.nickname));
+  }, [members]);
 
   const addSection = (type: SectionItemType) => {
     const item: SectionItem = {
@@ -465,14 +468,14 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
         <section className="space-y-6">
           <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">2. 모집 인원 · 신청기간 · 작업기간</h3></div>
           <div>
-            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">광고주 ID (광고의뢰 승인 건에서 선택)</label>
-            <select value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} className="w-full max-w-xs px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-bold">
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">결제 완료된 광고주 (견적서 결제 건에서 선택)</label>
+            <select value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} className="w-full max-w-md px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-bold">
               <option value="">선택 안 함</option>
-              {approvedAdvertiserIds.map((id) => (
-                <option key={id} value={id}>{id}</option>
+              {paidAdvertiserOptions.map((opt) => (
+                <option key={opt.userId} value={opt.userId}>{opt.nickname} - {opt.title}</option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">작업의뢰 ID는 프리랜서 선정 후 자동으로 연결됩니다.</p>
+            <p className="text-xs text-gray-500 mt-1">선택 후 프리랜서를 선정하면 해당 견적과 연결됩니다. (프리랜서 선정 완료 표시)</p>
           </div>
           <div className="flex flex-wrap gap-4">
             <div className="min-w-[120px]">
