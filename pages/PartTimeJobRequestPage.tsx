@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { NotificationType, PartTimeJobRequest } from '@/types';
-import { getPartTimeJobRequests, setPartTimeJobRequests, calcJobRequestFee } from '@/constants';
+import { getPartTimeJobRequests, setPartTimeJobRequests } from '@/constants';
 
 const todayStr = () => {
   const d = new Date();
@@ -25,15 +25,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const [contact, setContact] = useState('');
   const [workPeriodStart, setWorkPeriodStart] = useState(todayStr());
   const [workPeriodEnd, setWorkPeriodEnd] = useState(todayStr());
-  const [unitPrice, setUnitPrice] = useState<number>(0);
-  const [quantity, setQuantity] = useState<number>(1);
   const [showModal, setShowModal] = useState(false);
-  const adAmount = (unitPrice || 0) * (quantity || 1);
-  const [agree1, setAgree1] = useState(false);
-  const [agree2, setAgree2] = useState(false);
-  const [agree3, setAgree3] = useState(false);
-
-  const fee = calcJobRequestFee(adAmount);
 
   useEffect(() => {
     if (editRequest && editRequest.applicantUserId === user.id) {
@@ -44,9 +36,6 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       setContact(editRequest.contact || '');
       setWorkPeriodStart(editRequest.workPeriodStart);
       setWorkPeriodEnd(editRequest.workPeriodEnd);
-      const qty = editRequest.quantity ?? 1;
-      setQuantity(qty);
-      setUnitPrice(editRequest.unitPrice ?? (qty > 0 ? Math.floor(editRequest.adAmount / qty) : editRequest.adAmount));
     }
   }, [editRequest?.id, user.id]);
 
@@ -64,10 +53,6 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       alert('연락처를 입력해 주세요.');
       return;
     }
-    if (!agree1 || !agree2 || !agree3) {
-      alert('필수 동의 항목에 모두 체크해 주세요.');
-      return;
-    }
     const requests = getPartTimeJobRequests();
     if (editRequest && editRequest.applicantUserId === user.id) {
       const updated = {
@@ -79,10 +64,8 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         contact: contact.trim(),
         workPeriodStart,
         workPeriodEnd,
-        adAmount,
-        unitPrice: unitPrice || undefined,
-        quantity: quantity || 1,
-        fee,
+        adAmount: editRequest.adAmount ?? 0,
+        fee: editRequest.fee ?? 0,
         status: 'pending_review' as const,
         rejectReason: undefined,
       };
@@ -99,10 +82,10 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         contact: contact.trim(),
         workPeriodStart,
         workPeriodEnd,
-        adAmount,
-        unitPrice: unitPrice || undefined,
-        quantity: quantity || 1,
-        fee,
+        adAmount: 0,
+        unitPrice: undefined,
+        quantity: 1,
+        fee: 0,
         applicantUserId: user.id,
         status: 'pending_review' as const,
         paid: false,
@@ -155,17 +138,20 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-6 py-5 border border-slate-600/50 shadow-lg">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-6 py-6 border border-slate-600/50 shadow-lg">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/10 to-transparent" />
-          <div className="relative space-y-2">
-            <p className="text-white/95 font-semibold text-base leading-relaxed">
-              광고주님의 만족스런 결과를 위해 맞춤형 프리랜서로 선정됩니다.
+          <div className="relative space-y-3">
+            <p className="text-white text-xl font-black leading-relaxed">
+              최고의 전문가 프리랜서로 선별 매칭합니다.
             </p>
             <p className="text-white/95 font-semibold text-base leading-relaxed">
               부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 불법게시물 작업을 엄격히 제한합니다.
             </p>
-            <p className="text-amber-300/90 font-bold text-sm mt-3">
+            <p className="text-amber-300/90 font-bold text-sm">
               작업결과물로 인한 법적인 부분의 책임은 광고주에게 있습니다.
+            </p>
+            <p className="text-emerald-300 font-bold text-base pt-1">
+              최고의 전문가를 선별 매칭하고, 거품 없는 합리적인 견적을 제안드리겠습니다!
             </p>
           </div>
         </div>
@@ -252,68 +238,6 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">단가 (개당, 원)</label>
-            <input
-              type="number"
-              min={0}
-              value={unitPrice || ''}
-              onChange={(e) => setUnitPrice(Number(e.target.value) || 0)}
-              placeholder="0"
-              className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-base"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">갯수</label>
-            <input
-              type="number"
-              min={1}
-              value={quantity || ''}
-              onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
-              placeholder="1"
-              className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-base"
-            />
-          </div>
-        </div>
-
-        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-3">
-          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">광고주 수수료 (25% + 부가세 10% 자동계산)</label>
-          <p className="text-2xl font-black text-emerald-700">{fee.toLocaleString()}원</p>
-          <div className="pt-3 border-t border-gray-200">
-            <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-1">총합금액 (단가×갯수+수수료)</label>
-            <p className="text-2xl font-black text-gray-900">{(adAmount + fee).toLocaleString()}원</p>
-          </div>
-        </div>
-
-        <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-indigo-50 text-indigo-600 font-black text-sm border border-indigo-100">
-          <span>정산기준안내</span>
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-          <span className="text-xs font-bold">광고주 25% / 결제망 3.3% / 부가세 10%</span>
-        </div>
-
-        <div className="p-6 rounded-2xl bg-blue-50 border border-blue-100">
-          <p className="text-sm font-black text-blue-800 mb-2">취소/환불 규정</p>
-          <p className="text-sm text-blue-900 leading-relaxed">
-            <strong>작업 시작 전:</strong> 언제든 전액 취소·환불 가능합니다.<br />
-            <strong>작업 시작 후:</strong> 프리랜서 선정이 끝난 경우 작업내용 전달이 되어 환불이 어렵습니다.
-          </p>
-          <label className="flex items-start gap-3 cursor-pointer mt-4">
-            <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
-            <span className="text-sm font-bold">(필수) 취소/환불 규정을 확인하였으며 이에 동의합니다.</span>
-          </label>
-        </div>
-
-        <div className="space-y-3 p-4 rounded-2xl bg-amber-50 border border-amber-200">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
-            <span className="text-sm">(필수) 결제와 동시에 플랫폼과 귀하 사이의 용역 공급 계약이 성립됨에 동의합니다.</span>
-          </label>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
-            <span className="text-sm">(필수) 플랫폼 외 직접 거래 시 거래액의 10배 위약벌이 부과됨을 확인하였습니다.</span>
-          </label>
-        </div>
         <button
           type="submit"
           className="w-full py-5 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all text-lg"
