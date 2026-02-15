@@ -23,7 +23,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const focusWorkLink = (location.state as { focusWorkLink?: boolean })?.focusWorkLink;
+  const focusWorkLink = (location.state as { focusWorkLink?: boolean; fromAdmin?: boolean })?.focusWorkLink;
+  const fromAdmin = (location.state as { fromAdmin?: boolean })?.fromAdmin;
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
   const [isEditingWorkLinks, setIsEditingWorkLinks] = useState(false);
   const [applyComment, setApplyComment] = useState('');
@@ -292,7 +293,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     return (
       <div className="max-w-3xl mx-auto py-12 px-4 text-center">
         <p className="text-gray-500 font-bold">작업을 찾을 수 없습니다.</p>
-        <button onClick={() => navigate('/part-time')} className="mt-4 text-emerald-600 font-black hover:underline">
+        <button onClick={() => navigate(fromAdmin ? '/admin' : '/part-time')} className="mt-4 text-emerald-600 font-black hover:underline">
           목록으로
         </button>
       </div>
@@ -313,8 +314,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-black text-lg">+{task.reward.toLocaleString()}원</span>
             </div>
           </div>
-          <button onClick={() => navigate('/part-time')} className="shrink-0 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-bold text-sm transition-colors">
-            ← 목록
+          <button onClick={() => navigate(fromAdmin ? '/admin' : '/part-time')} className="shrink-0 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-bold text-sm transition-colors">
+            {fromAdmin ? '← 어드민 패널' : '← 목록'}
           </button>
         </div>
 
