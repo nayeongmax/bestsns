@@ -1,460 +1,689 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder, getUserGrade, Review, NotificationType } from '../../types';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/supabase';
-import { getFreelancerBalance } from '@/constants';
-import MyPage from '@/pages/MyPage';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { UserProfile } from '../types';
+import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '../types';
+import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals, getPartTimeJobRequests, generateProjectNo, compressImageForStorage } from '../constants';
 
 interface Props {
-  members: UserProfile[];
-  setMembers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
-  setNotifications: React.Dispatch<React.SetStateAction<SiteNotification[]>>;
-  smmOrders: SMMOrder[];
-  channelOrders: ChannelOrder[];
-  storeOrders: StoreOrder[];
-  ebooks: EbookProduct[];
-  setEbooks: React.Dispatch<React.SetStateAction<EbookProduct[]>>;
-  channels: ChannelProduct[];
-  gradeConfigs: GradeConfig[];
-  setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
-  reviews?: Review[];
-  setReviews?: React.Dispatch<React.SetStateAction<Review[]>>;
-  addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
-  currentUser?: UserProfile | null;
-  onUpdateUser?: (u: UserProfile) => void;
+  user: UserProfile | null;
+  onUpdateUser?: (updated: UserProfile) => void;
 }
 
-type SortKey = 'none' | 'purchase' | 'sales' | 'violations' | 'points' | 'join';
-
-const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
-  { id: 'g1', name: 'STANDARD', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-gray-400', sortOrder: 0 },
-  { id: 'g2', name: 'Prime', target: 'seller', minSales: 10000000, minPurchase: 0, color: 'bg-amber-500', sortOrder: 10 },
-  { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
-];
-
-const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = (..._args: unknown[]) => {}, currentUser, onUpdateUser }) => {
+const PartTimePage: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
-  const [activeSubTab, setActiveSubTab] = useState<'list' | 'seller' | 'freelancer' | 'grades'>('list');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'buyer' | 'seller' | 'freelancer'>('all');
-  const [sortKey, setSortKey] = useState<SortKey>('none');
-  
-  const [editingMember, setEditingMember] = useState<UserProfile | null>(null);
-  const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
+  const [selectedDate, setSelectedDate] = useState('');
+  const [weekOffset, setWeekOffset] = useState(0);
 
-  const resolveGrade = (m: UserProfile) => getUserGrade(m, gradeConfigs);
+  useEffect(() => {
+    processAutoApprovals();
+    setTasks(getPartTimeTasks());
+  }, []);
 
-  const filteredMembers = useMemo(() => {
-    let result = members.filter(m => 
-      (m.nickname || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (m.id || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  useEffect(() => {
+    if (user?.id) setBalance(getFreelancerBalance(user.id));
+  }, [user?.id]);
 
-    if (userTypeFilter === 'buyer') {
-      result = result.filter(m => m.sellerStatus !== 'approved' && m.freelancerStatus !== 'approved');
-    } else if (userTypeFilter === 'seller') {
-      result = result.filter(m => m.sellerStatus === 'approved');
-    } else if (userTypeFilter === 'freelancer') {
-      result = result.filter(m => m.freelancerStatus === 'approved');
+  const completedIds = useMemo(() => {
+    const raw = localStorage.getItem('parttime_completed_v1');
+    return raw ? new Set<string>(JSON.parse(raw)) : new Set<string>();
+  }, [tasks]);
+
+  const isTaskDone = (task: PartTimeTask) =>
+    completedIds.has(task.id) || (task.paidUserIds && user?.id && task.paidUserIds.includes(user.id));
+
+  const todayStrVal = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const weekDates = useMemo(() => {
+    const arr: string[] = [];
+    const base = new Date(todayStrVal);
+    base.setDate(base.getDate() + weekOffset * 7);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      arr.push(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      );
     }
+    return arr;
+  }, [todayStrVal, weekOffset]);
 
-    if (sortKey === 'purchase') result.sort((a, b) => (b.totalPurchaseAmount || 0) - (a.totalPurchaseAmount || 0));
-    else if (sortKey === 'sales') result.sort((a, b) => (b.totalSalesAmount || 0) - (a.totalSalesAmount || 0));
-    else if (sortKey === 'violations') result.sort((a, b) => (b.violationCount || 0) - (a.violationCount || 0));
-    else if (sortKey === 'points') result.sort((a, b) => (b.points || 0) - (a.points || 0));
-    else if (sortKey === 'join') result.sort((a, b) => new Date(b.joinDate || '').getTime() - new Date(a.joinDate || '').getTime());
-
-    return result;
-  }, [members, searchQuery, userTypeFilter, sortKey]);
-
-  const pendingRequests = useMemo(() => 
-    members.filter(m => m.sellerStatus === 'pending' || !!m.pendingApplication), 
-  [members]);
-
-  const pendingFreelancers = useMemo(() => 
-    members.filter(m => m.freelancerStatus === 'pending'), 
-  [members]);
-
-  const handleApproveFreelancer = (userId: string) => {
-    const updated = members.find(m => m.id === userId);
-    if (!updated) return;
-    const approvedProfile = { ...updated, freelancerStatus: 'approved' as const };
-    setMembers(prev => prev.map(m => m.id === userId ? approvedProfile : m));
-    addNotif(userId, 'approval', '프리랜서 승인', '프리랜서 등록이 승인되었습니다. 누구나알바에 신청할 수 있습니다.');
-    if (currentUser?.id === userId && onUpdateUser) onUpdateUser(approvedProfile);
-    alert('프리랜서 승인이 완료되었습니다.');
-  };
-
-  const memberPurchaseHistory = useMemo(() => {
-    if (!editingMember) return [];
-    const smm = smmOrders.filter(o => o.userId === editingMember.id).map(o => ({ id: o.id, orderTime: o.orderTime, category: 'SNS활성화', productName: o.productName, amount: o.sellingPrice * o.quantity, status: o.status }));
-    const channels_purchased = channelOrders.filter(o => o.userId === editingMember.id).map(o => ({ id: o.id, orderTime: o.orderTime, category: '채널구매', productName: o.productName, amount: o.price, status: o.status }));
-    const store = storeOrders.filter(o => o.userId === editingMember.id).map(o => ({ id: o.id, orderTime: o.orderTime, category: 'N잡스토어', productName: o.productName, amount: o.price, status: o.status }));
-    return [...smm, ...channels_purchased, ...store].sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
-  }, [editingMember, smmOrders, storeOrders, channelOrders]);
-
-  const memberSalesHistory = useMemo(() => {
-    if (!editingMember) return [];
-    return storeOrders.filter(o => o.sellerNickname === editingMember.nickname).map(o => ({ id: o.id, orderTime: o.orderTime, buyerNickname: o.userNickname, productName: o.productName, amount: o.price, status: o.status })).sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
-  }, [editingMember, storeOrders]);
-
-  const handleApproveSeller = async (userId: string) => {
-    const target = members.find(m => m.id === userId);
-    const app = target?.pendingApplication || target?.sellerApplication;
-    setMembers(prev => prev.map(m => {
-      if (m.id === userId) {
-        if (m.pendingApplication) return { ...m, sellerStatus: 'approved', sellerApplication: m.pendingApplication, pendingApplication: undefined };
-        return { ...m, sellerStatus: 'approved' };
+  const dateCounts = useMemo(() => {
+    const map: Record<string, { total: number; done: number }> = {};
+    weekDates.forEach((d) => {
+      map[d] = { total: 0, done: 0 };
+    });
+    tasks.forEach((t) => {
+      const key = t.workPeriod?.start || t.applicationPeriod?.start;
+      if (map[key]) {
+        map[key].total++;
+        if (t.pointPaid) map[key].done++;
       }
-      return m;
-    }));
-    await supabase.from('profiles').update({
-      seller_status: 'approved',
-      seller_application: app || target?.sellerApplication || null,
-      updated_at: new Date().toISOString()
-    }).eq('id', userId);
-    alert('승인 처리가 완료되었습니다.');
-    if (editingMember?.id === userId) setEditingMember(null);
-  };
+    });
+    return map;
+  }, [tasks, weekDates]);
 
-  const handleUpdateMemberInfo = async () => {
-    if (!editingMember) return;
-    setMembers(prev => prev.map(m => m.id === editingMember.id ? editingMember : m));
-    try {
-      await supabase.from('profiles').update({
-        role: editingMember.role,
-        points: editingMember.points ?? 0,
-        manual_grade: editingMember.manualGrade || null,
-        updated_at: new Date().toISOString()
-      }).eq('id', editingMember.id);
-    } catch (_) {}
-    alert('회원 정보 업데이트가 적용되었습니다.');
-    setEditingMember(null);
-  };
+  const effectiveDate = selectedDate || todayStrVal;
+  const tasksForDate = useMemo(() => {
+    return tasks.filter((t) => (t.workPeriod?.start || t.applicationPeriod?.start) === effectiveDate);
+  }, [tasks, effectiveDate]);
+
+  const sortedTasks = useMemo(() => {
+    const incomplete = tasksForDate.filter((t) => !isTaskDone(t));
+    const complete = tasksForDate.filter((t) => isTaskDone(t));
+    return [...incomplete, ...complete];
+  }, [tasksForDate, isTaskDone]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-white p-2 rounded-[24px] flex gap-2 w-fit border border-gray-100 shadow-sm mx-4">
-        <button onClick={() => setActiveSubTab('list')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'list' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>전체 회원 데이터</button>
-        <button onClick={() => setActiveSubTab('seller')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'seller' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>판매자 승인 대기 ({pendingRequests.length})</button>
-        <button onClick={() => setActiveSubTab('freelancer')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'freelancer' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>프리랜서 승인 대기 ({pendingFreelancers.length})</button>
-        <button onClick={() => setActiveSubTab('grades')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'grades' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>등급 관리</button>
-      </div>
+    <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700">
+      <div className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-10 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
 
-      {activeSubTab === 'list' && (
-        <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex gap-2">
-               {(['all', 'buyer', 'seller', 'freelancer'] as const).map(type => (
-                 <button key={type} onClick={() => setUserTypeFilter(type)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all border ${userTypeFilter === type ? 'bg-gray-900 text-white' : 'bg-white text-gray-400 border-gray-100'}`}>
-                   {type === 'all' ? '전체' : type === 'buyer' ? '구매자' : type === 'seller' ? '판매자' : '프리랜서'}
-                 </button>
-               ))}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
+              누구나<span className="text-emerald-600">알바</span>
+            </h2>
+            <p className="text-gray-700 font-black mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
+            <p className="text-gray-700 font-black mt-1">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => navigate('/part-time/register')}
+                  className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-emerald-700 transition-all"
+                >
+                  작업 등록
+                </button>
+              )}
+              <button
+                onClick={() => navigate('/part-time/request')}
+                className="px-5 py-3 rounded-xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 transition-all"
+              >
+                작업의뢰
+              </button>
             </div>
-            <div className="flex items-center gap-3">
-               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="회원 검색" className="px-6 py-2 bg-gray-50 rounded-full font-bold text-xs outline-none w-64" />
+          </div>
+          {user ? (
+            <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 min-w-[200px]">
+              <p className="text-[11px] font-black text-gray-500 uppercase italic">수익통장</p>
+              <p className="text-2xl font-black text-emerald-700 italic">{balance.toLocaleString()}원</p>
+              <p className="text-[11px] text-gray-500 mt-1">
+                {balance >= MIN_WITHDRAW_FREELANCER ? '출금 가능' : `${(MIN_WITHDRAW_FREELANCER - balance).toLocaleString()}원 더 모으면 출금 가능`}
+              </p>
+              <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-3 text-emerald-600 font-black text-sm hover:underline">
+                마이페이지에서 출금하기 →
+              </Link>
             </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-               <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase">
-                 <tr>
-                   <th className="px-8 py-5">회원정보</th>
-                   <th className="px-8 py-5 text-center">등급뱃지</th>
-                   <th className="px-8 py-5 text-right">총 구매액</th>
-                   <th className="px-8 py-5 text-right">총 판매액</th>
-                   <th className="px-8 py-5 text-right">포인트보유</th>
-                   <th className="px-8 py-5 text-right">알바비수익금</th>
-                   <th className="px-8 py-5 text-center">관리</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-50">
-                 {filteredMembers.map(m => (
-                   <tr key={m.id} className="hover:bg-blue-50/20 font-bold">
-                     <td className="px-8 py-4">
-                        <div className="flex items-center gap-3">
-                           <img src={m.profileImage} className="w-10 h-10 rounded-xl object-cover" alt="p" />
-                           <div><p className="text-gray-900">{m.nickname}</p><p className="text-[10px] text-gray-400">@{m.id}</p></div>
-                        </div>
-                     </td>
-                     <td className="px-8 py-4 text-center">
-                        <span className={`${resolveGrade(m)?.color || 'bg-gray-400'} text-white text-[10px] font-black px-3 py-1 rounded-full`}>{resolveGrade(m)?.name || '-'}</span>
-                     </td>
-                     <td className="px-8 py-4 text-right text-blue-600">₩{(m.totalPurchaseAmount || 0).toLocaleString()}</td>
-                     <td className="px-8 py-4 text-right text-orange-600">₩{(m.totalSalesAmount || 0).toLocaleString()}</td>
-                     <td className="px-8 py-4 text-right text-blue-600">{(m.points || 0).toLocaleString()}P</td>
-                     <td className="px-8 py-4 text-right text-emerald-600">₩{getFreelancerBalance(m.id).toLocaleString()}</td>
-                     <td className="px-8 py-4 text-center">
-                        <button onClick={() => setEditingMember({ ...m })} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black">관리</button>
-                     </td>
-                   </tr>
-                 ))}
-               </tbody>
-            </table>
-          </div>
+          ) : (
+            <button onClick={() => navigate('/login')} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black hover:bg-emerald-600 transition-all">
+              로그인 후 이용
+            </button>
+          )}
         </div>
-      )}
 
-      {activeSubTab === 'freelancer' && (
-        <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 border-b border-gray-50">
-            <h3 className="text-xl font-black text-gray-900">프리랜서 승인 대기</h3>
-            <p className="text-[13px] text-gray-500 font-bold mt-1">실명, 연락처, 통장정보, 신분증/통장 이미지를 확인한 뒤 승인해 주세요.</p>
-          </div>
-          <div className="p-8 space-y-8">
-            {pendingFreelancers.length === 0 ? (
-              <p className="text-gray-400 font-bold text-center py-16">승인 대기 중인 프리랜서가 없습니다.</p>
-            ) : (
-              pendingFreelancers.map(m => {
-                const app = m.freelancerApplication;
-                return (
-                  <div key={m.id} className="border border-emerald-200 rounded-[24px] p-8 bg-emerald-50/30 space-y-6">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <img src={m.profileImage} className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow" alt="" />
-                        <div>
-                          <p className="text-[18px] font-black text-gray-900">{m.nickname}</p>
-                          <p className="text-[12px] text-gray-500 font-bold">@{m.id}</p>
-                          {app?.appliedAt && <p className="text-[11px] text-emerald-600 font-bold mt-1">신청일: {app.appliedAt}</p>}
-                        </div>
-                      </div>
-                      <button onClick={() => handleApproveFreelancer(m.id)} className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black text-[14px] hover:bg-emerald-700 transition-all shadow-lg">승인</button>
-                    </div>
-                    {app && (
-                      <div className="space-y-6 pt-4 border-t border-emerald-100">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <p className="text-[11px] font-black text-gray-400 uppercase">개인 정보</p>
-                            <p className="font-bold text-gray-800">실명: {app.name}</p>
-                            <p className="font-bold text-gray-800">연락처: {app.contact}</p>
-                            <p className="font-bold text-gray-800">주민등록번호: {app.residentNumber}</p>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-[11px] font-black text-gray-400 uppercase">통장 정보</p>
-                            <p className="font-bold text-gray-800">은행: {app.bankName}</p>
-                            <p className="font-bold text-gray-800">계좌: {app.accountNo}</p>
-                            <p className="font-bold text-gray-800">예금주: {app.ownerName}</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-[11px] font-black text-gray-400 uppercase">첨부 (신분증·통장사본) · 클릭 시 확대</p>
-                          <div className="flex flex-wrap gap-3">
-                            {app.idCardImage && (
-                              <button type="button" onClick={() => setZoomImage(app.idCardImage!)} className="block w-24 h-24 rounded-xl border-2 border-emerald-200 overflow-hidden bg-white shadow-inner hover:border-emerald-400 hover:ring-2 hover:ring-emerald-200 transition-all cursor-pointer text-left">
-                                <img src={app.idCardImage} alt="신분증" className="w-full h-full object-cover pointer-events-none" />
-                                <span className="sr-only">신분증 확대 보기</span>
-                              </button>
-                            )}
-                            {app.bankbookImage && (
-                              <button type="button" onClick={() => setZoomImage(app.bankbookImage!)} className="block w-24 h-24 rounded-xl border-2 border-emerald-200 overflow-hidden bg-white shadow-inner hover:border-emerald-400 hover:ring-2 hover:ring-emerald-200 transition-all cursor-pointer text-left">
-                                <img src={app.bankbookImage} alt="통장사본" className="w-full h-full object-cover pointer-events-none" />
-                                <span className="sr-only">통장사본 확대 보기</span>
-                              </button>
-                            )}
-                            {!app.idCardImage && !app.bankbookImage && <span className="text-gray-400 text-[13px] font-bold">첨부 없음</span>}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeSubTab === 'seller' && (
-        <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 border-b border-gray-50">
-            <h3 className="text-xl font-black text-gray-900">판매자 승인 대기 · 심사 내역</h3>
-            <p className="text-[13px] text-gray-500 font-bold mt-1">통장정보·통장사본 등 제출 내용을 확인한 뒤 승인해 주세요.</p>
-          </div>
-          <div className="p-8 space-y-8">
-            {pendingRequests.length === 0 ? (
-              <p className="text-gray-400 font-bold text-center py-16">승인 대기 중인 회원이 없습니다.</p>
-            ) : (
-              pendingRequests.map(m => {
-                const app: SellerApplication | undefined = m.pendingApplication || m.sellerApplication;
-                return (
-                  <div key={m.id} className="border border-gray-200 rounded-[24px] p-8 bg-gray-50/50 space-y-6">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <img src={m.profileImage} className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow" alt="" />
-                        <div>
-                          <p className="text-[18px] font-black text-gray-900">{m.nickname}</p>
-                          <p className="text-[12px] text-gray-500 font-bold">@{m.id}</p>
-                          {app?.appliedAt && <p className="text-[11px] text-blue-600 font-bold mt-1">신청일: {app.appliedAt}</p>}
-                        </div>
-                      </div>
-                      <button onClick={() => handleApproveSeller(m.id)} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-[14px] hover:bg-blue-700 transition-all shadow-lg">승인</button>
-                    </div>
-                    {app && (
-                      <div className="space-y-6 pt-4 border-t border-gray-200">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <p className="text-[11px] font-black text-gray-400 uppercase">통장 정보</p>
-                            <p className="font-bold text-gray-800">은행: {app.bankInfo?.bankName || '-'}</p>
-                            <p className="font-bold text-gray-800">계좌: {app.bankInfo?.accountNo || '-'}</p>
-                            <p className="font-bold text-gray-800">예금주: {app.bankInfo?.ownerName || '-'}</p>
-                            <p className="font-bold text-gray-800">이메일: {app.bankInfo?.email || '-'}</p>
-                          </div>
-                          {(app.sellerType === 'business' && app.businessInfo) && (
-                            <div className="space-y-2">
-                              <p className="text-[11px] font-black text-gray-400 uppercase">사업자 정보</p>
-                              <p className="font-bold text-gray-800">상호/회사명: {app.businessInfo.companyName || '-'}</p>
-                              <p className="font-bold text-gray-800">사업자등록번호: {app.businessInfo.registrationNo || '-'}</p>
-                              <p className="font-bold text-gray-800">업종: {app.businessInfo.businessType || '-'}</p>
-                              <p className="font-bold text-gray-800">대표자: {app.businessInfo.repName || '-'}</p>
-                              <p className="font-bold text-gray-800">사업장 소재지: {app.businessInfo.location || '-'}</p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-[11px] font-black text-gray-400 uppercase">첨부 (통장사본 등) · 클릭 시 확대</p>
-                          <div className="flex flex-wrap gap-3">
-                            {app.proofs?.bankbookImg && (
-                              <button type="button" onClick={() => setZoomImage(app.proofs!.bankbookImg!)} className="block w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden bg-white shadow-inner hover:border-blue-400 hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer text-left">
-                                <img src={app.proofs.bankbookImg} alt="통장사본" className="w-full h-full object-cover pointer-events-none" />
-                                <span className="sr-only">통장사본 확대 보기</span>
-                              </button>
-                            )}
-                            {app.proofs?.licenseImg && (
-                              <button type="button" onClick={() => setZoomImage(app.proofs!.licenseImg!)} className="block w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden bg-white shadow-inner hover:border-blue-400 hover:ring-2 hover:ring-blue-200 transition-all cursor-pointer text-left">
-                                <img src={app.proofs.licenseImg} alt="사업자등록증" className="w-full h-full object-cover pointer-events-none" />
-                                <span className="sr-only">사업자등록증 확대 보기</span>
-                              </button>
-                            )}
-                            {!app.proofs?.bankbookImg && !app.proofs?.licenseImg && <span className="text-gray-400 text-[13px] font-bold">첨부 없음</span>}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeSubTab === 'grades' && (
-        <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 border-b border-gray-50">
-            <h3 className="text-xl font-black text-gray-900">등급 관리</h3>
-            <p className="text-[13px] text-gray-500 font-bold mt-1">구매자/판매자별 등급을 만들고, 기준을 설정하면 마이페이지·N잡스토어·자유게시판 등에서 뱃지로 표시됩니다.</p>
-          </div>
-          <div className="p-8 space-y-6">
-            <div className="flex justify-end">
-              <button onClick={() => setGradeConfigs(prev => [...prev, { id: `g_${Date.now()}`, name: '', target: 'both', minSales: 0, minPurchase: 0, color: 'bg-blue-500', sortOrder: prev.length }])} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-[13px]">+ 등급 추가</button>
+        <div className="grid gap-6">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors" aria-label="이전 주">←</button>
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            {weekDates.map((d) => {
+              const c = dateCounts[d] || { total: 0, done: 0 };
+              const isSelected = effectiveDate === d;
+              const dayLabel = d.slice(5);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setSelectedDate(d)}
+                  className={`p-5 rounded-xl border text-left transition-all duration-200 ${
+                    isSelected
+                      ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
+                      : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
+                  }`}
+                >
+                  <p className="text-sm font-black text-gray-600">{dayLabel}</p>
+                  <p className="text-xs text-gray-500 mt-2 font-semibold">작업 {c.total}건</p>
+                  <p className="text-xs text-emerald-600 font-semibold">완료 {c.done}건</p>
+                </button>
+              );
+            })}
             </div>
+            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors" aria-label="다음 주">→</button>
+          </div>
+
+          <h3 className="text-xl font-black text-gray-800">작업목록</h3>
+
+          {sortedTasks.length === 0 ? (
+            <p className="text-gray-500 text-center py-10 text-base">해당 날짜의 작업이 없습니다.</p>
+          ) : (
             <div className="space-y-4">
-              {gradeConfigs.map((g, idx) => (
-                <div key={g.id} className="flex flex-wrap items-center gap-4 p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <span className={`${g.color || 'bg-gray-400'} text-white text-xs font-black px-3 py-1.5 rounded-full`}>{g.name || '등급명 입력'}</span>
-                    <select value={g.target} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, target: e.target.value as any } : c))} className="px-3 py-2 rounded-xl font-bold text-[12px]">
-                      <option value="both">구매자·판매자 둘 다</option>
-                      <option value="seller">판매자 전용</option>
-                      <option value="buyer">구매자 전용</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-black text-gray-500">판매액 기준 (원)</label>
-                    <input type="number" value={g.minSales || ''} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, minSales: Number(e.target.value) || 0 } : c))} placeholder="0=수동만" className="w-32 px-3 py-2 rounded-xl font-bold text-[12px]" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-black text-gray-500">구매액 기준 (원)</label>
-                    <input type="number" value={g.minPurchase || ''} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, minPurchase: Number(e.target.value) || 0 } : c))} placeholder="0=미사용" className="w-32 px-3 py-2 rounded-xl font-bold text-[12px]" />
-                  </div>
-                  <input type="text" value={g.name} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, name: e.target.value.trim() || '' } : c))} className="w-32 px-3 py-2 rounded-xl font-black text-[12px] border-2 border-amber-200 focus:border-amber-500" placeholder="뱃지에 표시할 문구" />
-                  <select value={g.color} onChange={e => setGradeConfigs(prev => prev.map(c => c.id === g.id ? { ...c, color: e.target.value } : c))} className="px-3 py-2 rounded-xl font-bold text-[12px]">
-                    <option value="bg-gray-400">회색</option>
-                    <option value="bg-blue-500">파랑</option>
-                    <option value="bg-amber-500">골드(Prime)</option>
-                    <option value="bg-purple-600">보라</option>
-                    <option value="bg-gray-900">블랙(MASTER)</option>
-                    <option value="bg-emerald-500">에메랄드</option>
-                    <option value="bg-rose-500">로즈</option>
-                  </select>
-                  <button onClick={() => setGradeConfigs(prev => prev.filter(c => c.id !== g.id))} className="px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl font-black text-[12px]">삭제</button>
-                </div>
-              ))}
+              {sortedTasks.map((task) => {
+                const done = isTaskDone(task);
+                return (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => navigate(`/part-time/${task.id}`)}
+                    className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
+                      done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
+                      <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
+                      <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="font-black text-emerald-600 text-base">+{task.reward.toLocaleString()}원</span>
+                      {done ? (
+                        <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
+                      ) : (
+                        <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-sm font-black">상세보기 →</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-[12px] text-gray-400 font-bold">· 수동 등급: 회원 관리에서 해당 회원의 등급을 직접 지정할 수 있습니다.</p>
-          </div>
+          )}
         </div>
-      )}
 
-      {editingMember && (
-        <div className="fixed inset-0 z-[200] bg-[#F8FAFC] flex flex-col animate-in fade-in overflow-hidden">
-           <div className="flex-none p-4 md:p-6 border-b border-gray-200 bg-white shadow-sm flex flex-wrap justify-between items-center gap-4">
-             <h3 className="text-xl font-black text-gray-900">회원 마이페이지: {editingMember.nickname} (관리자 보기)</h3>
-             <div className="flex gap-3 flex-wrap">
-               <button onClick={handleUpdateMemberInfo} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-[13px] shadow-lg">저장 적용 💾</button>
-               <button onClick={() => setEditingMember(null)} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-2xl font-black">닫기</button>
-             </div>
-           </div>
-           <div className="flex-none p-4 bg-amber-50 border-b border-amber-100 flex flex-wrap gap-4 items-center">
-             <span className="text-[11px] font-black text-amber-700 uppercase">관리자 전용 조정</span>
-             <select value={editingMember.role} onChange={e => setEditingMember({...editingMember, role: e.target.value as any})} className="px-3 py-2 rounded-xl font-bold text-[12px] border border-amber-200">
-               <option value="user">일반 회원</option>
-               <option value="admin">최고 관리자</option>
-             </select>
-             <div className="flex items-center gap-2">
-               <label className="text-[11px] font-black text-amber-700">포인트</label>
-               <input type="number" value={editingMember.points || 0} onChange={e => setEditingMember({...editingMember, points: Number(e.target.value)})} className="w-24 px-3 py-2 rounded-xl font-bold text-[12px] border border-amber-200" />
-             </div>
-             <div className="flex items-center gap-2">
-               <label className="text-[11px] font-black text-amber-700">수동 등급</label>
-               <select value={editingMember.manualGrade || ''} onChange={e => setEditingMember({...editingMember, manualGrade: e.target.value || undefined})} className="px-3 py-2 rounded-xl font-bold text-[12px] border border-amber-200">
-                 <option value="">자동 (기준에 따라)</option>
-                 {gradeConfigs.filter(g => (g.name || '').trim()).map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
-               </select>
-             </div>
-           </div>
-           <div className="flex-1 overflow-y-auto p-4 md:p-6">
-             <MyPage
-               user={editingMember}
-               onUpdate={(u) => { setEditingMember(u); setMembers(prev => prev.map(m => m.id === u.id ? u : m)); }}
-               ebooks={ebooks}
-               setEbooks={setEbooks}
-               channels={channels}
-               smmOrders={smmOrders}
-               channelOrders={channelOrders}
-               storeOrders={storeOrders}
-               onAddReview={setReviews ? (r) => setReviews(prev => [r, ...prev]) : () => {}}
-               onUpdateReview={setReviews ? (r) => setReviews(prev => prev.map(i => i.id === r.id ? r : i)) : () => {}}
-               reviews={reviews}
-               addNotif={addNotif}
-               gradeConfigs={gradeConfigs}
-             />
-           </div>
-           <div className="flex-none p-4 border-t bg-white flex gap-4 justify-end">
-             <button onClick={() => setEditingMember(null)} className="px-8 py-4 bg-gray-100 text-gray-700 rounded-2xl font-black">취소</button>
-             <button onClick={handleUpdateMemberInfo} className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl">업데이트 적용 💾</button>
-           </div>
+        <div className="bg-blue-50/80 p-6 rounded-2xl border border-blue-100">
+          <p className="text-blue-800 font-bold text-base">
+            💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.
+            <br />
+            수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()}원</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
+          </p>
         </div>
-      )}
 
-      {/* 이미지 확대 팝업 (통장사본·사업자등록증 등) */}
-      {zoomImage && (
-        <div
-          className="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-6 cursor-pointer animate-in fade-in"
-          onClick={() => setZoomImage(null)}
-          role="dialog"
-          aria-label="이미지 확대"
-        >
-          <img
-            src={zoomImage}
-            alt="확대 보기"
-            className="max-w-full max-h-full rounded-2xl shadow-2xl object-contain select-none"
-          />
-          <p className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/80 text-sm font-bold">클릭하면 닫힙니다</p>
-        </div>
-      )}
+        <button onClick={() => navigate('/sns')} className="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-black hover:bg-gray-200 transition-all">
+          돌아가기
+        </button>
+      </div>
     </div>
   );
 };
 
-export default MemberAdmin;
+export default PartTimePage;
+
+// ----- 프리랜서 작업 등록 (같은 파일에 두어 Netlify 빌드 시 단일 파일로 해결) -----
+const REGISTER_CATEGORIES = ['설문', 'SNS', '네이버카페', '리뷰', '검수', '라벨링', '번역', '블로그체험단', '블로그기자단', '인스타그램', '유튜브', '웹사이트', '기타'];
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+type SectionItemType = '제목' | '내용' | '게시글' | '댓글' | '키워드' | '이미지' | '동영상' | 'gif' | '작업링크' | '작업안내';
+
+interface SectionItem {
+  id: string;
+  type: SectionItemType;
+  value?: string;
+  postBlock?: PartTimePostBlock;
+  images?: string[];
+  videoFile?: string;
+  gifFile?: string;
+}
+
+const SECTION_TYPES: { key: SectionItemType; label: string }[] = [
+  { key: '제목', label: '제목' },
+  { key: '내용', label: '내용' },
+  { key: '게시글', label: '게시글(제목+내용)' },
+  { key: '댓글', label: '댓글' },
+  { key: '키워드', label: '키워드' },
+  { key: '이미지', label: '이미지' },
+  { key: '동영상', label: '동영상' },
+  { key: 'gif', label: 'gif' },
+  { key: '작업링크', label: '작업링크' },
+  { key: '작업안내', label: '작업안내' },
+];
+
+const MAX_IMAGES_PER_SECTION = 10;
+
+export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ user }) => {
+  const navigate = useNavigate();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState(REGISTER_CATEGORIES[0]);
+  const [reward, setReward] = useState(300);
+  const [maxApplicants, setMaxApplicants] = useState(0);
+  const [sectionItems, setSectionItems] = useState<SectionItem[]>([]);
+  const [appStart, setAppStart] = useState(todayStr());
+  const [appEnd, setAppEnd] = useState(todayStr());
+  const [workStart, setWorkStart] = useState(todayStr());
+  const [workEnd, setWorkEnd] = useState(todayStr());
+  const [applicantUserId, setApplicantUserId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  /** 승인된 작업의뢰(광고의뢰)의 광고주 ID 목록 (드롭다운용) */
+  const approvedAdvertiserIds = useMemo(() => {
+    const reqs = getPartTimeJobRequests().filter((jr) => jr.status === 'pending' || jr.paid);
+    const ids = new Set<string>();
+    reqs.forEach((jr) => {
+      if (jr.applicantUserId?.trim()) ids.add(jr.applicantUserId.trim());
+    });
+    return Array.from(ids).sort();
+  }, []);
+
+  const addSection = (type: SectionItemType) => {
+    const item: SectionItem = {
+      id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      type,
+      value: '',
+      ...(type === '게시글' ? { postBlock: { 제목: '', 내용: '' } } : {}),
+    };
+    setSectionItems((prev) => [...prev, item]);
+  };
+
+  const removeSection = (id: string) => setSectionItems((prev) => prev.filter((s) => s.id !== id));
+
+  const moveSection = (id: string, dir: 'up' | 'down') => {
+    setSectionItems((prev) => {
+      const idx = prev.findIndex((s) => s.id === id);
+      if (idx < 0) return prev;
+      const next = prev.slice();
+      const target = dir === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  };
+
+  const updateSection = (id: string, upd: Partial<SectionItem>) => {
+    setSectionItems((prev) => prev.map((s) => (s.id === id ? { ...s, ...upd } : s)));
+  };
+
+  if (!user || user.role !== 'admin') {
+    navigate('/part-time', { replace: true });
+    return null;
+  }
+
+  const handleImageUpload = async (sectionId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const item = sectionItems.find((s) => s.id === sectionId);
+    if (!item || item.type !== '이미지') return;
+    const current = item.images?.length ?? 0;
+    const toAdd = Math.min(MAX_IMAGES_PER_SECTION - current, files.length);
+    if (toAdd <= 0) {
+      alert(`이미지는 최대 ${MAX_IMAGES_PER_SECTION}개까지 첨부할 수 있습니다.`);
+      e.target.value = '';
+      return;
+    }
+    const newImages = await Promise.all(
+      Array.from(files).slice(0, toAdd).map(
+        async (file: File) => {
+          const raw = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error('읽기 실패'));
+            reader.readAsDataURL(file);
+          });
+          try {
+            return await compressImageForStorage(raw, 480, 0.45);
+          } catch {
+            return raw;
+          }
+        }
+      )
+    );
+    updateSection(sectionId, { images: [...(item.images ?? []), ...newImages].slice(0, MAX_IMAGES_PER_SECTION) });
+    e.target.value = '';
+  };
+
+  const removeSectionImage = (sectionId: string, imgIdx: number) => {
+    const item = sectionItems.find((s) => s.id === sectionId);
+    if (!item?.images) return;
+    updateSection(sectionId, { images: item.images.filter((_, i) => i !== imgIdx) });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    if (!title.trim()) { alert('게시글 제목을 입력해 주세요.'); return; }
+    setIsSubmitting(true);
+    const tasks = getPartTimeTasks();
+    const sectionsOut: PartTimeTaskSections = {};
+    const postBlocksOut: PartTimePostBlock[] = [];
+    const commentList: string[] = [];
+    const workLinkList: string[] = [];
+
+    const titleList: string[] = [];
+    const contentList: string[] = [];
+    const sectionOrder: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용'; index: number }> = [];
+    sectionItems.forEach((item) => {
+      if (item.type === '제목' && item.value?.trim()) {
+        const idx = titleList.length;
+        titleList.push(item.value.trim());
+        sectionOrder.push({ type: '제목', index: idx });
+      } else if (item.type === '내용' && item.value?.trim()) {
+        const idx = contentList.length;
+        contentList.push(item.value.trim());
+        sectionOrder.push({ type: '내용', index: idx });
+      }
+      else if (item.type === '게시글' && item.postBlock && (item.postBlock.제목?.trim() || item.postBlock.내용?.trim())) {
+        const idx = postBlocksOut.length;
+        postBlocksOut.push({ 제목: item.postBlock.제목.trim(), 내용: item.postBlock.내용.trim() });
+        sectionOrder.push({ type: '게시글', index: idx });
+      } else if (item.type === '댓글' && item.value?.trim()) {
+        const idx = commentList.length;
+        commentList.push(item.value.trim());
+        sectionOrder.push({ type: '댓글', index: idx });
+      } else if (item.type === '키워드' && item.value?.trim()) sectionsOut.키워드 = item.value.trim();
+      else if (item.type === '이미지') {
+        if (item.value?.trim()) sectionsOut.이미지 = item.value.trim();
+        if (item.images?.length) sectionsOut.이미지목록 = item.images;
+      } else if (item.type === '동영상') {
+        if (item.videoFile) sectionsOut.동영상 = item.videoFile;
+        else if (item.value?.trim()) sectionsOut.동영상 = item.value.trim();
+      } else if (item.type === 'gif') {
+        if (item.gifFile) sectionsOut.gif = item.gifFile;
+        else if (item.value?.trim()) sectionsOut.gif = item.value.trim();
+      }
+      else if (item.type === '작업링크' && item.value?.trim()) {
+        const idx = workLinkList.length;
+        workLinkList.push(item.value.trim());
+        sectionOrder.push({ type: '작업링크', index: idx });
+      } else if (item.type === '작업안내' && item.value?.trim()) sectionsOut.작업안내 = item.value.trim();
+    });
+
+    if (postBlocksOut.length) sectionsOut.게시글목록 = postBlocksOut;
+    if (commentList.length) sectionsOut.댓글목록 = commentList;
+    if (workLinkList.length) sectionsOut.작업링크목록 = workLinkList;
+    if (titleList.length) sectionsOut.제목목록 = titleList;
+    if (contentList.length) sectionsOut.내용목록 = contentList;
+    if (sectionOrder.length) sectionsOut.sectionOrder = sectionOrder;
+    const newTask: PartTimeTask = {
+      id: `t_${Date.now()}`,
+      title: title.trim(),
+      description: description.trim() || title.trim(),
+      category,
+      reward: Math.max(0, reward),
+      maxApplicants: maxApplicants > 0 ? maxApplicants : undefined,
+      sections: sectionsOut,
+      applicationPeriod: { start: appStart, end: appEnd },
+      workPeriod: { start: workStart, end: workEnd },
+      createdAt: new Date().toISOString(),
+      createdBy: user.id,
+      applicants: [],
+      pointPaid: false,
+      paidUserIds: [],
+      projectNo: generateProjectNo(),
+      ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
+    };
+    try {
+      setPartTimeTasks([newTask, ...tasks]);
+      alert('작업이 등록되었습니다.');
+      navigate('/part-time');
+    } catch (err) {
+      const isQuota = err instanceof DOMException && err.name === 'QuotaExceededError';
+      alert(isQuota
+        ? '저장 공간이 부족합니다. 이미지·동영상 용량을 줄이거나 일부를 삭제한 뒤 다시 시도해 주세요.'
+        : '작업 등록에 실패했습니다. 다시 시도해 주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto pb-32 px-4">
+      <div className="flex items-center justify-between mb-10">
+        <button onClick={() => navigate('/part-time')} className="flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 transition-colors">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          돌아가기
+        </button>
+        <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-emerald-500 underline-offset-8">프리랜서 작업 등록</h2>
+        <div className="w-20" />
+      </div>
+      <form onSubmit={handleSubmit} formNoValidate className="bg-white p-8 md:p-12 rounded-[48px] shadow-xl border border-gray-100 space-y-12">
+        <section className="space-y-6">
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">1. 포인트 금액 · 게시글 제목 · 내용</h3></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">보상 금액 (원)</label>
+              <input type="number" min={0} value={reward} onChange={(e) => setReward(Number(e.target.value) || 0)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold" />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">카테고리</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold">
+                {REGISTER_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">게시글 제목 *</label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 카페 글 작성 · SNS 공유 인증" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold" required />
+          </div>
+          <div>
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">한 줄 설명</label>
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="작업 한 줄 요약" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none" />
+          </div>
+        </section>
+        <section className="space-y-6">
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">2. 모집 인원 · 신청기간 · 작업기간</h3></div>
+          <div>
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">광고주 ID (광고의뢰 승인 건에서 선택)</label>
+            <select value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} className="w-full max-w-xs px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-bold">
+              <option value="">선택 안 함</option>
+              {approvedAdvertiserIds.map((id) => (
+                <option key={id} value={id}>{id}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">작업의뢰 ID는 프리랜서 선정 후 자동으로 연결됩니다.</p>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <div className="min-w-[120px]">
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">모집 인원</label>
+              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
+            </div>
+            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+          </div>
+        </section>
+        <section className="space-y-6">
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용</h3></div>
+          <p className="text-sm text-gray-500">아래 항목을 클릭하면 순서대로 섹션이 추가됩니다. 원하는 만큼 추가하고 위치를 이동할 수 있습니다.</p>
+          <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+            {SECTION_TYPES.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => addSection(key)}
+                className="px-4 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 font-black text-sm hover:bg-emerald-50 hover:border-emerald-400 transition-all"
+              >
+                + {label}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-4">
+            {sectionItems.map((item, idx) => (
+              <div key={item.id} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3 relative">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-emerald-700 uppercase bg-emerald-100 px-2 py-1 rounded-lg">
+                    {SECTION_TYPES.find((t) => t.key === item.type)?.label ?? item.type} {idx + 1}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => moveSection(item.id, 'up')} disabled={idx === 0} className="p-1.5 rounded-lg bg-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-300 text-sm">▲</button>
+                    <button type="button" onClick={() => moveSection(item.id, 'down')} disabled={idx === sectionItems.length - 1} className="p-1.5 rounded-lg bg-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-300 text-sm">▼</button>
+                    <button type="button" onClick={() => removeSection(item.id)} className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 text-sm font-black">삭제</button>
+                  </div>
+                </div>
+                {item.type === '제목' && (
+                  <input
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                    placeholder="제목"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                  />
+                )}
+                {item.type === '내용' && (
+                  <textarea
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                    placeholder="내용"
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                  />
+                )}
+                {item.type === '게시글' && item.postBlock && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.postBlock.제목}
+                      onChange={(e) => updateSection(item.id, { postBlock: { ...item.postBlock!, 제목: e.target.value } })}
+                      placeholder="제목"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    />
+                    <textarea
+                      value={item.postBlock.내용}
+                      onChange={(e) => updateSection(item.id, { postBlock: { ...item.postBlock!, 내용: e.target.value } })}
+                      placeholder="내용"
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                    />
+                  </div>
+                )}
+                {(item.type === '댓글' || item.type === '키워드' || item.type === '작업링크') && (
+                  <input
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                    placeholder={item.type === '댓글' ? '댓글 지시사항' : item.type === '키워드' ? '키워드' : 'URL 또는 링크 안내'}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                  />
+                )}
+                {item.type === '이미지' && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.value ?? ''}
+                      onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                      placeholder="이미지 지시사항 (선택)"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    />
+                    <input
+                      ref={(el) => { fileInputRefs.current[item.id] = el; }}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => handleImageUpload(item.id, e)}
+                      className="hidden"
+                    />
+                    <button type="button" onClick={() => fileInputRefs.current[item.id]?.click()} disabled={(item.images?.length ?? 0) >= MAX_IMAGES_PER_SECTION} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs disabled:opacity-50">
+                      이미지 업로드 (최대 {MAX_IMAGES_PER_SECTION}개) {(item.images?.length ?? 0) > 0 && `(${item.images?.length})`}
+                    </button>
+                    {item.images && item.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.images.map((src, i) => (
+                          <div key={i} className="relative">
+                            <img src={src} alt={`참고 ${i + 1}`} className="w-16 h-16 rounded-lg object-cover border border-gray-200" />
+                            <button type="button" onClick={() => removeSectionImage(item.id, i)} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-black leading-none">×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {item.type === '동영상' && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.value ?? ''}
+                      onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                      placeholder="동영상 지시사항 (선택)"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    />
+                    <input
+                      ref={(el) => { fileInputRefs.current[`${item.id}_video`] = el; }}
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        if (f.size > 2 * 1024 * 1024) {
+                          alert('동영상은 2MB 이하로 첨부해 주세요. 용량이 크면 작업 등록 시 오류가 발생할 수 있습니다.');
+                          e.target.value = '';
+                          return;
+                        }
+                        const r = new FileReader();
+                        r.onload = () => updateSection(item.id, { videoFile: r.result as string });
+                        r.readAsDataURL(f);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <button type="button" onClick={() => fileInputRefs.current[`${item.id}_video`]?.click()} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs">
+                      동영상 업로드
+                    </button>
+                    {item.videoFile && (
+                      <div className="flex items-center gap-2">
+                        <video src={item.videoFile} className="max-h-24 rounded-lg border border-gray-200" controls />
+                        <button type="button" onClick={() => updateSection(item.id, { videoFile: undefined })} className="px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-black">삭제</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {item.type === 'gif' && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.value ?? ''}
+                      onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                      placeholder="gif 지시사항 (선택)"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    />
+                    <input
+                      ref={(el) => { fileInputRefs.current[`${item.id}_gif`] = el; }}
+                      type="file"
+                      accept="image/gif,image/*"
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const raw = await new Promise<string>((res, rej) => {
+                          const r = new FileReader();
+                          r.onload = () => res(r.result as string);
+                          r.onerror = () => rej(new Error('읽기 실패'));
+                          r.readAsDataURL(f);
+                        });
+                        try {
+                          const compressed = await compressImageForStorage(raw, 480, 0.45);
+                          updateSection(item.id, { gifFile: compressed });
+                        } catch {
+                          updateSection(item.id, { gifFile: raw });
+                        }
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                    <button type="button" onClick={() => fileInputRefs.current[`${item.id}_gif`]?.click()} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs">
+                      GIF 업로드
+                    </button>
+                    {item.gifFile && (
+                      <div className="flex items-center gap-2">
+                        <img src={item.gifFile} alt="GIF" className="max-h-24 rounded-lg border border-gray-200" />
+                        <button type="button" onClick={() => updateSection(item.id, { gifFile: undefined })} className="px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-black">삭제</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {item.type === '작업안내' && (
+                  <textarea
+                    value={item.value ?? ''}
+                    onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                    placeholder="전체 작업 가이드"
+                    rows={6}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+        <div className="flex gap-4 pt-6">
+          <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? '등록 중...' : '작업 등록하기'}</button>
+          <button type="button" onClick={() => navigate('/part-time')} className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-600 font-black hover:bg-gray-200 transition-all">취소</button>
+        </div>
+      </form>
+    </div>
+  );
+};
