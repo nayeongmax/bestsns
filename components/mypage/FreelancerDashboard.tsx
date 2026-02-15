@@ -268,8 +268,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
       {freelancerTab === 'tasks' ? (
         <div className="space-y-8">
-          <div className="flex items-center justify-between">
-            <h4 className="font-black text-gray-900">작업내역</h4>
+          <div className="flex items-center justify-end">
             <Link to="/part-time" className="text-emerald-600 font-black text-sm hover:underline">누구나알바에서 작업하기 →</Link>
           </div>
       {selectedTasks.length > 0 && (
@@ -346,8 +345,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         </div>
       ) : freelancerTab === 'settlement' ? (
         <div className="space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h4 className="font-black text-gray-900">정산내역</h4>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
             <button
               onClick={() => setShowFreelancerSettlementModal(true)}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-indigo-50 text-indigo-600 font-black text-sm hover:bg-indigo-100 border border-indigo-100 shadow-sm"
@@ -499,8 +497,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         </div>
       ) : (
         <div className="space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h4 className="font-black text-gray-900">알바의뢰 (광고주전용)</h4>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
             <button onClick={() => setShowAdvertiserSettlementModal(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-indigo-50 text-indigo-600 font-black text-sm hover:bg-indigo-100 border border-indigo-100 shadow-sm">
               정산 정책 안내
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
@@ -967,7 +964,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
             <h4 className="font-black text-gray-900 text-lg">수정 요청 · {advertiserRevisionModal.nickname}</h4>
-            <p className="text-sm text-gray-500">수정 요청 내용은 프리랜서에게 알림으로 전달됩니다.</p>
+            <p className="text-sm text-gray-500">수정 요청 내용은 프리랜서와 운영자에게 알림으로 전달됩니다.</p>
             <textarea
               id="advertiser-revision-text"
               placeholder="예: 제목을 더 구체적으로 수정해 주세요"
@@ -989,7 +986,10 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                   );
                   setPartTimeTasks(next);
                   setTasks(next);
-                  if (addNotif) addNotif(userId, 'revision', '작업 수정요청', `[${task.title}] 광고주가 수정을 요청했습니다. ${text}`, text);
+                  if (addNotif) {
+                    addNotif(userId, 'revision', '작업 수정요청', `[${task.title}] 광고주가 수정을 요청했습니다. ${text}`, text);
+                    if (task.createdBy && task.createdBy !== userId) addNotif(task.createdBy, 'revision', '광고주 수정요청', `[${task.title}] 광고주가 프리랜서에게 수정을 요청했습니다. (${advertiserRevisionModal.nickname}) ${text}`, text);
+                  }
                   setAdvertiserRevisionModal(null);
                   alert('수정요청 알림이 전송되었습니다.');
                 }}
