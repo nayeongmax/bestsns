@@ -31,6 +31,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [revenueMonthOffset, setRevenueMonthOffset] = useState(0);
   const [freelancerMonthOffset, setFreelancerMonthOffset] = useState(0);
   const [freelancerStatusFilter, setFreelancerStatusFilter] = useState<string>('all');
+  const [freelancerShowAllMonths, setFreelancerShowAllMonths] = useState(true); // 기본 전체 보기 (누구나알바 작업 목록 연동)
   const [revenueSearch, setRevenueSearch] = useState('');
   const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean } | null>(null);
   const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
@@ -212,10 +213,14 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   };
 
   const handlePayPoints = (task: PartTimeTask, userId?: string) => {
+    // 최신 데이터 로드 (다중 클릭·다른 탭에서 지급 시 중복 입금 방지)
+    const freshTasks = getPartTimeTasks();
+    const freshTask = freshTasks.find((x) => x.id === task.id);
+    const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
     const base = userId
       ? task.applicants.filter((a) => a.userId === userId && a.selected && hasWorkLink(a))
       : task.applicants.filter((a) => a.selected && hasWorkLink(a));
-    const target = base.filter((a) => !task.paidUserIds?.includes(a.userId));
+    const target = base.filter((a) => !currentPaid.includes(a.userId));
     if (target.length === 0) {
       if (base.length > 0 && base.every((a) => task.paidUserIds?.includes(a.userId))) {
         alert('이미 수익통장에 지급 완료된 상태입니다. 이중 지급되지 않습니다.');
@@ -232,13 +237,14 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       );
     }
     const paidIds = target.map((a) => a.userId);
-    const allPaid = [...(task.paidUserIds || []), ...paidIds];
-    const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
+    const allPaid = [...(freshTask?.paidUserIds ?? []), ...paidIds];
+    const selectedWithLink = (freshTask ?? task).applicants.filter((a) => a.selected && hasWorkLink(a));
     const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
-    const next = tasks.map((t) =>
+    const next = freshTasks.map((t) =>
       t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }
     );
-    saveTasks(next);
+    setPartTimeTasks(next);
+    setTasks(next);
     alert('알바비가 지급되었습니다.');
   };
 
@@ -332,10 +338,12 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     return '작업완료'; // 링크 전송됐으나 아직 미지급
   };
   const freelancerFilteredTasks = freelancerAllTasks.filter((t) => {
-    const taskDate = t.workPeriod?.start || t.applicationPeriod?.start || t.applicationPeriod?.end || t.createdAt;
-    if (taskDate && typeof taskDate === 'string' && taskDate.length >= 7) {
-      const taskMonth = taskDate.slice(0, 7);
-      if (taskMonth !== freelancerViewMonth) return false;
+    if (!freelancerShowAllMonths) {
+      const taskDate = t.workPeriod?.start || t.applicationPeriod?.start || t.applicationPeriod?.end || t.createdAt;
+      if (taskDate && typeof taskDate === 'string' && taskDate.length >= 7) {
+        const taskMonth = taskDate.slice(0, 7);
+        if (taskMonth !== freelancerViewMonth) return false;
+      }
     }
     if (freelancerStatusFilter !== 'all' && getTaskStatus(t) !== freelancerStatusFilter) return false;
     return true;
@@ -593,14 +601,21 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                 <p className="text-sm text-gray-500">월별·상태별 필터. 내용확인으로 상세 페이지에서 수정 또는 프리랜서 선정할 수 있습니다.</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <button type="button" onClick={() => setFreelancerMonthOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">←</button>
-                <span className="text-sm font-black text-gray-600 min-w-[100px] text-center">{freelancerViewMonth}</span>
-                <button type="button" onClick={() => setFreelancerMonthOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">→</button>
+                <button type="button" onClick={() => setFreelancerShowAllMonths(!freelancerShowAllMonths)} className={`px-4 py-2 rounded-xl text-sm font-black ${freelancerShowAllMonths ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  {freelancerShowAllMonths ? '전체 보기' : '월별 보기'}
+                </button>
+                {!freelancerShowAllMonths && (
+                  <>
+                    <button type="button" onClick={() => setFreelancerMonthOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">←</button>
+                    <span className="text-sm font-black text-gray-600 min-w-[100px] text-center">{freelancerViewMonth}</span>
+                    <button type="button" onClick={() => setFreelancerMonthOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">→</button>
+                  </>
+                )}
                 <select value={freelancerStatusFilter} onChange={(e) => setFreelancerStatusFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
                   <option value="all">전체 상태</option>
                   <option value="프리모집">프리모집</option>
                   <option value="프리선정">프리선정</option>
-                  <option value="작업진행">작업진행</option>
+                  <option value="작업진행">링크확인</option>
                   <option value="작업완료">작업완료</option>
                   <option value="구매확정">구매확정</option>
                   <option value="지급완료">지급완료</option>
@@ -631,7 +646,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                     const statusLabels: Record<string, { label: string; msg: string }> = {
                       프리모집: { label: '프리모집', msg: `${t.applicants.length}명 신청. 프리랜서 선정이 필요합니다.` },
                       프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨. 작업 링크 제출 대기 중입니다.` },
-                      작업진행: { label: '작업진행', msg: hasReApproval ? '링크를 재제출했습니다. 재승인요청을 했습니다. 확인바랍니다.' : '링크를 제출했습니다. 확인바랍니다.' },
+                      작업진행: { label: '링크확인', msg: hasReApproval ? '링크를 재제출했습니다. 재승인요청을 했습니다. 확인바랍니다.' : '링크를 제출했습니다. 확인바랍니다.' },
                       작업완료: { label: '작업완료', msg: '광고주 전송 완료. 구매확정 대기 중입니다.' },
                       구매확정: { label: '구매확정', msg: '광고주 구매확정 완료. 알바비 지급 대기 중입니다.' },
                       지급완료: { label: '지급완료', msg: '알바비 지급 완료되었습니다.' },
@@ -640,7 +655,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                     return (
                       <tr key={t.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          <span className={`inline-block px-2 py-1 rounded-lg text-xs font-black ${status === '프리모집' ? 'bg-amber-200 text-amber-800' : status === '프리선정' ? 'bg-blue-100 text-blue-700' : status === '작업진행' ? 'bg-amber-100 text-amber-700' : status === '작업완료' ? 'bg-indigo-100 text-indigo-700' : status === '지급완료' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
+                          <span className={`inline-block px-2 py-1 rounded-lg text-xs font-black ${status === '프리모집' ? 'bg-amber-200 text-amber-800' : status === '프리선정' ? 'bg-blue-100 text-blue-700' : status === '작업진행' ? 'bg-blue-100 text-blue-700' : status === '작업완료' ? 'bg-indigo-100 text-indigo-700' : status === '지급완료' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
                             {statusLabel}
                           </span>
                         </td>
