@@ -56,6 +56,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
   const myJobRequests = useMemo(() => jobRequests.filter((jr) => jr.applicantUserId === user.id), [jobRequests, user.id]);
   const myApprovedRequests = useMemo(() => myJobRequests.filter((jr) => jr.status === 'pending' && !jr.paid), [myJobRequests]);
+  const myPaidRequests = useMemo(() => myJobRequests.filter((jr) => jr.paid), [myJobRequests]);
   const myRejectedRequests = useMemo(() => myJobRequests.filter((jr) => jr.status === 'not_selected'), [myJobRequests]);
   const myPendingReviewRequests = useMemo(() => myJobRequests.filter((jr) => jr.status === 'pending_review'), [myJobRequests]);
   const myTasksAsApplicant = useMemo(() => tasks.filter((t) => t.applicantUserId === user.id), [tasks, user.id]);
@@ -585,6 +586,50 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               ))}
             </div>
           )}
+          {myPaidRequests.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="font-black text-gray-900">프리랜서 모집</h4>
+              {myPaidRequests.map((jr) => {
+                const linkedTask = tasks.find((t) => t.jobRequestId === jr.id);
+                const selectedWithLink = linkedTask?.applicants.filter((a) => a.selected && hasWorkLink(a)) ?? [];
+                const allPaid = linkedTask && selectedWithLink.length > 0 && selectedWithLink.every((a) => linkedTask.paidUserIds?.includes(a.userId));
+                const hasDelivery = selectedWithLink.some((a) => a.deliveryAt);
+                const statusStep = !linkedTask ? '모집진행중' : linkedTask.applicants.length === 0 ? '모집진행중' : selectedWithLink.length === 0 ? '프리랜서선정완료' : allPaid ? '작업확정완료' : hasDelivery ? '작업완료' : '작업중';
+                return (
+                  <div key={jr.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                      <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                      <span className={`px-3 py-1 rounded-lg text-xs font-black ${statusStep === '모집진행중' ? 'bg-gray-200 text-gray-700' : statusStep === '프리랜서선정완료' ? 'bg-blue-100 text-blue-700' : statusStep === '작업중' ? 'bg-amber-100 text-amber-700' : statusStep === '작업완료' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {statusStep}
+                      </span>
+                    </div>
+                    {linkedTask ? (
+                      <div className="space-y-3">
+                        {selectedWithLink.length > 0 && (
+                          <div>
+                            <p className="text-xs font-black text-gray-500 uppercase mb-2">작업 링크</p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedWithLink.flatMap((a) => (a.workLinks ?? (a.workLink ? [a.workLink] : [])).filter(Boolean).map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-sm hover:underline break-all">{url}</a>
+                              )))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <button onClick={() => setWorkConfirmModal({ task: linkedTask, isAdvertiserView: true, step: selectedWithLink.length > 0 ? 'check' : 'confirmed' })} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700">
+                            {selectedWithLink.length > 0 ? '링크 확인 · 작업확정' : '작업확정서'}
+                          </button>
+                          <Link to="/chat" state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any} className="px-4 py-2 rounded-xl border-2 border-gray-300 text-gray-700 font-black text-sm hover:bg-gray-100">문의요청</Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">운영자가 작업을 등록하면 프리랜서 모집이 시작됩니다.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {myTasksAsApplicant.length > 0 && (
             <div className="space-y-4">
               <h4 className="font-black text-gray-900">의뢰 진행 현황</h4>
@@ -645,51 +690,53 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         const beforePg = subTotal + platformFee;
         const pgFee = Math.round(beforePg * PAYMENT_GATEWAY_FEE_RATE);
         const totalPay = beforePg + pgFee;
-        const handlePdfDownload = async () => {
+        const handlePdfDownload = () => {
           const cell = (align: string, bold?: boolean) => `style="border:1px solid #e5e7eb;padding:8px;text-align:${align}${bold ? ';font-weight:bold' : ''}"`;
           const itemsHtml = (est.items && est.items.length > 0)
             ? est.items.map((it: { seq: number; content: string; unitPrice: number; quantity: number; amount: number; remarks?: string }) =>
               `<tr><td ${cell('center')}>${it.seq}</td><td ${cell('left')}>${it.content}</td><td ${cell('right')}>${it.unitPrice.toLocaleString()}</td><td ${cell('center')}>${it.quantity}</td><td ${cell('right', true)}>${it.amount.toLocaleString()}</td><td ${cell('left')}>${it.remarks || ''}</td></tr>`
             ).join('')
             : `<tr><td ${cell('center')}>1</td><td ${cell('left')}>${estimateViewJr.workContent}</td><td ${cell('right')}>${est.unitPrice?.toLocaleString() ?? '-'}</td><td ${cell('center')}>${est.quantity ?? 1}</td><td ${cell('right', true)}>${est.totalAmount.toLocaleString()}</td><td ${cell('left')}></td></tr>`;
-          const temp = document.createElement('div');
-          temp.style.cssText = 'position:absolute;left:-9999px;top:0;width:800px;background:white;padding:24px;font-family:Malgun Gothic,sans-serif';
-          temp.innerHTML = `
-<div style="font-size:13px">
-<h2 style="text-align:center;margin:0 0 8px">THEBEST<span style="color:#2563eb">SNS</span> 견적서</h2>
-<p style="text-align:center;color:#666;font-size:12px;margin-bottom:20px">견적일자: ${new Date(est.sentAt).toLocaleDateString('ko-KR')}${est.workName ? ' · ' + est.workName : ''}</p>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
-<div style="background:#f9fafb;padding:12px;border-radius:8px"><div style="font-size:11px;font-weight:bold;color:#666;margin-bottom:6px">공급처</div><p style="margin:0"><strong>상호</strong> THEBESTSNS<br><strong>대표자</strong> 김나영<br><strong>주소</strong> 대구광역시 달성군 현풍로6길 5<br><strong>사업자번호</strong> 409-30-51469</p></div>
-<div style="background:#f9fafb;padding:12px;border-radius:8px"><div style="font-size:11px;font-weight:bold;color:#666;margin-bottom:6px">수신처</div><p style="margin:0"><strong>${est.recipientName || '광고주'}</strong><br>${est.recipientContact || estimateViewJr.contact}</p></div>
-</div>
-${est.workPeriod ? `<p style="font-size:11px;font-weight:bold;color:#666;margin-bottom:6px">작업기간 : ${est.workPeriod}</p>` : ''}
-<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:13px"><thead><tr style="background:#ecfdf5;font-weight:bold"><th style="border:1px solid #e5e7eb;padding:8px;text-align:center">순번</th><th style="border:1px solid #e5e7eb;padding:8px">내용</th><th style="border:1px solid #e5e7eb;padding:8px;text-align:right">단가</th><th style="border:1px solid #e5e7eb;padding:8px;text-align:center">수량</th><th style="border:1px solid #e5e7eb;padding:8px;text-align:right">금액</th><th style="border:1px solid #e5e7eb;padding:8px">비고</th></tr></thead><tbody>${itemsHtml}</tbody></table>
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) {
+            alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.');
+            return;
+          }
+          printWindow.document.write(`
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>견적서</title>
+<style>body{font-family:Malgun Gothic,sans-serif;padding:24px;max-width:800px;margin:0 auto;font-size:13px}
+h2{text-align:center;margin:0 0 8px}.meta{text-align:center;color:#666;font-size:12px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.section{background:#f9fafb;padding:12px;border-radius:8px}
+.label{font-size:11px;font-weight:bold;color:#666;margin-bottom:6px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{border:1px solid #e5e7eb;padding:8px;text-align:left}
+th{background:#ecfdf5;font-weight:bold;font-size:11px}
+.tc{text-align:center;white-space:nowrap}.tr{text-align:right}.b{font-weight:bold}
+.fee-detail{font-size:11px;color:#666;margin-top:4px}
+.total{font-size:16px;font-weight:bold;color:#059669}
+.footer{text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af}
+@media print{.no-print{display:none}}
+</style></head><body>
+<h2>THEBEST<span style="color:#2563eb">SNS</span> 견적서</h2>
+<p class="meta">견적일자: ${new Date(est.sentAt).toLocaleDateString('ko-KR')}${est.workName ? ' · ' + est.workName : ''}</p>
+<div class="grid"><div class="section"><div class="label">공급처</div><p><strong>상호</strong> THEBESTSNS<br><strong>대표자</strong> 김나영<br><strong>주소</strong> 대구광역시 달성군 현풍로6길 5<br><strong>사업자번호</strong> 409-30-51469</p></div>
+<div class="section"><div class="label">수신처</div><p><strong>${est.recipientName || '광고주'}</strong><br>${est.recipientContact || estimateViewJr.contact}</p></div></div>
+${est.workPeriod ? `<p class="label">작업기간 : ${est.workPeriod}</p>` : ''}
+<table><thead><tr><th class="tc">순번</th><th>내용</th><th class="tr">단가</th><th class="tc">수량</th><th class="tr">금액</th><th>비고</th></tr></thead><tbody>${itemsHtml}</tbody></table>
 <div style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px">
 <div style="display:flex;justify-content:space-between"><span>소계 (광고금액)</span><span><strong>${subTotal.toLocaleString()}원</strong></span></div>
-<div style="display:flex;justify-content:space-between;margin-top:8px"><span>플랫폼 수수료 (광고금액의 25% + 부가세 10%)<br><span style="font-size:11px;color:#666">${subTotal.toLocaleString()} × 25% = ${Math.round(subTotal * 0.25).toLocaleString()}원, 부가세 ${Math.round(Math.round(subTotal * 0.25) * 0.1).toLocaleString()}원</span></span><span><strong>${platformFee.toLocaleString()}원</strong></span></div>
-<div style="display:flex;justify-content:space-between;margin-top:8px"><span>결제망 수수료 (3.3%)<br><span style="font-size:11px;color:#666">(${subTotal.toLocaleString()}+${platformFee.toLocaleString()}) × 3.3%</span></span><span><strong>${pgFee.toLocaleString()}원</strong></span></div>
-<div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid #d1d5db"><span style="font-size:16px;font-weight:bold;color:#059669">총 결제금액</span><span style="font-size:16px;font-weight:bold;color:#059669">${totalPay.toLocaleString()}원</span></div>
+<div style="display:flex;justify-content:space-between;margin-top:8px"><span>플랫폼 수수료 (광고금액의 25% + 부가세 10%)<span class="fee-detail"><br>${subTotal.toLocaleString()} × 25% = ${Math.round(subTotal * 0.25).toLocaleString()}원, 부가세 ${Math.round(Math.round(subTotal * 0.25) * 0.1).toLocaleString()}원</span></span><span><strong>${platformFee.toLocaleString()}원</strong></span></div>
+<div style="display:flex;justify-content:space-between;margin-top:8px"><span>결제망 수수료 (3.3%)<span class="fee-detail"><br>(${subTotal.toLocaleString()}+${platformFee.toLocaleString()}) × 3.3%</span></span><span><strong>${pgFee.toLocaleString()}원</strong></span></div>
+<div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid #d1d5db"><span class="total">총 결제금액</span><span class="total">${totalPay.toLocaleString()}원</span></div>
 </div>
 ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안내: ${est.note}</p>` : ''}
-<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af"><p style="font-size:18px;font-weight:bold;color:#1f2937;margin:0">THEBEST<span style="color:#2563eb">SNS</span></p><p style="margin:4px 0 0 0">© THEBESTSNS. All rights reserved.</p></div>
-</div>`;
-          document.body.appendChild(temp);
-          try {
-            const html2canvas = (await import('html2canvas')).default;
-            const { jsPDF } = await import('jspdf');
-            const canvas = await html2canvas(temp, { scale: 2, useCORS: true, logging: false });
-            document.body.removeChild(temp);
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const imgWidth = 210;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-            pdf.save(`견적서_${est.workName ? est.workName.replace(/[/\\?%*:|"<>]/g, '_') : 'THEBESTSNS'}_${new Date(est.sentAt).toISOString().slice(0, 10)}.pdf`);
-          } catch (err) {
-            document.body.contains(temp) && document.body.removeChild(temp);
-            console.error(err);
-            alert('PDF 저장 중 오류가 발생했습니다.');
-          }
+<div class="footer"><p style="font-size:18px;font-weight:bold;color:#1f2937">THEBEST<span style="color:#2563eb">SNS</span></p><p>© THEBESTSNS. All rights reserved.</p></div>
+<p class="no-print" style="margin-top:16px;text-align:center;font-size:12px;color:#666">인쇄 대화상자에서 <strong>대상 > PDF로 저장</strong>을 선택하면 파일로 저장할 수 있습니다.</p>
+</body></html>`);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => { printWindow.print(); printWindow.close(); }, 300);
         };
         return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
@@ -712,7 +759,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                 <p className="text-xs font-black text-gray-500 uppercase mb-3">견적항목</p>
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead><tr className="bg-emerald-50 text-gray-700"><th className="px-4 py-2 text-center font-black w-14">순번</th><th className="px-4 py-2 text-left font-black">내용</th><th className="px-4 py-2 text-right font-black w-24">단가</th><th className="px-4 py-2 text-center font-black w-16">수량</th><th className="px-4 py-2 text-right font-black w-28">금액</th><th className="px-4 py-2 text-left font-black w-24">비고</th></tr></thead>
+                    <thead><tr className="bg-emerald-50 text-gray-700"><th className="px-4 py-2 text-center font-black whitespace-nowrap">순번</th><th className="px-4 py-2 text-left font-black">내용</th><th className="px-4 py-2 text-right font-black w-24">단가</th><th className="px-4 py-2 text-center font-black w-16">수량</th><th className="px-4 py-2 text-right font-black w-28">금액</th><th className="px-4 py-2 text-left font-black w-24">비고</th></tr></thead>
                     <tbody>
                       {(est.items && est.items.length > 0) ? est.items.map((item: { seq: number; content: string; unitPrice: number; quantity: number; amount: number; remarks?: string }, i: number) => (
                         <tr key={i} className="border-t border-gray-100"><td className="px-4 py-3 text-center font-bold">{item.seq}</td><td className="px-4 py-3 text-gray-700 whitespace-pre-wrap">{item.content}</td><td className="px-4 py-3 text-right">{item.unitPrice.toLocaleString()}</td><td className="px-4 py-3 text-center">{item.quantity}</td><td className="px-4 py-3 text-right font-bold">{item.amount.toLocaleString()}</td><td className="px-4 py-3 text-gray-600 text-xs">{item.remarks || ''}</td></tr>
@@ -906,24 +953,24 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
               <p className="text-xs text-gray-500 mt-1 text-center">프리랜서 · 수익통장 실지급 기준</p>
             </div>
             <div className="p-6 space-y-5">
-              <div className="flex flex-wrap gap-2 justify-center">
+              <div className="grid grid-cols-3 gap-2 w-full">
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="text-lg">👤</span>
-                  <div><p className="text-[10px] font-black text-gray-500 uppercase">정산 수수료</p><p className="text-sm font-black text-indigo-600">5%</p></div>
+                  <div className="min-w-0"><p className="text-[10px] font-black text-gray-500 uppercase">플랫폼 수수료</p><p className="text-sm font-black text-indigo-600">5%</p></div>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="text-lg">📄</span>
-                  <div><p className="text-[10px] font-black text-gray-500 uppercase">원천징수</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
+                  <div className="min-w-0"><p className="text-[10px] font-black text-gray-500 uppercase">원천징수</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="text-lg">💳</span>
-                  <div><p className="text-[10px] font-black text-gray-500 uppercase">결제수수료</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
+                  <div className="min-w-0"><p className="text-[10px] font-black text-gray-500 uppercase">결제수수료</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
                 </div>
               </div>
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
                 <p className="text-sm font-black text-gray-800">예시: 50,000원 작업 완료 시</p>
                 <ul className="text-sm text-gray-700 space-y-0.5">
-                  <li>· 정산 수수료 (5%): - ₩2,500</li>
+                  <li>· 플랫폼 수수료 (5%): - ₩2,500</li>
                   <li>· 원천징수 (3.3%): - ₩1,650</li>
                   <li>· 결제수수료 (3.3%): - ₩1,650</li>
                   <li className="pt-1 font-black text-indigo-600">최종 통장 수령 금액: ₩44,200</li>
@@ -932,7 +979,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
                 <p className="text-sm font-black text-gray-800">예시: 100,000원 작업 완료 시</p>
                 <ul className="text-sm text-gray-700 space-y-0.5">
-                  <li>· 정산 수수료 (5%): - ₩5,000</li>
+                  <li>· 플랫폼 수수료 (5%): - ₩5,000</li>
                   <li>· 원천징수 (3.3%): - ₩3,300</li>
                   <li>· 결제수수료 (3.3%): - ₩3,300</li>
                   <li className="pt-1 font-black text-indigo-600">최종 통장 수령 금액: ₩88,400</li>
@@ -956,24 +1003,24 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
               <p className="text-xs text-gray-500 mt-1 text-center">알바의뢰 · 광고주 부담 수수료</p>
             </div>
             <div className="p-6 space-y-5">
-              <div className="flex flex-wrap gap-2 justify-center">
+              <div className="grid grid-cols-3 gap-2 w-full">
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="text-lg">🏢</span>
-                  <div><p className="text-[10px] font-black text-gray-500 uppercase">광고주 수수료</p><p className="text-sm font-black text-indigo-600">25%</p></div>
+                  <div className="min-w-0"><p className="text-[10px] font-black text-gray-500 uppercase">플랫폼 수수료</p><p className="text-sm font-black text-indigo-600">25%</p></div>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="text-lg">💳</span>
-                  <div><p className="text-[10px] font-black text-gray-500 uppercase">결제망 수수료</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
+                  <div className="min-w-0"><p className="text-[10px] font-black text-gray-500 uppercase">결제망 수수료</p><p className="text-sm font-black text-indigo-600">3.3%</p></div>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="text-lg">📋</span>
-                  <div><p className="text-[10px] font-black text-gray-500 uppercase">부가세</p><p className="text-sm font-black text-indigo-600">10%</p></div>
+                  <div className="min-w-0"><p className="text-[10px] font-black text-gray-500 uppercase">부가세</p><p className="text-sm font-black text-indigo-600">10%</p></div>
                 </div>
               </div>
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
                 <p className="text-sm font-black text-gray-800">예시: 광고비 100,000원 결제 시</p>
                 <ul className="text-sm text-gray-700 space-y-0.5">
-                  <li>· 광고주 수수료 (25%): ₩25,000</li>
+                  <li>· 플랫폼 수수료 (25%): ₩25,000</li>
                   <li>· 부가세 (수수료의 10%): ₩2,500</li>
                   <li>· 결제망 수수료 (3.3%): (100,000+27,500) × 3.3% = ₩4,208</li>
                   <li className="pt-1 font-black text-indigo-600">총 결제 금액: ₩131,708</li>
