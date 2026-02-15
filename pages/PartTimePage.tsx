@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '@/types';
-import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals, getPartTimeJobRequests, generateProjectNo } from '@/constants';
+import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals, getPartTimeJobRequests, generateProjectNo, compressImageForStorage } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -255,6 +255,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
   const [workStart, setWorkStart] = useState(todayStr());
   const [workEnd, setWorkEnd] = useState(todayStr());
   const [applicantUserId, setApplicantUserId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   /** 승인된 작업의뢰(광고의뢰)의 광고주 ID 목록 (드롭다운용) */
@@ -314,12 +315,19 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
     }
     const newImages = await Promise.all(
       Array.from(files).slice(0, toAdd).map(
-        (file: File) =>
-          new Promise<string>((resolve) => {
+        async (file: File) => {
+          const raw = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error('읽기 실패'));
             reader.readAsDataURL(file);
-          })
+          });
+          try {
+            return await compressImageForStorage(raw, 480, 0.45);
+          } catch {
+            return raw;
+          }
+        }
       )
     );
     updateSection(sectionId, { images: [...(item.images ?? []), ...newImages].slice(0, MAX_IMAGES_PER_SECTION) });
@@ -334,7 +342,9 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!title.trim()) { alert('게시글 제목을 입력해 주세요.'); return; }
+    setIsSubmitting(true);
     const tasks = getPartTimeTasks();
     const sectionsOut: PartTimeTaskSections = {};
     const postBlocksOut: PartTimePostBlock[] = [];
@@ -404,9 +414,18 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
       projectNo: generateProjectNo(),
       ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
     };
-    setPartTimeTasks([newTask, ...tasks]);
-    alert('작업이 등록되었습니다.');
-    navigate('/part-time');
+    try {
+      setPartTimeTasks([newTask, ...tasks]);
+      alert('작업이 등록되었습니다.');
+      navigate('/part-time');
+    } catch (err) {
+      const isQuota = err instanceof DOMException && err.name === 'QuotaExceededError';
+      alert(isQuota
+        ? '저장 공간이 부족합니다. 이미지·동영상 용량을 줄이거나 일부를 삭제한 뒤 다시 시도해 주세요.'
+        : '작업 등록에 실패했습니다. 다시 시도해 주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -582,6 +601,11 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (!f) return;
+                        if (f.size > 2 * 1024 * 1024) {
+                          alert('동영상은 2MB 이하로 첨부해 주세요. 용량이 크면 작업 등록 시 오류가 발생할 수 있습니다.');
+                          e.target.value = '';
+                          return;
+                        }
                         const r = new FileReader();
                         r.onload = () => updateSection(item.id, { videoFile: r.result as string });
                         r.readAsDataURL(f);
@@ -611,13 +635,22 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
                     <input
                       ref={(el) => { fileInputRefs.current[`${item.id}_gif`] = el; }}
                       type="file"
-                      accept="image/gif"
-                      onChange={(e) => {
+                      accept="image/gif,image/*"
+                      onChange={async (e) => {
                         const f = e.target.files?.[0];
                         if (!f) return;
-                        const r = new FileReader();
-                        r.onload = () => updateSection(item.id, { gifFile: r.result as string });
-                        r.readAsDataURL(f);
+                        const raw = await new Promise<string>((res, rej) => {
+                          const r = new FileReader();
+                          r.onload = () => res(r.result as string);
+                          r.onerror = () => rej(new Error('읽기 실패'));
+                          r.readAsDataURL(f);
+                        });
+                        try {
+                          const compressed = await compressImageForStorage(raw, 480, 0.45);
+                          updateSection(item.id, { gifFile: compressed });
+                        } catch {
+                          updateSection(item.id, { gifFile: raw });
+                        }
                         e.target.value = '';
                       }}
                       className="hidden"
@@ -647,7 +680,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null }> = ({ u
           </div>
         </section>
         <div className="flex gap-4 pt-6">
-          <button type="submit" className="flex-1 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all text-lg">작업 등록하기</button>
+          <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? '등록 중...' : '작업 등록하기'}</button>
           <button type="button" onClick={() => navigate('/part-time')} className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-600 font-black hover:bg-gray-200 transition-all">취소</button>
         </div>
       </form>
