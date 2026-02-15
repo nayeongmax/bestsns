@@ -131,7 +131,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const handleSelect = (userId: string) => {
     if (!task) return;
     const applicant = task.applicants.find((a) => a.userId === userId);
-    let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true } : a)) };
+    const now = new Date().toISOString();
+    let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true, selectedAt: now } : a)) };
     if (task.applicantUserId && !task.jobRequestId) {
       const jobReqs = getPartTimeJobRequests().filter((jr) => jr.applicantUserId === task!.applicantUserId && (jr.paid || jr.status === 'pending'));
       const linkedIds = new Set(getPartTimeTasks().filter((t) => t.jobRequestId).map((t) => t.jobRequestId));
@@ -207,7 +208,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       addNotif(user.id, 'freelancer', '링크 제출 완료', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다. 수고많으셨습니다.', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.');
     }
     if (task.applicantUserId && addNotif) {
-      addNotif(task.applicantUserId, 'freelancer', '작업 완료', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 작업확정서를 확인 후 작업완료를 눌러 주세요.`, '작업 링크가 제출되었습니다.');
+      addNotif(task.applicantUserId, 'approval', '작업 완료', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 마이페이지 → 알바의뢰에서 확인해 주세요.`);
+    }
+    if (task.createdBy && addNotif && task.applicantUserId) {
+      addNotif(task.createdBy, 'approval', '작업이 완료되었습니다', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 어드민 패널 수익탭에서 작업확인 버튼으로 링크를 확인해 주세요.`);
     }
     alert('작업링크가 제출되었습니다.\n제대로 작업이 되었는지 확인 후 수익통장에 충전됩니다.\n수고많으셨습니다.');
   };
