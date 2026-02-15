@@ -6,7 +6,34 @@ import {
   SMMProvider, SMMProduct, NotificationType, GradeConfig
 } from '@/types';
 import { supabase } from '@/supabase';
-import { profileRowToUserProfile } from './profileUtils.ts';
+
+/** Supabase profiles 행 → UserProfile 변환 (profileUtils 의존 제거로 Netlify 빌드 안정화) */
+function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
+  const id = String(row.id ?? '');
+  const nickname = String((row.nickname ?? row.id ?? id) || 'Unknown');
+  const profileImage = String(row.profile_image ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`);
+  return {
+    id,
+    nickname,
+    profileImage,
+    role: (row.role as UserProfile['role']) ?? 'user',
+    email: row.email != null ? String(row.email) : undefined,
+    phone: row.phone != null ? String(row.phone) : undefined,
+    points: Number(row.points ?? 0),
+    manualGrade: row.manual_grade != null ? String(row.manual_grade) : undefined,
+    coupons: Array.isArray(row.coupons) ? (row.coupons as UserProfile['coupons']) : (row.coupons as UserProfile['coupons']) ?? [],
+    totalPurchaseAmount: Number(row.total_purchase_amount ?? 0),
+    totalSalesAmount: Number(row.total_sales_amount ?? 0),
+    freelancerEarnings: Number(row.total_freelancer_earnings ?? 0),
+    joinDate: row.join_date != null ? String(row.join_date) : undefined,
+    sellerStatus: (row.seller_status as UserProfile['sellerStatus']) ?? 'none',
+    freelancerStatus: (row.freelancer_status as UserProfile['freelancerStatus']) ?? 'none',
+    sellerApplication: (row.seller_application as UserProfile['sellerApplication']) ?? undefined,
+    pendingApplication: (row.pending_application as UserProfile['pendingApplication']) ?? undefined,
+    freelancerApplication: (row.freelancer_application as UserProfile['freelancerApplication']) ?? undefined,
+    violationCount: Number(row.violation_count ?? 0),
+  };
+}
 
 // Page and Component Imports (루트 기준 @/ 사용 - Netlify 빌드 시 해석 기준 오류 방지)
 import Header from '@/components/Header';
