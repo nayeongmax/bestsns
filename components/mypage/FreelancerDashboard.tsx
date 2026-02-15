@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -10,6 +8,7 @@ import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import {
   PAYMENT_GATEWAY_FEE_RATE,
+  calcAdvertiserTotalPayment,
   getFreelancerBalance,
   getFreelancerHistory,
   withdrawFreelancerEarnings,
@@ -577,11 +576,11 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                       <div className="flex flex-wrap gap-4 text-sm">
                         <span className="font-bold text-gray-700">{jr.unitPrice != null && jr.quantity != null ? `단가 ${jr.unitPrice.toLocaleString()}원 × ${jr.quantity}개` : `광고금액: ${jr.adAmount.toLocaleString()}원`}</span>
                         <span className="font-bold text-gray-700">수수료: {jr.fee.toLocaleString()}원</span>
-                        <span className="font-black text-emerald-600">총 결제: {(jr.adAmount + jr.fee).toLocaleString()}원</span>
+                        <span className="font-black text-emerald-600">총 결제: {calcAdvertiserTotalPayment(jr.adAmount).toLocaleString()}원</span>
                       </div>
                     )}
                   </div>
-                  <button onClick={() => navigate('/payment/alba', { state: { jobRequest: jr } })} className="px-10 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shrink-0">결제하기</button>
+                  <button onClick={() => navigate('/payment/alba', { state: { jobRequest: jr } })} className="px-10 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shrink-0">결제하기 ({calcAdvertiserTotalPayment(jr.adAmount).toLocaleString()}원)</button>
                 </div>
               ))}
             </div>
@@ -676,6 +675,8 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
 </div>`;
           document.body.appendChild(temp);
           try {
+            const html2canvas = (await import('html2canvas')).default;
+            const { jsPDF } = await import('jspdf');
             const canvas = await html2canvas(temp, { scale: 2, useCORS: true, logging: false });
             document.body.removeChild(temp);
             const imgData = canvas.toDataURL('image/png');
@@ -972,10 +973,10 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
                 <p className="text-sm font-black text-gray-800">예시: 광고비 100,000원 결제 시</p>
                 <ul className="text-sm text-gray-700 space-y-0.5">
-                  <li>· 광고주 수수료 (25%): - ₩25,000</li>
-                  <li>· 결제망 수수료 (3.3%): - ₩3,300</li>
-                  <li>· 부가세 (수수료의 10%): - ₩2,830</li>
-                  <li className="pt-1 font-black text-indigo-600">총 결제 금액: 약 ₩131,000</li>
+                  <li>· 광고주 수수료 (25%): ₩25,000</li>
+                  <li>· 부가세 (수수료의 10%): ₩2,500</li>
+                  <li>· 결제망 수수료 (3.3%): (100,000+27,500) × 3.3% = ₩4,208</li>
+                  <li className="pt-1 font-black text-indigo-600">총 결제 금액: ₩131,708</li>
                 </ul>
               </div>
               <p className="text-[11px] text-gray-500">※ 작업 의뢰 시 광고주가 부담하는 수수료입니다.</p>
