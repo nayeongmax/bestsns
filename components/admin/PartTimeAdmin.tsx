@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus, refundFreelancerWithdrawal, processAutoApprovals } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus, refundFreelancerWithdrawal, processAutoApprovals, calcJobRequestFee } from '@/constants';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
@@ -17,6 +17,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
   const [withdrawRequests, setWithdrawRequests] = useState(() => getFreelancerWithdrawRequests());
   const [rejectModal, setRejectModal] = useState<{ jr: PartTimeJobRequest; reason: string } | null>(null);
   const [revisionModal, setRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string; text: string } | null>(null);
+  const [detailJr, setDetailJr] = useState<PartTimeJobRequest | null>(null);
+  const [estimateModal, setEstimateModal] = useState<PartTimeJobRequest | null>(null);
+  const [estimateForm, setEstimateForm] = useState({ unitPrice: '', quantity: '1', note: '' });
   const [parttimeDateOffset, setParttimeDateOffset] = useState(0);
 
   useEffect(() => {
@@ -62,7 +65,43 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
       addNotif(jr.applicantUserId, 'revision', '작업의뢰 거절', `[${jr.title}] 작업의뢰가 거절되었습니다. 사유: ${reason.trim()}`, reason.trim());
     }
     setRejectModal(null);
+    setDetailJr(null);
     alert('거절 처리되었습니다. 신청자에게 알림이 전송되었습니다.');
+  };
+
+  const handleSendEstimate = () => {
+    if (!estimateModal) return;
+    const unitPrice = Number(estimateForm.unitPrice) || 0;
+    const quantity = Math.max(1, Number(estimateForm.quantity) || 1);
+    const totalAmount = unitPrice * quantity;
+    if (totalAmount <= 0) {
+      alert('단가를 입력해 주세요.');
+      return;
+    }
+    const fee = calcJobRequestFee(totalAmount);
+    const now = new Date().toISOString();
+    const next = jobRequests.map((r) =>
+      r.id === estimateModal.id
+        ? {
+            ...r,
+            adAmount: totalAmount,
+            unitPrice,
+            quantity,
+            fee,
+            status: 'pending' as const,
+            operatorEstimate: { totalAmount, unitPrice, quantity, fee, note: estimateForm.note.trim() || undefined, sentAt: now },
+          }
+        : r
+    );
+    setPartTimeJobRequests(next);
+    setJobRequests(next);
+    if (estimateModal.applicantUserId && addNotif) {
+      addNotif(estimateModal.applicantUserId, 'approval', '견적서 도착', `[${estimateModal.title}] 견적서가 도착했습니다. 마이페이지 → 알바의뢰 탭에서 확인해 주세요.`, undefined);
+    }
+    setEstimateModal(null);
+    setEstimateForm({ unitPrice: '', quantity: '1', note: '' });
+    setDetailJr(null);
+    alert('견적서가 전송되었습니다. 광고주에게 알림이 전송되었습니다.');
   };
 
   const parttimeViewDate = (() => {
@@ -278,71 +317,130 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif }) => {
             검토 대기 중인 작업의뢰가 없습니다.
           </div>
         ) : (
-          <ul className="space-y-8">
-            {pendingReviews.map((jr) => (
-              <li key={jr.id} className="rounded-2xl border border-amber-200 bg-white overflow-hidden shadow-sm">
-                <div className="bg-amber-50 px-6 py-3 border-b border-amber-100">
-                  <span className="text-xs font-black text-amber-700 uppercase">신청자가 작성한 작업의뢰신청 폼</span>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">제목</th>
+                  <th className="px-6 py-4">작업기간</th>
+                  <th className="px-6 py-4">연락처</th>
+                  <th className="px-6 py-4 text-center">처리</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {pendingReviews.map((jr) => (
+                  <tr key={jr.id} className="hover:bg-emerald-50/20">
+                    <td className="px-6 py-4 font-bold text-gray-900">{jr.title}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{jr.workPeriodStart} ~ {jr.workPeriodEnd}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-gray-800">{jr.contact}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setDetailJr(jr)}
+                        className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700"
+                      >
+                        견적확인하기
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {detailJr && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto my-8">
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+                <h4 className="font-black text-gray-900">광고주 작업의뢰 상세</h4>
+                <button type="button" onClick={() => { setDetailJr(null); setEstimateModal(null); }} className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">✕</button>
+              </div>
+              <div className="p-6 space-y-6">
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase mb-1">알바광고 신청제목</p>
+                  <p className="text-lg font-black text-gray-900">{detailJr.title}</p>
                 </div>
-                <div className="p-8 space-y-6">
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase mb-1">작업내용</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">{detailJr.workContent}</p>
+                </div>
+                {(detailJr.exampleImages?.length ?? 0) > 0 && (
                   <div>
-                    <p className="text-xs font-black text-gray-500 uppercase mb-1">알바광고 신청제목</p>
-                    <p className="text-lg font-black text-gray-900">{jr.title}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-gray-500 uppercase mb-1">작업내용</p>
-                    <p className="text-gray-700 whitespace-pre-wrap">{jr.workContent}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-gray-500 uppercase mb-1">플랫폼링크</p>
-                    {(() => {
-                      const links = jr.platformLinks?.length ? jr.platformLinks : (jr.platformLink ? jr.platformLink.split(',').map((s) => s.trim()).filter(Boolean) : []);
-                      if (!links.length) return <p className="text-gray-400">-</p>;
-                      return (
-                        <div className="space-y-2">
-                          {links.map((url, i) => (
-                            <a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="block text-emerald-600 font-bold hover:underline break-all text-sm">
-                              {i + 1}. {url}
-                            </a>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-gray-500 uppercase mb-1">연락처</p>
-                    <p className="font-bold text-gray-800">{jr.contact}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs font-black text-gray-500 uppercase mb-1">작업기간</p>
-                      <p className="font-bold text-gray-800">{jr.workPeriodStart} ~ {jr.workPeriodEnd}</p>
+                    <p className="text-xs font-black text-gray-500 uppercase mb-2">원하는 예시 첨부</p>
+                    <div className="flex flex-wrap gap-2">
+                      {detailJr.exampleImages!.map((src, i) => (
+                        <img key={i} src={src} alt={`예시 ${i + 1}`} className="w-24 h-24 object-cover rounded-xl border border-gray-200" />
+                      ))}
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-gray-500 uppercase mb-1">광고금액 · 수수료</p>
-                      <p className="font-bold text-gray-800">{jr.unitPrice != null && jr.quantity != null ? `단가 ${jr.unitPrice.toLocaleString()}원 × ${jr.quantity}개` : jr.adAmount.toLocaleString() + '원'} / 수수료 {jr.fee.toLocaleString()}원</p>
-                    </div>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase mb-1">플랫폼링크</p>
+                  {(() => {
+                    const links = detailJr.platformLinks?.length ? detailJr.platformLinks : (detailJr.platformLink ? detailJr.platformLink.split(',').map((s) => s.trim()).filter(Boolean) : []);
+                    if (!links.length) return <p className="text-gray-400">-</p>;
+                    return (
+                      <div className="space-y-2">
+                        {links.map((url, i) => (
+                          <a key={i} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer" className="block text-emerald-600 font-bold hover:underline break-all text-sm">
+                            {i + 1}. {url}
+                          </a>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase mb-1">연락처</p>
+                  <p className="font-bold text-gray-800">{detailJr.contact}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-black text-gray-500 uppercase mb-1">작업기간</p>
+                    <p className="font-bold text-gray-800">{detailJr.workPeriodStart} ~ {detailJr.workPeriodEnd}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-gray-500 uppercase mb-1">광고금액 · 수수료</p>
+                    <p className="font-bold text-gray-800">{detailJr.operatorEstimate ? `${detailJr.operatorEstimate.unitPrice != null ? `단가 ${detailJr.operatorEstimate.unitPrice.toLocaleString()}원 × ${detailJr.operatorEstimate.quantity ?? 1}개` : ''} ${detailJr.operatorEstimate.totalAmount.toLocaleString()}원 / 수수료 ${detailJr.operatorEstimate.fee.toLocaleString()}원` : detailJr.unitPrice != null && detailJr.quantity != null ? `단가 ${detailJr.unitPrice.toLocaleString()}원 × ${detailJr.quantity}개` : `${detailJr.adAmount.toLocaleString()}원`} / 수수료 {detailJr.fee.toLocaleString()}원</p>
                   </div>
                 </div>
-                <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleApproveJobRequest(jr)}
-                    className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all"
-                  >
-                    승인
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRejectJobRequest(jr)}
-                    className="px-8 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200 transition-all"
-                  >
-                    거절
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+              </div>
+              <div className="px-6 py-5 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-3">
+                <button type="button" onClick={() => { setEstimateModal(detailJr); setEstimateForm({ unitPrice: String(detailJr.operatorEstimate?.unitPrice ?? ''), quantity: String(detailJr.operatorEstimate?.quantity ?? 1), note: detailJr.operatorEstimate?.note ?? '' }); }} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">견적서넣기</button>
+                <button type="button" onClick={() => { handleApproveJobRequest(detailJr); setDetailJr(null); }} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">승인</button>
+                <button type="button" onClick={() => { setDetailJr(null); handleRejectJobRequest(detailJr); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">거절</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {estimateModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
+              <h4 className="font-black text-gray-900 text-lg">견적서 발송</h4>
+              <p className="text-sm text-gray-500">단가와 갯수를 입력하면 수수료가 자동 계산됩니다. 광고주에게 견적서가 전송됩니다.</p>
+              <div>
+                <label className="block text-sm font-black text-gray-600 mb-1">단가 (원)</label>
+                <input type="number" min={0} value={estimateForm.unitPrice} onChange={(e) => setEstimateForm((f) => ({ ...f, unitPrice: e.target.value }))} placeholder="0" className="w-full px-4 py-3 rounded-xl border border-gray-200" />
+              </div>
+              <div>
+                <label className="block text-sm font-black text-gray-600 mb-1">갯수</label>
+                <input type="number" min={1} value={estimateForm.quantity} onChange={(e) => setEstimateForm((f) => ({ ...f, quantity: e.target.value }))} placeholder="1" className="w-full px-4 py-3 rounded-xl border border-gray-200" />
+              </div>
+              <div>
+                <label className="block text-sm font-black text-gray-600 mb-1">비고 (선택)</label>
+                <textarea value={estimateForm.note} onChange={(e) => setEstimateForm((f) => ({ ...f, note: e.target.value }))} placeholder="추가 안내사항" rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm" />
+              </div>
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-sm text-gray-600">총 금액: {((Number(estimateForm.unitPrice) || 0) * Math.max(1, Number(estimateForm.quantity) || 1)).toLocaleString()}원 / 수수료: {calcJobRequestFee((Number(estimateForm.unitPrice) || 0) * Math.max(1, Number(estimateForm.quantity) || 1)).toLocaleString()}원</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setEstimateModal(null)} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">취소</button>
+                <button onClick={handleSendEstimate} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">견적서 전송</button>
+              </div>
+            </div>
+          </div>
         )}
 
         {rejectModal && (
