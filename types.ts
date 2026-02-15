@@ -147,6 +147,17 @@ export interface PartTimeJobRequest {
   rejectReason?: string;
   /** 결제 완료 여부 (구매자 PG 결제 후) */
   paid?: boolean;
+  /** 광고주가 원하는 예시 이미지 (data URL, 최대 10개) */
+  exampleImages?: string[];
+  /** 운영자가 발송한 견적서 */
+  operatorEstimate?: {
+    totalAmount: number;
+    unitPrice?: number;
+    quantity?: number;
+    fee: number;
+    note?: string;
+    sentAt: string;
+  };
   createdAt: string;
 }
 
