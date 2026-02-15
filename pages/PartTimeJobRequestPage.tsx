@@ -25,6 +25,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const [contact, setContact] = useState('');
   const [workPeriodStart, setWorkPeriodStart] = useState(todayStr());
   const [workPeriodEnd, setWorkPeriodEnd] = useState(todayStr());
+  const [exampleImages, setExampleImages] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
@@ -36,8 +37,45 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       setContact(editRequest.contact || '');
       setWorkPeriodStart(editRequest.workPeriodStart);
       setWorkPeriodEnd(editRequest.workPeriodEnd);
+      setExampleImages(editRequest.exampleImages ?? []);
     }
   }, [editRequest?.id, user.id]);
+
+  const handleImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const toAdd: File[] = [];
+    for (let i = 0; i < files.length && toAdd.length < 10 - exampleImages.length; i++) {
+      if (files[i].type.startsWith('image/')) toAdd.push(files[i]);
+    }
+    if (!toAdd.length) return;
+    const readers = toAdd.map((f) => {
+      return new Promise<string>((resolve) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result as string);
+        r.readAsDataURL(f);
+      });
+    });
+    Promise.all(readers).then((urls) => {
+      setExampleImages((prev) => [...prev, ...urls].slice(0, 10));
+    });
+    e.target.value = '';
+  };
+
+  const removeImage = (idx: number) => {
+    setExampleImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const moveImage = (idx: number, dir: 'left' | 'right') => {
+    if (dir === 'left' && idx <= 0) return;
+    if (dir === 'right' && idx >= exampleImages.length - 1) return;
+    setExampleImages((prev) => {
+      const arr = [...prev];
+      const target = dir === 'left' ? idx - 1 : idx + 1;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return arr;
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +102,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         contact: contact.trim(),
         workPeriodStart,
         workPeriodEnd,
+        exampleImages,
         adAmount: editRequest.adAmount ?? 0,
         fee: editRequest.fee ?? 0,
         status: 'pending_review' as const,
@@ -82,6 +121,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         contact: contact.trim(),
         workPeriodStart,
         workPeriodEnd,
+        exampleImages,
         adAmount: 0,
         unitPrice: undefined,
         quantity: 1,
@@ -137,14 +177,11 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         </div>
       </div>
 
-      <div className="mb-8 text-center">
-        <p className="text-slate-700 text-xl md:text-2xl font-bold tracking-tight">
-          최고의 전문가 프리랜서로 선별 매칭합니다.
-        </p>
-        <div className="mt-3 h-px w-24 mx-auto bg-slate-300/60" />
-      </div>
-
       <form onSubmit={handleSubmit} className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
+        <p className="text-slate-700 text-xl md:text-2xl font-bold tracking-tight text-center pt-2 pb-4">
+          최고의 전문가 프리랜서로 선별 매칭해드립니다.
+        </p>
+
         <div>
           <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">알바광고 신청제목 *</label>
           <input
@@ -169,10 +206,31 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           />
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-6 py-5 shadow-sm">
-          <p className="text-slate-700 font-semibold text-sm leading-relaxed">
-            부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 불법게시물 작업을 엄격히 제한합니다.
-          </p>
+        <p className="text-amber-600 font-semibold text-sm leading-relaxed flex items-center gap-2">
+          <span className="text-lg">⚠️</span> 부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 불법게시물 작업을 엄격히 제한합니다.
+        </p>
+
+        <div>
+          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">문서 첨부파일 (원하는 예시 이미지, 최대 10개)</label>
+          <div className="flex flex-wrap gap-4">
+            {exampleImages.map((src, idx) => (
+              <div key={idx} className="flex flex-col items-center gap-1">
+                <img src={src} alt={`예시 ${idx + 1}`} className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={() => moveImage(idx, 'left')} disabled={idx === 0} className="p-1 rounded bg-gray-100 text-gray-600 disabled:opacity-40 text-sm" title="왼쪽으로">←</button>
+                  <button type="button" onClick={() => removeImage(idx)} className="p-1 rounded bg-red-100 text-red-600 text-sm" title="삭제">삭제</button>
+                  <button type="button" onClick={() => moveImage(idx, 'right')} disabled={idx === exampleImages.length - 1} className="p-1 rounded bg-gray-100 text-gray-600 disabled:opacity-40 text-sm" title="오른쪽으로">→</button>
+                </div>
+              </div>
+            ))}
+            {exampleImages.length < 10 && (
+              <label className="w-20 h-20 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 text-gray-400 hover:border-emerald-400 hover:text-emerald-600 cursor-pointer transition shrink-0">
+                <input type="file" accept="image/*" multiple onChange={handleImageAdd} className="hidden" />
+                <span className="text-2xl">+</span>
+                <span className="text-xs mt-0.5">추가</span>
+              </label>
+            )}
+          </div>
         </div>
 
         <div>
@@ -200,7 +258,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           </div>
         </div>
 
-        <p className="text-emerald-700 font-bold text-base text-center py-2 px-4 rounded-xl bg-emerald-50 border border-emerald-100">
+        <p className="text-emerald-700 font-bold text-lg text-center py-3 px-4 rounded-xl bg-emerald-50 border border-emerald-100">
           최고의 전문가를 선별 매칭하고, 거품 없는 합리적인 견적을 제안드리겠습니다!
         </p>
 
