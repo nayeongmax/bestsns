@@ -160,8 +160,12 @@ export interface PartTimeJobRequest {
     /** 수신처 (광고주) */
     recipientName?: string;
     recipientContact?: string;
-    /** 견적항목 (작업제목, 내용, 단가, 수량, 금액, 작업기간) */
-    items?: { workTitle: string; content: string; unitPrice: number; quantity: number; amount: number; workPeriod: string }[];
+    /** 작업기간 (전체) */
+    workPeriod?: string;
+    /** 견적항목 (순번, 내용, 단가, 수량, 금액, 비고) */
+    items?: { seq: number; content: string; unitPrice: number; quantity: number; amount: number; remarks?: string }[];
+    /** 작업명 (견적 상단) */
+    workName?: string;
   };
   createdAt: string;
 }
