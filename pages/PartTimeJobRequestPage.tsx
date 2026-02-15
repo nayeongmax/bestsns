@@ -56,7 +56,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         r.onload = () => resolve(r.result as string);
         r.onerror = () => reject(new Error('파일 읽기 실패'));
         r.readAsDataURL(f);
-      }).then((dataUrl) => compressImageForStorage(dataUrl));
+      }).then((dataUrl) => compressImageForStorage(dataUrl, 256, 0.25));
     Promise.all(toAdd.map(readAndCompress))
       .then((urls) => setExampleImages((prev) => [...prev, ...urls].slice(0, 10)))
       .catch((err) => alert('이미지 처리 중 오류가 발생했습니다. 파일 크기를 줄이거나 다른 이미지를 시도해 주세요.'));
