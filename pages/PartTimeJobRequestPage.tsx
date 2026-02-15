@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { NotificationType, PartTimeJobRequest } from '@/types';
-import { getPartTimeJobRequests, setPartTimeJobRequests } from '@/constants';
+import { getPartTimeJobRequests, setPartTimeJobRequests, compressImageForStorage } from '@/constants';
 
 const todayStr = () => {
   const d = new Date();
@@ -49,14 +49,13 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       if (files[i].type.startsWith('image/')) toAdd.push(files[i]);
     }
     if (!toAdd.length) return;
-    const readers = toAdd.map((f) => {
-      return new Promise<string>((resolve) => {
+    const readAndCompress = (f: File) =>
+      new Promise<string>((resolve) => {
         const r = new FileReader();
         r.onload = () => resolve(r.result as string);
         r.readAsDataURL(f);
-      });
-    });
-    Promise.all(readers).then((urls) => {
+      }).then((dataUrl) => compressImageForStorage(dataUrl));
+    Promise.all(toAdd.map(readAndCompress)).then((urls) => {
       setExampleImages((prev) => [...prev, ...urls].slice(0, 10));
     });
     e.target.value = '';
@@ -179,7 +178,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
 
       <form onSubmit={handleSubmit} className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
         <p className="text-slate-700 text-xl md:text-2xl font-bold tracking-tight text-center pt-2 pb-4">
-          최고의 전문가 프리랜서로 선별 매칭해드립니다.
+          최고의 전문가 프리랜서로 선별 매칭해드립니다!
         </p>
 
         <div>
@@ -211,7 +210,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         </p>
 
         <div>
-          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">문서 첨부파일 (원하는 예시 이미지, 최대 10개)</label>
+          <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">원하는 예시 첨부 (첨부파일, 최대 10개)</label>
           <div className="flex flex-wrap gap-4">
             {exampleImages.map((src, idx) => (
               <div key={idx} className="flex flex-col items-center gap-1">
@@ -309,9 +308,8 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
             <div className="text-emerald-600 text-4xl">✓</div>
             <div className="space-y-2">
               <p className="font-black text-gray-900 text-base">{editRequest ? '수정하여 재신청되었습니다.' : '신청완료되었습니다.'}</p>
-              <p className="text-gray-700 text-base">적합한 작업인지 확인 후 승인해드리겠습니다.</p>
-              <p className="text-gray-700 text-base">승인되면, 프리랜서 워크페이스 → 알바의뢰 (광고주한정) 탭에서 결제해주세요.</p>
-              <p className="text-gray-700 text-base">결제완료되면 프리랜서 모집글이 업로드 됩니다.</p>
+              <p className="text-gray-700 text-base">빠른 시일내에 연락드리겠습니다.</p>
+              <p className="text-gray-700 text-base">조금만 기다려주세요~ 광고주님:)</p>
             </div>
             <button
               onClick={handleModalConfirm}
