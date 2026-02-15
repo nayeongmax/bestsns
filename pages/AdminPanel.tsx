@@ -47,7 +47,8 @@ const AdminPanel: React.FC<Props> = ({
   members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
   gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const ADMIN_STORAGE_KEY = 'admin_logged_in';
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!sessionStorage.getItem(ADMIN_STORAGE_KEY));
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime'>('sns');
 
@@ -60,8 +61,10 @@ const AdminPanel: React.FC<Props> = ({
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (panelPassword && password === panelPassword) setIsLoggedIn(true);
-    else alert('비밀번호가 올바르지 않습니다.');
+    if (panelPassword && password === panelPassword) {
+      sessionStorage.setItem(ADMIN_STORAGE_KEY, '1');
+      setIsLoggedIn(true);
+    } else alert('비밀번호가 올바르지 않습니다.');
   };
 
   if (!isLoggedIn) {
