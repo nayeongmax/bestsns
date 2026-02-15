@@ -1,6 +1,6 @@
-
 import React, { useState, useMemo } from 'react';
-import { SiteNotification, NotificationType, UserProfile } from '../types';
+import { SiteNotification, NotificationType, UserProfile } from '@/types';
+import { supabase } from '@/supabase';
 
 interface Props {
   notifications: SiteNotification[];
@@ -17,12 +17,13 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
     return notifications.filter(n => n.userId === user.id);
   }, [notifications, user]);
 
-  // 알림 클릭 시 읽음 처리 및 모달 오픈
+  // 알림 클릭 시 읽음 처리 및 모달 오픈 (DB 연동)
   const handleOpenNotif = (n: SiteNotification) => {
     setSelectedNotif(n);
-    setNotifications(prev => prev.map(notif => 
+    setNotifications(prev => prev.map(notif =>
       notif.id === n.id ? { ...notif, isRead: true } : notif
     ));
+    supabase.from('site_notifications').update({ is_read: true }).eq('id', n.id).then(() => {});
   };
 
   const closeModal = () => {
