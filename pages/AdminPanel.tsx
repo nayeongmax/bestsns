@@ -10,6 +10,7 @@ import StoreAdmin from '../components/admin/StoreAdmin.tsx';
 import MemberAdmin from '../components/admin/MemberAdmin.tsx';
 import MarketingAdmin from '../components/admin/MarketingAdmin.tsx';
 import PartTimeAdmin from '../components/admin/PartTimeAdmin.tsx';
+import AiConsultAdmin from '../components/admin/AiConsultAdmin.tsx';
 
 interface Props {
   user: UserProfile | null;
@@ -50,7 +51,7 @@ const AdminPanel: React.FC<Props> = ({
   const ADMIN_STORAGE_KEY = 'admin_logged_in';
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!sessionStorage.getItem(ADMIN_STORAGE_KEY));
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime'>('sns');
+  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime' | 'aiconsult'>('sns');
 
   const panelPassword = (import.meta as any).env?.VITE_ADMIN_PANEL_PASSWORD ?? (import.meta as any).env?.VITE_ADMIN_PASSWORD ?? 'admin123';
 
@@ -97,6 +98,7 @@ const AdminPanel: React.FC<Props> = ({
            <button onClick={() => setActiveTab('member')} className={`px-8 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'member' ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>회원 및 권한 관리</button>
            <button onClick={() => setActiveTab('marketing')} className={`px-8 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'marketing' ? 'bg-rose-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>마케팅 캠페인</button>
            <button onClick={() => setActiveTab('parttime')} className={`px-8 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'parttime' ? 'bg-emerald-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>누구나알바</button>
+           <button onClick={() => setActiveTab('aiconsult')} className={`px-8 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'aiconsult' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>AI 상담 이력</button>
          </div>
       </div>
 
@@ -135,6 +137,7 @@ const AdminPanel: React.FC<Props> = ({
         )}
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
         {activeTab === 'parttime' && <PartTimeAdmin addNotif={addNotif} members={members} />}
+        {activeTab === 'aiconsult' && <AiConsultAdmin />}
       </main>
     </div>
   );
