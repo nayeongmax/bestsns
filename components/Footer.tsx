@@ -4,11 +4,11 @@ import { Link } from 'react-router-dom';
 const Footer: React.FC = () => {
   return (
     <footer className="mt-auto border-t border-gray-200 bg-gray-50">
-      <div className="container mx-auto max-w-[1550px] px-4 py-8">
-        <div className="flex justify-center mb-6">
+      <div className="w-full max-w-4xl mx-auto px-8 md:px-12 py-8">
+        <div className="flex justify-center mb-8">
           <p className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">THEBEST<span className="text-blue-600">SNS</span></p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start text-center md:text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-8 items-start justify-items-center md:justify-items-stretch text-center md:text-left">
           <div className="space-y-2">
             <p className="text-xs font-black text-gray-500 uppercase">사업자 정보</p>
             <div className="text-sm text-gray-700 space-y-1">
