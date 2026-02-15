@@ -21,10 +21,24 @@ function resolveTypesPlugin() {
   }
 }
 
+// Netlify 빌드 시 profileUtils resolve 오류 방지
+function resolveProfileUtilsPlugin() {
+  const profileUtilsPath = path.resolve(root, 'profileUtils.ts')
+  return {
+    name: 'resolve-profile-utils',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source !== './profileUtils' && source !== './profileUtils.ts') return null
+      if (importer && !importer.includes('App.tsx')) return null
+      return profileUtilsPath
+    },
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/', // 이 부분을 추가해서 경로를 명확하게 잡아줍니다.
-  plugins: [resolveTypesPlugin(), react()],
+  plugins: [resolveTypesPlugin(), resolveProfileUtilsPlugin(), react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
