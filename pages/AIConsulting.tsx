@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getMarketingConsultation } from '../services/geminiService';
+import { supabase } from '@/supabase';
+import type { UserProfile } from '@/types';
 
 /** 마크다운 형식 텍스트를 가독성 있게 렌더링 (추가 의존성 없음) */
 function formatAiText(text: string): React.ReactNode[] {
@@ -43,15 +45,32 @@ function formatAiText(text: string): React.ReactNode[] {
   return out;
 }
 
-const AIConsulting: React.FC = () => {
+interface Props {
+  user?: UserProfile | null;
+}
+
+const AIConsulting: React.FC<Props> = ({ user }) => {
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; text: string }[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [messages, isLoading]);
+
+  const saveToDb = async (sessionId: string, role: 'user' | 'bot', content: string) => {
+    try {
+      const msgId = `aim_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      await supabase.from('ai_consult_messages').insert({ id: msgId, session_id: sessionId, role, content });
+      const { data: s } = await supabase.from('ai_consult_sessions').select('message_count').eq('id', sessionId).single();
+      const cnt = ((s as { message_count?: number })?.message_count ?? 0) + 1;
+      await supabase.from('ai_consult_sessions').update({ message_count: cnt, updated_at: new Date().toISOString() }).eq('id', sessionId);
+    } catch (e) {
+      console.warn('AI 상담 DB 저장 실패:', e);
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -61,9 +80,36 @@ const AIConsulting: React.FC = () => {
     setInput('');
     setIsLoading(true);
 
+    let sessionId = currentSessionId;
+    if (user && !sessionId) {
+      try {
+        const sid = `ais_${Date.now()}`;
+        await supabase.from('ai_consult_sessions').insert({
+          id: sid,
+          user_id: user.id,
+          user_nickname: user.nickname,
+          message_count: 0,
+        });
+        sessionId = sid;
+        setCurrentSessionId(sid);
+      } catch (e) {
+        console.warn('AI 세션 생성 실패:', e);
+      }
+    }
+
+    if (user && sessionId) saveToDb(sessionId, 'user', userText);
+
     const botReply = await getMarketingConsultation(userText);
     setMessages(prev => [...prev, { role: 'bot', text: botReply }]);
+
+    if (user && sessionId) saveToDb(sessionId, 'bot', botReply);
+
     setIsLoading(false);
+  };
+
+  const handleReset = () => {
+    setMessages([]);
+    setCurrentSessionId(null);
   };
 
   const suggestions = [
@@ -86,7 +132,7 @@ const AIConsulting: React.FC = () => {
           </div>
         </div>
         <button 
-          onClick={() => setMessages([])}
+          onClick={handleReset}
           className="text-xs font-black text-gray-400 hover:text-red-500 transition-colors uppercase tracking-widest"
         >
           대화 초기화
