@@ -504,48 +504,38 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             </button>
           </div>
           {(() => {
-            const estimateList = myJobRequests.filter((jr) => jr.status !== 'not_selected');
-            if (estimateList.length === 0) return null;
-            return (
-            <div className="space-y-4">
-              <h4 className="font-black text-gray-900">누구나알바 견적목록</h4>
-              {estimateList.map((jr) => {
-                const hasEstimate = !!(jr.operatorEstimate);
-                const linkedTask = tasks.find((t) => t.jobRequestId === jr.id);
-                const hasSelection = linkedTask?.applicants.some((a) => a.selected);
-                const statusLabel = !jr.paid
-                  ? !hasEstimate
-                    ? '운영자 검토 중'
-                    : '견적서 확인'
-                  : !linkedTask || !hasSelection
-                    ? '프리랜서모집중'
-                    : '프리랜서선정완료';
-                return (
-                  <div key={jr.id} className={`p-6 rounded-[32px] shadow-sm border flex flex-col sm:flex-row justify-between items-start gap-4 ${hasEstimate ? 'bg-emerald-50/50 border-emerald-100' : 'bg-amber-50/50 border-amber-100'}`}>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
-                      <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
-                      <span className={`inline-block mt-3 px-3 py-1 rounded-lg text-xs font-black ${statusLabel === '운영자 검토 중' ? 'bg-amber-200 text-amber-800' : statusLabel === '견적서 확인' ? 'bg-emerald-200 text-emerald-800' : statusLabel === '프리랜서모집중' ? 'bg-gray-200 text-gray-700' : 'bg-blue-200 text-blue-800'}`}>
-                        {statusLabel}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                      {hasEstimate && (
-                        <>
-                          <button type="button" onClick={() => setEstimateViewJr(jr)} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">견적서확인</button>
-                          {!jr.paid && (
-                            <button type="button" onClick={() => navigate('/payment/alba', { state: { jobRequest: jr } })} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">결제하기</button>
+            const estimateListUnpaid = myJobRequests.filter((jr) => jr.status !== 'not_selected' && !jr.paid);
+            if (estimateListUnpaid.length > 0) {
+              return (
+                <div className="space-y-4">
+                  <h4 className="font-black text-gray-800 border-b-2 border-amber-200 pb-2">견적목록 (결제X)</h4>
+                  {estimateListUnpaid.map((jr) => {
+                    const hasEstimate = !!(jr.operatorEstimate);
+                    const statusLabel = !hasEstimate ? '운영자 검토 중' : '견적서 확인';
+                    return (
+                      <div key={jr.id} className={`p-6 rounded-[32px] shadow-sm border flex flex-col sm:flex-row justify-between items-start gap-4 ${hasEstimate ? 'bg-emerald-50/50 border-emerald-100' : 'bg-amber-50/50 border-amber-100'}`}>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                          <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
+                          <span className={`inline-block mt-3 px-3 py-1 rounded-lg text-xs font-black ${statusLabel === '운영자 검토 중' ? 'bg-amber-200 text-amber-800' : 'bg-emerald-200 text-emerald-800'}`}>{statusLabel}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 shrink-0">
+                          {hasEstimate && (
+                            <>
+                              <button type="button" onClick={() => setEstimateViewJr(jr)} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">견적서확인</button>
+                              <button type="button" onClick={() => navigate('/payment/alba', { state: { jobRequest: jr } })} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">결제하기</button>
+                            </>
                           )}
-                        </>
-                      )}
-                      {!hasEstimate && <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-gray-600 text-white font-black hover:bg-gray-700">수정하기</Link>}
-                      <button type="button" onClick={() => { if (!confirm('정말 삭제하시겠습니까?')) return; const next = jobRequests.filter((r) => r.id !== jr.id); setPartTimeJobRequests(next); setJobRequests(next); alert('삭제되었습니다.'); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            );
+                          {!hasEstimate && <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-gray-600 text-white font-black hover:bg-gray-700">수정하기</Link>}
+                          <button type="button" onClick={() => { if (!confirm('정말 삭제하시겠습니까?')) return; const next = jobRequests.filter((r) => r.id !== jr.id); setPartTimeJobRequests(next); setJobRequests(next); alert('삭제되었습니다.'); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+            return null;
           })()}
           {myRejectedRequests.length > 0 && (
             <div className="space-y-4">
@@ -565,30 +555,134 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               ))}
             </div>
           )}
-          {myPaidRequests.length > 0 && (
-            <div className="space-y-4">
-              <h4 className="font-black text-gray-900">프리랜서 모집</h4>
-              {myPaidRequests.map((jr) => {
-                const linkedTask = tasks.find((t) => t.jobRequestId === jr.id);
-                const selectedWithLink = linkedTask?.applicants.filter((a) => a.selected && hasWorkLink(a)) ?? [];
-                const allPaid = linkedTask && selectedWithLink.length > 0 && selectedWithLink.every((a) => linkedTask.paidUserIds?.includes(a.userId));
-                const sentToAdvertiser = !!linkedTask?.sentToAdvertiserAt;
-                const statusStep = !linkedTask ? '모집진행중' : linkedTask.applicants.length === 0 ? '모집진행중' : selectedWithLink.length === 0 ? '프리랜서선정완료' : allPaid ? '구매확정완료' : sentToAdvertiser ? '작업완료' : '작업중';
-                return (
-                  <div key={jr.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
-                    <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                      <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
-                      <span className={`px-3 py-1 rounded-lg text-xs font-black ${statusStep === '모집진행중' ? 'bg-gray-200 text-gray-700' : statusStep === '프리랜서선정완료' ? 'bg-blue-100 text-blue-700' : statusStep === '작업중' ? 'bg-amber-100 text-amber-700' : statusStep === '작업완료' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {statusStep}
-                      </span>
-                    </div>
-                    {linkedTask ? (
-                      <div className="space-y-3">
-                        {sentToAdvertiser && selectedWithLink.length > 0 && (
-                          <p className="text-emerald-600 font-bold text-sm">작업이 완료되었습니다. 아래에서 결과물을 확인하고 구매확정해 주세요.</p>
-                        )}
-                        {selectedWithLink.length > 0 && (
-                          <div>
+          {(() => {
+            const paidInProgress = myPaidRequests.filter((jr) => {
+              const linkedTask = tasks.find((t) => t.jobRequestId === jr.id);
+              const selectedWithLink = linkedTask?.applicants.filter((a) => a.selected && hasWorkLink(a)) ?? [];
+              const allPaid = linkedTask && selectedWithLink.length > 0 && selectedWithLink.every((a) => linkedTask.paidUserIds?.includes(a.userId));
+              return !allPaid;
+            });
+            const paidCompleted = myPaidRequests.filter((jr) => {
+              const linkedTask = tasks.find((t) => t.jobRequestId === jr.id);
+              const selectedWithLink = linkedTask?.applicants.filter((a) => a.selected && hasWorkLink(a)) ?? [];
+              return linkedTask && selectedWithLink.length > 0 && selectedWithLink.every((a) => linkedTask.paidUserIds?.includes(a.userId));
+            });
+            const hasInProgress = paidInProgress.length > 0;
+            const tasksInProgress = myTasksInProgress.filter((t) => {
+              const jr = jobRequests.find((j) => j.id === t.jobRequestId);
+              if (!jr?.paid) return false;
+              const inPaidProgress = paidInProgress.some((jr2) => jr2.id === t.jobRequestId);
+              if (inPaidProgress) return false;
+              const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
+              const allPaid = selectedWithLink.length > 0 && selectedWithLink.every((a) => t.paidUserIds?.includes(a.userId));
+              return !allPaid;
+            });
+            const tasksCompleted = myTasksInProgress.filter((t) => {
+              const inPaidCompleted = paidCompleted.some((jr2) => jr2.id === t.jobRequestId);
+              if (inPaidCompleted) return false;
+              const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
+              return selectedWithLink.length > 0 && selectedWithLink.every((a) => t.paidUserIds?.includes(a.userId));
+            });
+            const hasInProgressOrTask = hasInProgress || tasksInProgress.length > 0;
+            return (
+              <>
+                {hasInProgressOrTask ? (
+                  <div className="space-y-4">
+                    <h4 className="font-black text-gray-800 border-b-2 border-blue-200 pb-2">작업진행목록 (결제O)</h4>
+                    {paidInProgress.map((jr) => {
+                      const linkedTask = tasks.find((t) => t.jobRequestId === jr.id);
+                      const selectedWithLink = linkedTask?.applicants.filter((a) => a.selected && hasWorkLink(a)) ?? [];
+                      const allPaid = linkedTask && selectedWithLink.length > 0 && selectedWithLink.every((a) => linkedTask.paidUserIds?.includes(a.userId));
+                      if (allPaid) return null;
+                      const sentToAdvertiser = !!linkedTask?.sentToAdvertiserAt;
+                      const statusStep = !linkedTask ? '모집진행중' : linkedTask.applicants.length === 0 ? '모집진행중' : selectedWithLink.length === 0 ? '프리랜서선정완료' : sentToAdvertiser ? '작업완료' : '작업중';
+                      return (
+                        <div key={jr.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
+                          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                            <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                            <span className={`px-3 py-1 rounded-lg text-xs font-black ${statusStep === '모집진행중' ? 'bg-gray-200 text-gray-700' : statusStep === '프리랜서선정완료' ? 'bg-blue-100 text-blue-700' : statusStep === '작업중' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{statusStep}</span>
+                          </div>
+                          {linkedTask ? (
+                            <div className="space-y-3">
+                              {sentToAdvertiser && selectedWithLink.length > 0 && <p className="text-emerald-600 font-bold text-sm">작업이 완료되었습니다. 아래에서 결과물을 확인하고 구매확정해 주세요.</p>}
+                              {selectedWithLink.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-black text-gray-500 uppercase mb-2">작업 링크</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {selectedWithLink.flatMap((a) => (a.workLinks ?? (a.workLink ? [a.workLink] : [])).filter(Boolean).map((url, i) => (
+                                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-sm hover:underline break-all">{url}</a>
+                                    )))}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="flex flex-wrap gap-2">
+                                {sentToAdvertiser && selectedWithLink.length > 0 ? (
+                                  <button onClick={() => setWorkConfirmModal({ task: linkedTask, isAdvertiserView: true, step: 'check' })} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700">링크확인</button>
+                                ) : (
+                                  <button onClick={() => setWorkConfirmModal({ task: linkedTask, isAdvertiserView: true, step: selectedWithLink.length > 0 ? 'check' : 'confirmed' })} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700">{selectedWithLink.length > 0 ? '링크확인·작업확정' : '작업확정서'}</button>
+                                )}
+                                <button onClick={() => setWorkConfirmModal({ task: linkedTask, isAdvertiserView: true, step: 'confirmed' })} className="px-4 py-2 rounded-xl bg-gray-700 text-white font-black text-sm hover:bg-gray-800">작업확정서</button>
+                                <Link to="/chat" state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any} className="px-4 py-2 rounded-xl border-2 border-gray-300 text-gray-700 font-black text-sm hover:bg-gray-100">문의요청</Link>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500">운영자가 작업을 등록하면 프리랜서 모집이 시작됩니다. 등록 후 작업확정서를 확인할 수 있습니다.</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {tasksInProgress.map((t) => {
+                      const jr = jobRequests.find((jr) => jr.id === t.jobRequestId);
+                      const selectedOne = t.applicants.find((a) => a.selected);
+                      const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
+                      const sentToAdvertiser = !!t.sentToAdvertiserAt;
+                      const allPaid = selectedWithLink.length > 0 && selectedWithLink.every((a) => t.paidUserIds?.includes(a.userId));
+                      if (allPaid) return null;
+                      const statusLabel = sentToAdvertiser && selectedWithLink.length > 0 ? '작업이 완료되었습니다' : '작업진행중';
+                      return (
+                        <div key={t.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-black text-gray-500 bg-gray-100 px-2 py-1 rounded">{t.projectNo ?? t.id}</span>
+                                <h4 className="font-black text-gray-900 text-lg">{jr?.title ?? t.title}</h4>
+                              </div>
+                              <p className="text-sm text-gray-500 mt-1">작업기간: {t.workPeriod?.start ?? '-'} ~ {t.workPeriod?.end ?? '-'}</p>
+                              <p className="text-sm font-bold text-gray-700 mt-1">프리랜서: {selectedOne?.nickname ?? '-'}</p>
+                              <span className={`inline-block mt-3 px-3 py-1 rounded-lg text-xs font-black ${statusLabel === '작업진행중' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{statusLabel}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 shrink-0">
+                              {sentToAdvertiser && selectedWithLink.length > 0 ? (
+                                <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'check' })} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">링크확인</button>
+                              ) : selectedWithLink.length > 0 ? (
+                                <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'check' })} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">결과물 확인</button>
+                              ) : null}
+                              <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'confirmed' })} className="px-6 py-3 rounded-xl bg-gray-800 text-white font-black hover:bg-gray-700">작업확정서</button>
+                              <Link to="/chat" state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any} className="px-6 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-black hover:bg-gray-100">문의요청</Link>
+                            </div>
+                          </div>
+                          {selectedWithLink.length > 0 && statusLabel === '작업이 완료되었습니다' && (
+                            <p className="text-emerald-600 font-bold text-sm mt-3">아래 링크확인에서 결과물을 확인하고 수정 또는 구매확정해 주세요.</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                {(paidCompleted.length > 0 || tasksCompleted.length > 0) ? (
+                  <div className="space-y-4">
+                    <h4 className="font-black text-gray-800 border-b-2 border-emerald-200 pb-2">작업완료</h4>
+                    {paidCompleted.map((jr) => {
+                      const linkedTask = tasks.find((t) => t.jobRequestId === jr.id);
+                      if (!linkedTask) return null;
+                      const selectedWithLink = linkedTask.applicants.filter((a) => a.selected && hasWorkLink(a));
+                      return (
+                        <div key={jr.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
+                          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                            <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                            <span className="px-3 py-1 rounded-lg text-xs font-black bg-emerald-100 text-emerald-700">구매확정완료</span>
+                          </div>
+                          <div className="pt-4 border-t border-gray-100">
                             <p className="text-xs font-black text-gray-500 uppercase mb-2">작업 링크</p>
                             <div className="flex flex-wrap gap-2">
                               {selectedWithLink.flatMap((a) => (a.workLinks ?? (a.workLink ? [a.workLink] : [])).filter(Boolean).map((url, i) => (
@@ -596,83 +690,49 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                               )))}
                             </div>
                           </div>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                          {sentToAdvertiser && selectedWithLink.length > 0 && !allPaid ? (
-                            <>
-                              <button onClick={() => setWorkConfirmModal({ task: linkedTask, isAdvertiserView: true, step: 'check' })} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700">
-                                링크확인
-                              </button>
-                            </>
-                          ) : (
-                            <button onClick={() => setWorkConfirmModal({ task: linkedTask, isAdvertiserView: true, step: selectedWithLink.length > 0 ? 'check' : 'confirmed' })} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700">
-                              {selectedWithLink.length > 0 ? '링크 확인 · 작업확정' : '작업확정서'}
-                            </button>
-                          )}
-                          <Link to="/chat" state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any} className="px-4 py-2 rounded-xl border-2 border-gray-300 text-gray-700 font-black text-sm hover:bg-gray-100">문의요청</Link>
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            <button onClick={() => setWorkConfirmModal({ task: linkedTask, isAdvertiserView: true, step: 'confirmed' })} className="px-4 py-2 rounded-xl bg-gray-800 text-white font-black text-sm hover:bg-gray-900">작업확정서</button>
+                            <Link to="/chat" state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any} className="px-4 py-2 rounded-xl border-2 border-gray-300 text-gray-700 font-black text-sm hover:bg-gray-100">문의요청</Link>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">운영자가 작업을 등록하면 프리랜서 모집이 시작됩니다.</p>
-                    )}
+                      );
+                    })}
+                    {tasksCompleted.map((t) => {
+                      const jr = jobRequests.find((jr) => jr.id === t.jobRequestId);
+                      const selectedOne = t.applicants.find((a) => a.selected);
+                      const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
+                      return (
+                        <div key={t.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-black text-gray-500 bg-gray-100 px-2 py-1 rounded">{t.projectNo ?? t.id}</span>
+                                <h4 className="font-black text-gray-900 text-lg">{jr?.title ?? t.title}</h4>
+                              </div>
+                              <p className="text-sm text-gray-500 mt-1">프리랜서: {selectedOne?.nickname ?? '-'}</p>
+                              <span className="inline-block mt-2 px-3 py-1 rounded-lg text-xs font-black bg-emerald-100 text-emerald-700">구매확정완료</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 shrink-0">
+                              <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'confirmed' })} className="px-6 py-3 rounded-xl bg-gray-800 text-white font-black hover:bg-gray-700">작업확정서</button>
+                              <Link to="/chat" state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any} className="px-6 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-black hover:bg-gray-100">문의요청</Link>
+                            </div>
+                          </div>
+                          <div className="pt-4 mt-4 border-t border-gray-100">
+                            <p className="text-xs font-black text-gray-500 uppercase mb-2">작업 링크</p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedWithLink.flatMap((a) => (a.workLinks ?? (a.workLink ? [a.workLink] : [])).filter(Boolean).map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-sm hover:underline break-all">{url}</a>
+                              )))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          )}
-          {myTasksInProgress.length > 0 && (
-            <div className="space-y-4">
-              <h4 className="font-black text-gray-900">의뢰 진행 현황</h4>
-              {myTasksInProgress.map((t) => {
-                const jr = jobRequests.find((jr) => jr.id === t.jobRequestId);
-                const selectedOne = t.applicants.find((a) => a.selected);
-                const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
-                const sentToAdvertiser = !!t.sentToAdvertiserAt;
-                const allPaid = selectedWithLink.length > 0 && selectedWithLink.every((a) => t.paidUserIds?.includes(a.userId));
-                const statusLabel = allPaid ? '구매확정완료' : sentToAdvertiser && selectedWithLink.length > 0 ? '작업이 완료되었습니다' : '작업진행중';
-                return (
-                  <div key={t.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-black text-gray-500 bg-gray-100 px-2 py-1 rounded">{t.projectNo ?? t.id}</span>
-                          <h4 className="font-black text-gray-900 text-lg">{jr?.title ?? t.title}</h4>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">작업기간: {t.workPeriod?.start ?? '-'} ~ {t.workPeriod?.end ?? '-'}</p>
-                        <p className="text-sm font-bold text-gray-700 mt-1">프리랜서: {selectedOne?.nickname ?? '-'}</p>
-                        <span className={`inline-block mt-3 px-3 py-1 rounded-lg text-xs font-black ${statusLabel === '작업진행중' ? 'bg-amber-100 text-amber-700' : statusLabel === '작업이 완료되었습니다' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          {statusLabel}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2 shrink-0">
-                        {sentToAdvertiser && selectedWithLink.length > 0 && !allPaid ? (
-                          <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'check' })} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all">링크확인</button>
-                        ) : selectedWithLink.length > 0 ? (
-                          <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'check' })} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all">결과물 확인</button>
-                        ) : (
-                          <button onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true, step: 'confirmed' })} className="px-6 py-3 rounded-xl bg-gray-800 text-white font-black hover:bg-gray-700 transition-all">작업확정서</button>
-                        )}
-                        <Link to="/chat" state={{ targetUser: { id: 'admin', nickname: '플랫폼 운영자', profileImage: '' } } as any} className="px-6 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-black hover:bg-gray-100 transition-all">문의요청</Link>
-                      </div>
-                    </div>
-                    {selectedWithLink.length > 0 && statusLabel === '작업이 완료되었습니다' && (
-                      <p className="text-emerald-600 font-bold text-sm mt-3">아래 링크확인에서 결과물을 확인하고 수정 또는 구매확정해 주세요.</p>
-                    )}
-                    {selectedWithLink.length > 0 && allPaid && (
-                      <div className="pt-4 mt-4 border-t border-gray-100">
-                        <p className="text-xs font-black text-gray-500 uppercase mb-2">작업 링크</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedWithLink.flatMap((a) => (a.workLinks ?? (a.workLink ? [a.workLink] : [])).filter(Boolean).map((url, i) => (
-                            <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-sm hover:underline break-all">{url}</a>
-                          )))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                ) : null}
+              </>
+            );
+          })()}
           {myJobRequests.length === 0 && myTasksAsApplicant.length === 0 && (
             <div className="py-20 text-center bg-white rounded-[40px] border border-dashed border-gray-100">
               <p className="text-gray-300 font-black italic">알바의뢰 내역이 없습니다.</p>
