@@ -22,7 +22,9 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
   const [agreeContract, setAgreeContract] = useState(false);
   const [agreePenalty, setAgreePenalty] = useState(false);
 
-  if (!jobRequest || jobRequest.applicantUserId !== user.id) {
+  const isAdmin = user?.role === 'admin';
+  const canAccess = jobRequest && (jobRequest.applicantUserId === user.id || isAdmin);
+  if (!jobRequest || !canAccess) {
     return (
       <div className="max-w-2xl mx-auto py-20 px-4 text-center">
         <p className="text-gray-600 font-bold mb-4">결제할 작업의뢰를 찾을 수 없습니다.</p>
@@ -126,11 +128,40 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
             <span className="text-sm font-bold">(필수) 플랫폼 외 직접 거래 시 거래액의 10배 위약벌이 부과됨을 확인하였습니다.</span>
           </label>
         </div>
-        <div className="flex gap-4">
-          <button onClick={() => navigate(-1)} className="flex-1 py-4 rounded-xl bg-gray-100 text-gray-700 font-black">취소</button>
-          <button onClick={handlePayment} disabled={isProcessing} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 disabled:opacity-70">
-            {isProcessing ? '결제 진행 중...' : '결제하기'}
-          </button>
+        <div className="flex flex-col gap-3">
+          {isAdmin && (
+            <button
+              onClick={async () => {
+                if (isProcessing) return;
+                if (!agreeCancel || !agreeContract || !agreePenalty) {
+                  alert('필수 동의 항목에 모두 체크해 주세요.');
+                  return;
+                }
+                setIsProcessing(true);
+                try {
+                  const targetUserId = jobRequest!.applicantUserId;
+                  const requests = getPartTimeJobRequests();
+                  const next = requests.map((r) => (r.id === jobRequest!.id ? { ...r, paid: true } : r));
+                  setPartTimeJobRequests(next);
+                  addNotif?.(targetUserId, 'payment', '알바의뢰 결제 완료', `[${jobRequest!.title}] 결제가 완료되었습니다. 운영자가 곧 연락드리겠습니다.`);
+                  alert('테스트 결제가 임시통과 처리되었습니다.');
+                  navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
+                } finally {
+                  setIsProcessing(false);
+                }
+              }}
+              disabled={isProcessing}
+              className="w-full py-3 rounded-xl bg-amber-500 text-white font-black hover:bg-amber-600 disabled:opacity-70 border-2 border-dashed border-amber-600"
+            >
+              🔧 테스트용 임시통과 (PG 우회)
+            </button>
+          )}
+          <div className="flex gap-4">
+            <button onClick={() => navigate(-1)} className="flex-1 py-4 rounded-xl bg-gray-100 text-gray-700 font-black">취소</button>
+            <button onClick={handlePayment} disabled={isProcessing} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 disabled:opacity-70">
+              {isProcessing ? '결제 진행 중...' : '결제하기'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
