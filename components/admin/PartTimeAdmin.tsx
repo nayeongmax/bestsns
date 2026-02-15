@@ -23,7 +23,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [revisionModal, setRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string; text: string } | null>(null);
   const [detailJr, setDetailJr] = useState<PartTimeJobRequest | null>(null);
   const [estimateModal, setEstimateModal] = useState<PartTimeJobRequest | null>(null);
-  const [estimateForm, setEstimateForm] = useState<{ workName: string; recipientName: string; recipientContact: string; items: EstimateItem[]; note: string }>({ workName: '', recipientName: '', recipientContact: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
+  const [estimateForm, setEstimateForm] = useState<{ workName: string; recipientName: string; recipientContact: string; workPeriodStart: string; workPeriodEnd: string; items: EstimateItem[]; note: string }>({ workName: '', recipientName: '', recipientContact: '', workPeriodStart: '', workPeriodEnd: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
   const [parttimeDateOffset, setParttimeDateOffset] = useState(0);
 
   useEffect(() => {
@@ -75,6 +75,10 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
 
   const handleSendEstimate = () => {
     if (!estimateModal) return;
+    if (!estimateForm.workPeriodStart || !estimateForm.workPeriodEnd) {
+      alert('작업기간을 선택해 주세요.');
+      return;
+    }
     const validItems = estimateForm.items.filter((it) => (Number(it.unitPrice) || 0) > 0);
     if (validItems.length === 0) {
       alert('단가를 입력한 견적 항목이 1개 이상 필요합니다.');
@@ -88,7 +92,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     const totalAmount = itemsData.reduce((s, it) => s + it.amount, 0);
     const fee = calcJobRequestFee(totalAmount);
     const now = new Date().toISOString();
-    const workPeriod = `${estimateModal.workPeriodStart} ~ ${estimateModal.workPeriodEnd}`;
+    const workPeriod = `${estimateForm.workPeriodStart} ~ ${estimateForm.workPeriodEnd}`;
     const next = jobRequests.map((r) =>
       r.id === estimateModal.id
         ? {
@@ -117,7 +121,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       addNotif(estimateModal.applicantUserId, 'approval', '견적서 도착', `[${estimateModal.title}] 견적서가 도착했습니다. 마이페이지 → 알바의뢰 탭에서 확인해 주세요.`, undefined);
     }
     setEstimateModal(null);
-    setEstimateForm({ workName: '', recipientName: '', recipientContact: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
+    setEstimateForm({ workName: '', recipientName: '', recipientContact: '', workPeriodStart: '', workPeriodEnd: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
     setDetailJr(null);
     alert('견적서가 전송되었습니다. 광고주에게 알림이 전송되었습니다.');
   };
@@ -235,8 +239,54 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
 
   const pendingWithdrawals = withdrawRequests.filter((r) => r.status === 'pending');
 
+  const estimateHistory = jobRequests
+    .filter((jr) => jr.operatorEstimate?.sentAt)
+    .sort((a, b) => (b.operatorEstimate!.sentAt! > a.operatorEstimate!.sentAt! ? 1 : -1));
+  const estimateHistoryByDate = estimateHistory.reduce<Record<string, PartTimeJobRequest[]>>((acc, jr) => {
+    const dateKey = jr.operatorEstimate!.sentAt!.slice(0, 10);
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(jr);
+    return acc;
+  }, {});
+
   return (
     <div className="space-y-10">
+      {/* 견적서 발송 내역 (날짜별, C/S 참고용) */}
+      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+        <h3 className="text-xl font-black text-gray-900 mb-1">견적서 발송 내역</h3>
+        <p className="text-sm text-gray-500 mb-6">날짜별로 발송한 견적서 목록입니다. C/S 응대 시 참고해 주세요.</p>
+        {estimateHistory.length === 0 ? (
+          <div className="py-8 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
+            발송된 견적서가 없습니다.
+          </div>
+        ) : (
+          <div className="space-y-6 max-h-[400px] overflow-y-auto">
+            {Object.entries(estimateHistoryByDate).map(([dateStr, list]: [string, PartTimeJobRequest[]]) => (
+              <div key={dateStr} className="border border-gray-100 rounded-xl overflow-hidden">
+                <div className="px-4 py-2 bg-indigo-50 text-indigo-700 font-black text-sm">{dateStr}</div>
+                <ul className="divide-y divide-gray-50">
+                  {list.map((jr) => {
+                    const m = members.find((mm) => mm.id === jr.applicantUserId);
+                    const est = jr.operatorEstimate!;
+                    return (
+                      <li key={jr.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 hover:bg-gray-50">
+                        <div>
+                          <span className="font-bold text-gray-900">{jr.title}</span>
+                          <span className="text-gray-500 text-sm ml-2">→ {m?.nickname ?? '광고주'}</span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {est.totalAmount.toLocaleString()}원 / {est.workPeriod ?? '-'}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* 프리랜서 출금 신청 목록 */}
       <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
         <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
@@ -419,7 +469,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                 </div>
               </div>
               <div className="px-6 py-5 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-3">
-                <button type="button" onClick={() => { const m = members.find((mm) => mm.id === detailJr.applicantUserId); setEstimateModal(detailJr); const prevItems = detailJr.operatorEstimate?.items; setEstimateForm({ workName: detailJr.operatorEstimate?.workName ?? detailJr.title, recipientName: detailJr.operatorEstimate?.recipientName ?? m?.nickname ?? '', recipientContact: detailJr.operatorEstimate?.recipientContact ?? detailJr.contact, items: prevItems?.length ? prevItems.map((it: { content: string; unitPrice: number; quantity: number; remarks?: string }) => ({ content: it.content, unitPrice: String(it.unitPrice), quantity: String(it.quantity), remarks: it.remarks ?? '' })) : [{ content: detailJr.workContent, unitPrice: String(detailJr.operatorEstimate?.unitPrice ?? ''), quantity: String(detailJr.operatorEstimate?.quantity ?? 1), remarks: '' }], note: detailJr.operatorEstimate?.note ?? '' }); }} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">견적서넣기</button>
+                <button type="button" onClick={() => { const m = members.find((mm) => mm.id === detailJr.applicantUserId); setEstimateModal(detailJr); const prevItems = detailJr.operatorEstimate?.items; const prevWorkPeriod = detailJr.operatorEstimate?.workPeriod?.split(' ~ '); setEstimateForm({ workName: detailJr.operatorEstimate?.workName ?? detailJr.title, recipientName: detailJr.operatorEstimate?.recipientName ?? m?.nickname ?? '', recipientContact: detailJr.operatorEstimate?.recipientContact ?? detailJr.contact, workPeriodStart: prevWorkPeriod?.[0] ?? detailJr.workPeriodStart, workPeriodEnd: prevWorkPeriod?.[1] ?? detailJr.workPeriodEnd, items: prevItems?.length ? prevItems.map((it: { content: string; unitPrice: number; quantity: number; remarks?: string }) => ({ content: it.content, unitPrice: String(it.unitPrice), quantity: String(it.quantity), remarks: it.remarks ?? '' })) : [{ content: detailJr.workContent, unitPrice: String(detailJr.operatorEstimate?.unitPrice ?? ''), quantity: String(detailJr.operatorEstimate?.quantity ?? 1), remarks: '' }], note: detailJr.operatorEstimate?.note ?? '' }); }} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">견적서넣기</button>
                 <button type="button" onClick={() => { handleApproveJobRequest(detailJr); setDetailJr(null); }} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">승인</button>
                 <button type="button" onClick={() => { setDetailJr(null); handleRejectJobRequest(detailJr); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">거절</button>
               </div>
@@ -456,7 +506,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                   <input type="text" value={estimateForm.workName} onChange={(e) => setEstimateForm((f) => ({ ...f, workName: e.target.value }))} placeholder="작업명 입력" className="w-full px-4 py-2.5 rounded-xl border border-gray-200" />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-gray-600 mb-2">작업기간 : {estimateModal.workPeriodStart} ~ {estimateModal.workPeriodEnd}</p>
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <label className="block text-xs font-black text-gray-500 uppercase mb-1">작업기간 시작</label>
+                      <input type="date" value={estimateForm.workPeriodStart} onChange={(e) => setEstimateForm((f) => ({ ...f, workPeriodStart: e.target.value }))} className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black text-gray-500 uppercase mb-1">작업기간 종료</label>
+                      <input type="date" value={estimateForm.workPeriodEnd} onChange={(e) => setEstimateForm((f) => ({ ...f, workPeriodEnd: e.target.value }))} className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-1">견적서일자: 전송 시점(오늘)으로 저장됩니다</p>
                   <p className="text-xs font-black text-gray-500 uppercase mb-3">견적항목</p>
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
