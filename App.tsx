@@ -6,7 +6,7 @@ import {
   SMMProvider, SMMProduct, NotificationType, GradeConfig
 } from '@/types';
 import { supabase } from '@/supabase';
-import { profileRowToUserProfile } from '@/profileUtils';
+import { profileRowToUserProfile } from './profileUtils';
 
 // Page and Component Imports (루트 기준 @/ 사용 - Netlify 빌드 시 해석 기준 오류 방지)
 import Header from '@/components/Header';
