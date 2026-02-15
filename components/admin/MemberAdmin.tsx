@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder, getUserGrade, Review, NotificationType } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabase';
+import { getFreelancerBalance } from '@/constants';
 import MyPage from '@/pages/MyPage';
 
 interface Props {
@@ -31,11 +32,11 @@ const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
   { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
 ];
 
-const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = () => {}, currentUser, onUpdateUser }) => {
+const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = (..._args: unknown[]) => {}, currentUser, onUpdateUser }) => {
   const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState<'list' | 'seller' | 'freelancer' | 'grades'>('list');
   const [searchQuery, setSearchQuery] = useState('');
-  const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'buyer' | 'seller'>('all');
+  const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'buyer' | 'seller' | 'freelancer'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('none');
   
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null);
@@ -50,9 +51,11 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
     );
 
     if (userTypeFilter === 'buyer') {
-      result = result.filter(m => m.sellerStatus !== 'approved');
+      result = result.filter(m => m.sellerStatus !== 'approved' && m.freelancerStatus !== 'approved');
     } else if (userTypeFilter === 'seller') {
       result = result.filter(m => m.sellerStatus === 'approved');
+    } else if (userTypeFilter === 'freelancer') {
+      result = result.filter(m => m.freelancerStatus === 'approved');
     }
 
     if (sortKey === 'purchase') result.sort((a, b) => (b.totalPurchaseAmount || 0) - (a.totalPurchaseAmount || 0));
@@ -142,9 +145,9 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
         <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex gap-2">
-               {['all', 'buyer', 'seller'].map(type => (
-                 <button key={type} onClick={() => setUserTypeFilter(type as any)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all border ${userTypeFilter === type ? 'bg-gray-900 text-white' : 'bg-white text-gray-400 border-gray-100'}`}>
-                   {type === 'all' ? '전체' : type === 'buyer' ? '구매자' : '판매자'}
+               {(['all', 'buyer', 'seller', 'freelancer'] as const).map(type => (
+                 <button key={type} onClick={() => setUserTypeFilter(type)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all border ${userTypeFilter === type ? 'bg-gray-900 text-white' : 'bg-white text-gray-400 border-gray-100'}`}>
+                   {type === 'all' ? '전체' : type === 'buyer' ? '구매자' : type === 'seller' ? '판매자' : '프리랜서'}
                  </button>
                ))}
             </div>
@@ -161,6 +164,7 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                    <th className="px-8 py-5 text-right">총 구매액</th>
                    <th className="px-8 py-5 text-right">총 판매액</th>
                    <th className="px-8 py-5 text-right">포인트보유</th>
+                   <th className="px-8 py-5 text-right">알바비수익금</th>
                    <th className="px-8 py-5 text-center">관리</th>
                  </tr>
                </thead>
@@ -179,6 +183,7 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                      <td className="px-8 py-4 text-right text-blue-600">₩{(m.totalPurchaseAmount || 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-right text-orange-600">₩{(m.totalSalesAmount || 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-right text-blue-600">{(m.points || 0).toLocaleString()}P</td>
+                     <td className="px-8 py-4 text-right text-emerald-600">₩{getFreelancerBalance(m.id).toLocaleString()}</td>
                      <td className="px-8 py-4 text-center">
                         <button onClick={() => setEditingMember({ ...m })} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black">관리</button>
                      </td>
@@ -231,19 +236,23 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                             <p className="font-bold text-gray-800">예금주: {app.ownerName}</p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          {app.idCardImage && (
-                            <div>
-                              <p className="text-[11px] font-black text-gray-400 uppercase mb-2">신분증</p>
-                              <img src={app.idCardImage} alt="신분증" className="max-h-48 rounded-xl border object-contain" />
-                            </div>
-                          )}
-                          {app.bankbookImage && (
-                            <div>
-                              <p className="text-[11px] font-black text-gray-400 uppercase mb-2">통장</p>
-                              <img src={app.bankbookImage} alt="통장" className="max-h-48 rounded-xl border object-contain" />
-                            </div>
-                          )}
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-black text-gray-400 uppercase">첨부 (신분증·통장사본) · 클릭 시 확대</p>
+                          <div className="flex flex-wrap gap-3">
+                            {app.idCardImage && (
+                              <button type="button" onClick={() => setZoomImage(app.idCardImage!)} className="block w-24 h-24 rounded-xl border-2 border-emerald-200 overflow-hidden bg-white shadow-inner hover:border-emerald-400 hover:ring-2 hover:ring-emerald-200 transition-all cursor-pointer text-left">
+                                <img src={app.idCardImage} alt="신분증" className="w-full h-full object-cover pointer-events-none" />
+                                <span className="sr-only">신분증 확대 보기</span>
+                              </button>
+                            )}
+                            {app.bankbookImage && (
+                              <button type="button" onClick={() => setZoomImage(app.bankbookImage!)} className="block w-24 h-24 rounded-xl border-2 border-emerald-200 overflow-hidden bg-white shadow-inner hover:border-emerald-400 hover:ring-2 hover:ring-emerald-200 transition-all cursor-pointer text-left">
+                                <img src={app.bankbookImage} alt="통장사본" className="w-full h-full object-cover pointer-events-none" />
+                                <span className="sr-only">통장사본 확대 보기</span>
+                              </button>
+                            )}
+                            {!app.idCardImage && !app.bankbookImage && <span className="text-gray-400 text-[13px] font-bold">첨부 없음</span>}
+                          </div>
                         </div>
                       </div>
                     )}
