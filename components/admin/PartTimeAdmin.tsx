@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import type { UserProfile } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus, refundFreelancerWithdrawal, processAutoApprovals, calcJobRequestFee } from '@/constants';
+import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus, refundFreelancerWithdrawal, processAutoApprovals, calcJobRequestFee, FREELANCER_FEE_RATE, PAYMENT_GATEWAY_FEE_RATE } from '@/constants';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
@@ -29,6 +29,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [estimateForm, setEstimateForm] = useState<{ workName: string; recipientName: string; recipientContact: string; workPeriodStart: string; workPeriodEnd: string; items: EstimateItem[]; note: string }>({ workName: '', recipientName: '', recipientContact: '', workPeriodStart: '', workPeriodEnd: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
   const [parttimeDateOffset, setParttimeDateOffset] = useState(0);
   const [revenueMonthOffset, setRevenueMonthOffset] = useState(0);
+  const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean } | null>(null);
+  const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
 
   useEffect(() => {
     processAutoApprovals();
@@ -182,11 +184,16 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   };
 
   const handlePayPoints = (task: PartTimeTask, userId?: string) => {
-    const target = userId
+    const base = userId
       ? task.applicants.filter((a) => a.userId === userId && a.selected && hasWorkLink(a))
       : task.applicants.filter((a) => a.selected && hasWorkLink(a));
+    const target = base.filter((a) => !task.paidUserIds?.includes(a.userId));
     if (target.length === 0) {
-      alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
+      if (base.length > 0 && base.every((a) => task.paidUserIds?.includes(a.userId))) {
+        alert('이미 수익통장에 지급 완료된 상태입니다. 이중 지급되지 않습니다.');
+      } else {
+        alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
+      }
       return;
     }
     if (!confirm(`작업을 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
@@ -370,16 +377,27 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       <th className="px-4 py-3 text-left font-black">제목</th>
                       <th className="px-4 py-3 text-left font-black">광고주</th>
                       <th className="px-4 py-3 text-right font-black">금액</th>
+                      <th className="px-4 py-3 text-center font-black">상세확인</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {paidList.map((jr) => {
                       const m = members.find((mm) => mm.id === jr.applicantUserId);
+                      const hasEstimate = !!jr.operatorEstimate;
                       return (
                         <tr key={jr.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 font-bold text-gray-900">{jr.title}</td>
                           <td className="px-4 py-3 text-gray-600">{m?.nickname ?? '-'}</td>
                           <td className="px-4 py-3 text-right font-black text-indigo-600">{jr.adAmount?.toLocaleString() ?? '-'}원</td>
+                          <td className="px-4 py-3 text-center">
+                            {hasEstimate ? (
+                              <button type="button" onClick={() => setEstimateViewJr(jr)} className="px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-xs hover:bg-indigo-200">
+                                견적서 확인
+                              </button>
+                            ) : (
+                              <span className="text-gray-400 text-xs">-</span>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -511,16 +529,81 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
 
       {adminTab === 'freelancer' && (
       <div className="space-y-10">
-        {needsSelectionTasks.length > 0 ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-            <h4 className="font-black text-amber-800 mb-2">프리랜서 선정 필요</h4>
-            <p className="text-sm text-amber-700 mb-3">신청 기간이 종료된 작업 {needsSelectionTasks.length}건에서 프리랜서 선정이 필요합니다. 상세 페이지에서 프리랜서를 선정해 주세요.</p>
-            <div className="flex flex-wrap gap-2">
-              {needsSelectionTasks.slice(0, 10).map((t) => (
-                <Link key={t.id} to={`/part-time/${t.id}`} className="px-4 py-2 rounded-xl bg-amber-200 text-amber-900 font-bold text-sm hover:bg-amber-300">
-                  {t.title} ({t.applicants.length}명 신청)
-                </Link>
-              ))}
+        {(needsSelectionTasks.length > 0 || tasksWithSelectedBase.length > 0) ? (
+          <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+            <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 모집 · 작업 목록</h3>
+            <p className="text-sm text-gray-500 mb-6">목록별로 관리합니다. 내용확인으로 상세 페이지에서 수정 또는 프리랜서 선정할 수 있습니다.</p>
+            <div className="overflow-x-auto border border-gray-100 rounded-xl">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-xs font-black text-gray-500 uppercase">
+                  <tr>
+                    <th className="px-4 py-3 text-left">제목</th>
+                    <th className="px-4 py-3 text-left">상태</th>
+                    <th className="px-4 py-3 text-center">내용확인</th>
+                    <th className="px-4 py-3 text-center">채팅하기</th>
+                    <th className="px-4 py-3 text-center">수정요청</th>
+                    <th className="px-4 py-3 text-center">비상 알바비</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {[...needsSelectionTasks, ...tasksWithSelectedBase].map((t) => {
+                    const selectedOne = t.applicants.find((a) => a.selected);
+                    const needsSelection = !selectedOne;
+                    const hasWorkLinkSelected = selectedOne && hasWorkLink(selectedOne);
+                    const isPaid = selectedOne && t.paidUserIds?.includes(selectedOne.userId);
+                    const hasReApproval = selectedOne?.reApprovalRequestedAt;
+                    return (
+                      <tr key={t.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-bold text-gray-900">{t.title}</td>
+                        <td className="px-4 py-3">
+                          {needsSelection ? (
+                            <span className="text-amber-700 font-bold">{t.applicants.length}명 신청</span>
+                          ) : (
+                            <div>
+                              <span className="text-gray-700">{selectedOne?.nickname ?? '-'}</span>
+                              {hasReApproval && <p className="text-xs text-blue-600 font-bold mt-0.5">재승인요청을 했습니다</p>}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Link to={`/part-time/${t.id}`} className="inline-block px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs hover:bg-emerald-200">
+                            내용확인
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {(needsSelection ? t.applicants[0] : selectedOne) ? (
+                            <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: (needsSelection ? t.applicants[0] : selectedOne)!.userId, nickname: (needsSelection ? t.applicants[0] : selectedOne)!.nickname, profileImage: '' } } })} className="inline-block px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs hover:bg-blue-200">
+                              채팅하기
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                            <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="inline-block px-3 py-1.5 rounded-lg bg-orange-100 text-orange-700 font-bold text-xs hover:bg-orange-200">
+                              수정요청
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                            <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="inline-block px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 font-bold text-xs hover:bg-amber-200">
+                              비상 지급
+                            </button>
+                          ) : isPaid ? (
+                            <span className="text-gray-500 font-bold text-xs">지급완료</span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         ) : (
@@ -549,7 +632,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                     <th className="px-4 py-3 text-left">견적제목</th>
                     <th className="px-4 py-3 text-left">광고주</th>
                     <th className="px-4 py-3 text-left">프리랜서</th>
-                    <th className="px-4 py-3 text-center">작업확정서</th>
+                    <th className="px-4 py-3 text-center">광고주 작업확정서</th>
+                    <th className="px-4 py-3 text-center">프리랜서 작업확정서</th>
                     <th className="px-4 py-3 text-center">상세확인</th>
                   </tr>
                 </thead>
@@ -565,9 +649,14 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                         <td className="px-4 py-3">{adv?.nickname ?? '-'}</td>
                         <td className="px-4 py-3">{selectedOne?.nickname ?? '-'}</td>
                         <td className="px-4 py-3 text-center">
-                          <Link to={`/part-time/${t.id}`} state={{ showConfirm: true }} className="inline-block px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs hover:bg-blue-200">
-                            작업확정서
-                          </Link>
+                          <button type="button" onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: true })} className="inline-block px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs hover:bg-blue-200">
+                            광고주
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button type="button" onClick={() => setWorkConfirmModal({ task: t, isAdvertiserView: false })} className="inline-block px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-xs hover:bg-indigo-200">
+                            프리랜서
+                          </button>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Link to={`/part-time/${t.id}`} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200">
@@ -583,232 +672,189 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
           </div>
         );
       })()}
+      </div>
+      )}
 
-      {/* 수익탭: 프리랜서 작업 · 알바비 지급 (월별 필터) */}
-      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">프리랜서 작업 · 알바비 지급</h3>
-            <p className="text-sm text-gray-500">월별로 확인·지급합니다. 링크를 클릭해 검토하고 수정요청 또는 광고주 전송·포인트 지급해 주세요.</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button type="button" onClick={() => setRevenueMonthOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">←</button>
-            <span className="text-sm font-black text-gray-600 min-w-[120px] text-center">{revenueViewMonth}</span>
-            <button type="button" onClick={() => setRevenueMonthOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">→</button>
-          </div>
-        </div>
-
-      {tasksWithSelectedForRevenue.length === 0 ? (
-        <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
-          링크 확인 후 알바비 지급이 필요한 작업이 없습니다.
-        </div>
-      ) : (
-        <ul className="space-y-10">
-          {tasksWithSelectedForRevenue.map((task) => {
-            const sections = task.sections || {};
-            const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
-            const hasJobRequest = !!task.jobRequestId && !!task.applicantUserId;
-            const allPaid = selectedWithLink.every((a) => task.paidUserIds?.includes(a.userId));
-            const canSendToAdvertiser = hasJobRequest && selectedWithLink.length > 0 && !allPaid;
-            return (
-              <li key={task.id} className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-                <div className="p-8 space-y-6">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <span className="text-[10px] font-black text-gray-400 uppercase">{task.category}</span>
-                      <h4 className="text-xl font-black text-gray-900 mt-1">{task.title}</h4>
-                      <p className="text-gray-500 mt-1">{task.description}</p>
-                      <p className="text-emerald-600 font-black text-lg mt-2">+{task.reward.toLocaleString()}원</p>
-                    </div>
-                    <Link to={`/part-time/${task.id}`} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm hover:bg-gray-200">
-                      상세 페이지에서 관리 →
-                    </Link>
-                  </div>
-
-                  <div className="grid gap-4">
-                    <h4 className="text-sm font-black text-gray-500 uppercase">작업 내용 (작업자가 할 일)</h4>
-                    {sections.게시글목록 && sections.게시글목록.length > 0 && (
-                      <div className="space-y-4">
-                        {sections.게시글목록.map((block: { 제목?: string; 내용?: string }, i: number) => (
-                          <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                            <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {i + 1}</p>
-                            {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
-                            {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {sections.댓글목록 && sections.댓글목록.length > 0 && (
-                      <div className="space-y-4">
-                        {sections.댓글목록.map((text: string, i: number) => (
-                          <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
-                            <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {sections.작업링크목록 && sections.작업링크목록.length > 0 && (
-                      <div className="space-y-4">
-                        {sections.작업링크목록.map((text: string, i: number) => {
-                          const isUrl = text.startsWith('http://') || text.startsWith('https://');
-                          return (
-                            <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                              <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {i + 1}</p>
-                              {isUrl ? (
-                                <p><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
-                              ) : (
-                                <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                      <p className="text-[10px] font-black text-blue-600 uppercase">신청기간</p>
-                      <p className="text-gray-800 font-bold">{task.applicationPeriod.start} ~ {task.applicationPeriod.end}</p>
-                    </div>
-                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-                      <p className="text-[10px] font-black text-amber-600 uppercase">작업기간</p>
-                      <p className="text-gray-800 font-bold">{task.workPeriod.start} ~ {task.workPeriod.end}</p>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-gray-100 pt-6">
-                    <h4 className="text-lg font-black text-gray-800 mb-3">프리랜서 신청자 목록 (운영자 전용)</h4>
-                    {task.applicants.length === 0 ? (
-                      <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
-                    ) : (
-                      <ul className="space-y-4">
-                        {task.applicants.map((a) => {
-                          const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
-                          const paid = task.paidUserIds?.includes(a.userId);
-                          return (
-                            <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
-                              <div className="flex items-center justify-between gap-4 flex-wrap">
-                                <div>
-                                  <p className="font-black text-gray-800">{a.nickname}</p>
-                                  <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
-                                  {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
-                                </div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {a.selected ? (
-                                    <>
-                                      <button type="button" onClick={() => handleDeselect(task, a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-amber-100 text-amber-700 hover:bg-amber-200">선정취소</button>
-                                      <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
-                                    </>
-                                  ) : (
-                                    <button type="button" onClick={() => handleSelect(task, a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700">선정</button>
-                                  )}
-                                  <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: a.userId, nickname: a.nickname, profileImage: '' } } })} className="px-4 py-2 rounded-lg text-sm font-black bg-blue-100 text-blue-700 hover:bg-blue-200">채팅하기</button>
-                                </div>
-                              </div>
-                              {a.selected && (
-                                <div className="text-sm space-y-2">
-                                  {links.length > 0 ? (
-                                    <div>
-                                      <p className="text-gray-700 font-bold">작업 링크 ({links.length}개):</p>
-                                      {links.map((url, i) => (
-                                        <p key={i}><a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{url}</a></p>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <p className="text-amber-600 font-bold">작업 링크 미제출</p>
-                                  )}
-                                  {links.length > 0 && !paid && (
-                                    <div className="flex gap-2 flex-wrap items-center">
-                                      <button type="button" onClick={() => setRevisionModal({ task, userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200">수정요청</button>
-                                      {a.deliveryAt && a.autoApproveAt ? (
-                                        new Date(a.autoApproveAt) > new Date() ? (
-                                          <span className="text-blue-600 font-bold text-xs">3일 후 자동 지급 ({new Date(a.autoApproveAt).toLocaleString('ko-KR')})</span>
-                                        ) : (
-                                          <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중</span>
-                                        )
-                                      ) : (
-                                        <>
-                                          <button type="button" onClick={() => handleApprovePass(task, a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">통과</button>
-                                          <button type="button" onClick={() => handlePayPoints(task, a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">즉시 지급</button>
-                                        </>
-                                      )}
-                                    </div>
-                                  )}
-                                  {paid && <span className="text-gray-500 font-bold text-xs">✓ 지급 완료</span>}
-                                </div>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                    {canSendToAdvertiser && (
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                        <button type="button" onClick={() => handleSendToAdvertiser(task)} className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700">
-                          광고주 전송 (결과물 확인 요청)
-                        </button>
-                        <p className="text-xs text-gray-500 mt-2">광고주에게 결과물 확인 알림을 보냅니다. 광고주가 링크확인 후 수정 또는 구매확정할 수 있습니다.</p>
-                      </div>
-                    )}
-                    <p className="text-sm text-gray-500 mt-3">링크를 클릭해 확인 후, 수정요청이 필요하면 수정요청 버튼으로 알림을 보내거나 포인트 지급해 주세요.</p>
-                  </div>
+      {/* 견적서 상세 확인 모달 (결제확인된 작업에서) */}
+      {estimateViewJr && estimateViewJr.operatorEstimate && (() => {
+        const est = estimateViewJr.operatorEstimate;
+        const subTotal = est.totalAmount;
+        const platformFee = est.fee;
+        const beforePg = subTotal + platformFee;
+        const pgFee = Math.round(beforePg * PAYMENT_GATEWAY_FEE_RATE);
+        const totalPay = beforePg + pgFee;
+        const handlePdfDownload = () => {
+          const cell = (align: string, bold?: boolean) => `style="border:1px solid #e5e7eb;padding:8px;text-align:${align}${bold ? ';font-weight:bold' : ''}"`;
+          const itemsHtml = (est.items && est.items.length > 0)
+            ? est.items.map((it: { seq: number; content: string; unitPrice: number; quantity: number; amount: number; remarks?: string }) =>
+              `<tr><td ${cell('center')}>${it.seq}</td><td ${cell('left')}>${it.content}</td><td ${cell('right')}>${it.unitPrice.toLocaleString()}</td><td ${cell('center')}>${it.quantity}</td><td ${cell('right', true)}>${it.amount.toLocaleString()}</td><td ${cell('left')}>${it.remarks || ''}</td></tr>`
+            ).join('')
+            : `<tr><td ${cell('center')}>1</td><td ${cell('left')}>${estimateViewJr.workContent}</td><td ${cell('right')}>${est.unitPrice?.toLocaleString() ?? '-'}</td><td ${cell('center')}>${est.quantity ?? 1}</td><td ${cell('right', true)}>${est.totalAmount.toLocaleString()}</td><td ${cell('left')}></td></tr>`;
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) return;
+          printWindow.document.write(`
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>견적서</title>
+<style>body{font-family:Malgun Gothic,sans-serif;padding:24px;max-width:800px;margin:0 auto;font-size:13px}
+h2{text-align:center;margin:0 0 8px}.meta{text-align:center;color:#666;font-size:12px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.section{background:#f9fafb;padding:12px;border-radius:8px}
+.label{font-size:11px;font-weight:bold;color:#666;margin-bottom:6px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{border:1px solid #e5e7eb;padding:8px;text-align:left}
+th{background:#ecfdf5;font-weight:bold;font-size:11px}
+.tc{text-align:center;white-space:nowrap}.tr{text-align:right}.b{font-weight:bold}
+.total{font-size:16px;font-weight:bold;color:#059669}
+</style></head><body>
+<h2>THEBEST<span style="color:#2563eb">SNS</span> 견적서</h2>
+<p class="meta">견적일자: ${new Date(est.sentAt!).toLocaleDateString('ko-KR')}${est.workName ? ' · ' + est.workName : ''}</p>
+<div class="grid"><div class="section"><div class="label">공급처</div><p><strong>상호</strong> THEBESTSNS<br><strong>대표자</strong> 김나영<br><strong>주소</strong> 대구광역시 달성군 현풍로6길 5<br><strong>사업자번호</strong> 409-30-51469</p></div>
+<div class="section"><div class="label">수신처</div><p><strong>${est.recipientName || '광고주'}</strong><br>${est.recipientContact || estimateViewJr.contact}</p></div></div>
+${est.workPeriod ? `<p class="label">작업기간 : ${est.workPeriod}</p>` : ''}
+<table><thead><tr><th class="tc">순번</th><th>내용</th><th class="tr">단가</th><th class="tc">수량</th><th class="tr">금액</th><th>비고</th></tr></thead><tbody>${itemsHtml}</tbody></table>
+<div style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px">
+<div style="display:flex;justify-content:space-between"><span>소계 (광고금액)</span><span><strong>${subTotal.toLocaleString()}원</strong></span></div>
+<div style="display:flex;justify-content:space-between;margin-top:8px"><span>플랫폼 수수료</span><span><strong>${platformFee.toLocaleString()}원</strong></span></div>
+<div style="display:flex;justify-content:space-between;margin-top:8px"><span>결제망 수수료 (3.3%)</span><span><strong>${pgFee.toLocaleString()}원</strong></span></div>
+<div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid #d1d5db"><span class="total">총 결제금액</span><span class="total">${totalPay.toLocaleString()}원</span></div>
+</div>
+${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안내: ${est.note}</p>` : ''}
+</body></html>`);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => { printWindow.print(); printWindow.close(); }, 300);
+        };
+        return (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto my-8">
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between">
+                <h4 className="font-black text-gray-900">견적서</h4>
+                <button type="button" onClick={() => setEstimateViewJr(null)} className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">✕</button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div className="text-center border-b border-gray-200 pb-4">
+                  <p className="text-2xl font-black text-gray-900">THEBEST<span className="text-blue-600">SNS</span> 견적서</p>
+                  <p className="text-xs text-gray-500 mt-1">견적일자: {new Date(est.sentAt!).toLocaleDateString('ko-KR')}{est.workName && ` · ${est.workName}`}</p>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      </div>
-
-      {/* 수익탭: 프리랜서 출금 신청 목록 */}
-      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
-        <p className="text-sm text-gray-500 mb-6">수익통장에서 출금을 신청한 프리랜서 목록입니다. 신청일 기준 익일에 출금됩니다.</p>
-        {pendingWithdrawals.length === 0 ? (
-          <div className="py-8 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">대기 중인 출금 신청이 없습니다.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-4">신청일시</th>
-                  <th className="px-6 py-4">출금 예정일 (익일)</th>
-                  <th className="px-6 py-4">프리랜서</th>
-                  <th className="px-6 py-4 text-right">금액 (원)</th>
-                  <th className="px-6 py-4">입금 계좌</th>
-                  <th className="px-6 py-4 text-center">처리</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {pendingWithdrawals.map((r) => {
-                  const reqDate = new Date(r.requestedAt);
-                  const nextDay = new Date(reqDate);
-                  nextDay.setDate(reqDate.getDate() + 1);
-                  return (
-                    <tr key={r.id} className="hover:bg-emerald-50/20">
-                      <td className="px-6 py-4 font-bold text-sm text-gray-700">{new Date(r.requestedAt).toLocaleString('ko-KR')}</td>
-                      <td className="px-6 py-4 font-bold text-sm text-emerald-600">{nextDay.toLocaleDateString('ko-KR')}</td>
-                      <td className="px-6 py-4 font-black text-gray-900">{r.nickname}</td>
-                      <td className="px-6 py-4 text-right font-black text-emerald-600">{r.amount.toLocaleString()}원</td>
-                      <td className="px-6 py-4 text-sm"><span className="font-bold text-gray-800">{r.bankName}</span> {r.accountNo}<br /><span className="text-gray-500 text-xs">예금주: {r.ownerName}</span></td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button type="button" onClick={() => { updateFreelancerWithdrawRequestStatus(r.id, 'completed'); refreshWithdrawRequests(); if (addNotif) addNotif(r.userId, 'freelancer', '출금 완료', `${r.amount.toLocaleString()}원이 ${r.bankName} ${r.accountNo} 계좌로 입금되었습니다.`); alert('입금 완료로 표시했습니다.'); }} className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700">입금 완료</button>
-                          <button type="button" onClick={() => { if (!confirm('입금 실패로 표시하시겠습니까?')) return; refundFreelancerWithdrawal(r.userId, r.amount, '출금 실패 환급'); updateFreelancerWithdrawRequestStatus(r.id, 'failed'); refreshWithdrawRequests(); if (addNotif) addNotif(r.userId, 'freelancer', '출금 실패', `출금 신청이 실패하여 ${r.amount.toLocaleString()}원이 수익통장에 환급되었습니다.`); alert('실패로 표시했습니다.'); }} className="px-4 py-2 rounded-lg bg-red-100 text-red-700 font-black text-xs hover:bg-red-200">실패</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                <div className="grid grid-cols-2 gap-8 border-b border-gray-200 pb-6">
+                  <div><p className="text-xs font-black text-gray-500 uppercase mb-2">공급처</p><div className="text-sm text-gray-700 space-y-1"><p><strong>상호</strong> THEBESTSNS</p><p><strong>대표자</strong> 김나영</p><p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p><p><strong>사업자번호</strong> 409-30-51469</p></div></div>
+                  <div><p className="text-xs font-black text-gray-500 uppercase mb-2">수신처</p><div className="text-sm text-gray-700 space-y-1"><p><strong>{est.recipientName || '광고주'}</strong></p><p>{est.recipientContact || estimateViewJr.contact}</p></div></div>
+                </div>
+                {est.workPeriod && <p className="text-sm font-black text-gray-600">작업기간 : {est.workPeriod}</p>}
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase mb-3">견적항목</p>
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead><tr className="bg-emerald-50 text-gray-700"><th className="px-4 py-2 text-center font-black whitespace-nowrap">순번</th><th className="px-4 py-2 text-left font-black">내용</th><th className="px-4 py-2 text-right font-black w-24">단가</th><th className="px-4 py-2 text-center font-black w-16">수량</th><th className="px-4 py-2 text-right font-black w-28">금액</th><th className="px-4 py-2 text-left font-black w-24">비고</th></tr></thead>
+                      <tbody>
+                        {(est.items && est.items.length > 0) ? est.items.map((item: { seq: number; content: string; unitPrice: number; quantity: number; amount: number; remarks?: string }, i: number) => (
+                          <tr key={i} className="border-t border-gray-100"><td className="px-4 py-3 text-center font-bold">{item.seq}</td><td className="px-4 py-3 text-gray-700 whitespace-pre-wrap">{item.content}</td><td className="px-4 py-3 text-right">{item.unitPrice.toLocaleString()}</td><td className="px-4 py-3 text-center">{item.quantity}</td><td className="px-4 py-3 text-right font-bold">{item.amount.toLocaleString()}</td><td className="px-4 py-3 text-gray-600 text-xs">{item.remarks || ''}</td></tr>
+                        )) : (
+                          <tr className="border-t border-gray-100"><td className="px-4 py-3 text-center font-bold">1</td><td className="px-4 py-3 text-gray-700">{estimateViewJr.workContent}</td><td className="px-4 py-3 text-right">{est.unitPrice?.toLocaleString() ?? '-'}</td><td className="px-4 py-3 text-center">{est.quantity ?? 1}</td><td className="px-4 py-3 text-right font-bold">{est.totalAmount.toLocaleString()}</td><td className="px-4 py-3 text-gray-600 text-xs"></td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-4 space-y-2 text-sm bg-gray-50 p-4 rounded-xl">
+                    <div className="flex justify-between"><span className="text-gray-600">소계 (광고금액)</span><span className="font-bold">{subTotal.toLocaleString()}원</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">플랫폼 수수료 (광고금액 25% + 부가세 10%)</span><span className="font-bold">{platformFee.toLocaleString()}원</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">결제망 수수료 (3.3%)</span><span className="font-bold">{pgFee.toLocaleString()}원</span></div>
+                    <div className="flex justify-between pt-3 mt-3 border-t-2 border-gray-200"><span className="font-black text-gray-900">총 결제금액</span><span className="font-black text-emerald-600 text-lg">{totalPay.toLocaleString()}원</span></div>
+                  </div>
+                  {est.note && <p className="mt-3 text-gray-600 text-sm">추가 안내: {est.note}</p>}
+                </div>
+                <div className="pt-4 border-t border-gray-200 text-center"><p className="text-xl font-black text-gray-800">THEBEST<span className="text-blue-600">SNS</span></p></div>
+                <div className="flex gap-3 justify-center pt-2">
+                  <button onClick={() => setEstimateViewJr(null)} className="px-8 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">닫기</button>
+                  <button onClick={handlePdfDownload} className="px-8 py-3 rounded-xl bg-slate-600 text-white font-black hover:bg-slate-700">내려받기</button>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-      </div>
-      )}
+        );
+      })()}
+
+      {/* 작업확정서 모달 (거래 목록에서 광고주/프리랜서용) */}
+      {workConfirmModal && (() => {
+        const { task, isAdvertiserView } = workConfirmModal;
+        const selectedWithLink = task.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim()));
+        const workLinksList = selectedWithLink.flatMap((a) => a.workLinks ?? (a.workLink ? [a.workLink] : [])).filter(Boolean);
+        const deductedReward = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
+        const handlePdfDownload = () => {
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) return;
+          printWindow.document.write(`
+            <!DOCTYPE html><html><head><meta charset="utf-8"><title>작업확정서</title>
+            <style>body{font-family:Malgun Gothic,sans-serif;padding:24px;max-width:600px;margin:0 auto;font-size:14px}
+            h2{margin:0 0 16px;font-size:18px} .section{margin-bottom:16px}
+            .label{font-size:11px;color:#666;font-weight:bold;margin-bottom:4px}
+            .value{color:#333} a{color:#059669;word-break:break-all}
+            </style></head><body>
+            <h2>프로젝트 작업확정서 ${isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}</h2>
+            <p style="font-size:12px;color:#666">본 문서의 내용은 이용약관에 의거하여 결제 시점부터 법적 효력이 발생합니다.</p>
+            <div class="section"><div class="label">1. 프로젝트 번호 및 계약당사자</div>
+            <div class="value">프로젝트번호: ${task.projectNo || '-'}</div>
+            <div class="value">프로젝트명: ${task.title}</div>
+            <div class="value">재위탁 수행자: ${task.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}</div></div>
+            <div class="section"><div class="label">2. 업무 범위 및 단가</div>
+            <div class="value">과업 내용: ${task.description}</div>
+            <div class="value">최종 납기: ${task.workPeriod?.end ?? '-'}</div>
+            <div class="value" style="font-weight:bold;color:#059669">총 계약 금액: ₩${task.reward.toLocaleString()}</div>
+            ${!isAdvertiserView ? `<div class="value">지급대금 (5%+3.3% 차감): ₩${deductedReward.toLocaleString()}</div>` : ''}</div>
+            ${workLinksList.length > 0 ? `<div class="section"><div class="label">3. 작업 링크</div><ul>${workLinksList.map((u) => `<li><a href="${u}">${u}</a></li>`).join('')}</ul></div>` : ''}
+            <div class="section"><div class="label">취소·환불·검수·위약벌</div>
+            <div class="value">작업 시작 전 전액 취소·환불 가능. 결과물 전달일로부터 3일 이내 이의없으면 자동 승인. 직거래 시 거래액 10배 위약벌.</div></div>
+            </body></html>`);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+        };
+        return (
+          <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 overflow-y-auto">
+            <div id="work-confirm-print" className="bg-white w-full max-w-2xl rounded-[48px] p-10 shadow-2xl space-y-6 my-8 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center">
+                <h3 className="text-2xl font-black text-gray-900">📂 프로젝트 작업확정서 {isAdvertiserView ? '(광고주용)' : '(프리랜서용)'}</h3>
+                <button onClick={() => setWorkConfirmModal(null)} className="text-gray-400 hover:text-gray-800 text-2xl font-bold">×</button>
+              </div>
+              <p className="text-xs text-gray-500">본 문서의 내용은 이용약관에 의거하여 결제 시점부터 법적 효력이 발생합니다.</p>
+              <div className="space-y-6 text-sm">
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase mb-2">1. 프로젝트 번호 및 계약당사자</p>
+                  <p className="font-bold text-gray-800">프로젝트번호: {task.projectNo || '-'}</p>
+                  <p className="font-bold text-gray-800 mt-1">프로젝트명: {task.title}</p>
+                  <p className="text-gray-600 mt-1">재위탁 수행자(프리랜서): {task.applicants.filter((a) => a.selected).map((a) => a.nickname).join(', ') || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase mb-2">2. 업무 범위 및 단가</p>
+                  <p className="font-bold text-gray-800">과업 내용: {task.description}</p>
+                  <p className="text-gray-600 mt-1">최종 납기: {task.workPeriod?.end ?? '-'}</p>
+                  <p className="text-emerald-600 font-black mt-1">총 계약 금액: ₩{task.reward.toLocaleString()} (VAT 포함)</p>
+                  {!isAdvertiserView && (
+                    <p className="text-gray-600 mt-1">지급대금 (정산 수수료 5% + 원천징수 3.3% 차감): ₩{deductedReward.toLocaleString()}</p>
+                  )}
+                </div>
+                {isAdvertiserView && workLinksList.length > 0 && (
+                  <div>
+                    <p className="text-xs font-black text-gray-400 uppercase mb-2">3. 작업 링크</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      {workLinksList.map((url, i) => (
+                        <li key={i}><a href={url} className="text-blue-600 break-all" rel="noopener noreferrer" target="_blank">{url}</a></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-black text-gray-400 uppercase mb-2">{isAdvertiserView && workLinksList.length > 0 ? '4' : '3'}. 취소 및 환불 규정</p>
+                  <p className="text-gray-700 leading-relaxed text-sm">작업 시작 전: 언제든 전액 취소·환불 가능합니다. 작업 시작 후: 프리랜서 선정이 끝난 경우 작업내용 전달이 되어 환불이 어렵습니다.</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handlePdfDownload} className="flex-1 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">PDF 저장</button>
+                <button onClick={() => setWorkConfirmModal(null)} className="flex-1 py-4 rounded-xl bg-gray-900 text-white font-black">확인</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 모달: 견적 확인 상세, 견적서 전송, 거절, 수정요청 (estimate/freelancer 탭 공용) */}
         {detailJr && (
