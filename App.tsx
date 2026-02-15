@@ -162,7 +162,7 @@ const App: React.FC = () => {
       const isQuota = err instanceof DOMException && err.name === 'QuotaExceededError';
       const isStorage = err instanceof Error && (err.message?.includes('Storage') || err.message?.includes('setItem'));
       if (isQuota || isStorage) {
-        alert('저장 공간이 부족합니다. 브라우저 데이터를 정리하거나, 통장/신분증 이미지를 더 작은 사진으로 다시 첨부해 주세요.');
+        alert('저장 공간이 부족합니다. 브라우저 캐시·데이터를 정리한 후 다시 시도해 주세요.');
       }
     }
   }, [user]);
