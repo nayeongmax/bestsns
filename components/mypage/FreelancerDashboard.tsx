@@ -48,6 +48,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
   const [chartTab, setChartTab] = useState<'daily' | 'monthly'>('daily');
   const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean; step?: 'check' | 'confirmed' } | null>(null);
+  const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
   const [jobRequests, setJobRequests] = useState(() => getPartTimeJobRequests());
   const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
 
@@ -493,19 +494,35 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
           {myPendingReviewRequests.length > 0 && (
             <div className="space-y-4">
               <h4 className="font-black text-gray-900">검토 대기</h4>
-              {myPendingReviewRequests.map((jr) => (
-                <div key={jr.id} className="bg-amber-50/50 p-6 rounded-[32px] shadow-sm border border-amber-100 flex flex-col sm:flex-row justify-between items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
-                    <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
-                    <span className="inline-block mt-3 px-3 py-1 rounded-lg bg-amber-200 text-amber-800 text-xs font-black">운영자 검토 중</span>
+              {myPendingReviewRequests.map((jr) => {
+                const hasEstimate = !!(jr.operatorEstimate);
+                return (
+                  <div key={jr.id} className={`p-6 rounded-[32px] shadow-sm border flex flex-col sm:flex-row justify-between items-start gap-4 ${hasEstimate ? 'bg-emerald-50/50 border-emerald-100' : 'bg-amber-50/50 border-amber-100'}`}>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
+                      <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
+                      {hasEstimate ? (
+                        <span className="inline-block mt-3 px-3 py-1 rounded-lg bg-emerald-200 text-emerald-800 text-xs font-black">견적서가 도착했습니다!</span>
+                      ) : (
+                        <span className="inline-block mt-3 px-3 py-1 rounded-lg bg-amber-200 text-amber-800 text-xs font-black">운영자 검토 중</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 shrink-0">
+                      {hasEstimate && (
+                        <>
+                          <button type="button" onClick={() => setEstimateViewJr(jr)} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">견적서확인</button>
+                          {!jr.paid && (
+                            <button type="button" onClick={() => navigate('/payment/alba', { state: { jobRequest: jr } })} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">결제하기</button>
+                          )}
+                          {jr.paid && <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm">결제 완료</span>}
+                        </>
+                      )}
+                      <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-gray-600 text-white font-black hover:bg-gray-700">수정하기</Link>
+                      <button type="button" onClick={() => { if (!confirm('정말 삭제하시겠습니까?')) return; const next = jobRequests.filter((r) => r.id !== jr.id); setPartTimeJobRequests(next); setJobRequests(next); alert('삭제되었습니다.'); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">수정하기</Link>
-                    <button type="button" onClick={() => { if (!confirm('정말 삭제하시겠습니까?')) return; const next = jobRequests.filter((r) => r.id !== jr.id); setPartTimeJobRequests(next); setJobRequests(next); alert('삭제되었습니다.'); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {myRejectedRequests.length > 0 && (
@@ -616,6 +633,104 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               <Link to="/part-time/request" className="inline-block mt-4 text-emerald-600 font-black hover:underline">작업의뢰 신청하러 가기 →</Link>
             </div>
           )}
+        </div>
+      )}
+
+      {estimateViewJr && estimateViewJr.operatorEstimate && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto my-8">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+              <h4 className="font-black text-gray-900">견적서</h4>
+              <button type="button" onClick={() => setEstimateViewJr(null)} className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">✕</button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="text-center border-b border-gray-200 pb-4">
+                <p className="text-2xl font-black text-gray-900">THEBEST<span className="text-blue-600">SNS</span> 견적서</p>
+                <p className="text-xs text-gray-500 mt-1">견적일자: {new Date(estimateViewJr.operatorEstimate.sentAt).toLocaleDateString('ko-KR')}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-6 border-b border-gray-200 pb-6">
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase mb-2">공급처</p>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <p><strong>상호</strong> THEBESTSNS</p>
+                    <p><strong>대표자</strong> 김나영</p>
+                    <p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p>
+                    <p><strong>사업자번호</strong> 409-30-51469</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase mb-2">수신처</p>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <p><strong>{estimateViewJr.operatorEstimate.recipientName || '광고주'}</strong></p>
+                    <p>{estimateViewJr.operatorEstimate.recipientContact || estimateViewJr.contact}</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-black text-gray-500 uppercase mb-3">견적항목</p>
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-emerald-50 text-gray-700">
+                        <th className="px-4 py-2 text-left font-black">작업제목</th>
+                        <th className="px-4 py-2 text-left font-black">내용</th>
+                        <th className="px-4 py-2 text-right font-black">단가</th>
+                        <th className="px-4 py-2 text-center font-black">수량</th>
+                        <th className="px-4 py-2 text-right font-black">금액</th>
+                        <th className="px-4 py-2 text-left font-black">작업기간</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(estimateViewJr.operatorEstimate.items && estimateViewJr.operatorEstimate.items.length > 0)
+                        ? estimateViewJr.operatorEstimate.items.map((item, i) => (
+                            <tr key={i} className="border-t border-gray-100">
+                              <td className="px-4 py-3 font-bold text-gray-900">{item.workTitle}</td>
+                              <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate" title={item.content}>{item.content}</td>
+                              <td className="px-4 py-3 text-right">{item.unitPrice.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-center">{item.quantity}</td>
+                              <td className="px-4 py-3 text-right font-bold">{item.amount.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-gray-600 text-xs">{item.workPeriod}</td>
+                            </tr>
+                          ))
+                        : (
+                          <tr className="border-t border-gray-100">
+                            <td className="px-4 py-3 font-bold text-gray-900">{estimateViewJr.title}</td>
+                            <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">{estimateViewJr.workContent}</td>
+                            <td className="px-4 py-3 text-right">{estimateViewJr.operatorEstimate.unitPrice?.toLocaleString() ?? '-'}</td>
+                            <td className="px-4 py-3 text-center">{estimateViewJr.operatorEstimate.quantity ?? 1}</td>
+                            <td className="px-4 py-3 text-right font-bold">{estimateViewJr.operatorEstimate.totalAmount.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-gray-600 text-xs">{estimateViewJr.workPeriodStart} ~ {estimateViewJr.workPeriodEnd}</td>
+                          </tr>
+                        )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-4 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">소계</span>
+                    <span className="font-bold">{estimateViewJr.operatorEstimate.totalAmount.toLocaleString()}원</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">수수료 (25% + 부가세)</span>
+                    <span className="font-bold">{estimateViewJr.operatorEstimate.fee.toLocaleString()}원</span>
+                  </div>
+                  <div className="flex justify-between pt-3 mt-3 border-t-2 border-gray-200">
+                    <span className="font-black text-gray-900">총 결제금액</span>
+                    <span className="font-black text-emerald-600 text-lg">{(estimateViewJr.operatorEstimate.totalAmount + estimateViewJr.operatorEstimate.fee).toLocaleString()}원</span>
+                  </div>
+                </div>
+                {estimateViewJr.operatorEstimate.note && <p className="mt-3 text-gray-600 text-sm">참고: {estimateViewJr.operatorEstimate.note}</p>}
+              </div>
+              <div className="pt-4 border-t border-gray-200 text-center">
+                <p className="text-xl font-black text-gray-800">THEBEST<span className="text-blue-600">SNS</span></p>
+                <p className="text-xs text-gray-400 mt-1">© THEBESTSNS. All rights reserved.</p>
+              </div>
+              <div className="flex gap-3 justify-center pt-2">
+                <button onClick={() => setEstimateViewJr(null)} className="px-8 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">닫기</button>
+                <button onClick={() => { setEstimateViewJr(null); navigate('/payment/alba', { state: { jobRequest: estimateViewJr } }); }} className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">결제하기</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
