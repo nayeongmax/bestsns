@@ -157,6 +157,11 @@ export interface PartTimeJobRequest {
     fee: number;
     note?: string;
     sentAt: string;
+    /** 수신처 (광고주) */
+    recipientName?: string;
+    recipientContact?: string;
+    /** 견적항목 (작업제목, 내용, 단가, 수량, 금액, 작업기간) */
+    items?: { workTitle: string; content: string; unitPrice: number; quantity: number; amount: number; workPeriod: string }[];
   };
   createdAt: string;
 }
