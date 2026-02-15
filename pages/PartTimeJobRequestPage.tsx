@@ -280,7 +280,6 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-3">
           <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-2">광고주 수수료 (25% + 부가세 10% 자동계산)</label>
           <p className="text-2xl font-black text-emerald-700">{fee.toLocaleString()}원</p>
-          <p className="text-xs text-gray-500">프리랜서 정산 5% / 원천징수 3.3% / 결제망 3.3% / 부가세 10% 별도 적용</p>
           <div className="pt-3 border-t border-gray-200">
             <label className="block text-sm font-black text-gray-600 uppercase tracking-wider mb-1">총합금액 (단가×갯수+수수료)</label>
             <p className="text-2xl font-black text-gray-900">{(adAmount + fee).toLocaleString()}원</p>
@@ -290,7 +289,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-indigo-50 text-indigo-600 font-black text-sm border border-indigo-100">
           <span>정산기준안내</span>
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-          <span className="text-xs font-bold">광고주 25% / 프리랜서 정산 5% / 원천징수 3.3% / 결제망 3.3% / 부가세 10%</span>
+          <span className="text-xs font-bold">광고주 25% / 결제망 3.3% / 부가세 10%</span>
         </div>
 
         <div className="p-6 rounded-2xl bg-blue-50 border border-blue-100">
