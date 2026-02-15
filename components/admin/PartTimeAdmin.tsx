@@ -319,10 +319,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     const sentToAdvertiser = !!t.sentToAdvertiserAt;
     if (needsSelection) return '프리모집';
     if (!hasWorkLinkSel) return '프리선정';
+    if (isPaid) return '지급완료'; // 지급된 경우 상태 뱃지도 지급완료로 (비상 알바비 컬럼과 일치)
     if (!sentToAdvertiser) return '작업진행';
-    if (!isPaid) return '작업완료';
-    if (!t.pointPaid) return '구매확정';
-    return '지급완료';
+    return '작업완료'; // 링크 전송됐으나 아직 미지급
   };
   const freelancerFilteredTasks = freelancerAllTasks.filter((t) => {
     const taskDate = t.workPeriod?.start || t.applicationPeriod?.start || t.applicationPeriod?.end || t.createdAt;
@@ -633,7 +632,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                     return (
                       <tr key={t.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          <span className={`inline-block px-2 py-1 rounded-lg text-xs font-black ${status === '프리모집' ? 'bg-amber-200 text-amber-800' : status === '프리선정' ? 'bg-blue-100 text-blue-700' : status === '작업진행' ? 'bg-amber-100 text-amber-700' : status === '작업완료' ? 'bg-indigo-100 text-indigo-700' : status === '구매확정' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
+                          <span className={`inline-block px-2 py-1 rounded-lg text-xs font-black ${status === '프리모집' ? 'bg-amber-200 text-amber-800' : status === '프리선정' ? 'bg-blue-100 text-blue-700' : status === '작업진행' ? 'bg-amber-100 text-amber-700' : status === '작업완료' ? 'bg-indigo-100 text-indigo-700' : status === '지급완료' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
                             {statusLabel}
                           </span>
                         </td>
@@ -911,7 +910,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
             <div class="value">과업 내용: ${task.description}</div>
             <div class="value">최종 납기: ${task.workPeriod?.end ?? '-'}</div>
             <div class="value" style="font-weight:bold;color:#059669">총 계약 금액: ₩${task.reward.toLocaleString()}</div>
-            ${!isAdvertiserView ? `<div class="value">지급대금 (5%+3.3% 차감): ₩${deductedReward.toLocaleString()}</div>` : ''}</div>
+            <div class="value">지급대금 (정산 수수료 5% + 원천징수 3.3% 차감): ₩${deductedReward.toLocaleString()}</div></div>
             ${workLinksList.length > 0 ? `<div class="section"><div class="label">3. 작업 링크</div><ul>${workLinksList.map((u) => `<li><a href="${u}">${u}</a></li>`).join('')}</ul></div>` : ''}
             <div class="section"><div class="label">취소·환불·검수·위약벌</div>
             <div class="value">작업 시작 전 전액 취소·환불 가능. 결과물 전달일로부터 3일 이내 이의없으면 자동 승인. 직거래 시 거래액 10배 위약벌.</div></div>
@@ -941,7 +940,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                   <p className="text-gray-800">과업 내용: {task.description}</p>
                   <p className="text-gray-700 mt-1">최종 납기: {task.workPeriod?.end ?? '-'}</p>
                   <p className="text-gray-900 font-black mt-2">총 계약 금액: ₩{task.reward.toLocaleString()} (VAT 포함)</p>
-                  {!isAdvertiserView && <p className="text-gray-600 mt-1">지급대금 (정산 수수료 5% + 원천징수 3.3% 차감): ₩{deductedReward.toLocaleString()}</p>}
+                  <p className="text-gray-600 mt-1">지급대금 (정산 수수료 5% + 원천징수 3.3% 차감): ₩{deductedReward.toLocaleString()}</p>
                 </div>
                 {workLinksList.length > 0 && (
                   <div className="border-b border-gray-200 pb-4">
