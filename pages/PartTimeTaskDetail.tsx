@@ -241,14 +241,22 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     alert('통과 처리되었습니다. 3일 후 자동으로 수익통장에 지급됩니다.');
   };
 
-  /** 운영자: 즉시 지급 (기존 포인트 지급) */
+  /** 운영자: 즉시 지급 (기존 포인트 지급) - 작업건당 1회만 수익통장 입금 */
   const handlePayPoints = (userId?: string) => {
     if (!task) return;
-    const target = userId
+    const freshTasks = getPartTimeTasks();
+    const freshTask = freshTasks.find((x) => x.id === task.id);
+    const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
+    const base = userId
       ? task.applicants.filter((a) => a.userId === userId && a.selected && hasWorkLink(a))
       : task.applicants.filter((a) => a.selected && hasWorkLink(a));
+    const target = base.filter((a) => !currentPaid.includes(a.userId));
     if (target.length === 0) {
-      alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
+      if (base.length > 0 && base.every((a) => currentPaid.includes(a.userId))) {
+        alert('이미 수익통장에 지급 완료된 상태입니다. 이중 지급되지 않습니다.');
+      } else {
+        alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
+      }
       return;
     }
     if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 즉시 지급합니다.`)) return;
@@ -259,13 +267,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       );
     }
     const paidIds = target.map((a) => a.userId);
-    const allPaid = [...(task.paidUserIds || []), ...paidIds];
+    const allPaid = [...(freshTask?.paidUserIds ?? task.paidUserIds ?? []), ...paidIds];
     const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
     const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
-    const next = tasks.map((t) =>
+    const next = freshTasks.map((t) =>
       t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }
     );
-    saveTasks(next);
+    setPartTimeTasks(next);
+    setTasks(next);
     alert('알바비가 지급되었습니다.');
     if (!userId) navigate('/part-time');
   };
@@ -293,7 +302,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     return (
       <div className="max-w-3xl mx-auto py-12 px-4 text-center">
         <p className="text-gray-500 font-bold">작업을 찾을 수 없습니다.</p>
-        <button onClick={() => navigate(fromAdmin ? -1 : '/part-time')} className="mt-4 text-emerald-600 font-black hover:underline">
+        <button onClick={() => { fromAdmin ? navigate(-1) : navigate('/part-time'); }} className="mt-4 text-emerald-600 font-black hover:underline">
           목록으로
         </button>
       </div>
@@ -314,7 +323,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-black text-lg">+{task.reward.toLocaleString()}원</span>
             </div>
           </div>
-          <button onClick={() => navigate(fromAdmin ? -1 : '/part-time')} className="shrink-0 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-bold text-sm transition-colors">
+          <button onClick={() => { fromAdmin ? navigate(-1) : navigate('/part-time'); }} className="shrink-0 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-bold text-sm transition-colors">
             {fromAdmin ? '← 이전' : '← 목록'}
           </button>
         </div>
