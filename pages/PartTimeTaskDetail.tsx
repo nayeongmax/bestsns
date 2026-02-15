@@ -196,7 +196,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             ...t,
             applicants: t.applicants.map((a) =>
               a.userId === user.id
-                ? { ...a, workLinks: links, workLink: links[0], revisionRequest: undefined, workLinkSubmittedAt: now }
+                ? { ...a, workLinks: links, workLink: links[0], revisionRequest: undefined, workLinkSubmittedAt: now, reApprovalRequestedAt: a.revisionRequest ? now : undefined }
                 : a
             ),
           }
