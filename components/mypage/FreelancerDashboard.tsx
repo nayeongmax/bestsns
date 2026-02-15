@@ -530,15 +530,36 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             <div className="space-y-4">
               <h4 className="font-black text-gray-900">승인 완료 · 결제 대기</h4>
               {myApprovedRequests.map((jr) => (
-                <div key={jr.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-10">
-                  <div className="flex-1 min-w-0">
+                <div key={jr.id} className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-start gap-10">
+                  <div className="flex-1 min-w-0 space-y-4">
                     <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
-                    <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
-                    <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                      <span className="font-bold text-gray-700">{jr.unitPrice != null && jr.quantity != null ? `단가 ${jr.unitPrice.toLocaleString()}원 × ${jr.quantity}개` : `광고금액: ${jr.adAmount.toLocaleString()}원`}</span>
-                      <span className="font-bold text-gray-700">수수료: {jr.fee.toLocaleString()}원</span>
-                      <span className="font-black text-emerald-600">총 결제: {(jr.adAmount + jr.fee).toLocaleString()}원</span>
-                    </div>
+                    <p className="text-gray-500 line-clamp-2">{jr.workContent}</p>
+                    {jr.operatorEstimate ? (
+                      <div className="rounded-2xl border-2 border-slate-200 bg-slate-50/50 p-6">
+                        <p className="text-xs font-black text-slate-500 uppercase mb-4">견 적 서</p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">{jr.operatorEstimate.unitPrice != null && jr.operatorEstimate.quantity != null ? `단가 (${jr.operatorEstimate.unitPrice.toLocaleString()}원 × ${jr.operatorEstimate.quantity}개)` : '광고금액'}</span>
+                            <span className="font-bold text-gray-900">{jr.operatorEstimate.totalAmount.toLocaleString()}원</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">수수료 (25% + 부가세)</span>
+                            <span className="font-bold text-gray-900">{jr.operatorEstimate.fee.toLocaleString()}원</span>
+                          </div>
+                          <div className="flex justify-between pt-3 mt-3 border-t-2 border-slate-200">
+                            <span className="font-black text-gray-900">총 결제금액</span>
+                            <span className="font-black text-emerald-600 text-lg">{(jr.operatorEstimate.totalAmount + jr.operatorEstimate.fee).toLocaleString()}원</span>
+                          </div>
+                          {jr.operatorEstimate.note && <p className="mt-3 text-gray-600 text-xs">{jr.operatorEstimate.note}</p>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-4 text-sm">
+                        <span className="font-bold text-gray-700">{jr.unitPrice != null && jr.quantity != null ? `단가 ${jr.unitPrice.toLocaleString()}원 × ${jr.quantity}개` : `광고금액: ${jr.adAmount.toLocaleString()}원`}</span>
+                        <span className="font-bold text-gray-700">수수료: {jr.fee.toLocaleString()}원</span>
+                        <span className="font-black text-emerald-600">총 결제: {(jr.adAmount + jr.fee).toLocaleString()}원</span>
+                      </div>
+                    )}
                   </div>
                   <button onClick={() => navigate('/payment/alba', { state: { jobRequest: jr } })} className="px-10 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shrink-0">결제하기</button>
                 </div>
