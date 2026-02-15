@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { NotificationType, PartTimeJobRequest } from '@/types';
@@ -27,6 +27,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const [workPeriodEnd, setWorkPeriodEnd] = useState(todayStr());
   const [exampleImages, setExampleImages] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editRequest && editRequest.applicantUserId === user.id) {
@@ -50,14 +51,15 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
     }
     if (!toAdd.length) return;
     const readAndCompress = (f: File) =>
-      new Promise<string>((resolve) => {
+      new Promise<string>((resolve, reject) => {
         const r = new FileReader();
         r.onload = () => resolve(r.result as string);
+        r.onerror = () => reject(new Error('파일 읽기 실패'));
         r.readAsDataURL(f);
       }).then((dataUrl) => compressImageForStorage(dataUrl));
-    Promise.all(toAdd.map(readAndCompress)).then((urls) => {
-      setExampleImages((prev) => [...prev, ...urls].slice(0, 10));
-    });
+    Promise.all(toAdd.map(readAndCompress))
+      .then((urls) => setExampleImages((prev) => [...prev, ...urls].slice(0, 10)))
+      .catch((err) => alert('이미지 처리 중 오류가 발생했습니다. 파일 크기를 줄이거나 다른 이미지를 시도해 주세요.'));
     e.target.value = '';
   };
 
@@ -90,48 +92,52 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       alert('연락처를 입력해 주세요.');
       return;
     }
-    const requests = getPartTimeJobRequests();
-    if (editRequest && editRequest.applicantUserId === user.id) {
-      const updated = {
-        ...editRequest,
-        title: title.trim(),
-        workContent: workContent.trim(),
-        platformLink: platformLinks.filter(Boolean).join(', ') || '',
-        platformLinks: platformLinks.filter(Boolean),
-        contact: contact.trim(),
-        workPeriodStart,
-        workPeriodEnd,
-        exampleImages,
-        adAmount: editRequest.adAmount ?? 0,
-        fee: editRequest.fee ?? 0,
-        status: 'pending_review' as const,
-        rejectReason: undefined,
-      };
-      setPartTimeJobRequests(requests.map((r) => (r.id === editRequest.id ? updated : r)));
-      setShowModal(true);
-    } else {
-      const plTrimmed = platformLinks.map((s) => s.trim()).filter(Boolean);
-      const newRequest = {
-        id: `jr_${Date.now()}`,
-        title: title.trim(),
-        workContent: workContent.trim(),
-        platformLink: plTrimmed.join(', ') || '',
-        platformLinks: plTrimmed,
-        contact: contact.trim(),
-        workPeriodStart,
-        workPeriodEnd,
-        exampleImages,
-        adAmount: 0,
-        unitPrice: undefined,
-        quantity: 1,
-        fee: 0,
-        applicantUserId: user.id,
-        status: 'pending_review' as const,
-        paid: false,
-        createdAt: new Date().toISOString(),
-      };
-      setPartTimeJobRequests([newRequest, ...requests]);
-      setShowModal(true);
+    try {
+      const requests = getPartTimeJobRequests();
+      if (editRequest && editRequest.applicantUserId === user.id) {
+        const updated = {
+          ...editRequest,
+          title: title.trim(),
+          workContent: workContent.trim(),
+          platformLink: platformLinks.filter(Boolean).join(', ') || '',
+          platformLinks: platformLinks.filter(Boolean),
+          contact: contact.trim(),
+          workPeriodStart,
+          workPeriodEnd,
+          exampleImages,
+          adAmount: editRequest.adAmount ?? 0,
+          fee: editRequest.fee ?? 0,
+          status: 'pending_review' as const,
+          rejectReason: undefined,
+        };
+        setPartTimeJobRequests(requests.map((r) => (r.id === editRequest.id ? updated : r)));
+        setShowModal(true);
+      } else {
+        const plTrimmed = platformLinks.map((s) => s.trim()).filter(Boolean);
+        const newRequest = {
+          id: `jr_${Date.now()}`,
+          title: title.trim(),
+          workContent: workContent.trim(),
+          platformLink: plTrimmed.join(', ') || '',
+          platformLinks: plTrimmed,
+          contact: contact.trim(),
+          workPeriodStart,
+          workPeriodEnd,
+          exampleImages,
+          adAmount: 0,
+          unitPrice: undefined,
+          quantity: 1,
+          fee: 0,
+          applicantUserId: user.id,
+          status: 'pending_review' as const,
+          paid: false,
+          createdAt: new Date().toISOString(),
+        };
+        setPartTimeJobRequests([newRequest, ...requests]);
+        setShowModal(true);
+      }
+    } catch (err) {
+      alert('저장 중 오류가 발생했습니다. 첨부 이미지 개수를 줄이거나 용량이 큰 이미지를 제거한 후 다시 시도해 주세요.');
     }
   };
 
@@ -176,7 +182,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
+      <form id="job-request-form" onSubmit={handleSubmit} noValidate className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
         <p className="text-slate-700 text-xl md:text-2xl font-bold tracking-tight text-center pt-2 pb-4">
           최고의 전문가 프리랜서로 선별 매칭해드립니다!
         </p>
@@ -223,11 +229,17 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
               </div>
             ))}
             {exampleImages.length < 10 && (
-              <label className="w-20 h-20 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 text-gray-400 hover:border-emerald-400 hover:text-emerald-600 cursor-pointer transition shrink-0">
-                <input type="file" accept="image/*" multiple onChange={handleImageAdd} className="hidden" />
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(ev) => ev.key === 'Enter' && fileInputRef.current?.click()}
+                className="w-20 h-20 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 text-gray-400 hover:border-emerald-400 hover:text-emerald-600 cursor-pointer transition shrink-0"
+              >
+                <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageAdd} className="hidden" />
                 <span className="text-2xl">+</span>
                 <span className="text-xs mt-0.5">추가</span>
-              </label>
+              </div>
             )}
           </div>
         </div>
@@ -238,7 +250,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
             {platformLinks.map((link, idx) => (
               <div key={idx} className="flex gap-2">
                 <input
-                  type="url"
+                  type="text"
                   value={link}
                   onChange={(e) => setPlatformLinks((prev) => prev.map((v, i) => (i === idx ? e.target.value : v)))}
                   placeholder="https://instagram.com/... 또는 https://youtube.com/..."
