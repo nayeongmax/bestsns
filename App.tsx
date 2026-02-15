@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { 
   UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
   SMMProvider, SMMProduct, NotificationType, GradeConfig
 } from '@/types';
+import { supabase } from '@/supabase';
+import { profileRowToUserProfile } from '@/profileUtils';
 
 // Page and Component Imports (루트 기준 @/ 사용 - Netlify 빌드 시 해석 기준 오류 방지)
 import Header from '@/components/Header';
@@ -114,6 +116,7 @@ function safeStorage<T>(key: string, fallback: T): T {
 }
 
 const App: React.FC = () => {
+  const location = useLocation();
   const [members, setMembers] = useState<UserProfile[]>(() => safeStorage('site_members_v2', []));
   const [user, setUser] = useState<UserProfile | null>(() => safeStorage<UserProfile | null>('user_profile_v2', null));
   const [notifications, setNotifications] = useState<SiteNotification[]>(() => safeStorage('site_notifications_v2', []));
@@ -147,6 +150,99 @@ const App: React.FC = () => {
   });
 
   useEffect(() => { localStorage.setItem('grade_configs_v2', JSON.stringify(gradeConfigs)); }, [gradeConfigs]);
+
+  // 사이트 접속 로그: 로그인한 사용자 접속 시 기록 (2분당 1회 제한)
+  const lastAccessLog = useRef<{ userId: string; at: number }>({ userId: '', at: 0 });
+  useEffect(() => {
+    if (!user?.id) return;
+    const now = Date.now();
+    if (lastAccessLog.current.userId === user.id && now - lastAccessLog.current.at < 120000) return;
+    lastAccessLog.current = { userId: user.id, at: now };
+    const id = `SAL_${now}_${Math.random().toString(36).slice(2, 9)}`;
+    supabase.from('site_access_log').insert({ id, user_id: user.id, path: location.pathname || null }).then(() => {});
+  }, [user?.id, location.pathname]);
+
+  // 찜(user_wishlist) 로드 - 로그인 시
+  useEffect(() => {
+    if (!user?.id) {
+      setWishlist([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.from('user_wishlist').select('item_type, item_id').eq('user_id', user.id);
+        if (cancelled || error) return;
+        if (data && data.length > 0) {
+          const items: WishlistItem[] = [];
+          for (const row of data as { item_type: string; item_id: string }[]) {
+            if (row.item_type === 'channel') {
+              const ch = channels.find((c: ChannelProduct) => c.id === row.item_id);
+              if (ch) items.push({ type: 'channel', data: ch });
+            } else if (row.item_type === 'ebook') {
+              const eb = ebooks.find((e: EbookProduct) => e.id === row.item_id);
+              if (eb) items.push({ type: 'ebook', data: eb });
+            }
+          }
+          setWishlist(items);
+        } else {
+          setWishlist([]);
+        }
+      } catch (_) {}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, channels, ebooks]);
+
+  // 알림(site_notifications) 로드 - 로그인 시
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.from('site_notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+        if (cancelled || error) return;
+        if (data && data.length > 0) {
+          const list: SiteNotification[] = (data as any[]).map((r: any) => ({
+            id: r.id,
+            userId: r.user_id,
+            type: r.type,
+            title: r.title,
+            message: r.message,
+            reason: r.reason,
+            isRead: r.is_read ?? false,
+            createdAt: r.created_at || new Date().toISOString(),
+          }));
+          setNotifications(list);
+        }
+      } catch (_) {}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // 회원 목록 단일 소스: Supabase profiles에서 로드 (DEPLOY 가이드)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.from('profiles').select('id, email, nickname, profile_image, phone, role, points, manual_grade, coupons, total_purchase_amount, total_sales_amount, total_freelancer_earnings, join_date, seller_status, freelancer_status, seller_application, pending_application, freelancer_application, violation_count, withdrawn_at');
+        if (cancelled) return;
+        if (error) {
+          console.warn('profiles 로드 실패, localStorage 사용:', error.message);
+          return;
+        }
+        if (data && data.length > 0) {
+          const parsed = data
+            .map((r: Record<string, unknown>) => profileRowToUserProfile(r))
+            .filter((p: UserProfile) => p.id);
+          setMembers(parsed);
+        }
+      } catch (e) {
+        if (!cancelled) console.warn('profiles fetch 오류:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('site_members_v2', JSON.stringify(members));
@@ -194,11 +290,14 @@ const App: React.FC = () => {
   }, [handleGlobalUserUpdate]);
 
   const addNotif = useCallback((userId: string, type: NotificationType, title: string, message: string, reason?: string) => {
+    const id = `NOTIF_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const newNotif: SiteNotification = {
-      id: `NOTIF_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      userId, type, title, message, reason, isRead: false, createdAt: new Date().toISOString()
+      id, userId, type, title, message, reason, isRead: false, createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
+    supabase.from('site_notifications').insert({
+      id, user_id: userId, type, title, message, reason: reason || null, is_read: false
+    }).then(() => {});
   }, []);
 
   const handleMassIssueCoupons = useCallback((targetIds: string[], couponData: Omit<Coupon, 'id' | 'status'>) => {
@@ -248,7 +347,27 @@ const App: React.FC = () => {
 
   const handleLogout = () => setUser(null);
 
-  const wishlistToggle = (i: WishlistItem) => setWishlist(p => p.some(w => w.data.id === i.data.id) ? p.filter(w => w.data.id !== i.data.id) : [...p, i]);
+  const wishlistToggle = useCallback((item: WishlistItem) => {
+    const itemId = item.data.id;
+    const itemType = item.type;
+    setWishlist(prev => {
+      const exists = prev.some(w => w.data.id === itemId);
+      const next = exists ? prev.filter(w => w.data.id !== itemId) : [...prev, item];
+      if (user?.id) {
+        if (exists) {
+          supabase.from('user_wishlist').delete().eq('user_id', user.id).eq('item_type', itemType).eq('item_id', itemId).then(() => {});
+        } else {
+          supabase.from('user_wishlist').upsert({
+            id: `WL_${user.id}_${itemType}_${itemId}`,
+            user_id: user.id,
+            item_type: itemType,
+            item_id: itemId
+          }, { onConflict: 'user_id,item_type,item_id' }).then(() => {});
+        }
+      }
+      return next;
+    });
+  }, [user?.id]);
 
   const content = (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
