@@ -29,6 +29,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './'),
       '@/types': path.resolve(__dirname, 'types.ts'),
+      '@/profileUtils': path.resolve(__dirname, 'profileUtils.ts'),
       './components/Header': path.resolve(__dirname, 'components/Header.tsx'),
       './components/LiveNotification': path.resolve(__dirname, 'components/LiveNotification.tsx'),
       './pages': path.resolve(__dirname, 'pages'),
