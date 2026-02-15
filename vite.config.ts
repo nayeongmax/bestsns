@@ -32,7 +32,6 @@ export default defineConfig({
       './components/Header': path.resolve(__dirname, 'components/Header.tsx'),
       './components/LiveNotification': path.resolve(__dirname, 'components/LiveNotification.tsx'),
       './pages': path.resolve(__dirname, 'pages'),
-      'html2canvas': path.resolve(__dirname, 'stub-html2canvas.js'), // 빌드 실패 방지 (미사용)
     },
   },
   build: {
