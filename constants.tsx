@@ -54,11 +54,11 @@ export const MIN_WITHDRAW_FREELANCER = 5000;
 export const ADVERTISER_FEE_RATE = 0.25;        // 광고주 수수료 25%
 export const FREELANCER_SETTLEMENT_FEE_RATE = 0.05;  // 프리랜서 정산 수수료 5%
 export const FREELANCER_WITHHOLDING_RATE = 0.033;   // 프리랜서 원천징수 3.3%
-export const PAYMENT_GATEWAY_FEE_RATE = 0.033;      // 결제망 수수료 3.3%
-export const VAT_RATE = 0.1;                        // 부가세 10% (수수료+결제망에 대한)
+export const PAYMENT_GATEWAY_FEE_RATE = 0.033;      // 결제수수료/결제망 수수료 3.3%
+export const VAT_RATE = 0.1;                        // 부가세 10% (광고주 수수료에 대한)
 
-/** 프리랜서 실지급액 = 계약금액 × (1 - 5% - 3.3%) = 91.7% */
-export const FREELANCER_FEE_RATE = FREELANCER_SETTLEMENT_FEE_RATE + FREELANCER_WITHHOLDING_RATE;
+/** 프리랜서 실지급액 = 계약금액 × (1 - 5% - 3.3% - 3.3%) = 88.4% */
+export const FREELANCER_FEE_RATE = FREELANCER_SETTLEMENT_FEE_RATE + FREELANCER_WITHHOLDING_RATE + PAYMENT_GATEWAY_FEE_RATE;
 
 export function getFreelancerBalance(userId: string): number {
   try {
@@ -395,11 +395,19 @@ export function setPartTimeJobRequests(requests: PartTimeJobRequest[]): void {
   localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(toStore));
 }
 
-/** 광고금액 기준 수수료 계산: 25% + 수수료의 부가세 10% */
+/** 광고금액 기준 플랫폼 수수료: 광고주 수수료 25% + 부가세 10% */
 export function calcJobRequestFee(adAmount: number): number {
   const baseFee = Math.round(adAmount * ADVERTISER_FEE_RATE); // 25%
-  const vat = Math.round(baseFee * 0.1);
+  const vat = Math.round(baseFee * VAT_RATE); // 10%
   return baseFee + vat;
+}
+
+/** 광고주 총 결제금액: 광고금액 + 플랫폼수수료(25%+부가세10%) + 결제망수수료 3.3% */
+export function calcAdvertiserTotalPayment(adAmount: number): number {
+  const platformFee = calcJobRequestFee(adAmount);
+  const beforePg = adAmount + platformFee;
+  const pgFee = Math.round(beforePg * PAYMENT_GATEWAY_FEE_RATE);
+  return beforePg + pgFee;
 }
 
 /** localStorage 용량 제한(약 5MB) 방지 - 증빙 이미지 강력 압축. 최대 480px, JPEG 0.45 → 약 30~80KB */
