@@ -7,6 +7,7 @@ import {
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import {
+  PAYMENT_GATEWAY_FEE_RATE,
   getFreelancerBalance,
   getFreelancerHistory,
   withdrawFreelancerEarnings,
@@ -517,7 +518,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                           {jr.paid && <span className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm">결제 완료</span>}
                         </>
                       )}
-                      <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-gray-600 text-white font-black hover:bg-gray-700">수정하기</Link>
+                      {!hasEstimate && <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-gray-600 text-white font-black hover:bg-gray-700">수정하기</Link>}
                       <button type="button" onClick={() => { if (!confirm('정말 삭제하시겠습니까?')) return; const next = jobRequests.filter((r) => r.id !== jr.id); setPartTimeJobRequests(next); setJobRequests(next); alert('삭제되었습니다.'); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
                     </div>
                   </div>
@@ -636,103 +637,110 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         </div>
       )}
 
-      {estimateViewJr && estimateViewJr.operatorEstimate && (
+      {estimateViewJr && estimateViewJr.operatorEstimate && (() => {
+        const est = estimateViewJr.operatorEstimate;
+        const subTotal = est.totalAmount;
+        const platformFee = est.fee;
+        const beforePg = subTotal + platformFee;
+        const pgFee = Math.round(beforePg * PAYMENT_GATEWAY_FEE_RATE);
+        const totalPay = beforePg + pgFee;
+        const handlePdfDownload = () => {
+          const html = document.getElementById('estimate-pdf-content');
+          if (!html) return;
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) {
+            window.print();
+            return;
+          }
+          const itemsHtml = (est.items && est.items.length > 0)
+            ? est.items.map((it: { seq: number; content: string; unitPrice: number; quantity: number; amount: number; remarks?: string }) =>
+              `<tr><td class="tc">${it.seq}</td><td>${it.content}</td><td class="tr">${it.unitPrice.toLocaleString()}</td><td class="tc">${it.quantity}</td><td class="tr b">${it.amount.toLocaleString()}</td><td>${it.remarks || ''}</td></tr>`
+            ).join('')
+            : `<tr><td class="tc">1</td><td>${estimateViewJr.workContent}</td><td class="tr">${est.unitPrice?.toLocaleString() ?? '-'}</td><td class="tc">${est.quantity ?? 1}</td><td class="tr b">${est.totalAmount.toLocaleString()}</td><td></td></tr>`;
+          printWindow.document.write(`
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>견적서</title>
+<style>body{font-family:Malgun Gothic,sans-serif;padding:24px;max-width:800px;margin:0 auto;font-size:13px}
+h2{text-align:center;margin:0 0 8px}.meta{text-align:center;color:#666;font-size:12px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.section{background:#f9fafb;padding:12px;border-radius:8px}
+.label{font-size:11px;font-weight:bold;color:#666;margin-bottom:6px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{border:1px solid #e5e7eb;padding:8px;text-align:left}
+th{background:#ecfdf5;font-weight:bold;font-size:11px}
+.tc{text-align:center}.tr{text-align:right}.b{font-weight:bold}
+.fee-detail{font-size:11px;color:#666;margin-top:4px}
+.total{font-size:16px;font-weight:bold;color:#059669}
+.footer{text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af}
+</style></head><body>
+<h2>THEBEST<span style="color:#2563eb">SNS</span> 견적서</h2>
+<p class="meta">견적일자: ${new Date(est.sentAt).toLocaleDateString('ko-KR')}${est.workName ? ' · ' + est.workName : ''}</p>
+<div class="grid"><div class="section"><div class="label">공급처</div><p><strong>상호</strong> THEBESTSNS<br><strong>대표자</strong> 김나영<br><strong>주소</strong> 대구광역시 달성군 현풍로6길 5<br><strong>사업자번호</strong> 409-30-51469</p></div>
+<div class="section"><div class="label">수신처</div><p><strong>${est.recipientName || '광고주'}</strong><br>${est.recipientContact || estimateViewJr.contact}</p></div></div>
+${est.workPeriod ? `<p class="label">작업기간 : ${est.workPeriod}</p>` : ''}
+<table><thead><tr><th class="tc">순번</th><th>내용</th><th class="tr">단가</th><th class="tc">수량</th><th class="tr">금액</th><th>비고</th></tr></thead><tbody>${itemsHtml}</tbody></table>
+<div style="margin-top:16px; padding:12px; background:#f9fafb; border-radius:8px">
+<div style="display:flex;justify-content:space-between"><span>소계 (광고금액)</span><span><strong>${subTotal.toLocaleString()}원</strong></span></div>
+<div style="display:flex;justify-content:space-between;margin-top:8px"><span>플랫폼 수수료 (광고금액의 25% + 부가세 10%)<span class="fee-detail"><br>${subTotal.toLocaleString()} × 25% = ${Math.round(subTotal * 0.25).toLocaleString()}원, 부가세 ${Math.round(Math.round(subTotal * 0.25) * 0.1).toLocaleString()}원</span></span><span><strong>${platformFee.toLocaleString()}원</strong></span></div>
+<div style="display:flex;justify-content:space-between;margin-top:8px"><span>결제망 수수료 (3.3%)<span class="fee-detail"><br>(${subTotal.toLocaleString()}+${platformFee.toLocaleString()}) × 3.3%</span></span><span><strong>${pgFee.toLocaleString()}원</strong></span></div>
+<div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:2px solid #d1d5db"><span class="total">총 결제금액</span><span class="total">${totalPay.toLocaleString()}원</span></div>
+</div>
+${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안내: ${est.note}</p>` : ''}
+<div class="footer"><p style="font-size:18px;font-weight:bold;color:#1f2937">THEBEST<span style="color:#2563eb">SNS</span></p><p>© THEBESTSNS. All rights reserved.</p></div>
+</body></html>`);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => { printWindow.print(); printWindow.close(); }, 300);
+        };
+        return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto my-8">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+          <div id="estimate-pdf-content" className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto my-8">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between">
               <h4 className="font-black text-gray-900">견적서</h4>
               <button type="button" onClick={() => setEstimateViewJr(null)} className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">✕</button>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-8 space-y-6">
               <div className="text-center border-b border-gray-200 pb-4">
                 <p className="text-2xl font-black text-gray-900">THEBEST<span className="text-blue-600">SNS</span> 견적서</p>
-                <p className="text-xs text-gray-500 mt-1">견적일자: {new Date(estimateViewJr.operatorEstimate.sentAt).toLocaleDateString('ko-KR')}</p>
+                <p className="text-xs text-gray-500 mt-1">견적일자: {new Date(est.sentAt).toLocaleDateString('ko-KR')}{est.workName && ` · ${est.workName}`}</p>
               </div>
-              <div className="grid grid-cols-2 gap-6 border-b border-gray-200 pb-6">
-                <div>
-                  <p className="text-xs font-black text-gray-500 uppercase mb-2">공급처</p>
-                  <div className="text-sm text-gray-700 space-y-1">
-                    <p><strong>상호</strong> THEBESTSNS</p>
-                    <p><strong>대표자</strong> 김나영</p>
-                    <p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p>
-                    <p><strong>사업자번호</strong> 409-30-51469</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-black text-gray-500 uppercase mb-2">수신처</p>
-                  <div className="text-sm text-gray-700 space-y-1">
-                    <p><strong>{estimateViewJr.operatorEstimate.recipientName || '광고주'}</strong></p>
-                    <p>{estimateViewJr.operatorEstimate.recipientContact || estimateViewJr.contact}</p>
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-8 border-b border-gray-200 pb-6">
+                <div><p className="text-xs font-black text-gray-500 uppercase mb-2">공급처</p><div className="text-sm text-gray-700 space-y-1"><p><strong>상호</strong> THEBESTSNS</p><p><strong>대표자</strong> 김나영</p><p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p><p><strong>사업자번호</strong> 409-30-51469</p></div></div>
+                <div><p className="text-xs font-black text-gray-500 uppercase mb-2">수신처</p><div className="text-sm text-gray-700 space-y-1"><p><strong>{est.recipientName || '광고주'}</strong></p><p>{est.recipientContact || estimateViewJr.contact}</p></div></div>
               </div>
+              {est.workPeriod && <p className="text-sm font-black text-gray-600">작업기간 : {est.workPeriod}</p>}
               <div>
                 <p className="text-xs font-black text-gray-500 uppercase mb-3">견적항목</p>
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-emerald-50 text-gray-700">
-                        <th className="px-4 py-2 text-left font-black">작업제목</th>
-                        <th className="px-4 py-2 text-left font-black">내용</th>
-                        <th className="px-4 py-2 text-right font-black">단가</th>
-                        <th className="px-4 py-2 text-center font-black">수량</th>
-                        <th className="px-4 py-2 text-right font-black">금액</th>
-                        <th className="px-4 py-2 text-left font-black">작업기간</th>
-                      </tr>
-                    </thead>
+                    <thead><tr className="bg-emerald-50 text-gray-700"><th className="px-4 py-2 text-center font-black w-14">순번</th><th className="px-4 py-2 text-left font-black">내용</th><th className="px-4 py-2 text-right font-black w-24">단가</th><th className="px-4 py-2 text-center font-black w-16">수량</th><th className="px-4 py-2 text-right font-black w-28">금액</th><th className="px-4 py-2 text-left font-black w-24">비고</th></tr></thead>
                     <tbody>
-                      {(estimateViewJr.operatorEstimate.items && estimateViewJr.operatorEstimate.items.length > 0)
-                        ? estimateViewJr.operatorEstimate.items.map((item, i) => (
-                            <tr key={i} className="border-t border-gray-100">
-                              <td className="px-4 py-3 font-bold text-gray-900">{item.workTitle}</td>
-                              <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate" title={item.content}>{item.content}</td>
-                              <td className="px-4 py-3 text-right">{item.unitPrice.toLocaleString()}</td>
-                              <td className="px-4 py-3 text-center">{item.quantity}</td>
-                              <td className="px-4 py-3 text-right font-bold">{item.amount.toLocaleString()}</td>
-                              <td className="px-4 py-3 text-gray-600 text-xs">{item.workPeriod}</td>
-                            </tr>
-                          ))
-                        : (
-                          <tr className="border-t border-gray-100">
-                            <td className="px-4 py-3 font-bold text-gray-900">{estimateViewJr.title}</td>
-                            <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">{estimateViewJr.workContent}</td>
-                            <td className="px-4 py-3 text-right">{estimateViewJr.operatorEstimate.unitPrice?.toLocaleString() ?? '-'}</td>
-                            <td className="px-4 py-3 text-center">{estimateViewJr.operatorEstimate.quantity ?? 1}</td>
-                            <td className="px-4 py-3 text-right font-bold">{estimateViewJr.operatorEstimate.totalAmount.toLocaleString()}</td>
-                            <td className="px-4 py-3 text-gray-600 text-xs">{estimateViewJr.workPeriodStart} ~ {estimateViewJr.workPeriodEnd}</td>
-                          </tr>
-                        )}
+                      {(est.items && est.items.length > 0) ? est.items.map((item: { seq: number; content: string; unitPrice: number; quantity: number; amount: number; remarks?: string }, i: number) => (
+                        <tr key={i} className="border-t border-gray-100"><td className="px-4 py-3 text-center font-bold">{item.seq}</td><td className="px-4 py-3 text-gray-700 whitespace-pre-wrap">{item.content}</td><td className="px-4 py-3 text-right">{item.unitPrice.toLocaleString()}</td><td className="px-4 py-3 text-center">{item.quantity}</td><td className="px-4 py-3 text-right font-bold">{item.amount.toLocaleString()}</td><td className="px-4 py-3 text-gray-600 text-xs">{item.remarks || ''}</td></tr>
+                      )) : (
+                        <tr className="border-t border-gray-100"><td className="px-4 py-3 text-center font-bold">1</td><td className="px-4 py-3 text-gray-700">{estimateViewJr.workContent}</td><td className="px-4 py-3 text-right">{est.unitPrice?.toLocaleString() ?? '-'}</td><td className="px-4 py-3 text-center">{est.quantity ?? 1}</td><td className="px-4 py-3 text-right font-bold">{est.totalAmount.toLocaleString()}</td><td className="px-4 py-3 text-gray-600 text-xs"></td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-4 space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">소계</span>
-                    <span className="font-bold">{estimateViewJr.operatorEstimate.totalAmount.toLocaleString()}원</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">수수료 (25% + 부가세)</span>
-                    <span className="font-bold">{estimateViewJr.operatorEstimate.fee.toLocaleString()}원</span>
-                  </div>
-                  <div className="flex justify-between pt-3 mt-3 border-t-2 border-gray-200">
-                    <span className="font-black text-gray-900">총 결제금액</span>
-                    <span className="font-black text-emerald-600 text-lg">{(estimateViewJr.operatorEstimate.totalAmount + estimateViewJr.operatorEstimate.fee).toLocaleString()}원</span>
-                  </div>
+                <div className="mt-4 space-y-2 text-sm bg-gray-50 p-4 rounded-xl">
+                  <div className="flex justify-between"><span className="text-gray-600">소계 (광고금액)</span><span className="font-bold">{subTotal.toLocaleString()}원</span></div>
+                  <div className="flex justify-between"><span className="text-gray-600">플랫폼 수수료 (광고금액 25% + 부가세 10%)<br /><span className="text-xs text-gray-500">{subTotal.toLocaleString()} × 25% = {Math.round(subTotal * 0.25).toLocaleString()}원, 부가세 {Math.round(Math.round(subTotal * 0.25) * 0.1).toLocaleString()}원</span></span><span className="font-bold">{platformFee.toLocaleString()}원</span></div>
+                  <div className="flex justify-between"><span className="text-gray-600">결제망 수수료 (3.3%)<br /><span className="text-xs text-gray-500">({subTotal.toLocaleString()}+{platformFee.toLocaleString()}) × 3.3%</span></span><span className="font-bold">{pgFee.toLocaleString()}원</span></div>
+                  <div className="flex justify-between pt-3 mt-3 border-t-2 border-gray-200"><span className="font-black text-gray-900">총 결제금액</span><span className="font-black text-emerald-600 text-lg">{totalPay.toLocaleString()}원</span></div>
                 </div>
-                {estimateViewJr.operatorEstimate.note && <p className="mt-3 text-gray-600 text-sm">참고: {estimateViewJr.operatorEstimate.note}</p>}
+                {est.note && <p className="mt-3 text-gray-600 text-sm">추가 안내: {est.note}</p>}
               </div>
-              <div className="pt-4 border-t border-gray-200 text-center">
-                <p className="text-xl font-black text-gray-800">THEBEST<span className="text-blue-600">SNS</span></p>
-                <p className="text-xs text-gray-400 mt-1">© THEBESTSNS. All rights reserved.</p>
-              </div>
+              <div className="pt-4 border-t border-gray-200 text-center"><p className="text-xl font-black text-gray-800">THEBEST<span className="text-blue-600">SNS</span></p><p className="text-xs text-gray-400 mt-1">© THEBESTSNS. All rights reserved.</p></div>
               <div className="flex gap-3 justify-center pt-2">
                 <button onClick={() => setEstimateViewJr(null)} className="px-8 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">닫기</button>
+                <button onClick={handlePdfDownload} className="px-8 py-3 rounded-xl bg-slate-600 text-white font-black hover:bg-slate-700">내려받기</button>
                 <button onClick={() => { setEstimateViewJr(null); navigate('/payment/alba', { state: { jobRequest: estimateViewJr } }); }} className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">결제하기</button>
               </div>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {workConfirmModal && (() => {
         const { task, isAdvertiserView, step = 'confirmed' } = workConfirmModal;
