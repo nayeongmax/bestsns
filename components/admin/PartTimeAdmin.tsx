@@ -28,6 +28,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [estimateModal, setEstimateModal] = useState<PartTimeJobRequest | null>(null);
   const [estimateForm, setEstimateForm] = useState<{ workName: string; recipientName: string; recipientContact: string; workPeriodStart: string; workPeriodEnd: string; items: EstimateItem[]; note: string }>({ workName: '', recipientName: '', recipientContact: '', workPeriodStart: '', workPeriodEnd: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
   const [parttimeDateOffset, setParttimeDateOffset] = useState(0);
+  const [revenueMonthOffset, setRevenueMonthOffset] = useState(0);
 
   useEffect(() => {
     processAutoApprovals();
@@ -142,6 +143,16 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     (t) => (t.workPeriod?.start || t.applicationPeriod?.start) === parttimeViewDate
   );
 
+  const revenueViewMonth = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + revenueMonthOffset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  })();
+  const tasksWithSelectedForRevenue = tasksWithSelectedBase.filter((t) => {
+    const taskDate = t.workPeriod?.start || t.applicationPeriod?.start || t.createdAt;
+    return taskDate && taskDate.startsWith(revenueViewMonth);
+  });
+
   const saveTasks = (next: PartTimeTask[]) => {
     setPartTimeTasks(next);
     setTasks(next);
@@ -198,7 +209,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
 
   const handleSelect = (task: PartTimeTask, userId: string) => {
     const applicant = task.applicants.find((a) => a.userId === userId);
-    let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true } : a)) };
+    const now = new Date().toISOString();
+    let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true, selectedAt: now } : a)) };
     if (task.applicantUserId && !task.jobRequestId) {
       const jobReqs = getPartTimeJobRequests().filter((jr) => jr.applicantUserId === task.applicantUserId && (jr.paid || jr.status === 'pending'));
       const linkedIds = new Set(getPartTimeTasks().filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
@@ -240,28 +252,19 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     alert('수정요청 알림이 전송되었습니다.');
   };
 
-  /** 광고주 전송: 운영자 만족 시 → 광고주 확인 알림, 프리랜서에게 3일 후 확인완료 알림 */
+  /** 광고주 전송: 운영자 만족 시 → 광고주 확인 알림, 광고주가 링크확인·수정·구매확정 가능 */
   const handleSendToAdvertiser = (task: PartTimeTask) => {
     const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
     if (selectedWithLink.length === 0) return;
-    const now = new Date();
-    const autoAt = new Date(now.getTime() + 72 * 60 * 60 * 1000);
+    const now = new Date().toISOString();
     const next = tasks.map((t) =>
-      t.id !== task.id ? t : {
-        ...t,
-        applicants: t.applicants.map((a) =>
-          a.selected && hasWorkLink(a) ? { ...a, deliveryAt: now.toISOString(), autoApproveAt: autoAt.toISOString() } : a
-        ),
-      }
+      t.id !== task.id ? t : { ...t, sentToAdvertiserAt: now }
     );
     saveTasks(next);
-    if (task.jobRequestId && task.applicantUserId && addNotif) {
-      addNotif(task.applicantUserId, 'approval', '결과물 확인 요청', `[${task.title}] 프리랜서 작업 결과물이 제출되었습니다. 마이페이지 → 알바의뢰 탭에서 확인해 주세요.`, '결과물 확인 후 3일 내 이의 없으면 자동 확정됩니다.');
+    if (task.applicantUserId && addNotif) {
+      addNotif(task.applicantUserId, 'approval', '작업 완료·결과물 확인', `[${task.title}] 프리랜서 작업이 완료되었습니다. 마이페이지 → 알바의뢰 탭에서 링크 확인 후 구매확정해 주세요.`);
     }
-    selectedWithLink.forEach((a) => {
-      if (addNotif) addNotif(a.userId, 'freelancer', '확인완료 예정', `[${task.title}] 운영자가 광고주에게 결과물을 전송했습니다. 3일 후 확인되면 수익통장에 ${task.reward.toLocaleString()}원이 자동 적립됩니다.`, '3일 후 자동 적립');
-    });
-    alert('광고주에게 결과물 전송 알림을 보냈습니다. 프리랜서에게 3일 후 확인완료 예정 안내를 보냈습니다.');
+    alert('광고주에게 결과물 전송 알림을 보냈습니다.');
   };
 
   const pendingWithdrawals = withdrawRequests.filter((r) => r.status === 'pending');
@@ -508,40 +511,100 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
 
       {adminTab === 'freelancer' && (
       <div className="space-y-10">
-        {needsSelectionTasks.length > 0 && (
+        {needsSelectionTasks.length > 0 ? (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
             <h4 className="font-black text-amber-800 mb-2">프리랜서 선정 필요</h4>
-            <p className="text-sm text-amber-700 mb-3">신청 기간이 종료된 작업 {needsSelectionTasks.length}건에서 프리랜서 선정이 필요합니다.</p>
+            <p className="text-sm text-amber-700 mb-3">신청 기간이 종료된 작업 {needsSelectionTasks.length}건에서 프리랜서 선정이 필요합니다. 상세 페이지에서 프리랜서를 선정해 주세요.</p>
             <div className="flex flex-wrap gap-2">
-              {needsSelectionTasks.slice(0, 5).map((t) => (
-                <button key={t.id} type="button" onClick={() => navigate(`/part-time/${t.id}`)} className="px-4 py-2 rounded-xl bg-amber-200 text-amber-900 font-bold text-sm hover:bg-amber-300">
+              {needsSelectionTasks.slice(0, 10).map((t) => (
+                <Link key={t.id} to={`/part-time/${t.id}`} className="px-4 py-2 rounded-xl bg-amber-200 text-amber-900 font-bold text-sm hover:bg-amber-300">
                   {t.title} ({t.applicants.length}명 신청)
-                </button>
+                </Link>
               ))}
             </div>
           </div>
+        ) : (
+          <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
+            프리랜서 선정이 필요한 작업이 없습니다. 누구나알바 페이지에서 작업을 등록하고, 신청 기간이 끝나면 여기서 선정해 주세요.
+          </div>
         )}
+      </div>
+      )}
 
+      {adminTab === 'revenue' && (
+      <div className="space-y-10">
+      {/* 수익탭: 거래 목록 (ALBA-상품번호, 광고주/프리랜서, 작업확정서/상세확인) */}
+      {(() => {
+        const tradeTasks = tasks.filter((t) => t.jobRequestId && t.applicantUserId && t.applicants.some((a) => a.selected));
+        if (tradeTasks.length === 0) return null;
+        return (
+          <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+            <h3 className="text-xl font-black text-gray-900 mb-1">거래 목록</h3>
+            <p className="text-sm text-gray-500 mb-6">상품번호(ALBA), 광고주·프리랜서, 작업확정서·상세 페이지 확인</p>
+            <div className="overflow-x-auto border border-gray-100 rounded-xl">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-xs font-black text-gray-500 uppercase">
+                  <tr>
+                    <th className="px-4 py-3 text-left">상품번호</th>
+                    <th className="px-4 py-3 text-left">견적제목</th>
+                    <th className="px-4 py-3 text-left">광고주</th>
+                    <th className="px-4 py-3 text-left">프리랜서</th>
+                    <th className="px-4 py-3 text-center">작업확정서</th>
+                    <th className="px-4 py-3 text-center">상세확인</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {tradeTasks.map((t) => {
+                    const jr = jobRequests.find((jr) => jr.id === t.jobRequestId);
+                    const selectedOne = t.applicants.find((a) => a.selected);
+                    const adv = members.find((m) => m.id === t.applicantUserId);
+                    return (
+                      <tr key={t.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-black text-gray-900">{t.projectNo ?? t.id}</td>
+                        <td className="px-4 py-3 font-bold">{jr?.title ?? t.title}</td>
+                        <td className="px-4 py-3">{adv?.nickname ?? '-'}</td>
+                        <td className="px-4 py-3">{selectedOne?.nickname ?? '-'}</td>
+                        <td className="px-4 py-3 text-center">
+                          <Link to={`/part-time/${t.id}`} state={{ showConfirm: true }} className="inline-block px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs hover:bg-blue-200">
+                            작업확정서
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Link to={`/part-time/${t.id}`} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200">
+                            상세확인
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 수익탭: 프리랜서 작업 · 알바비 지급 (월별 필터) */}
       <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-xl font-black text-gray-900 mb-2">프리랜서 작업 · 알바비 지급</h3>
-            <p className="text-sm text-gray-500">작업 상세와 선정된 프리랜서 목록을 확인한 후, 링크를 클릭해 검토하고 수정요청 또는 포인트 지급해 주세요.</p>
+            <p className="text-sm text-gray-500">월별로 확인·지급합니다. 링크를 클릭해 검토하고 수정요청 또는 광고주 전송·포인트 지급해 주세요.</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button type="button" onClick={() => setParttimeDateOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">←</button>
-            <span className="text-sm font-black text-gray-600 min-w-[100px] text-center">{parttimeViewDate}</span>
-            <button type="button" onClick={() => setParttimeDateOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">→</button>
+            <button type="button" onClick={() => setRevenueMonthOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">←</button>
+            <span className="text-sm font-black text-gray-600 min-w-[120px] text-center">{revenueViewMonth}</span>
+            <button type="button" onClick={() => setRevenueMonthOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black">→</button>
           </div>
         </div>
 
-      {tasksWithSelected.length === 0 ? (
+      {tasksWithSelectedForRevenue.length === 0 ? (
         <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
           링크 확인 후 알바비 지급이 필요한 작업이 없습니다.
         </div>
       ) : (
         <ul className="space-y-10">
-          {tasksWithSelected.map((task) => {
+          {tasksWithSelectedForRevenue.map((task) => {
             const sections = task.sections || {};
             const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
             const hasJobRequest = !!task.jobRequestId && !!task.applicantUserId;
@@ -686,7 +749,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                         <button type="button" onClick={() => handleSendToAdvertiser(task)} className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700">
                           광고주 전송 (결과물 확인 요청)
                         </button>
-                        <p className="text-xs text-gray-500 mt-2">광고주에게 결과물 확인 알림을 보내고, 프리랜서에게 3일 후 확인완료 예정 안내를 보냅니다.</p>
+                        <p className="text-xs text-gray-500 mt-2">광고주에게 결과물 확인 알림을 보냅니다. 광고주가 링크확인 후 수정 또는 구매확정할 수 있습니다.</p>
                       </div>
                     )}
                     <p className="text-sm text-gray-500 mt-3">링크를 클릭해 확인 후, 수정요청이 필요하면 수정요청 버튼으로 알림을 보내거나 포인트 지급해 주세요.</p>
@@ -697,6 +760,52 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
           })}
         </ul>
       )}
+      </div>
+
+      {/* 수익탭: 프리랜서 출금 신청 목록 */}
+      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+        <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
+        <p className="text-sm text-gray-500 mb-6">수익통장에서 출금을 신청한 프리랜서 목록입니다. 신청일 기준 익일에 출금됩니다.</p>
+        {pendingWithdrawals.length === 0 ? (
+          <div className="py-8 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">대기 중인 출금 신청이 없습니다.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">신청일시</th>
+                  <th className="px-6 py-4">출금 예정일 (익일)</th>
+                  <th className="px-6 py-4">프리랜서</th>
+                  <th className="px-6 py-4 text-right">금액 (원)</th>
+                  <th className="px-6 py-4">입금 계좌</th>
+                  <th className="px-6 py-4 text-center">처리</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {pendingWithdrawals.map((r) => {
+                  const reqDate = new Date(r.requestedAt);
+                  const nextDay = new Date(reqDate);
+                  nextDay.setDate(reqDate.getDate() + 1);
+                  return (
+                    <tr key={r.id} className="hover:bg-emerald-50/20">
+                      <td className="px-6 py-4 font-bold text-sm text-gray-700">{new Date(r.requestedAt).toLocaleString('ko-KR')}</td>
+                      <td className="px-6 py-4 font-bold text-sm text-emerald-600">{nextDay.toLocaleDateString('ko-KR')}</td>
+                      <td className="px-6 py-4 font-black text-gray-900">{r.nickname}</td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-600">{r.amount.toLocaleString()}원</td>
+                      <td className="px-6 py-4 text-sm"><span className="font-bold text-gray-800">{r.bankName}</span> {r.accountNo}<br /><span className="text-gray-500 text-xs">예금주: {r.ownerName}</span></td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex justify-center gap-2">
+                          <button type="button" onClick={() => { updateFreelancerWithdrawRequestStatus(r.id, 'completed'); refreshWithdrawRequests(); if (addNotif) addNotif(r.userId, 'freelancer', '출금 완료', `${r.amount.toLocaleString()}원이 ${r.bankName} ${r.accountNo} 계좌로 입금되었습니다.`); alert('입금 완료로 표시했습니다.'); }} className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700">입금 완료</button>
+                          <button type="button" onClick={() => { if (!confirm('입금 실패로 표시하시겠습니까?')) return; refundFreelancerWithdrawal(r.userId, r.amount, '출금 실패 환급'); updateFreelancerWithdrawRequestStatus(r.id, 'failed'); refreshWithdrawRequests(); if (addNotif) addNotif(r.userId, 'freelancer', '출금 실패', `출금 신청이 실패하여 ${r.amount.toLocaleString()}원이 수익통장에 환급되었습니다.`); alert('실패로 표시했습니다.'); }} className="px-4 py-2 rounded-lg bg-red-100 text-red-700 font-black text-xs hover:bg-red-200">실패</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
       </div>
       )}
