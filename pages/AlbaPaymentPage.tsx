@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeJobRequest } from '@/types';
-import { getPartTimeJobRequests, setPartTimeJobRequests } from '@/constants';
+import { getPartTimeJobRequests, setPartTimeJobRequests, calcAdvertiserTotalPayment } from '@/constants';
 
 declare const window: any;
 
@@ -30,7 +30,7 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
     );
   }
 
-  const totalAmount = jobRequest.adAmount + jobRequest.fee;
+  const totalAmount = calcAdvertiserTotalPayment(jobRequest.adAmount);
 
   const handlePayment = async () => {
     if (isProcessing) return;
@@ -87,7 +87,7 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
         <div className="space-y-4 mb-8">
           <p className="text-gray-600 font-bold">{jobRequest.title}</p>
           <p className="text-sm text-gray-500">{jobRequest.unitPrice != null && jobRequest.quantity != null ? `단가 ${jobRequest.unitPrice.toLocaleString()}원 × ${jobRequest.quantity}개` : `광고금액: ${jobRequest.adAmount.toLocaleString()}원`}</p>
-          <p className="text-sm text-gray-500">수수료: {jobRequest.fee.toLocaleString()}원</p>
+          <p className="text-sm text-gray-500">플랫폼 수수료(25%+부가세10%): {jobRequest.fee.toLocaleString()}원 / 결제망 수수료(3.3%): {Math.round((jobRequest.adAmount + jobRequest.fee) * 0.033).toLocaleString()}원</p>
           <p className="text-2xl font-black text-emerald-600">총 결제: {totalAmount.toLocaleString()}원</p>
         </div>
         <div className="space-y-4 mb-8">
