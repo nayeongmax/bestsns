@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 /**
  * Fixed: Removed .ts extension from import
  */
-import { EbookProduct, ChannelProduct, SiteNotification, SMMProvider, SMMProduct, SMMOrder, UserProfile, ChannelOrder, StoreOrder, Coupon, NotificationType, GradeConfig, Review } from '../types';
+import { EbookProduct, ChannelProduct, SiteNotification, SMMProvider, SMMProduct, SMMOrder, UserProfile, ChannelOrder, StoreOrder, Coupon, NotificationType, GradeConfig, Review } from '@/types';
 import SnsAdmin from '../components/admin/SnsAdmin.tsx';
 import ChannelAdmin from '../components/admin/ChannelAdmin.tsx';
 import StoreAdmin from '../components/admin/StoreAdmin.tsx';
@@ -134,7 +134,7 @@ const AdminPanel: React.FC<Props> = ({
           />
         )}
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
-        {activeTab === 'parttime' && <PartTimeAdmin addNotif={addNotif} />}
+        {activeTab === 'parttime' && <PartTimeAdmin addNotif={addNotif} members={members} />}
       </main>
     </div>
   );
