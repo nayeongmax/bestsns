@@ -18,6 +18,9 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
 
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'toss'>('card');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [agreeCancel, setAgreeCancel] = useState(false);
+  const [agreeContract, setAgreeContract] = useState(false);
+  const [agreePenalty, setAgreePenalty] = useState(false);
 
   if (!jobRequest || jobRequest.applicantUserId !== user.id) {
     return (
@@ -34,6 +37,10 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
 
   const handlePayment = async () => {
     if (isProcessing) return;
+    if (!agreeCancel || !agreeContract || !agreePenalty) {
+      alert('필수 동의 항목에 모두 체크해 주세요.');
+      return;
+    }
 
     const { PortOne } = window;
     if (!PortOne) return alert('결제 모듈이 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
@@ -99,6 +106,25 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
               </button>
             ))}
           </div>
+        </div>
+        <div className="space-y-4 mb-8 p-6 rounded-2xl bg-gray-50 border border-gray-100">
+          <h4 className="text-sm font-black text-gray-800 mb-3">취소/환불 규정</h4>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            작업 시작 전: 언제든 전액 취소·환불 가능합니다.<br />
+            작업 시작 후: 프리랜서 선정이 끝난 경우 작업내용 전달이 되어 환불이 어렵습니다.
+          </p>
+          <label className="flex items-start gap-3 cursor-pointer mt-4">
+            <input type="checkbox" checked={agreeCancel} onChange={(e) => setAgreeCancel(e.target.checked)} className="mt-1 w-4 h-4 rounded border-gray-300" />
+            <span className="text-sm font-bold">(필수) 취소/환불 규정을 확인하였으며 이에 동의합니다.</span>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer mt-2">
+            <input type="checkbox" checked={agreeContract} onChange={(e) => setAgreeContract(e.target.checked)} className="mt-1 w-4 h-4 rounded border-gray-300" />
+            <span className="text-sm font-bold">(필수) 결제와 동시에 플랫폼과 귀하 사이의 용역 공급 계약이 성립됨에 동의합니다.</span>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer mt-2">
+            <input type="checkbox" checked={agreePenalty} onChange={(e) => setAgreePenalty(e.target.checked)} className="mt-1 w-4 h-4 rounded border-gray-300" />
+            <span className="text-sm font-bold">(필수) 플랫폼 외 직접 거래 시 거래액의 10배 위약벌이 부과됨을 확인하였습니다.</span>
+          </label>
         </div>
         <div className="flex gap-4">
           <button onClick={() => navigate(-1)} className="flex-1 py-4 rounded-xl bg-gray-100 text-gray-700 font-black">취소</button>
