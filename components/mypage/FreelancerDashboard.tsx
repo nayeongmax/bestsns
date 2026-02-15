@@ -856,16 +856,24 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
         const isCheckStep = isAdvertiserView && step === 'check';
 
         const handleAdvertiserConfirm = () => {
-          if (!confirm(`구매를 확정하시겠습니까? ${selectedWithLink.length}명에게 각 ${task.reward.toLocaleString()}원이 수익통장에 지급됩니다.`)) return;
+          const freshTasks = getPartTimeTasks();
+          const freshTask = freshTasks.find((x) => x.id === task.id);
+          const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
+          const toPay = selectedWithLink.filter((a) => !currentPaid.includes(a.userId));
+          if (toPay.length === 0) {
+            alert('이미 수익통장에 지급 완료된 상태입니다. 이중 지급되지 않습니다.');
+            return;
+          }
+          if (!confirm(`구매를 확정하시겠습니까? ${toPay.length}명에게 각 ${task.reward.toLocaleString()}원이 수익통장에 지급됩니다.`)) return;
           const now = new Date().toISOString();
-          selectedWithLink.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
+          toPay.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
           if (addNotif) {
-            selectedWithLink.forEach((a) =>
+            toPay.forEach((a) =>
               addNotif(a.userId, 'freelancer', '구매확정완료', `[${task.title}] 구매확정완료했습니다. ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`)
             );
           }
-          const paidIds = [...(task.paidUserIds || []), ...selectedWithLink.map((a) => a.userId)];
-          const nextTasks = tasks.map((t) =>
+          const paidIds = [...(freshTask?.paidUserIds ?? task.paidUserIds ?? []), ...toPay.map((a) => a.userId)];
+          const nextTasks = freshTasks.map((t) =>
             t.id !== task.id ? t : {
               ...t,
               pointPaid: true,
