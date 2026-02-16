@@ -3,7 +3,16 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, processAutoApprovals, getPartTimeJobRequests } from '@/constants';
+import {
+  fetchPartTimeTasks,
+  fetchPartTimeJobRequests,
+  upsertPartTimeTasks,
+  processAutoApprovalsInDb,
+  fetchFreelancerBalance,
+  setFreelancerBalance,
+  addFreelancerEarningToDb,
+} from '@/parttimeDb';
+import { FREELANCER_FEE_RATE } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -25,7 +34,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const location = useLocation();
   const focusWorkLink = (location.state as { focusWorkLink?: boolean; fromAdmin?: boolean })?.focusWorkLink;
   const fromAdmin = (location.state as { fromAdmin?: boolean })?.fromAdmin;
-  const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
+  const [tasks, setTasks] = useState<PartTimeTask[]>([]);
+  const [jobRequests, setJobRequests] = useState<Awaited<ReturnType<typeof fetchPartTimeJobRequests>>>([]);
   const [isEditingWorkLinks, setIsEditingWorkLinks] = useState(false);
   const [applyComment, setApplyComment] = useState('');
   const [applyContact, setApplyContact] = useState('');
@@ -38,8 +48,20 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const task = tasks.find((t) => t.id === taskId);
 
   useEffect(() => {
-    processAutoApprovals();
-    setTasks(getPartTimeTasks());
+    let cancelled = false;
+    (async () => {
+      try {
+        await processAutoApprovalsInDb();
+        const [taskList, jrList] = await Promise.all([fetchPartTimeTasks(), fetchPartTimeJobRequests()]);
+        if (!cancelled) {
+          setTasks(taskList);
+          setJobRequests(jrList);
+        }
+      } catch (e) {
+        if (!cancelled) console.error('PartTimeTaskDetail load:', e);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [taskId]);
 
   /** 작업 링크 수정 모드: focusWorkLink 또는 수정요청 시 workLinks에 제출된 링크 채우기 */
@@ -87,8 +109,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   }, [task, addNotif]);
 
   const saveTasks = (next: PartTimeTask[]) => {
-    setPartTimeTasks(next);
     setTasks(next);
+    upsertPartTimeTasks(next).catch((e) => console.error('saveTasks:', e));
   };
 
   const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
@@ -135,8 +157,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     const now = new Date().toISOString();
     let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true, selectedAt: now } : a)) };
     if (task.applicantUserId && !task.jobRequestId) {
-      const jobReqs = getPartTimeJobRequests().filter((jr) => jr.applicantUserId === task!.applicantUserId && (jr.paid || jr.status === 'pending'));
-      const linkedIds = new Set(getPartTimeTasks().filter((t) => t.jobRequestId).map((t) => t.jobRequestId));
+      const jobReqs = jobRequests.filter((jr) => jr.applicantUserId === task!.applicantUserId && (jr.paid || jr.status === 'pending'));
+      const linkedIds = new Set(tasks.filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
       const unlinked = jobReqs.find((jr) => !linkedIds.has(jr.id));
       if (unlinked) updatedTask = { ...updatedTask, jobRequestId: unlinked.id };
     }
@@ -242,10 +264,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   };
 
   /** 운영자: 즉시 지급 (기존 포인트 지급) - 작업건당 1회만 수익통장 입금 */
-  const handlePayPoints = (userId?: string) => {
+  const handlePayPoints = async (userId?: string) => {
     if (!task) return;
-    const freshTasks = getPartTimeTasks();
-    const freshTask = freshTasks.find((x) => x.id === task.id);
+    const freshTask = tasks.find((x) => x.id === task.id);
     const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
     const base = userId
       ? task.applicants.filter((a) => a.userId === userId && a.selected && hasWorkLink(a))
@@ -260,23 +281,31 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       return;
     }
     if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 즉시 지급합니다.`)) return;
-    target.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
-    if (addNotif) {
-      target.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
-      );
+    try {
+      const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
+      for (const a of target) {
+        const cur = await fetchFreelancerBalance(a.userId);
+        await setFreelancerBalance(a.userId, cur + netAmount);
+        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
+      }
+      if (addNotif) {
+        target.forEach((a) =>
+          addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
+        );
+      }
+      const paidIds = target.map((a) => a.userId);
+      const allPaid = [...(freshTask?.paidUserIds ?? task.paidUserIds ?? []), ...paidIds];
+      const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
+      const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
+      const next = tasks.map((t) => (t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }));
+      setTasks(next);
+      await upsertPartTimeTasks(next);
+      alert('알바비가 지급되었습니다.');
+      if (!userId) navigate('/part-time');
+    } catch (err) {
+      console.error(err);
+      alert('지급 처리 중 오류가 발생했습니다.');
     }
-    const paidIds = target.map((a) => a.userId);
-    const allPaid = [...(freshTask?.paidUserIds ?? task.paidUserIds ?? []), ...paidIds];
-    const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
-    const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
-    const next = freshTasks.map((t) =>
-      t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }
-    );
-    setPartTimeTasks(next);
-    setTasks(next);
-    alert('알바비가 지급되었습니다.');
-    if (!userId) navigate('/part-time');
   };
 
   /** 운영자: 수정요청 → 프리랜서에게 알림 */
