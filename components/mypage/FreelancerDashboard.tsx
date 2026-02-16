@@ -9,21 +9,26 @@ import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import {
   PAYMENT_GATEWAY_FEE_RATE,
   calcAdvertiserTotalPayment,
-  getFreelancerBalance,
-  getFreelancerHistory,
-  withdrawFreelancerEarnings,
-  addFreelancerWithdrawRequest,
-  addFreelancerEarning,
   MIN_WITHDRAW_FREELANCER,
   FREELANCER_FEE_RATE,
   FREELANCER_SETTLEMENT_FEE_RATE,
   FREELANCER_WITHHOLDING_RATE,
-  getPartTimeTasks,
-  setPartTimeTasks,
-  getPartTimeJobRequests,
-  setPartTimeJobRequests,
-  processAutoApprovals,
 } from '@/constants';
+import {
+  fetchPartTimeTasks,
+  fetchPartTimeJobRequests,
+  upsertPartTimeTasks,
+  upsertPartTimeJobRequests,
+  deletePartTimeJobRequest,
+  processAutoApprovalsInDb,
+  fetchFreelancerBalance,
+  fetchFreelancerHistory,
+  fetchFreelancerWithdrawRequests,
+  withdrawFreelancerEarningsInDb,
+  addFreelancerEarningToDb,
+  setFreelancerBalance,
+} from '@/parttimeDb';
+import type { FreelancerEarningEntry } from '@/types';
 import type { NotificationType } from '@/types';
 
 interface Props {
@@ -45,15 +50,15 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const [showAdvertiserSettlementModal, setShowAdvertiserSettlementModal] = useState(false);
   const [balance, setBalance] = useState(0);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [history, setHistory] = useState<ReturnType<typeof getFreelancerHistory>>([]);
+  const [history, setHistory] = useState<FreelancerEarningEntry[]>([]);
   const [withdrawing, setWithdrawing] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
   const [chartTab, setChartTab] = useState<'daily' | 'monthly'>('daily');
   const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean; step?: 'check' | 'confirmed' } | null>(null);
   const [advertiserRevisionModal, setAdvertiserRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string } | null>(null);
   const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
-  const [jobRequests, setJobRequests] = useState(() => getPartTimeJobRequests());
-  const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
+  const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
+  const [tasks, setTasks] = useState<PartTimeTask[]>([]);
 
   const myJobRequests = useMemo(() => jobRequests.filter((jr) => jr.applicantUserId === user.id), [jobRequests, user.id]);
   const myApprovedRequests = useMemo(() => myJobRequests.filter((jr) => jr.status === 'pending' && !jr.paid), [myJobRequests]);
@@ -80,9 +85,20 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   }, [initialSubTab]);
 
   useEffect(() => {
-    if (freelancerTab === 'alba') processAutoApprovals();
-    setJobRequests(getPartTimeJobRequests());
-    setTasks(getPartTimeTasks());
+    let cancelled = false;
+    (async () => {
+      try {
+        if (freelancerTab === 'alba') await processAutoApprovalsInDb();
+        const [jrList, taskList] = await Promise.all([fetchPartTimeJobRequests(), fetchPartTimeTasks()]);
+        if (!cancelled) {
+          setJobRequests(jrList);
+          setTasks(taskList);
+        }
+      } catch (e) {
+        if (!cancelled) console.error('FreelancerDashboard load:', e);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [freelancerTab]);
 
   /** 입금 내역 (작업 완료 후 지급된 알바비만) */
@@ -128,18 +144,28 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     }
   }, [chartTab, depositEntries]);
 
-  const refresh = () => {
-    setBalance(getFreelancerBalance(user.id));
-    setHistory(getFreelancerHistory(user.id));
+  const refresh = async () => {
+    try {
+      const [b, h] = await Promise.all([fetchFreelancerBalance(user.id), fetchFreelancerHistory(user.id)]);
+      setBalance(b);
+      setHistory(h);
+    } catch (e) {
+      console.error('Freelancer refresh:', e);
+    }
   };
 
   useEffect(() => {
-    refresh();
-    const tasks = getPartTimeTasks();
-    const mySelected = tasks.filter(
-      (t) => !t.pointPaid && t.applicants.some((a) => a.userId === user.id && a.selected)
-    );
-    setSelectedTasks(mySelected);
+    let cancelled = false;
+    (async () => {
+      await refresh();
+      const taskList = await fetchPartTimeTasks();
+      if (cancelled) return;
+      const mySelected = taskList.filter(
+        (t) => !t.pointPaid && t.applicants.some((a) => a.userId === user.id && a.selected)
+      );
+      setSelectedTasks(mySelected);
+    })();
+    return () => { cancelled = true; };
   }, [user.id]);
 
   const handleWithdrawClick = () => {
@@ -160,26 +186,33 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     setShowWithdrawModal(true);
   };
 
-  const handleWithdrawConfirm = () => {
-    if (!bankInfo) return;
+  const handleWithdrawConfirm = async () => {
+    const bank = user.freelancerStatus === 'approved' && user.freelancerApplication
+      ? { bankName: user.freelancerApplication.bankName, accountNo: user.freelancerApplication.accountNo, ownerName: user.freelancerApplication.ownerName }
+      : (user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo);
+    const bankInfo = bank;
+    if (!bankInfo?.bankName?.trim() || !bankInfo?.accountNo?.trim()) return;
     setShowWithdrawModal(false);
     setWithdrawing(true);
-    const result = withdrawFreelancerEarnings(user.id, balance);
-    if (result.success) {
-      addFreelancerWithdrawRequest({
-        userId: user.id,
+    try {
+      const result = await withdrawFreelancerEarningsInDb(user.id, balance, {
         nickname: user.nickname,
-        amount: balance,
         bankName: bankInfo.bankName,
         accountNo: bankInfo.accountNo,
         ownerName: bankInfo.ownerName || user.nickname,
       });
-      setBalance(getFreelancerBalance(user.id));
-      refresh();
-      alert(
-        `출금 신청이 완료되었습니다.\n출금일 기준 익일~3일 이내 신청한 계좌(${bankInfo.bankName} ${bankInfo.accountNo})로 입금됩니다.`
-      );
-    } else {
+      if (result.success) {
+        setBalance(result.newBalance);
+        const h = await fetchFreelancerHistory(user.id);
+        setHistory(h);
+        alert(
+          `출금 신청이 완료되었습니다.\n출금일 기준 익일~3일 이내 신청한 계좌(${bankInfo.bankName} ${bankInfo.accountNo})로 입금됩니다.`
+        );
+      } else {
+        alert('출금 처리에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error(err);
       alert('출금 처리에 실패했습니다.');
     }
     setWithdrawing(false);
@@ -527,7 +560,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                             </>
                           )}
                           {!hasEstimate && <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-gray-600 text-white font-black hover:bg-gray-700">수정하기</Link>}
-                          <button type="button" onClick={() => { if (!confirm('정말 삭제하시겠습니까?')) return; const next = jobRequests.filter((r) => r.id !== jr.id); setPartTimeJobRequests(next); setJobRequests(next); alert('삭제되었습니다.'); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
+                          <button type="button" onClick={async () => { if (!confirm('정말 삭제하시겠습니까?')) return; try { await deletePartTimeJobRequest(jr.id); setJobRequests((prev) => prev.filter((r) => r.id !== jr.id)); alert('삭제되었습니다.'); } catch (e) { console.error(e); alert('삭제에 실패했습니다.'); } }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
                         </div>
                       </div>
                     );
@@ -549,7 +582,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">수정하기</Link>
-                    <button type="button" onClick={() => { if (!confirm('정말 삭제하시겠습니까?')) return; const next = jobRequests.filter((r) => r.id !== jr.id); setPartTimeJobRequests(next); setJobRequests(next); alert('삭제되었습니다.'); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
+                    <button type="button" onClick={async () => { if (!confirm('정말 삭제하시겠습니까?')) return; try { await deletePartTimeJobRequest(jr.id); setJobRequests((prev) => prev.filter((r) => r.id !== jr.id)); alert('삭제되었습니다.'); } catch (e) { console.error(e); alert('삭제에 실패했습니다.'); } }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
                   </div>
                 </div>
               ))}
@@ -855,9 +888,8 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
         const deductedReward = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
         const isCheckStep = isAdvertiserView && step === 'check';
 
-        const handleAdvertiserConfirm = () => {
-          const freshTasks = getPartTimeTasks();
-          const freshTask = freshTasks.find((x) => x.id === task.id);
+        const handleAdvertiserConfirm = async () => {
+          const freshTask = tasks.find((x) => x.id === task.id);
           const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
           const toPay = selectedWithLink.filter((a) => !currentPaid.includes(a.userId));
           if (toPay.length === 0) {
@@ -865,26 +897,36 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
             return;
           }
           if (!confirm(`구매를 확정하시겠습니까? ${toPay.length}명에게 각 ${task.reward.toLocaleString()}원이 수익통장에 지급됩니다.`)) return;
-          const now = new Date().toISOString();
-          toPay.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
-          if (addNotif) {
-            toPay.forEach((a) =>
-              addNotif(a.userId, 'freelancer', '구매확정완료', `[${task.title}] 구매확정완료했습니다. ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`)
-            );
-          }
-          const paidIds = [...(freshTask?.paidUserIds ?? task.paidUserIds ?? []), ...toPay.map((a) => a.userId)];
-          const nextTasks = freshTasks.map((t) =>
-            t.id !== task.id ? t : {
-              ...t,
-              pointPaid: true,
-              paidUserIds: paidIds,
-              applicants: t.applicants.map((a) => (a.selected && selectedWithLink.some((s) => s.userId === a.userId) ? { ...a, advertiserConfirmedAt: now } : a)),
+          try {
+            const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
+            for (const a of toPay) {
+              const cur = await fetchFreelancerBalance(a.userId);
+              await setFreelancerBalance(a.userId, cur + netAmount);
+              await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
             }
-          );
-          setPartTimeTasks(nextTasks);
-          setTasks(nextTasks);
-          setWorkConfirmModal({ task: { ...task, pointPaid: true, paidUserIds: paidIds }, isAdvertiserView: true, step: 'confirmed' });
-          alert('구매확정완료했습니다. 프리랜서 수익통장에 작업 대금이 적립되었습니다.');
+            if (addNotif) {
+              toPay.forEach((a) =>
+                addNotif(a.userId, 'freelancer', '구매확정완료', `[${task.title}] 구매확정완료했습니다. ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`)
+              );
+            }
+            const now = new Date().toISOString();
+            const paidIds = [...(freshTask?.paidUserIds ?? task.paidUserIds ?? []), ...toPay.map((a) => a.userId)];
+            const nextTasks = tasks.map((t) =>
+              t.id !== task.id ? t : {
+                ...t,
+                pointPaid: true,
+                paidUserIds: paidIds,
+                applicants: t.applicants.map((a) => (a.selected && selectedWithLink.some((s) => s.userId === a.userId) ? { ...a, advertiserConfirmedAt: now } : a)),
+              }
+            );
+            setTasks(nextTasks);
+            await upsertPartTimeTasks(nextTasks);
+            setWorkConfirmModal({ task: { ...task, pointPaid: true, paidUserIds: paidIds }, isAdvertiserView: true, step: 'confirmed' });
+            alert('구매확정완료했습니다. 프리랜서 수익통장에 작업 대금이 적립되었습니다.');
+          } catch (err) {
+            console.error(err);
+            alert('처리 중 오류가 발생했습니다.');
+          }
         };
 
         const handlePdfDownload = () => {
@@ -1044,8 +1086,8 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                       applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, revisionRequest: text } : a)),
                     }
                   );
-                  setPartTimeTasks(next);
                   setTasks(next);
+                  upsertPartTimeTasks(next).catch((e) => console.error('수정요청 저장:', e));
                   if (addNotif) {
                     addNotif(userId, 'revision', '작업 수정요청', `[${task.title}] 광고주가 수정을 요청했습니다. ${text}`, text);
                     if (task.createdBy && task.createdBy !== userId) addNotif(task.createdBy, 'revision', '광고주 수정요청', `[${task.title}] 광고주가 프리랜서에게 수정을 요청했습니다. (${advertiserRevisionModal.nickname}) ${text}`, text);
