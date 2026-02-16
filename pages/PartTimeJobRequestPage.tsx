@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { NotificationType, PartTimeJobRequest } from '@/types';
-import { getPartTimeJobRequests, setPartTimeJobRequests, compressImageForStorage } from '@/constants';
+import { compressImageForStorage } from '@/constants';
+import { upsertPartTimeJobRequest, deletePartTimeJobRequest } from '@/parttimeDb';
 
 const todayStr = () => {
   const d = new Date();
@@ -78,7 +79,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       alert('알바광고 신청제목을 입력해 주세요.');
@@ -93,9 +94,8 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       return;
     }
     try {
-      const requests = getPartTimeJobRequests();
       if (editRequest && editRequest.applicantUserId === user.id) {
-        const updated = {
+        const updated: PartTimeJobRequest = {
           ...editRequest,
           title: title.trim(),
           workContent: workContent.trim(),
@@ -107,14 +107,14 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           exampleImages,
           adAmount: editRequest.adAmount ?? 0,
           fee: editRequest.fee ?? 0,
-          status: 'pending_review' as const,
+          status: 'pending_review',
           rejectReason: undefined,
         };
-        setPartTimeJobRequests(requests.map((r) => (r.id === editRequest.id ? updated : r)));
+        await upsertPartTimeJobRequest(updated);
         setShowModal(true);
       } else {
         const plTrimmed = platformLinks.map((s) => s.trim()).filter(Boolean);
-        const newRequest = {
+        const newRequest: PartTimeJobRequest = {
           id: `jr_${Date.now()}`,
           title: title.trim(),
           workContent: workContent.trim(),
@@ -129,14 +129,15 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           quantity: 1,
           fee: 0,
           applicantUserId: user.id,
-          status: 'pending_review' as const,
+          status: 'pending_review',
           paid: false,
           createdAt: new Date().toISOString(),
         };
-        setPartTimeJobRequests([newRequest, ...requests]);
+        await upsertPartTimeJobRequest(newRequest);
         setShowModal(true);
       }
     } catch (err) {
+      console.error(err);
       alert('저장 중 오류가 발생했습니다. 첨부 이미지 개수를 줄이거나 용량이 큰 이미지를 제거한 후 다시 시도해 주세요.');
     }
   };
@@ -152,14 +153,18 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
     else navigate('/part-time');
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!editRequest || editRequest.applicantUserId !== user.id) return;
     if (!confirm('정말 이 의뢰를 삭제하시겠습니까?')) return;
-    const requests = getPartTimeJobRequests().filter((r) => r.id !== editRequest.id);
-    setPartTimeJobRequests(requests);
-    alert('삭제되었습니다.');
-    if (fromAlba) navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
-    else navigate('/part-time');
+    try {
+      await deletePartTimeJobRequest(editRequest.id);
+      alert('삭제되었습니다.');
+      if (fromAlba) navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
+      else navigate('/part-time');
+    } catch (err) {
+      console.error(err);
+      alert('삭제에 실패했습니다.');
+    }
   };
 
   return (
