@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '../types';
-import type { PartTimeTask, PartTimeTaskSections, PartTimePostBlock } from '../types';
-import { getFreelancerBalance, MIN_WITHDRAW_FREELANCER, getPartTimeTasks, setPartTimeTasks, processAutoApprovals, getPartTimeJobRequests, generateProjectNo, compressImageForStorage } from '../constants';
+import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock } from '../types';
+import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '../constants';
+import {
+  fetchPartTimeTasks,
+  fetchPartTimeJobRequests,
+  upsertPartTimeTask,
+  fetchFreelancerBalance,
+  fetchPartTimeCompletedIds,
+  processAutoApprovalsInDb,
+} from '@/parttimeDb';
 
 interface Props {
   user: UserProfile | null;
@@ -12,23 +20,37 @@ interface Props {
 const PartTimePage: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
-  const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
+  const [tasks, setTasks] = useState<PartTimeTask[]>([]);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState('');
   const [weekOffset, setWeekOffset] = useState(0);
 
   useEffect(() => {
-    processAutoApprovals();
-    setTasks(getPartTimeTasks());
-  }, []);
-
-  useEffect(() => {
-    if (user?.id) setBalance(getFreelancerBalance(user.id));
+    let cancelled = false;
+    (async () => {
+      try {
+        await processAutoApprovalsInDb();
+        const [taskList, completedSet] = await Promise.all([fetchPartTimeTasks(), user?.id ? fetchPartTimeCompletedIds(user.id) : Promise.resolve(new Set<string>())]);
+        if (!cancelled) {
+          setTasks(taskList);
+          setCompletedIds(completedSet);
+        }
+      } catch (e) {
+        if (!cancelled) console.error('PartTime tasks load:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user?.id]);
 
-  const completedIds = useMemo(() => {
-    const raw = localStorage.getItem('parttime_completed_v1');
-    return raw ? new Set<string>(JSON.parse(raw)) : new Set<string>();
-  }, [tasks]);
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    fetchFreelancerBalance(user.id).then((b) => { if (!cancelled) setBalance(b); }).catch((e) => { if (!cancelled) console.error('Balance load:', e); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const isTaskDone = (task: PartTimeTask) =>
     completedIds.has(task.id) || (task.paidUserIds && user?.id && task.paidUserIds.includes(user.id));
@@ -77,6 +99,14 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
     const complete = tasksForDate.filter((t) => isTaskDone(t));
     return [...incomplete, ...complete];
   }, [tasksForDate, isTaskDone]);
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto py-12 px-4 flex items-center justify-center min-h-[200px]">
+        <p className="text-gray-500 font-bold">로딩 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700">
@@ -256,12 +286,19 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   const [workEnd, setWorkEnd] = useState(todayStr());
   const [applicantUserId, setApplicantUserId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tasks, setTasks] = useState<PartTimeTask[]>([]);
+  const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    fetchPartTimeTasks().then(setTasks).catch((e) => console.error('PartTime tasks load:', e));
+    fetchPartTimeJobRequests().then(setJobRequests).catch((e) => console.error('Job requests load:', e));
+  }, []);
 
   /** 결제 완료된 견적의 광고주 목록 (닉네임 표시, 드롭다운용) */
   const paidAdvertiserOptions = useMemo(() => {
-    const reqs = getPartTimeJobRequests().filter((jr) => jr.paid && jr.applicantUserId?.trim());
-    const linkedIds = new Set(getPartTimeTasks().filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
+    const reqs = jobRequests.filter((jr) => jr.paid && jr.applicantUserId?.trim());
+    const linkedIds = new Set(tasks.filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
     return reqs
       .filter((jr) => !linkedIds.has(jr.id))
       .map((jr) => {
@@ -269,7 +306,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
         return { userId: jr.applicantUserId!, nickname: m?.nickname ?? '광고주', title: jr.title };
       })
       .sort((a, b) => a.nickname.localeCompare(b.nickname));
-  }, [members]);
+  }, [jobRequests, tasks, members]);
 
   const addSection = (type: SectionItemType) => {
     const item: SectionItem = {
@@ -343,12 +380,11 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
     updateSection(sectionId, { images: item.images.filter((_, i) => i !== imgIdx) });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     if (!title.trim()) { alert('게시글 제목을 입력해 주세요.'); return; }
     setIsSubmitting(true);
-    const tasks = getPartTimeTasks();
     const sectionsOut: PartTimeTaskSections = {};
     const postBlocksOut: PartTimePostBlock[] = [];
     const commentList: string[] = [];
@@ -399,6 +435,16 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
     if (titleList.length) sectionsOut.제목목록 = titleList;
     if (contentList.length) sectionsOut.내용목록 = contentList;
     if (sectionOrder.length) sectionsOut.sectionOrder = sectionOrder;
+    const projectNo = (() => {
+      let maxN = 0;
+      for (const t of tasks) {
+        if (t.projectNo && /^ALBA-\d+$/.test(t.projectNo)) {
+          const n = parseInt(t.projectNo.replace('ALBA-', ''), 10);
+          if (n > maxN) maxN = n;
+        }
+      }
+      return `ALBA-${String(maxN + 1).padStart(5, '0')}`;
+    })();
     const newTask: PartTimeTask = {
       id: `t_${Date.now()}`,
       title: title.trim(),
@@ -414,18 +460,16 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
       applicants: [],
       pointPaid: false,
       paidUserIds: [],
-      projectNo: generateProjectNo(),
+      projectNo,
       ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
     };
     try {
-      setPartTimeTasks([newTask, ...tasks]);
+      await upsertPartTimeTask(newTask);
       alert('작업이 등록되었습니다.');
       navigate('/part-time');
     } catch (err) {
-      const isQuota = err instanceof DOMException && err.name === 'QuotaExceededError';
-      alert(isQuota
-        ? '저장 공간이 부족합니다. 이미지·동영상 용량을 줄이거나 일부를 삭제한 뒤 다시 시도해 주세요.'
-        : '작업 등록에 실패했습니다. 다시 시도해 주세요.');
+      console.error(err);
+      alert('작업 등록에 실패했습니다. 다시 시도해 주세요.');
     } finally {
       setIsSubmitting(false);
     }
