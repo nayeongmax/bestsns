@@ -3,7 +3,20 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import type { UserProfile } from '@/types';
 import { NotificationType } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, addFreelancerEarning, getPartTimeJobRequests, setPartTimeJobRequests, getFreelancerWithdrawRequests, updateFreelancerWithdrawRequestStatus, refundFreelancerWithdrawal, processAutoApprovals, calcJobRequestFee, FREELANCER_FEE_RATE, PAYMENT_GATEWAY_FEE_RATE } from '@/constants';
+import { calcJobRequestFee, FREELANCER_FEE_RATE, PAYMENT_GATEWAY_FEE_RATE } from '@/constants';
+import {
+  fetchPartTimeTasks,
+  fetchPartTimeJobRequests,
+  upsertPartTimeTasks,
+  upsertPartTimeJobRequest,
+  fetchFreelancerWithdrawRequests,
+  updateFreelancerWithdrawRequestStatusToDb,
+  refundFreelancerWithdrawalInDb,
+  processAutoApprovalsInDb,
+  fetchFreelancerBalance,
+  setFreelancerBalance,
+  addFreelancerEarningToDb,
+} from '@/parttimeDb';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
@@ -19,9 +32,9 @@ type PartTimeAdminTab = 'estimate' | 'freelancer' | 'revenue';
 const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const navigate = useNavigate();
   const [adminTab, setAdminTab] = useState<PartTimeAdminTab>('estimate');
-  const [tasks, setTasks] = useState<PartTimeTask[]>(() => getPartTimeTasks());
-  const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>(() => getPartTimeJobRequests());
-  const [withdrawRequests, setWithdrawRequests] = useState(() => getFreelancerWithdrawRequests());
+  const [tasks, setTasks] = useState<PartTimeTask[]>([]);
+  const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
+  const [withdrawRequests, setWithdrawRequests] = useState<Awaited<ReturnType<typeof fetchFreelancerWithdrawRequests>>>([]);
   const [rejectModal, setRejectModal] = useState<{ jr: PartTimeJobRequest; reason: string } | null>(null);
   const [revisionModal, setRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string; text: string } | null>(null);
   const [detailJr, setDetailJr] = useState<PartTimeJobRequest | null>(null);
@@ -37,17 +50,30 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
 
   useEffect(() => {
-    processAutoApprovals();
-    setTasks(getPartTimeTasks());
-    setJobRequests(getPartTimeJobRequests());
-    setWithdrawRequests(getFreelancerWithdrawRequests());
+    let cancelled = false;
+    (async () => {
+      try {
+        await processAutoApprovalsInDb();
+        const [taskList, jrList, withdrawList] = await Promise.all([
+          fetchPartTimeTasks(),
+          fetchPartTimeJobRequests(),
+          fetchFreelancerWithdrawRequests(),
+        ]);
+        if (!cancelled) {
+          setTasks(taskList);
+          setJobRequests(jrList);
+          setWithdrawRequests(withdrawList);
+        }
+      } catch (e) {
+        if (!cancelled) console.error('PartTimeAdmin load:', e);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  // 프리랜서모집 탭 활성화 시 최신 작업 목록 새로고침 (다른 탭에서 등록한 작업 반영)
   useEffect(() => {
-    if (adminTab === 'freelancer') {
-      setTasks(getPartTimeTasks());
-    }
+    if (adminTab !== 'freelancer') return;
+    fetchPartTimeTasks().then(setTasks).catch((e) => console.error('PartTime tasks refresh:', e));
   }, [adminTab]);
 
   const pushModalState = (key: string, onPop: () => void) => {
@@ -68,47 +94,53 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     return pushModalState('adminEstimateView', () => setEstimateViewJr(null));
   }, [estimateViewJr]);
 
-  const refreshWithdrawRequests = () => setWithdrawRequests(getFreelancerWithdrawRequests());
+  const refreshWithdrawRequests = () => fetchFreelancerWithdrawRequests().then(setWithdrawRequests).catch(console.error);
 
   const pendingReviewsBase = jobRequests.filter((jr) => jr.status === 'pending_review');
 
-  const handleApproveJobRequest = (jr: PartTimeJobRequest) => {
-    const next = jobRequests.map((r) =>
-      r.id === jr.id ? { ...r, status: 'pending' as const } : r
-    );
-    setPartTimeJobRequests(next);
-    setJobRequests(next);
-    if (jr.applicantUserId && addNotif) {
-      addNotif(jr.applicantUserId, 'approval', '작업의뢰 승인', `[${jr.title}] 작업의뢰가 승인되었습니다. 프리랜서 워크페이스 → 알바의뢰 (광고주한정) 탭에서 결제를 진행해 주세요.`, '프리랜서 워크페이스 → 알바의뢰 탭에서 결제를 진행해 주세요.');
+  const handleApproveJobRequest = async (jr: PartTimeJobRequest) => {
+    const updated = { ...jr, status: 'pending' as const };
+    try {
+      await upsertPartTimeJobRequest(updated);
+      setJobRequests((prev) => prev.map((r) => (r.id === jr.id ? updated : r)));
+      if (jr.applicantUserId && addNotif) {
+        addNotif(jr.applicantUserId, 'approval', '작업의뢰 승인', `[${jr.title}] 작업의뢰가 승인되었습니다. 프리랜서 워크페이스 → 알바의뢰 (광고주한정) 탭에서 결제를 진행해 주세요.`, '프리랜서 워크페이스 → 알바의뢰 탭에서 결제를 진행해 주세요.');
+      }
+      alert('승인되었습니다. 신청자에게 알림이 전송되었습니다.');
+    } catch (e) {
+      console.error(e);
+      alert('저장에 실패했습니다.');
     }
-    alert('승인되었습니다. 신청자에게 알림이 전송되었습니다.');
   };
 
   const handleRejectJobRequest = (jr: PartTimeJobRequest) => {
     setRejectModal({ jr, reason: '' });
   };
 
-  const confirmReject = () => {
+  const confirmReject = async () => {
     if (!rejectModal) return;
     const { jr, reason } = rejectModal;
     if (!reason.trim()) {
       alert('거절 사유를 입력해 주세요.');
       return;
     }
-    const next = jobRequests.map((r) =>
-      r.id === jr.id ? { ...r, status: 'not_selected' as const, rejectReason: reason.trim() } : r
-    );
-    setPartTimeJobRequests(next);
-    setJobRequests(next);
-    if (jr.applicantUserId && addNotif) {
-      addNotif(jr.applicantUserId, 'revision', '작업의뢰 거절', `[${jr.title}] 작업의뢰가 거절되었습니다. 사유: ${reason.trim()}`, reason.trim());
+    const updated = { ...jr, status: 'not_selected' as const, rejectReason: reason.trim() };
+    try {
+      await upsertPartTimeJobRequest(updated);
+      setJobRequests((prev) => prev.map((r) => (r.id === jr.id ? updated : r)));
+      if (jr.applicantUserId && addNotif) {
+        addNotif(jr.applicantUserId, 'revision', '작업의뢰 거절', `[${jr.title}] 작업의뢰가 거절되었습니다. 사유: ${reason.trim()}`, reason.trim());
+      }
+      setRejectModal(null);
+      setDetailJr(null);
+      alert('거절 처리되었습니다. 신청자에게 알림이 전송되었습니다.');
+    } catch (e) {
+      console.error(e);
+      alert('저장에 실패했습니다.');
     }
-    setRejectModal(null);
-    setDetailJr(null);
-    alert('거절 처리되었습니다. 신청자에게 알림이 전송되었습니다.');
   };
 
-  const handleSendEstimate = () => {
+  const handleSendEstimate = async () => {
     if (!estimateModal) return;
     if (!estimateForm.workPeriodStart || !estimateForm.workPeriodEnd) {
       alert('작업기간을 선택해 주세요.');
@@ -128,37 +160,38 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     const fee = calcJobRequestFee(totalAmount);
     const now = new Date().toISOString();
     const workPeriod = `${estimateForm.workPeriodStart} ~ ${estimateForm.workPeriodEnd}`;
-    const next = jobRequests.map((r) =>
-      r.id === estimateModal.id
-        ? {
-            ...r,
-            adAmount: totalAmount,
-            unitPrice: itemsData[0]?.unitPrice,
-            quantity: itemsData.reduce((s, it) => s + it.quantity, 0),
-            fee,
-            operatorEstimate: {
-              totalAmount,
-              fee,
-              note: estimateForm.note.trim() || undefined,
-              sentAt: now,
-              recipientName: estimateForm.recipientName.trim() || undefined,
-              recipientContact: estimateForm.recipientContact.trim() || estimateModal.contact,
-              workPeriod,
-              workName: estimateForm.workName.trim() || undefined,
-              items: itemsData,
-            },
-          }
-        : r
-    );
-    setPartTimeJobRequests(next);
-    setJobRequests(next);
-    if (estimateModal.applicantUserId && addNotif) {
-      addNotif(estimateModal.applicantUserId, 'approval', '견적서 도착', `[${estimateModal.title}] 견적서가 도착했습니다. 마이페이지 → 알바의뢰 탭에서 확인해 주세요.`, undefined);
+    const updated = {
+      ...estimateModal,
+      adAmount: totalAmount,
+      unitPrice: itemsData[0]?.unitPrice,
+      quantity: itemsData.reduce((s, it) => s + it.quantity, 0),
+      fee,
+      operatorEstimate: {
+        totalAmount,
+        fee,
+        note: estimateForm.note.trim() || undefined,
+        sentAt: now,
+        recipientName: estimateForm.recipientName.trim() || undefined,
+        recipientContact: estimateForm.recipientContact.trim() || estimateModal.contact,
+        workPeriod,
+        workName: estimateForm.workName.trim() || undefined,
+        items: itemsData,
+      },
+    };
+    try {
+      await upsertPartTimeJobRequest(updated);
+      setJobRequests((prev) => prev.map((r) => (r.id === estimateModal.id ? updated : r)));
+      if (estimateModal.applicantUserId && addNotif) {
+        addNotif(estimateModal.applicantUserId, 'approval', '견적서 도착', `[${estimateModal.title}] 견적서가 도착했습니다. 마이페이지 → 알바의뢰 탭에서 확인해 주세요.`, undefined);
+      }
+      setEstimateModal(null);
+      setEstimateForm({ workName: '', recipientName: '', recipientContact: '', workPeriodStart: '', workPeriodEnd: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
+      setDetailJr(null);
+      alert('견적서가 전송되었습니다. 광고주에게 알림이 전송되었습니다.');
+    } catch (e) {
+      console.error(e);
+      alert('저장에 실패했습니다.');
     }
-    setEstimateModal(null);
-    setEstimateForm({ workName: '', recipientName: '', recipientContact: '', workPeriodStart: '', workPeriodEnd: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
-    setDetailJr(null);
-    alert('견적서가 전송되었습니다. 광고주에게 알림이 전송되었습니다.');
   };
 
   const parttimeViewDate = (() => {
@@ -185,8 +218,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   });
 
   const saveTasks = (next: PartTimeTask[]) => {
-    setPartTimeTasks(next);
     setTasks(next);
+    upsertPartTimeTasks(next).catch((e) => console.error('saveTasks:', e));
   };
 
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
@@ -212,10 +245,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     alert('통과 처리되었습니다. 3일 후 자동으로 수익통장에 지급됩니다.');
   };
 
-  const handlePayPoints = (task: PartTimeTask, userId?: string) => {
-    // 최신 데이터 로드 (다중 클릭·다른 탭에서 지급 시 중복 입금 방지)
-    const freshTasks = getPartTimeTasks();
-    const freshTask = freshTasks.find((x) => x.id === task.id);
+  const handlePayPoints = async (task: PartTimeTask, userId?: string) => {
+    const freshTask = tasks.find((x) => x.id === task.id);
     const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
     const base = userId
       ? task.applicants.filter((a) => a.userId === userId && a.selected && hasWorkLink(a))
@@ -230,22 +261,30 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       return;
     }
     if (!confirm(`작업을 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
-    target.forEach((a) => addFreelancerEarning(a.userId, task.reward, task.title));
-    if (addNotif) {
-      target.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
-      );
+    try {
+      const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
+      for (const a of target) {
+        const cur = await fetchFreelancerBalance(a.userId);
+        await setFreelancerBalance(a.userId, cur + netAmount);
+        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
+      }
+      if (addNotif) {
+        target.forEach((a) =>
+          addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
+        );
+      }
+      const paidIds = target.map((a) => a.userId);
+      const allPaid = [...(freshTask?.paidUserIds ?? []), ...paidIds];
+      const selectedWithLink = (freshTask ?? task).applicants.filter((a) => a.selected && hasWorkLink(a));
+      const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
+      const next = tasks.map((t) => (t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }));
+      setTasks(next);
+      await upsertPartTimeTasks(next);
+      alert('알바비가 지급되었습니다.');
+    } catch (err) {
+      console.error(err);
+      alert('지급 처리 중 오류가 발생했습니다.');
     }
-    const paidIds = target.map((a) => a.userId);
-    const allPaid = [...(freshTask?.paidUserIds ?? []), ...paidIds];
-    const selectedWithLink = (freshTask ?? task).applicants.filter((a) => a.selected && hasWorkLink(a));
-    const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
-    const next = freshTasks.map((t) =>
-      t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }
-    );
-    setPartTimeTasks(next);
-    setTasks(next);
-    alert('알바비가 지급되었습니다.');
   };
 
   const handleSelect = (task: PartTimeTask, userId: string) => {
@@ -253,8 +292,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     const now = new Date().toISOString();
     let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true, selectedAt: now } : a)) };
     if (task.applicantUserId && !task.jobRequestId) {
-      const jobReqs = getPartTimeJobRequests().filter((jr) => jr.applicantUserId === task.applicantUserId && (jr.paid || jr.status === 'pending'));
-      const linkedIds = new Set(getPartTimeTasks().filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
+      const jobReqs = jobRequests.filter((jr) => jr.applicantUserId === task.applicantUserId && (jr.paid || jr.status === 'pending'));
+      const linkedIds = new Set(tasks.filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
       const unlinked = jobReqs.find((jr) => !linkedIds.has(jr.id));
       if (unlinked) updatedTask = { ...updatedTask, jobRequestId: unlinked.id };
     }
@@ -554,11 +593,16 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       <div className="flex justify-center gap-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            updateFreelancerWithdrawRequestStatus(r.id, 'completed');
-                            refreshWithdrawRequests();
-                            if (addNotif) addNotif(r.userId, 'freelancer', '출금 완료', `${r.amount.toLocaleString()}원이 ${r.bankName} ${r.accountNo} 계좌로 입금되었습니다.`);
-                            alert('입금 완료로 표시했습니다.');
+                          onClick={async () => {
+                            try {
+                              await updateFreelancerWithdrawRequestStatusToDb(r.id, 'completed');
+                              await refreshWithdrawRequests();
+                              if (addNotif) addNotif(r.userId, 'freelancer', '출금 완료', `${r.amount.toLocaleString()}원이 ${r.bankName} ${r.accountNo} 계좌로 입금되었습니다.`);
+                              alert('입금 완료로 표시했습니다.');
+                            } catch (e) {
+                              console.error(e);
+                              alert('처리에 실패했습니다.');
+                            }
                           }}
                           className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700"
                         >
@@ -566,13 +610,18 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             if (!confirm('입금 실패로 표시하시겠습니까? 수익통장에 해당 금액이 다시 충전됩니다.')) return;
-                            refundFreelancerWithdrawal(r.userId, r.amount, '출금 실패 환급');
-                            updateFreelancerWithdrawRequestStatus(r.id, 'failed');
-                            refreshWithdrawRequests();
-                            if (addNotif) addNotif(r.userId, 'freelancer', '출금 실패', `출금 신청이 실패하여 ${r.amount.toLocaleString()}원이 수익통장에 환급되었습니다. 통장 정보를 확인 후 다시 출금 신청해 주세요.`);
-                            alert('실패로 표시했습니다. 수익통장에 금액이 환급되었습니다.');
+                            try {
+                              await refundFreelancerWithdrawalInDb(r.userId, r.amount, '출금 실패 환급');
+                              await updateFreelancerWithdrawRequestStatusToDb(r.id, 'failed');
+                              await refreshWithdrawRequests();
+                              if (addNotif) addNotif(r.userId, 'freelancer', '출금 실패', `출금 신청이 실패하여 ${r.amount.toLocaleString()}원이 수익통장에 환급되었습니다. 통장 정보를 확인 후 다시 출금 신청해 주세요.`);
+                              alert('실패로 표시했습니다. 수익통장에 금액이 환급되었습니다.');
+                            } catch (e) {
+                              console.error(e);
+                              alert('처리에 실패했습니다.');
+                            }
                           }}
                           className="px-4 py-2 rounded-lg bg-red-100 text-red-700 font-black text-xs hover:bg-red-200"
                         >
