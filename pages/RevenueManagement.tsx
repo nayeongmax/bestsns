@@ -1,36 +1,90 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
-import { OperatingCompany, RevenueProject, RevenueTodo, WorkType, GeneralExpense, ExpenseCategory } from '../types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { OperatingCompany, RevenueProject, RevenueTodo, WorkType, GeneralExpense, ExpenseCategory, UserProfile } from '@/types';
+import {
+  fetchRevenueCompanies,
+  upsertRevenueCompanies,
+  fetchRevenueProjects,
+  upsertRevenueProjects,
+  fetchRevenueTodos,
+  upsertRevenueTodos,
+  fetchRevenueGeneralExpenses,
+  upsertRevenueGeneralExpenses,
+} from '@/revenueDb';
 
 const PROJECT_TYPES: WorkType[] = ['카페관리', '블로그대행', '블로그체험단', '유튜브', '인스타그램', '기타작업'];
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ['운영비', '인건비', '식비', '집기구입비', '구독비', '기타비용'];
 const CHANNEL_OPTIONS = ['크몽', '직거래', '숨고', '쇼핑몰', '키플랫', '기타'];
 
-const RevenueManagement: React.FC = () => {
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? (JSON.parse(saved) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+interface Props {
+  user: UserProfile;
+}
+
+const RevenueManagement: React.FC<Props> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'todo' | 'project' | 'data' | 'profit'>('dashboard');
-  
-  // 데이터 상태 관리 (독립적 로컬스토리지 사용)
-  const [companies, setCompanies] = useState<OperatingCompany[]>(() => {
-    const saved = localStorage.getItem('rev_companies');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const revenueDbLoaded = useRef(false);
 
-  const [projects, setProjects] = useState<RevenueProject[]>(() => {
-    const saved = localStorage.getItem('rev_projects');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [companies, setCompanies] = useState<OperatingCompany[]>(() => loadFromStorage('rev_companies', []));
+  const [projects, setProjects] = useState<RevenueProject[]>(() => loadFromStorage('rev_projects', []));
+  const [todos, setTodos] = useState<RevenueTodo[]>(() => loadFromStorage('rev_todos', []));
+  const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>(() => loadFromStorage('rev_general_expenses', []));
 
-  const [todos, setTodos] = useState<RevenueTodo[]>(() => {
-    const saved = localStorage.getItem('rev_todos');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Supabase 로드 (user 있으면)
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [c, p, t, e] = await Promise.all([
+          fetchRevenueCompanies(user.id),
+          fetchRevenueProjects(user.id),
+          fetchRevenueTodos(user.id),
+          fetchRevenueGeneralExpenses(user.id),
+        ]);
+        if (!cancelled) {
+          setCompanies(c);
+          setProjects(p);
+          setTodos(t);
+          setGeneralExpenses(e);
+          revenueDbLoaded.current = true;
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('매출관리 DB 로드 실패, localStorage 사용:', err);
+          revenueDbLoaded.current = true;
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
-  const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>(() => {
-    const saved = localStorage.getItem('rev_general_expenses');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Supabase 저장 (로드 완료 후 변경분만)
+  useEffect(() => {
+    if (!user?.id || !revenueDbLoaded.current) return;
+    upsertRevenueCompanies(user.id, companies).catch((err) => console.warn('rev_companies 저장:', err));
+  }, [user?.id, companies]);
+  useEffect(() => {
+    if (!user?.id || !revenueDbLoaded.current) return;
+    upsertRevenueProjects(user.id, projects).catch((err) => console.warn('rev_projects 저장:', err));
+  }, [user?.id, projects]);
+  useEffect(() => {
+    if (!user?.id || !revenueDbLoaded.current) return;
+    upsertRevenueTodos(user.id, todos).catch((err) => console.warn('rev_todos 저장:', err));
+  }, [user?.id, todos]);
+  useEffect(() => {
+    if (!user?.id || !revenueDbLoaded.current) return;
+    upsertRevenueGeneralExpenses(user.id, generalExpenses).catch((err) => console.warn('rev_expenses 저장:', err));
+  }, [user?.id, generalExpenses]);
 
-  // 로컬스토리지 자동 저장
+  // localStorage 백업
   useEffect(() => localStorage.setItem('rev_companies', JSON.stringify(companies)), [companies]);
   useEffect(() => localStorage.setItem('rev_projects', JSON.stringify(projects)), [projects]);
   useEffect(() => localStorage.setItem('rev_todos', JSON.stringify(todos)), [todos]);
