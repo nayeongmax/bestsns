@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { SNS_PLATFORMS } from '../constants';
-import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource } from '../types';
+import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource } from '@/types';
+import { updateProfile } from '@/profileDb';
 
 interface Props {
   smmProducts: SMMProduct[];
@@ -84,11 +85,12 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       // 실제로는 App.tsx의 handleGlobalUserUpdate와 같은 핸들러를 통해 전체 회원 데이터도 함께 고쳐야 함.
       // 여기서는 데모 목적으로 부모로부터 전달받은 상태를 업데이트하도록 구성됨.
       const nextPoints = userPoints - totalOrderAmount;
-      
-      // MyPage의 onUpdate를 통해 동기화 (전역 상태 관리 일관성)
-      window.dispatchEvent(new CustomEvent('site-user-update', { 
-        detail: { ...user, points: nextPoints } 
+
+      // 전역 상태 + DB 반영
+      window.dispatchEvent(new CustomEvent('site-user-update', {
+        detail: { ...user, points: nextPoints },
       }));
+      updateProfile(user.id, { points: nextPoints }).catch((e) => console.warn('SNS 주문 포인트 차감 DB 반영 실패:', e));
 
       for (const opt of selectedOptions) {
         const product = smmProducts.find(p => p.id === opt.serviceId);
