@@ -2,7 +2,7 @@
  * 매출관리 Supabase DB 연동 (4단계 테이블)
  * - revenue_operating_companies, revenue_projects, revenue_todos, revenue_general_expenses
  */
-import { supabase } from '@/supabase';
+import { supabase } from './supabase';
 import type { OperatingCompany, RevenueProject, RevenueTodo, GeneralExpense } from '@/types';
 
 function companyToRow(c: OperatingCompany, userId: string): Record<string, unknown> {
