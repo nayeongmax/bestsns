@@ -7,6 +7,7 @@ import {
 } from '@/types';
 import { supabase } from '@/supabase';
 import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from '@/storeDb';
+import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from '@/channelDb';
 
 /** Supabase profiles 행 → UserProfile 변환 (profileUtils 의존 제거로 Netlify 빌드 안정화) */
 function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
@@ -120,7 +121,7 @@ function ContainerRoutes(props: {
       <Route path="/notifications" element={props.user ? <NotificationsPage notifications={props.notifications} setNotifications={props.setNotifications} user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/wishlist" element={<WishlistPage wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channels={props.channels} ebooks={props.ebooks} />} />
       <Route path="/coupons" element={props.user ? <CouponBox user={props.user} /> : <Navigate to="/login" />} />
-      <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
+      <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} channels={props.channels} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} setChannelOrders={props.setChannelOrders} /> : <Navigate to="/login" />} />
       <Route path="/payment/alba" element={props.user ? <AlbaPaymentPage user={props.user} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
       <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} /> : <Navigate to="/login" />} />
@@ -181,25 +182,33 @@ const App: React.FC = () => {
 
   useEffect(() => { localStorage.setItem('grade_configs_v2', JSON.stringify(gradeConfigs)); }, [gradeConfigs]);
 
-  // N잡스토어: 상품/주문/리뷰 Supabase 로드
+  const channelDbLoaded = useRef(false);
+
+  // N잡스토어 + 채널판매: Supabase 로드
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [products, orders, reviewList] = await Promise.all([
+        const [products, orders, reviewList, channelProducts, channelOrderList] = await Promise.all([
           fetchStoreProducts(),
           fetchStoreOrders(),
           fetchReviews(),
+          fetchChannelProducts(),
+          fetchChannelOrders(),
         ]);
         if (!cancelled) {
           setEbooks(products);
           setStoreOrders(orders);
           setReviews(reviewList);
+          setChannels(channelProducts);
+          setChannelOrders(channelOrderList);
           storeDbLoaded.current = true;
+          channelDbLoaded.current = true;
         }
       } catch (e) {
-        if (!cancelled) console.warn('N잡스토어 DB 로드 실패, localStorage 사용:', e);
+        if (!cancelled) console.warn('스토어/채널 DB 로드 실패, localStorage 사용:', e);
         storeDbLoaded.current = true;
+        channelDbLoaded.current = true;
       }
     })();
     return () => { cancelled = true; };
@@ -218,6 +227,16 @@ const App: React.FC = () => {
     if (!storeDbLoaded.current) return;
     upsertReviews(reviews).catch((e) => console.warn('reviews 저장:', e));
   }, [reviews]);
+
+  // 채널판매: 상품/주문 변경 시 DB 저장
+  useEffect(() => {
+    if (!channelDbLoaded.current) return;
+    upsertChannelProducts(channels).catch((e) => console.warn('channel_products 저장:', e));
+  }, [channels]);
+  useEffect(() => {
+    if (!channelDbLoaded.current) return;
+    upsertChannelOrders(channelOrders).catch((e) => console.warn('channel_orders 저장:', e));
+  }, [channelOrders]);
 
   // 사이트 접속 로그: 로그인한 사용자 접속 시 기록 (2분당 1회 제한)
   const lastAccessLog = useRef<{ userId: string; at: number }>({ userId: '', at: 0 });
