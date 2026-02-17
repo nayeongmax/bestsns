@@ -294,10 +294,14 @@ const App: React.FC = () => {
     upsertReviews(reviews).catch((e) => console.warn('reviews 저장:', e));
   }, [reviews]);
 
-  // 채널판매: 상품/주문 변경 시 DB 저장
+  // 채널판매: 상품/주문 변경 시 DB 저장 (실패 시 알림 — RLS 또는 env 미설정 시 저장 안 됨)
   useEffect(() => {
     if (!channelDbLoaded.current) return;
-    upsertChannelProducts(channels).catch((e) => console.warn('channel_products 저장:', e));
+    if (channels.length === 0) return;
+    upsertChannelProducts(channels).catch((e) => {
+      console.warn('channel_products 저장 실패:', e);
+      alert('채널 상품이 DB에 저장되지 않았습니다. Supabase RLS 정책(supabase-rls-public-read-channel-store.sql) 적용 여부와 VITE_SUPABASE_URL·ANON_KEY 설정을 확인해 주세요.');
+    });
   }, [channels]);
   useEffect(() => {
     if (!channelDbLoaded.current) return;
