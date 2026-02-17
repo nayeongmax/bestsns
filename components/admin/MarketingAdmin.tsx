@@ -1,6 +1,6 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
-import { UserProfile, Coupon, AutoCouponCampaign } from '../../types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { UserProfile, Coupon, AutoCouponCampaign } from '@/types';
+import { fetchCouponCampaigns, upsertCouponCampaigns, deleteCouponCampaign } from '@/campaignDb';
 
 interface Props {
   user: UserProfile | null;
@@ -11,20 +11,55 @@ interface Props {
 type TargetType = 'all' | 'buyer' | 'seller';
 type IssuanceMode = 'manual' | 'auto';
 
+function loadCampaignsFromStorage(): AutoCouponCampaign[] {
+  try {
+    return JSON.parse(localStorage.getItem('auto_coupon_campaigns') || '[]');
+  } catch {
+    return [];
+  }
+}
+
 const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
   const [targetFilter, setTargetFilter] = useState<TargetType>('all');
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isAllSelected, setIsAllSelected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  
+  const campaignDbLoaded = useRef(false);
+
   const [issuanceMode, setIssuanceMode] = useState<IssuanceMode>('manual');
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
 
-  // 등록된 캠페인 및 수동 발행 이력 상태
-  const [campaigns, setCampaigns] = useState<AutoCouponCampaign[]>(() => {
-    return JSON.parse(localStorage.getItem('auto_coupon_campaigns') || '[]');
-  });
+  const [campaigns, setCampaigns] = useState<AutoCouponCampaign[]>(loadCampaignsFromStorage);
+
+  // Supabase 로드
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchCouponCampaigns();
+        if (!cancelled) {
+          setCampaigns(list);
+          campaignDbLoaded.current = true;
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('쿠폰 캠페인 DB 로드 실패, localStorage 사용:', err);
+          campaignDbLoaded.current = true;
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Supabase 저장 (변경 시)
+  useEffect(() => {
+    if (!campaignDbLoaded.current) return;
+    upsertCouponCampaigns(campaigns).catch((err) => console.warn('coupon_campaigns 저장:', err));
+  }, [campaigns]);
+
+  // localStorage 백업
+  useEffect(() => localStorage.setItem('auto_coupon_campaigns', JSON.stringify(campaigns)), [campaigns]);
 
   // 쿠폰 폼 상태
   const [couponForm, setCouponForm] = useState({
@@ -81,7 +116,6 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
       }
 
       setCampaigns(updatedCampaigns);
-      localStorage.setItem('auto_coupon_campaigns', JSON.stringify(updatedCampaigns));
       resetForm();
       return;
     }
@@ -113,7 +147,6 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
     
     const nextCampaigns = [manualHistory, ...campaigns];
     setCampaigns(nextCampaigns);
-    localStorage.setItem('auto_coupon_campaigns', JSON.stringify(nextCampaigns));
 
     setTimeout(() => {
       setIsProcessing(false);
@@ -172,11 +205,8 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
 
   const deleteCampaign = (id: string) => {
     if (!window.confirm('해당 캠페인/이력을 리스트에서 삭제하시겠습니까?')) return;
-    setCampaigns(prev => {
-      const updated = prev.filter(c => c.id !== id);
-      localStorage.setItem('auto_coupon_campaigns', JSON.stringify(updated));
-      return updated;
-    });
+    deleteCouponCampaign(id).catch((err) => console.warn('캠페인 삭제 실패:', err));
+    setCampaigns(prev => prev.filter(c => c.id !== id));
     if (editingCampaignId === id) resetForm();
   };
 
