@@ -85,6 +85,8 @@ function ContainerRoutes(props: {
   setSmmProviders: React.Dispatch<React.SetStateAction<any[]>>; setSmmProducts: React.Dispatch<React.SetStateAction<any[]>>; setNotices: React.Dispatch<React.SetStateAction<Notice[]>>;
   handleMassIssueCoupons: () => void;
   gradeConfigs: GradeConfig[]; setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
+  onRefreshMembers?: () => void;
+  onRefetchProfile?: () => void;
 }) {
   const location = useLocation();
   const pathname = location.pathname || '';
@@ -120,14 +122,14 @@ function ContainerRoutes(props: {
       <Route path="/revenue" element={props.user ? <RevenueManagement user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/profit-mgmt" element={props.user ? <ProfitManagement user={props.user} storeOrders={props.storeOrders} /> : <Navigate to="/login" />} />
       <Route path="/chat" element={props.user ? <ChatPage user={props.user} members={props.members} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
-      <Route path="/mypage" element={props.user ? <MyPage user={props.user} members={props.members} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={() => {}} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
+      <Route path="/mypage" element={props.user ? <MyPage user={props.user} members={props.members} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={props.onRefetchProfile} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/notifications" element={props.user ? <NotificationsPage notifications={props.notifications} setNotifications={props.setNotifications} user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/wishlist" element={<WishlistPage wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channels={props.channels} ebooks={props.ebooks} />} />
       <Route path="/coupons" element={props.user ? <CouponBox user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} channels={props.channels} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} setChannelOrders={props.setChannelOrders} setStoreOrders={props.setStoreOrders} /> : <Navigate to="/login" />} />
       <Route path="/payment/alba" element={props.user ? <AlbaPaymentPage user={props.user} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
-      <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} /> : <Navigate to="/login" />} />
+      <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} onRefreshMembers={props.onRefreshMembers} /> : <Navigate to="/login" />} />
       <Route path="/notices" element={<NoticePage notices={props.notices} setNotices={props.setNotices} user={props.user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -478,6 +480,25 @@ const App: React.FC = () => {
     setMembers(prev => prev.map(m => m.id === updated.id ? updated : m));
   }, []);
 
+  /** 어드민 회원 탭에서 Supabase profiles 전체 재조회 (RLS 적용 후 회원 목록 전체 노출) */
+  const refreshMembers = useCallback(() => {
+    supabase.from('profiles').select('id, email, nickname, profile_image, phone, role, points, manual_grade, coupons, total_purchase_amount, total_sales_amount, total_freelancer_earnings, join_date, seller_status, freelancer_status, seller_application, pending_application, freelancer_application, violation_count, withdrawn_at').then(({ data, error }) => {
+      if (error) return;
+      if (data?.length) {
+        const parsed = data.map((r: Record<string, unknown>) => profileRowToUserProfile(r)).filter((p: UserProfile) => p.id);
+        setMembers(parsed);
+      }
+    });
+  }, []);
+
+  /** 마이페이지 진입 시 DB에서 포인트·수익 재조회 (쿠키 삭제 후 0으로 바뀌는 현상 방지) */
+  const refetchCurrentUserProfile = useCallback(() => {
+    if (!user?.id) return;
+    fetchProfileRow(user.id).then((row) => {
+      if (row) setUser(prev => prev ? { ...prev, ...profileRowToUserProfile(row) } : null);
+    }).catch(() => {});
+  }, [user?.id]);
+
   useEffect(() => {
     const handleSync = (e: any) => {
       if (e.detail) {
@@ -637,6 +658,8 @@ const App: React.FC = () => {
             handleMassIssueCoupons={handleMassIssueCoupons}
             gradeConfigs={gradeConfigs}
             setGradeConfigs={setGradeConfigs}
+            onRefreshMembers={refreshMembers}
+            onRefetchProfile={refetchCurrentUserProfile}
           />
       </div>
       <Footer />
