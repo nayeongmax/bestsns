@@ -1,7 +1,7 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '../../types';
+import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '@/types';
+import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, type OrderBuyerFlag } from '@/storeDb';
 
 interface Props {
   user: UserProfile;
@@ -46,27 +46,23 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
   const [rating, setRating] = useState(5);
   const [reviewContent, setReviewContent] = useState('');
 
-  // 구매 확정 및 리뷰 완료 목록
-  const [confirmedList, setConfirmedList] = useState<string[]>(() => {
-    const saved = localStorage.getItem('confirmed_ids_v4');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [reviewedList, setReviewedList] = useState<string[]>(() => {
-    const saved = localStorage.getItem('reviewed_ids_v4');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // --- 90일 다운로드 제한 및 다운로드 시간 표시용 상태 ---
-  const [downloadStarts, setDownloadStarts] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('download_start_times_v1');
-    return saved ? JSON.parse(saved) : {};
-  });
-
+  // 구매 확정/리뷰/다운로드 시작 — DB (order_buyer_flags) 연동
+  const [flags, setFlags] = useState<OrderBuyerFlag[]>([]);
   useEffect(() => {
-    localStorage.setItem('confirmed_ids_v4', JSON.stringify(confirmedList));
-    localStorage.setItem('reviewed_ids_v4', JSON.stringify(reviewedList));
-    localStorage.setItem('download_start_times_v1', JSON.stringify(downloadStarts));
-  }, [confirmedList, reviewedList, downloadStarts]);
+    if (!user?.id) return;
+    fetchOrderBuyerFlags(user.id).then(setFlags).catch((e) => console.warn('order_buyer_flags 로드:', e));
+  }, [user?.id]);
+
+  const confirmedList = useMemo(() => flags.filter((f) => f.confirmedAt).map((f) => f.orderId), [flags]);
+  const reviewedList = useMemo(() => flags.filter((f) => f.reviewedAt).map((f) => f.orderId), [flags]);
+  const downloadStarts = useMemo(
+    () =>
+      flags.reduce<Record<string, number>>((acc, f) => {
+        if (f.downloadStartedAt) acc[f.orderId] = new Date(f.downloadStartedAt).getTime();
+        return acc;
+      }, {}),
+    [flags]
+  );
 
   // 데이터 통합 (실제 주문만 표시)
   const buyerOrders: OrderItem[] = useMemo(() => {
@@ -101,7 +97,14 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
 
   const handleConfirmOrder = (order: OrderItem, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    setConfirmedList(prev => [...new Set([...prev, order.id])]);
+    const now = new Date().toISOString();
+    upsertOrderBuyerFlag(order.id, user.id, order.type, { confirmedAt: now })
+      .then(() => setFlags((prev) => {
+        const idx = prev.findIndex((f) => f.orderId === order.id && f.orderType === order.type);
+        if (idx >= 0) return prev.map((f, i) => (i === idx ? { ...f, confirmedAt: now } : f));
+        return [...prev, { orderId: order.id, orderType: order.type, confirmedAt: now, reviewedAt: null, downloadStartedAt: null }];
+      }))
+      .catch((err) => console.warn('구매확정 저장:', err));
     if (order.type !== 'sns') {
       setTargetOrder(order); setRating(5); setReviewContent(''); setIsReviewModalOpen(true);
     } else { alert('구매 확정이 완료되었습니다.'); }
@@ -119,17 +122,29 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       rating, content: reviewContent, date: new Date().toISOString().split('T')[0].replace(/-/g, '.')
     };
     onAddReview(newReview);
-    setReviewedList(prev => [...new Set([...prev, targetOrder.id])]);
+    const now = new Date().toISOString();
+    upsertOrderBuyerFlag(targetOrder.id, user.id, targetOrder.type, { reviewedAt: now })
+      .then(() => setFlags((prev) => {
+        const idx = prev.findIndex((f) => f.orderId === targetOrder.id && f.orderType === targetOrder.type);
+        if (idx >= 0) return prev.map((f, i) => (i === idx ? { ...f, reviewedAt: now } : f));
+        return [...prev, { orderId: targetOrder.id, orderType: targetOrder.type, confirmedAt: null, reviewedAt: now, downloadStartedAt: null }];
+      }))
+      .catch((err) => console.warn('리뷰플래그 저장:', err));
     setIsReviewModalOpen(false); setTargetOrder(null);
     alert('소중한 리뷰가 등록되었습니다!');
   };
 
   const handleDownloadClick = (orderId: string) => {
-    if (!downloadStarts[orderId]) {
-      const updated = { ...downloadStarts, [orderId]: Date.now() };
-      setDownloadStarts(updated);
-      alert('다운로드가 시작되었습니다. 지금부터 90일 동안만 다운로드가 가능합니다.');
-    }
+    if (downloadStarts[orderId]) return;
+    const now = new Date().toISOString();
+    upsertOrderBuyerFlag(orderId, user.id, 'store', { downloadStartedAt: now })
+      .then(() => setFlags((prev) => {
+        const idx = prev.findIndex((f) => f.orderId === orderId && f.orderType === 'store');
+        if (idx >= 0) return prev.map((f, i) => (i === idx ? { ...f, downloadStartedAt: now } : f));
+        return [...prev, { orderId, orderType: 'store', confirmedAt: null, reviewedAt: null, downloadStartedAt: now }];
+      }))
+      .catch((err) => console.warn('다운로드시작 저장:', err));
+    alert('다운로드가 시작되었습니다. 지금부터 90일 동안만 다운로드가 가능합니다.');
   };
 
   const isDownloadExpired = (orderId: string) => {
