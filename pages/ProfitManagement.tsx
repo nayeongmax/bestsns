@@ -1,7 +1,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserProfile, StoreOrder } from '../types';
+import { UserProfile, StoreOrder } from '@/types';
+import { fetchSellerWithdrawalBatches, addSellerWithdrawalBatch } from '@/storeDb';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   BarChart, Bar, Cell 
@@ -71,10 +72,13 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
       .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
   }, [storeOrders, user.nickname]);
 
-  const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalBatch[]>(() => {
-    const saved = localStorage.getItem(`withdrawal_history_v21_${user.id}`);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalBatch[]>([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchSellerWithdrawalBatches(user.id)
+      .then((rows) => setWithdrawalHistory(rows.map((r) => ({ id: r.id, confirmedDate: r.confirmedDate, amount: r.amount, grossAmount: r.grossAmount, status: r.status, orderIds: r.orderIds, productName: r.productName }))))
+      .catch((e) => console.warn('출금이력 로드:', e));
+  }, [user?.id]);
 
   const confirmedOrders = useMemo(() => allMyOrders.filter(o => o.status === '구매확정'), [allMyOrders]);
   
@@ -138,22 +142,29 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [confirmedOrders]);
 
-  const handleApplyWithdrawal = () => {
+  const handleApplyWithdrawal = async () => {
     const netToWithdraw = stats.availableOrders.reduce((sum, o) => sum + calculateDetailedProfit(o.price).netProfit, 0);
     if (netToWithdraw === 0) return alert('신청 가능한 확정 수익금이 없습니다.');
     if (!isBankInfoRegistered) return alert('계좌 정보가 등록되어 있지 않습니다. 계정 정보 관리에서 계좌를 등록해 주세요.');
 
-    const newBatch: WithdrawalBatch = {
-      id: `W-${Date.now()}`,
-      confirmedDate: new Date().toLocaleString(),
-      amount: netToWithdraw,
-      grossAmount: stats.availablePrice,
-      status: '지급 예정',
-      orderIds: stats.availableOrders.map(o => o.id),
-      productName: stats.availableOrders.length === 1 ? stats.availableOrders[0].productName : `${stats.availableOrders[0].productName} 외 ${stats.availableOrders.length-1}건`
-    };
-    setWithdrawalHistory(prev => [newBatch, ...prev]);
-    setWithdrawalStep('success');
+    const confirmedDate = new Date().toLocaleString();
+    const productName = stats.availableOrders.length === 1 ? stats.availableOrders[0].productName : `${stats.availableOrders[0].productName} 외 ${stats.availableOrders.length - 1}건`;
+    try {
+      const id = await addSellerWithdrawalBatch({
+        userId: user.id,
+        confirmedDate,
+        amount: netToWithdraw,
+        grossAmount: stats.availablePrice,
+        status: '지급 예정',
+        orderIds: stats.availableOrders.map((o) => o.id),
+        productName,
+      });
+      setWithdrawalHistory((prev) => [{ id, confirmedDate, amount: netToWithdraw, grossAmount: stats.availablePrice, status: '지급 예정', orderIds: stats.availableOrders.map((o) => o.id), productName }, ...prev]);
+      setWithdrawalStep('success');
+    } catch (e) {
+      console.error(e);
+      alert('출금 신청 저장에 실패했습니다.');
+    }
   };
 
   return (
