@@ -1,9 +1,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserProfile, SellerApplication, NotificationType, FreelancerApplication } from '@/types';
-import { supabase } from '@/supabase';
+import { supabase } from '../../supabase';
 import { compressImageForStorage } from '@/constants';
-import { updateProfile } from '@/profileDb';
+import { updateProfile } from '../../profileDb';
 
 interface Props {
   user: UserProfile;
