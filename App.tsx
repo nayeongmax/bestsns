@@ -9,7 +9,7 @@ import { supabase } from './supabase';
 import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from './storeDb';
 import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from './channelDb';
 import { fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, upsertSmmOrders, upsertSmmProviders, upsertSmmProducts } from './smmDb';
-import { updateProfile } from './profileDb';
+import { updateProfile, fetchProfileRow } from './profileDb';
 import { fetchNotices, upsertNotices, fetchGradeConfigs, upsertGradeConfigs, fetchPosts, upsertPosts } from './siteDb';
 
 /** Supabase profiles 행 → UserProfile 변환 (profileUtils 의존 제거로 Netlify 빌드 안정화) */
@@ -435,6 +435,20 @@ const App: React.FC = () => {
       console.warn('회원 목록 저장 실패 (localStorage 용량 초과)');
     }
   }, [members]);
+
+  // 회원 목록(DB) 로드 후 현재 로그인 유저의 포인트·수익을 DB 기준으로 동기화 (돈이 0으로 바뀌는 현상 방지)
+  useEffect(() => {
+    if (!user?.id || members.length === 0) return;
+    const fromDb = members.find(m => m.id.toLowerCase() === user.id.toLowerCase());
+    if (!fromDb) return;
+    const same =
+      (fromDb.points ?? 0) === (user.points ?? 0) &&
+      (fromDb.totalPurchaseAmount ?? 0) === (user.totalPurchaseAmount ?? 0) &&
+      (fromDb.totalSalesAmount ?? 0) === (user.totalSalesAmount ?? 0) &&
+      (fromDb.freelancerEarnings ?? 0) === (user.freelancerEarnings ?? 0);
+    if (!same) setUser(prev => prev ? { ...prev, points: fromDb.points, totalPurchaseAmount: fromDb.totalPurchaseAmount, totalSalesAmount: fromDb.totalSalesAmount, freelancerEarnings: fromDb.freelancerEarnings, coupons: fromDb.coupons ?? prev.coupons } : null);
+  }, [members, user?.id, user?.points, user?.totalPurchaseAmount, user?.totalSalesAmount, user?.freelancerEarnings]);
+
   useEffect(() => {
     try {
       localStorage.setItem('user_profile_v2', JSON.stringify(user));
@@ -513,7 +527,7 @@ const App: React.FC = () => {
     });
   }, [user, addNotif]);
 
-  const handleLoginSuccess = (userData: UserProfile) => {
+  const handleLoginSuccess = async (userData: UserProfile) => {
     const isAdminLogin = userData.role === 'admin' || userData.id?.toLowerCase() === 'admin';
     const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
     let targetProfile: UserProfile;
@@ -529,6 +543,21 @@ const App: React.FC = () => {
       };
       setMembers(prev => [...prev, targetProfile]);
     }
+    // 돈·포인트는 항상 DB 기준으로 덮어쓰기 (쿠키 삭제 후 0으로 바뀌는 현상 방지)
+    try {
+      const dbRow = await fetchProfileRow(userData.id);
+      if (dbRow) {
+        const dbProfile = profileRowToUserProfile(dbRow);
+        targetProfile = {
+          ...targetProfile,
+          points: dbProfile.points,
+          totalPurchaseAmount: dbProfile.totalPurchaseAmount,
+          totalSalesAmount: dbProfile.totalSalesAmount,
+          freelancerEarnings: dbProfile.freelancerEarnings,
+          coupons: dbProfile.coupons ?? targetProfile.coupons,
+        };
+      }
+    } catch (_) { /* RLS 등으로 조회 실패 시 기본 targetProfile 유지 */ }
     setUser(targetProfile);
     // 로그인 직후 채널/스토어 재로드 (첫 로드는 세션 복구 전이라 빈 결과였을 수 있음, admin 로그인은 RLS public SELECT 필요)
     Promise.all([
