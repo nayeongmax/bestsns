@@ -2,7 +2,7 @@
  * SNS활성화 Supabase DB 연동
  * - smm_orders (주문/결제 내역), smm_providers (공급처), smm_products (마스터상품)
  */
-import { supabase } from '@/supabase';
+import { supabase } from './supabase';
 import type { SMMOrder, SMMProvider, SMMProduct, SMMSource } from '@/types';
 
 // ─── smm_providers ─────────────────────────────────────────────────────
