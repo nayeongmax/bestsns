@@ -6,6 +6,7 @@ import {
   SMMProvider, SMMProduct, NotificationType, GradeConfig
 } from '@/types';
 import { supabase } from '@/supabase';
+import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from '@/storeDb';
 
 /** Supabase profiles 행 → UserProfile 변환 (profileUtils 의존 제거로 Netlify 빌드 안정화) */
 function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
@@ -176,7 +177,47 @@ const App: React.FC = () => {
     } catch { return []; }
   });
 
+  const storeDbLoaded = useRef(false);
+
   useEffect(() => { localStorage.setItem('grade_configs_v2', JSON.stringify(gradeConfigs)); }, [gradeConfigs]);
+
+  // N잡스토어: 상품/주문/리뷰 Supabase 로드
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [products, orders, reviewList] = await Promise.all([
+          fetchStoreProducts(),
+          fetchStoreOrders(),
+          fetchReviews(),
+        ]);
+        if (!cancelled) {
+          setEbooks(products);
+          setStoreOrders(orders);
+          setReviews(reviewList);
+          storeDbLoaded.current = true;
+        }
+      } catch (e) {
+        if (!cancelled) console.warn('N잡스토어 DB 로드 실패, localStorage 사용:', e);
+        storeDbLoaded.current = true;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // N잡스토어: 상품/주문/리뷰 변경 시 DB 저장
+  useEffect(() => {
+    if (!storeDbLoaded.current) return;
+    upsertStoreProducts(ebooks).catch((e) => console.warn('store_products 저장:', e));
+  }, [ebooks]);
+  useEffect(() => {
+    if (!storeDbLoaded.current) return;
+    upsertStoreOrders(storeOrders).catch((e) => console.warn('store_orders 저장:', e));
+  }, [storeOrders]);
+  useEffect(() => {
+    if (!storeDbLoaded.current) return;
+    upsertReviews(reviews).catch((e) => console.warn('reviews 저장:', e));
+  }, [reviews]);
 
   // 사이트 접속 로그: 로그인한 사용자 접속 시 기록 (2분당 1회 제한)
   const lastAccessLog = useRef<{ userId: string; at: number }>({ userId: '', at: 0 });
