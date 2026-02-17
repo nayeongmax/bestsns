@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { NotificationType, PartTimeJobRequest } from '@/types';
 import { compressImageForStorage } from '@/constants';
-import { upsertPartTimeJobRequest, deletePartTimeJobRequest } from '@/parttimeDb';
+import { upsertPartTimeJobRequest, deletePartTimeJobRequest } from '../parttimeDb';
 
 const todayStr = () => {
   const d = new Date();
