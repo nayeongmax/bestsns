@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { SNS_PLATFORMS } from '../constants';
 import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource } from '@/types';
-import { updateProfile } from '@/profileDb';
+import { updateProfile } from '../profileDb';
 
 interface Props {
   smmProducts: SMMProduct[];
