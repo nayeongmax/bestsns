@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { UserProfile, ChatMessage, ChannelProduct, NotificationType } from '../types';
+import { UserProfile, ChatMessage, ChannelProduct, NotificationType } from '@/types';
 import { supabase } from '@/supabase';
+import { fetchChatRoomMeta, upsertChatRoomMeta } from '@/chatRoomMetaDb';
 
 interface Props {
   user: UserProfile;
@@ -93,10 +94,11 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
   }, []);
 
   const setMeta = useCallback((roomId: string, patch: { memo?: string; isTrading?: boolean; isFavorite?: boolean }) => {
+    upsertChatRoomMeta(user.id, roomId, patch).catch((err) => console.warn('채팅방 메타 저장 실패:', err));
     const meta = getMeta();
     meta[roomId] = { ...meta[roomId], ...patch };
     localStorage.setItem(CHAT_META_KEY, JSON.stringify(meta));
-  }, [getMeta]);
+  }, [getMeta, user.id]);
 
   /** 문의하기/채팅하기로 진입 시: 대상 대화방을 만들고 선택해 오른쪽에서 바로 채팅 가능하게 함 */
   const ensureTargetRoom = useCallback((pendingTargetUser: PendingTargetUser, existingRooms: ChatRoom[]) => {
@@ -122,8 +124,13 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
 
   const loadRooms = useCallback(async (navState?: { targetUser?: PendingTargetUser }) => {
     setLoadingRooms(true);
-    const meta = getMeta();
     const pendingTargetUser = navState?.targetUser;
+    let meta: Record<string, { memo?: string; isTrading?: boolean; isFavorite?: boolean }>;
+    try {
+      meta = await fetchChatRoomMeta(user.id);
+    } catch {
+      meta = getMeta();
+    }
     try {
       const { data: rows, error } = await supabase
         .from('chat_messages')
