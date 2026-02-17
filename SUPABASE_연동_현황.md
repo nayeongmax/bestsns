@@ -14,6 +14,10 @@ SQL로 테이블을 만든 뒤, **App·각 페이지의 localStorage 사용을 S
 - 상품 **목록 조회(SELECT)** 만 비로그인도 허용하고, 등록·수정·삭제는 기존처럼 로그인 사용자만 가능합니다.  
 - 적용 후에는 로그인 여부·쿠키 삭제와 관계없이 상품 목록이 항상 DB에서 불러와져 정상 표시됩니다.
 
+**상품을 올려도 Supabase 테이블이 비어 있을 때:**  
+- RLS가 **등록(INSERT)·수정(UPDATE)·삭제(DELETE)** 도 막고 있기 때문입니다. 관리자 로그인은 Supabase 세션이 없어서 기존 정책(로그인만 허용)이면 저장이 거부됩니다.  
+- **같은 파일** `supabase-rls-public-read-channel-store.sql` 에 **쓰기 정책(INSERT/UPDATE/DELETE)** 이 추가되어 있으므로, **SQL Editor에서 해당 스크립트를 다시 한 번 실행**해 주세요. (기존 조회 정책에 더해 쓰기 정책이 생성됩니다.)
+
 **RLS 적용했는데도 상품이 비어 보일 때:**  
 1. **배포 환경(Netlify 등)에 env 설정**  
    - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 가 **실제 사용하는 Supabase 프로젝트** 값으로 설정되어 있어야 합니다.  
