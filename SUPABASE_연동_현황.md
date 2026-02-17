@@ -19,8 +19,16 @@ SQL로 테이블을 만든 뒤, **App·각 페이지의 localStorage 사용을 S
 - **같은 파일** `supabase-rls-public-read-channel-store.sql` 에 **쓰기 정책(INSERT/UPDATE/DELETE)** 이 추가되어 있으므로, **SQL Editor에서 해당 스크립트를 다시 한 번 실행**해 주세요. (기존 조회 정책에 더해 쓰기 정책이 생성됩니다.)
 
 **포인트·수익(돈)이 쿠키 삭제 후 0으로 바뀌는 문제:**  
-- 로그인 시 **DB(profiles)** 에서 포인트·누적 구매/판매·프리랜서 수익을 불러와 덮어쓰고, 회원 목록 로드 후에도 **DB 기준으로 동기화**하도록 앱을 수정했습니다.  
+- 로그인 시 **DB(profiles)** 에서 포인트·누적 구매/판매·프리랜서 수익을 불러와 덮어쓰고, **마이페이지 진입 시**에도 DB에서 다시 조회해 동기화합니다. 회원 목록 로드 후에도 DB 기준으로 user를 맞춥니다.  
 - **`supabase-rls-public-all-site-data.sql`** 에 **profiles** 테이블에 대한 **SELECT·UPDATE** 정책이 포함되어 있으므로, 이 스크립트를 실행해야 충전·수익이 DB에 저장되고 삭제 후에도 유지됩니다.
+
+**어드민에서 회원 목록이 전체가 안 나오는 문제:**  
+- 회원 목록은 Supabase **profiles**에서 불러옵니다. RLS가 로그인 사용자만 허용하면 관리자(세션 없음)일 때 빈 목록이 됩니다.  
+- 위와 동일하게 **`supabase-rls-public-all-site-data.sql`** 실행 후, 어드민에서 **「회원 및 권한 관리」** 탭을 열면 **profiles를 다시 조회**해 전체 회원이 나오도록 했습니다.
+
+**AI 상담 이력·통계가 안 나오는 문제:**  
+- **ai_consult_sessions**, **ai_consult_messages** 테이블도 RLS가 authenticated만 허용하면 관리자(anon)일 때 조회가 막혀 통계가 비어 보입니다.  
+- **`supabase-rls-public-all-site-data.sql`** 에 AI 상담 테이블에 대한 **SELECT·INSERT·UPDATE** 정책이 추가되어 있습니다. (6단계 AI컨설팅 SQL 실행으로 테이블이 있어야 합니다.)
 
 **RLS 적용했는데도 상품이 비어 보일 때:**  
 1. **배포 환경(Netlify 등)에 env 설정**  
