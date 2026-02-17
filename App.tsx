@@ -8,6 +8,7 @@ import {
 import { supabase } from '@/supabase';
 import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from '@/storeDb';
 import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from '@/channelDb';
+import { fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, upsertSmmOrders, upsertSmmProviders, upsertSmmProducts } from '@/smmDb';
 
 /** Supabase profiles 행 → UserProfile 변환 (profileUtils 의존 제거로 Netlify 빌드 안정화) */
 function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
@@ -183,6 +184,7 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('grade_configs_v2', JSON.stringify(gradeConfigs)); }, [gradeConfigs]);
 
   const channelDbLoaded = useRef(false);
+  const smmDbLoaded = useRef(false);
 
   // N잡스토어 + 채널판매: Supabase 로드
   useEffect(() => {
@@ -214,6 +216,30 @@ const App: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
+  // SNS활성화: 주문/공급처/상품 Supabase 로드
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [orders, providers, products] = await Promise.all([
+          fetchSmmOrders(),
+          fetchSmmProviders(),
+          fetchSmmProducts(),
+        ]);
+        if (!cancelled) {
+          setSmmOrders(orders);
+          setSmmProviders(providers);
+          setSmmProducts(products);
+          smmDbLoaded.current = true;
+        }
+      } catch (e) {
+        if (!cancelled) console.warn('SNS활성화 DB 로드 실패, localStorage 사용:', e);
+        smmDbLoaded.current = true;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // N잡스토어: 상품/주문/리뷰 변경 시 DB 저장
   useEffect(() => {
     if (!storeDbLoaded.current) return;
@@ -237,6 +263,20 @@ const App: React.FC = () => {
     if (!channelDbLoaded.current) return;
     upsertChannelOrders(channelOrders).catch((e) => console.warn('channel_orders 저장:', e));
   }, [channelOrders]);
+
+  // SNS활성화: 주문/공급처/상품 변경 시 DB 저장
+  useEffect(() => {
+    if (!smmDbLoaded.current) return;
+    upsertSmmOrders(smmOrders).catch((e) => console.warn('smm_orders 저장:', e));
+  }, [smmOrders]);
+  useEffect(() => {
+    if (!smmDbLoaded.current) return;
+    upsertSmmProviders(smmProviders).catch((e) => console.warn('smm_providers 저장:', e));
+  }, [smmProviders]);
+  useEffect(() => {
+    if (!smmDbLoaded.current) return;
+    upsertSmmProducts(smmProducts).catch((e) => console.warn('smm_products 저장:', e));
+  }, [smmProducts]);
 
   // 사이트 접속 로그: 로그인한 사용자 접속 시 기록 (2분당 1회 제한)
   const lastAccessLog = useRef<{ userId: string; at: number }>({ userId: '', at: 0 });
