@@ -18,6 +18,10 @@ SQL로 테이블을 만든 뒤, **App·각 페이지의 localStorage 사용을 S
 - RLS가 **등록(INSERT)·수정(UPDATE)·삭제(DELETE)** 도 막고 있기 때문입니다. 관리자 로그인은 Supabase 세션이 없어서 기존 정책(로그인만 허용)이면 저장이 거부됩니다.  
 - **같은 파일** `supabase-rls-public-read-channel-store.sql` 에 **쓰기 정책(INSERT/UPDATE/DELETE)** 이 추가되어 있으므로, **SQL Editor에서 해당 스크립트를 다시 한 번 실행**해 주세요. (기존 조회 정책에 더해 쓰기 정책이 생성됩니다.)
 
+**포인트·수익(돈)이 쿠키 삭제 후 0으로 바뀌는 문제:**  
+- 로그인 시 **DB(profiles)** 에서 포인트·누적 구매/판매·프리랜서 수익을 불러와 덮어쓰고, 회원 목록 로드 후에도 **DB 기준으로 동기화**하도록 앱을 수정했습니다.  
+- **`supabase-rls-public-all-site-data.sql`** 에 **profiles** 테이블에 대한 **SELECT·UPDATE** 정책이 포함되어 있으므로, 이 스크립트를 실행해야 충전·수익이 DB에 저장되고 삭제 후에도 유지됩니다.
+
 **RLS 적용했는데도 상품이 비어 보일 때:**  
 1. **배포 환경(Netlify 등)에 env 설정**  
    - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 가 **실제 사용하는 Supabase 프로젝트** 값으로 설정되어 있어야 합니다.  
