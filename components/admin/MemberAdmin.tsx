@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder, getUserGrade, Review, NotificationType } from '../../types';
+import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder, getUserGrade, Review, NotificationType } from '@/types';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/supabase';
+import { supabase } from '../../supabase';
 import { getFreelancerBalance } from '@/constants';
 import MyPage from '@/pages/MyPage';
 
