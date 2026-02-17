@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, StoreOrder } from '@/types';
-import { fetchSellerWithdrawalBatches, addSellerWithdrawalBatch } from '@/storeDb';
+import { fetchSellerWithdrawalBatches, addSellerWithdrawalBatch } from '../storeDb';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   BarChart, Bar, Cell 
