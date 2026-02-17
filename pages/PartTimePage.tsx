@@ -10,7 +10,7 @@ import {
   fetchFreelancerBalance,
   fetchPartTimeCompletedIds,
   processAutoApprovalsInDb,
-} from '@/parttimeDb';
+} from '../parttimeDb';
 
 interface Props {
   user: UserProfile | null;
