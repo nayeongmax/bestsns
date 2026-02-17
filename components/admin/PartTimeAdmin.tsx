@@ -16,7 +16,7 @@ import {
   fetchFreelancerBalance,
   setFreelancerBalance,
   addFreelancerEarningToDb,
-} from '@/parttimeDb';
+} from '../../parttimeDb';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
