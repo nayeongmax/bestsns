@@ -513,6 +513,18 @@ const App: React.FC = () => {
       setMembers(prev => [...prev, targetProfile]);
     }
     setUser(targetProfile);
+    // 로그인 직후 채널/스토어 재로드 (첫 로드는 세션 복구 전이라 빈 결과였을 수 있음, admin 로그인은 RLS public SELECT 필요)
+    Promise.all([
+      fetchChannelProducts(),
+      fetchStoreProducts(),
+      fetchReviews(),
+      fetchChannelOrders(),
+    ]).then(([channelProducts, products, reviewList, channelOrderList]) => {
+      setChannels(channelProducts);
+      setEbooks(products);
+      setReviews(reviewList);
+      setChannelOrders(channelOrderList);
+    }).catch((e) => console.warn('로그인 후 채널/스토어 재로드 실패:', e));
   };
 
   const handleLogout = () => setUser(null);
