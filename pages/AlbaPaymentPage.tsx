@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeJobRequest } from '@/types';
 import { getPartTimeJobRequests, setPartTimeJobRequests, calcAdvertiserTotalPayment } from '@/constants';
-import { upsertPartTimeJobRequest } from '@/parttimeDb';
+import { upsertPartTimeJobRequest } from '../parttimeDb';
 
 declare const window: any;
 
