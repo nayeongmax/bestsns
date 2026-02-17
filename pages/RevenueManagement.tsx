@@ -9,7 +9,7 @@ import {
   upsertRevenueTodos,
   fetchRevenueGeneralExpenses,
   upsertRevenueGeneralExpenses,
-} from '@/revenueDb';
+} from '../revenueDb';
 
 const PROJECT_TYPES: WorkType[] = ['카페관리', '블로그대행', '블로그체험단', '유튜브', '인스타그램', '기타작업'];
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ['운영비', '인건비', '식비', '집기구입비', '구독비', '기타비용'];
