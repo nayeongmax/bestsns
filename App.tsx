@@ -117,7 +117,7 @@ function ContainerRoutes(props: {
       <Route path="/board" element={<FreeBoard posts={props.posts} notices={props.notices} members={props.members} gradeConfigs={props.gradeConfigs} />} />
       <Route path="/board/:id" element={props.user ? <FreeBoardDetail user={props.user} posts={props.posts} setPosts={props.setPosts} members={props.members} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/board/write" element={props.user ? <FreeBoardWrite user={props.user} posts={props.posts} setPosts={props.setPosts} /> : <Navigate to="/login" />} />
-      <Route path="/revenue" element={props.user ? <RevenueManagement /> : <Navigate to="/login" />} />
+      <Route path="/revenue" element={props.user ? <RevenueManagement user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/profit-mgmt" element={props.user ? <ProfitManagement user={props.user} storeOrders={props.storeOrders} /> : <Navigate to="/login" />} />
       <Route path="/chat" element={props.user ? <ChatPage user={props.user} members={props.members} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/mypage" element={props.user ? <MyPage user={props.user} members={props.members} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={() => {}} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
