@@ -9,6 +9,8 @@ import { supabase } from '@/supabase';
 import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from '@/storeDb';
 import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from '@/channelDb';
 import { fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, upsertSmmOrders, upsertSmmProviders, upsertSmmProducts } from '@/smmDb';
+import { updateProfile } from '@/profileDb';
+import { fetchNotices, upsertNotices, fetchGradeConfigs, upsertGradeConfigs, fetchPosts, upsertPosts } from '@/siteDb';
 
 /** Supabase profiles 행 → UserProfile 변환 (profileUtils 의존 제거로 Netlify 빌드 안정화) */
 function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
@@ -122,7 +124,7 @@ function ContainerRoutes(props: {
       <Route path="/notifications" element={props.user ? <NotificationsPage notifications={props.notifications} setNotifications={props.setNotifications} user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/wishlist" element={<WishlistPage wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channels={props.channels} ebooks={props.ebooks} />} />
       <Route path="/coupons" element={props.user ? <CouponBox user={props.user} /> : <Navigate to="/login" />} />
-      <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} channels={props.channels} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} setChannelOrders={props.setChannelOrders} /> : <Navigate to="/login" />} />
+      <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} channels={props.channels} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} setChannelOrders={props.setChannelOrders} setStoreOrders={props.setStoreOrders} /> : <Navigate to="/login" />} />
       <Route path="/payment/alba" element={props.user ? <AlbaPaymentPage user={props.user} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
       <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} /> : <Navigate to="/login" />} />
@@ -185,6 +187,7 @@ const App: React.FC = () => {
 
   const channelDbLoaded = useRef(false);
   const smmDbLoaded = useRef(false);
+  const siteDbLoaded = useRef(false);
 
   // N잡스토어 + 채널판매: Supabase 로드
   useEffect(() => {
@@ -240,6 +243,30 @@ const App: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
+  // 공지/등급/게시글: Supabase 로드 (1·2·5단계 테이블)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [noticeList, gradeList, postList] = await Promise.all([
+          fetchNotices(),
+          fetchGradeConfigs(),
+          fetchPosts(),
+        ]);
+        if (!cancelled) {
+          setNotices(noticeList);
+          setGradeConfigs(gradeList);
+          setPosts(postList);
+          siteDbLoaded.current = true;
+        }
+      } catch (e) {
+        if (!cancelled) console.warn('공지/등급/게시글 DB 로드 실패, localStorage 사용:', e);
+        siteDbLoaded.current = true;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // N잡스토어: 상품/주문/리뷰 변경 시 DB 저장
   useEffect(() => {
     if (!storeDbLoaded.current) return;
@@ -277,6 +304,20 @@ const App: React.FC = () => {
     if (!smmDbLoaded.current) return;
     upsertSmmProducts(smmProducts).catch((e) => console.warn('smm_products 저장:', e));
   }, [smmProducts]);
+
+  // 공지/등급/게시글: 변경 시 DB 저장
+  useEffect(() => {
+    if (!siteDbLoaded.current) return;
+    upsertNotices(notices).catch((e) => console.warn('site_notices 저장:', e));
+  }, [notices]);
+  useEffect(() => {
+    if (!siteDbLoaded.current) return;
+    upsertGradeConfigs(gradeConfigs).catch((e) => console.warn('grade_configs 저장:', e));
+  }, [gradeConfigs]);
+  useEffect(() => {
+    if (!siteDbLoaded.current) return;
+    upsertPosts(posts).catch((e) => console.warn('site_posts 저장:', e));
+  }, [posts]);
 
   // 사이트 접속 로그: 로그인한 사용자 접속 시 기록 (2분당 1회 제한)
   const lastAccessLog = useRef<{ userId: string; at: number }>({ userId: '', at: 0 });
@@ -430,18 +471,20 @@ const App: React.FC = () => {
   const handleMassIssueCoupons = useCallback((targetIds: string[], couponData: Omit<Coupon, 'id' | 'status'>) => {
     const now = Date.now();
     const targetIdsLower = targetIds.map(id => id.trim().toLowerCase());
-    
+
     setMembers(prev => {
       const next = prev.map(m => {
         if (targetIdsLower.includes(m.id.trim().toLowerCase())) {
           const newCoupon: Coupon = { ...couponData, id: `CPN_${now}_${m.id}`, status: 'available' };
           addNotif(
-            m.id, 
-            'coupon', 
-            '🎫 새로운 쿠폰이 도착했습니다!', 
+            m.id,
+            'coupon',
+            '🎫 새로운 쿠폰이 도착했습니다!',
             `회원님께 [${couponData.title}] (${couponData.discountLabel}) 쿠폰이 발행되었습니다. 쿠폰함을 확인해 보세요!`
           );
-          return { ...m, coupons: [...(m.coupons || []), newCoupon] };
+          const updated = { ...m, coupons: [...(m.coupons || []), newCoupon] };
+          updateProfile(m.id, { coupons: updated.coupons }).catch((e) => console.warn('쿠폰 발급 DB 반영 실패:', e));
+          return updated;
         }
         return m;
       });
