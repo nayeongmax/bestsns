@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { SiteNotification, NotificationType, UserProfile } from '@/types';
-import { supabase } from '@/supabase';
+import { supabase } from '../supabase';
 
 interface Props {
   notifications: SiteNotification[];
