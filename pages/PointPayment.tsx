@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile, Coupon, NotificationType, EbookProduct, ChannelProduct, ChannelOrder, StoreOrder, StoreType } from '@/types';
-import { updateProfile } from '@/profileDb';
+import { updateProfile } from '../profileDb';
 
 declare const window: any;
 
