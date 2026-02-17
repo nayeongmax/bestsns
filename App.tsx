@@ -189,10 +189,10 @@ const App: React.FC = () => {
   const smmDbLoaded = useRef(false);
   const siteDbLoaded = useRef(false);
 
-  // N잡스토어 + 채널판매: Supabase 로드
+  // N잡스토어 + 채널판매: Supabase 로드 (실패 시 1회 재시도 — 쿠키/캐시 삭제 후에도 상품이 보이도록)
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const load = async (isRetry: boolean) => {
       try {
         const [products, orders, reviewList, channelProducts, channelOrderList] = await Promise.all([
           fetchStoreProducts(),
@@ -211,11 +211,24 @@ const App: React.FC = () => {
           channelDbLoaded.current = true;
         }
       } catch (e) {
-        if (!cancelled) console.warn('스토어/채널 DB 로드 실패, localStorage 사용:', e);
-        storeDbLoaded.current = true;
-        channelDbLoaded.current = true;
+        if (cancelled) return;
+        console.warn(
+          isRetry ? '스토어/채널 DB 재시도도 실패' : '스토어/채널 DB 로드 실패, 1.5초 후 재시도합니다.',
+          e
+        );
+        if (!isRetry) {
+          await new Promise((r) => setTimeout(r, 1500));
+          if (!cancelled) load(true);
+        } else {
+          console.warn(
+            '[Supabase] 배포 환경(Netlify 등)에 VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY 가 설정되어 있는지 확인하세요. 설정 없으면 상품 목록이 비어 보입니다.'
+          );
+          storeDbLoaded.current = true;
+          channelDbLoaded.current = true;
+        }
       }
-    })();
+    };
+    load(false);
     return () => { cancelled = true; };
   }, []);
 
