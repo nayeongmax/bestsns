@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade } from '../types';
+import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade } from '@/types';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -99,8 +99,14 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
   const handleBuyNow = () => {
     const selectedTier = tiers[activeTierIdx];
     if (window.confirm(`${ebook.title} (${selectedTier.name}) 상품을 구매하시겠습니까?`)) {
-      navigate('/payment/point', { 
-        state: { amount: selectedTier.price, product: { title: `${ebook.title} [${selectedTier.name}]`, id: ebook.id } } 
+      navigate('/payment/point', {
+        state: {
+          amount: selectedTier.price,
+          product: { title: `${ebook.title} [${selectedTier.name}]`, id: ebook.id },
+          tier: selectedTier,
+          storeType: currentStoreType,
+          sellerNickname: ebook.author,
+        },
       });
     }
   };
