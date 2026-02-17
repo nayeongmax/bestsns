@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { UserProfile, Coupon, NotificationType, EbookProduct, ChannelProduct, ChannelOrder } from '@/types';
+import { UserProfile, Coupon, NotificationType, EbookProduct, ChannelProduct, ChannelOrder, StoreOrder, StoreType } from '@/types';
+import { updateProfile } from '@/profileDb';
 
 declare const window: any;
 
@@ -13,14 +14,18 @@ interface Props {
   onUpdateUser: (updated: UserProfile) => void;
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
   setChannelOrders: React.Dispatch<React.SetStateAction<ChannelOrder[]>>;
+  setStoreOrders: React.Dispatch<React.SetStateAction<StoreOrder[]>>;
 }
 
-const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpdateUser, addNotif, setChannelOrders }) => {
+const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpdateUser, addNotif, setChannelOrders, setStoreOrders }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const productInfo = location.state?.product;
-  const initialAmount = location.state?.amount || 0; 
+  const initialAmount = location.state?.amount || 0;
   const isProductPayment = !!productInfo;
+  const ebookTier = location.state?.tier as { name: string; price: number } | undefined;
+  const storeType = (location.state?.storeType as StoreType) || 'ebook';
+  const sellerNickname = location.state?.sellerNickname as string | undefined;
 
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'toss'>('card');
   const [amount, setAmount] = useState<number>(initialAmount); 
@@ -83,8 +88,19 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
 
       // 결제 성공 시 (response.code가 없으면 성공으로 간주하는 V2 방식)
       if (!response.code) {
+        const paymentId = paymentData.paymentId as string;
+        // 쿠폰 사용 시 DB 반영
+        let nextUser = { ...user };
+        if (appliedCoupon) {
+          const nextCoupons = (user.coupons || []).map((c) =>
+            c.id === appliedCoupon.id ? { ...c, status: 'used' as const } : c
+          );
+          nextUser = { ...user, coupons: nextCoupons };
+          onUpdateUser(nextUser);
+          updateProfile(user.id, { coupons: nextCoupons }).catch((e) => console.warn('쿠폰 사용 DB 반영 실패:', e));
+        }
+
         if (isProductPayment) {
-          const paymentId = paymentData.paymentId as string;
           addNotif(user.id, 'payment', '💳 상품 결제 완료', `[${productInfo.title}] 상품의 결제가 완료되었습니다. 마이페이지에서 확인하세요.`);
           // 채널 상품: 구매 내역(ChannelOrder) 추가 → DB 연동은 App에서 channelOrders 변경 시 자동 저장
           const channelProduct = channels.find((c: ChannelProduct) => c.id === productInfo.id) ?? (productInfo as ChannelProduct);
@@ -108,16 +124,34 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
               addNotif(channelProduct.sellerId, 'channel', '💰 채널 판매 알림', `[${channelProduct.title}] 채널이 판매되었습니다.`);
             }
           } else {
-            // 이북 등 기타 상품: 판매자 알림
-            const targetProduct = ebooks.find(e => e.id === productInfo.id);
-            if (targetProduct) {
+            // N잡스토어(이북 등): StoreOrder 추가 → DB 연동은 App에서 storeOrders 변경 시 자동 저장
+            const targetProduct = ebooks.find((e) => e.id === productInfo.id);
+            if (targetProduct && ebookTier && sellerNickname) {
+              const newStoreOrder: StoreOrder = {
+                id: `SO_${Date.now()}_${user.id.slice(0, 6)}`,
+                userId: user.id,
+                userNickname: user.nickname ?? user.id,
+                sellerNickname,
+                orderTime: new Date().toISOString(),
+                productId: targetProduct.id,
+                productName: productInfo.title ?? targetProduct.title,
+                tierName: ebookTier.name ?? '',
+                price: finalPayAmount,
+                storeType,
+                status: '결제완료',
+                paymentId,
+              };
+              setStoreOrders((prev) => [...prev, newStoreOrder]);
+              addNotif(targetProduct.authorId, 'ebook', '💰 상품 판매 알림', `축하합니다! 회원님의 [${targetProduct.title}] 상품이 판매되었습니다.`);
+            } else if (targetProduct) {
               addNotif(targetProduct.authorId, 'ebook', '💰 상품 판매 알림', `축하합니다! 회원님의 [${targetProduct.title}] 상품이 판매되었습니다.`);
             }
           }
         } else {
-          // 포인트 충전 처리
+          // 포인트 충전 처리 + DB 반영
           const nextPoints = (user.points || 0) + amount;
-          onUpdateUser({ ...user, points: nextPoints });
+          onUpdateUser({ ...nextUser, points: nextPoints });
+          updateProfile(user.id, { points: nextPoints }).catch((e) => console.warn('포인트 충전 DB 반영 실패:', e));
           addNotif(user.id, 'payment', '💰 포인트 충전 완료', `${amount.toLocaleString()}P 충전이 완료되었습니다. 현재 잔액: ${nextPoints.toLocaleString()}P`);
         }
         alert('결제가 정상적으로 완료되었습니다.');
