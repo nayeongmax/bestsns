@@ -1,7 +1,7 @@
 /**
  * 쿠폰·마케팅 캠페인 Supabase DB 연동 (2단계 coupon_campaigns)
  */
-import { supabase } from '@/supabase';
+import { supabase } from './supabase';
 import type { AutoCouponCampaign } from '@/types';
 
 function campaignToRow(c: AutoCouponCampaign): Record<string, unknown> {
