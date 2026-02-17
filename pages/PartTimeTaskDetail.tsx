@@ -11,7 +11,7 @@ import {
   fetchFreelancerBalance,
   setFreelancerBalance,
   addFreelancerEarningToDb,
-} from '@/parttimeDb';
+} from '../parttimeDb';
 import { FREELANCER_FEE_RATE } from '@/constants';
 
 interface Props {
