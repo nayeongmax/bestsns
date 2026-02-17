@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserProfile } from '../types';
-import { supabase } from '@/supabase';
+import { UserProfile } from '@/types';
+import { supabase } from '../supabase';
 
 interface Props {
   onLoginSuccess: (user: UserProfile) => void;
