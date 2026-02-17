@@ -27,7 +27,7 @@ import {
   withdrawFreelancerEarningsInDb,
   addFreelancerEarningToDb,
   setFreelancerBalance,
-} from '@/parttimeDb';
+} from '../../parttimeDb';
 import type { FreelancerEarningEntry } from '@/types';
 import type { NotificationType } from '@/types';
 
@@ -161,9 +161,9 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       const taskList = await fetchPartTimeTasks();
       if (cancelled) return;
       const mySelected = taskList.filter(
-        (t) => !t.pointPaid && t.applicants.some((a) => a.userId === user.id && a.selected)
-      );
-      setSelectedTasks(mySelected);
+      (t) => !t.pointPaid && t.applicants.some((a) => a.userId === user.id && a.selected)
+    );
+    setSelectedTasks(mySelected);
     })();
     return () => { cancelled = true; };
   }, [user.id]);
@@ -201,14 +201,14 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         accountNo: bankInfo.accountNo,
         ownerName: bankInfo.ownerName || user.nickname,
       });
-      if (result.success) {
-        setBalance(result.newBalance);
+    if (result.success) {
+      setBalance(result.newBalance);
         const h = await fetchFreelancerHistory(user.id);
         setHistory(h);
         alert(
           `출금 신청이 완료되었습니다.\n출금일 기준 익일~3일 이내 신청한 계좌(${bankInfo.bankName} ${bankInfo.accountNo})로 입금됩니다.`
         );
-      } else {
+    } else {
         alert('출금 처리에 실패했습니다.');
       }
     } catch (err) {
@@ -318,9 +318,9 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                 ? '알바비 지급됨'
                 : hasRevision
                   ? '작업에 수정필요'
-                  : hasLink
-                    ? '링크 제출됨 (확인 대기)'
-                    : '링크 미제출';
+                : hasLink
+                  ? '링크 제출됨 (확인 대기)'
+                  : '링크 미제출';
               const statusDesc = hasLink && !t.paidUserIds?.includes(user.id) && !hasRevision
                 ? '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.'
                 : null;
@@ -328,7 +328,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                 <li key={t.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-emerald-200">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-black text-gray-900">{t.title}</p>
+                    <p className="font-black text-gray-900">{t.title}</p>
                       {t.projectNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t.projectNo}</span>}
                     </div>
                     <p className="text-xs text-gray-500">+{t.reward.toLocaleString()}원 · {status}</p>
@@ -359,8 +359,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     </button>
                     {!hasLink && (
                       <Link to={`/part-time/${t.id}`} className="px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm hover:bg-emerald-200">
-                        상세/링크 제출
-                      </Link>
+                    상세/링크 제출
+                  </Link>
                     )}
                   </div>
                 </li>
@@ -483,7 +483,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             </div>
           </div>
 
-          <div>
+      <div>
             <h5 className="font-black text-gray-800 mb-2">수익통장 내역 (전체)</h5>
             <div className="flex items-center gap-2 mb-3">
               <select value={settlementMonth} onChange={(e) => setSettlementMonth(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
@@ -498,18 +498,18 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white">
               {history.filter((e) => e.at.startsWith(settlementMonth)).length === 0 ? (
                 <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 내역이 없습니다.</div>
-              ) : (
-                <ul className="divide-y divide-gray-100">
+          ) : (
+            <ul className="divide-y divide-gray-100">
                   {history.filter((e) => e.at.startsWith(settlementMonth)).map((entry) => {
                     const isRefund = entry.label?.includes('환급');
                     const isTaskEarn = entry.type === 'task' && entry.amount > 0 && !isRefund;
                     const netAmount = isTaskEarn ? Math.round(entry.amount * (1 - FREELANCER_FEE_RATE)) : entry.amount;
                     return (
                       <li key={entry.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
-                          <div>
-                            <p className="font-bold text-gray-800">{entry.label}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
+                    <div>
+                      <p className="font-bold text-gray-800">{entry.label}</p>
                             <p className="text-[11px] text-gray-400">{new Date(entry.at).toLocaleString('ko-KR')}</p>
                           </div>
                         </div>
@@ -579,7 +579,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     <h4 className="font-black text-gray-900 text-lg">{jr.title}</h4>
                     <p className="text-gray-500 mt-2 line-clamp-2">{jr.workContent}</p>
                     {jr.rejectReason && <div className="mt-3 p-3 rounded-xl bg-white border border-red-100"><p className="text-xs font-black text-red-600 uppercase">거절 사유</p><p className="text-gray-800 font-bold mt-1">{jr.rejectReason}</p></div>}
-                  </div>
+                    </div>
                   <div className="flex gap-2 flex-wrap">
                     <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">수정하기</Link>
                     <button type="button" onClick={async () => { if (!confirm('정말 삭제하시겠습니까?')) return; try { await deletePartTimeJobRequest(jr.id); setJobRequests((prev) => prev.filter((r) => r.id !== jr.id)); alert('삭제되었습니다.'); } catch (e) { console.error(e); alert('삭제에 실패했습니다.'); } }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
@@ -1221,8 +1221,8 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
               <button type="button" onClick={() => setShowWithdrawModal(false)} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">취소</button>
               <button type="button" onClick={handleWithdrawConfirm} className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700">확인</button>
             </div>
-          </div>
         </div>
+      </div>
       )}
     </div>
   );
