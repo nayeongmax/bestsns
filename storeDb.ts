@@ -2,7 +2,7 @@
  * N잡스토어 / 구매자·판매자 워크페이스 Supabase DB 연동
  * - store_products (상품), store_orders (주문), reviews (리뷰), order_buyer_flags (구매확정/리뷰/다운로드)
  */
-import { supabase } from '@/supabase';
+import { supabase } from './supabase';
 import type { EbookProduct, EbookTier, StoreOrder, Review, StoreType } from '@/types';
 
 // ─── store_products (N잡 상품) ────────────────────────────────────────
