@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeJobRequest } from '@/types';
 import { getPartTimeJobRequests, setPartTimeJobRequests, calcAdvertiserTotalPayment } from '@/constants';
+import { upsertPartTimeJobRequest } from '@/parttimeDb';
 
 declare const window: any;
 
@@ -68,9 +69,11 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
       const response = await PortOne.requestPayment(paymentData);
 
       if (!response.code) {
+        const updated = { ...jobRequest, paid: true };
         const requests = getPartTimeJobRequests();
-        const next = requests.map((r) => (r.id === jobRequest.id ? { ...r, paid: true } : r));
+        const next = requests.map((r) => (r.id === jobRequest.id ? updated : r));
         setPartTimeJobRequests(next);
+        await upsertPartTimeJobRequest(updated);
         addNotif?.(user.id, 'payment', '알바의뢰 결제 완료', `[${jobRequest.title}] 결제가 완료되었습니다. 프리랜서 모집이 진행될 예정입니다.`);
         alert('결제가 정상적으로 완료되었습니다.');
         navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
@@ -140,9 +143,11 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
                 setIsProcessing(true);
                 try {
                   const targetUserId = jobRequest!.applicantUserId;
+                  const updated = { ...jobRequest!, paid: true };
                   const requests = getPartTimeJobRequests();
-                  const next = requests.map((r) => (r.id === jobRequest!.id ? { ...r, paid: true } : r));
+                  const next = requests.map((r) => (r.id === jobRequest!.id ? updated : r));
                   setPartTimeJobRequests(next);
+                  await upsertPartTimeJobRequest(updated);
                   addNotif?.(targetUserId, 'payment', '알바의뢰 결제 완료', `[${jobRequest!.title}] 결제가 완료되었습니다. 프리랜서 모집이 진행될 예정입니다.`);
                   alert('테스트 결제가 임시통과 처리되었습니다.');
                   navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
