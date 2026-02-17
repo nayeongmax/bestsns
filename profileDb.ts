@@ -19,6 +19,7 @@ function toSnakePayload(partial: Partial<{
   freelancerApplication: unknown;
   totalPurchaseAmount: number;
   totalSalesAmount: number;
+  freelancerEarnings: number;
 }>) {
   const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (partial.points !== undefined) row.points = partial.points;
@@ -34,7 +35,18 @@ function toSnakePayload(partial: Partial<{
   if (partial.freelancerApplication !== undefined) row.freelancer_application = partial.freelancerApplication;
   if (partial.totalPurchaseAmount !== undefined) row.total_purchase_amount = partial.totalPurchaseAmount;
   if (partial.totalSalesAmount !== undefined) row.total_sales_amount = partial.totalSalesAmount;
+  if (partial.freelancerEarnings !== undefined) row.total_freelancer_earnings = partial.freelancerEarnings;
   return row;
+}
+
+const PROFILE_SELECT =
+  'id, email, nickname, profile_image, phone, role, points, manual_grade, coupons, total_purchase_amount, total_sales_amount, total_freelancer_earnings, join_date, seller_status, freelancer_status, seller_application, pending_application, freelancer_application, violation_count, withdrawn_at';
+
+/** 단일 회원 프로필 조회 (로그인 시 포인트·수익 등 금액 필드 동기화용) */
+export async function fetchProfileRow(userId: string): Promise<Record<string, unknown> | null> {
+  const { data, error } = await supabase.from('profiles').select(PROFILE_SELECT).eq('id', userId).maybeSingle();
+  if (error) throw error;
+  return data as Record<string, unknown> | null;
 }
 
 /** 프로필 일부 필드만 DB에 반영 (포인트, 쿠폰, 닉네임, 전문가/프리랜서 신청 등) */
