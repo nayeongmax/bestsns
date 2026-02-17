@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { UserProfile, SellerApplication, NotificationType } from '../../types';
+import { UserProfile, SellerApplication, NotificationType, FreelancerApplication } from '@/types';
 import { supabase } from '@/supabase';
 import { compressImageForStorage } from '@/constants';
+import { updateProfile } from '@/profileDb';
 
 interface Props {
   user: UserProfile;
@@ -184,7 +185,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
         if (!proofImages.bankbook) return alert('통장 사본 이미지를 등록해 주세요.');
       }
       if (!window.confirm('프리랜서 등록 신청을 제출하시겠습니까? 운영자 승인 후 누구나알바에 신청할 수 있습니다.')) return;
-      const freelancerApp: import('../../types').FreelancerApplication = {
+      const freelancerApp: FreelancerApplication = {
         appliedAt: new Date().toISOString(),
         name: sellerType === 'individual' ? individualForm.ownerName : businessForm.ownerName,
         contact: (sellerType === 'individual' ? individualForm.contact || individualForm.email : businessForm.taxEmail) || '',
@@ -196,6 +197,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       };
       try {
         await onUpdate({ ...user, freelancerStatus: 'pending', freelancerApplication: freelancerApp });
+        await updateProfile(user.id, { freelancerStatus: 'pending', freelancerApplication: freelancerApp });
         setShowApplySuccessModal(true);
         onExpertRegistrationDone?.();
         alert('프리랜서 등록 신청이 완료되었습니다.\n운영자 승인 후 누구나알바에 신청할 수 있습니다.');
@@ -240,11 +242,13 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     
     if (user.sellerStatus === 'approved') {
       onUpdate({ ...user, sellerApplication: newApp });
+      updateProfile(user.id, { sellerApplication: newApp }).catch((e) => console.warn('전문가 정보 DB 반영 실패:', e));
       alert('전문가 정보가 성공적으로 수정되었습니다.');
     } else {
       if (user.sellerStatus === 'none' && !window.confirm('전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.\n제출하시겠습니까?')) return;
       try {
         await onUpdate({ ...user, sellerStatus: 'pending', sellerApplication: newApp });
+        await updateProfile(user.id, { sellerStatus: 'pending', sellerApplication: newApp });
         setShowApplySuccessModal(true);
       } catch (_) {
         // 저장 실패 시 App에서 이미 alert 함, 모달은 띄우지 않음
