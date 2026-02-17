@@ -2,7 +2,7 @@
  * 사이트 공통 Supabase DB 연동 (기존 1·2·5단계 SQL 테이블 사용)
  * - site_notices (공지), grade_configs (등급), site_posts + site_post_comments (게시글)
  */
-import { supabase } from '@/supabase';
+import { supabase } from './supabase';
 import type { Notice, GradeConfig, Post, BoardComment } from '@/types';
 
 // ─── site_notices ───────────────────────────────────────────────────────
