@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getMarketingConsultation } from '../services/geminiService';
-import { supabase } from '@/supabase';
+import { supabase } from '../supabase';
 import type { UserProfile } from '@/types';
 
 /** 마크다운 형식 텍스트를 가독성 있게 렌더링 (추가 의존성 없음) */
