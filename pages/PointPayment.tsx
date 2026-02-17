@@ -1,19 +1,21 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { UserProfile, Coupon, NotificationType, EbookProduct } from '../types';
+import { UserProfile, Coupon, NotificationType, EbookProduct, ChannelProduct, ChannelOrder } from '@/types';
 
 declare const window: any;
 
 interface Props {
   user: UserProfile;
   ebooks: EbookProduct[];
+  channels: ChannelProduct[];
   members: UserProfile[];
   onUpdateUser: (updated: UserProfile) => void;
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+  setChannelOrders: React.Dispatch<React.SetStateAction<ChannelOrder[]>>;
 }
 
-const PointPayment: React.FC<Props> = ({ user, ebooks, members, onUpdateUser, addNotif }) => {
+const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpdateUser, addNotif, setChannelOrders }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const productInfo = location.state?.product;
@@ -82,11 +84,35 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, members, onUpdateUser, ad
       // 결제 성공 시 (response.code가 없으면 성공으로 간주하는 V2 방식)
       if (!response.code) {
         if (isProductPayment) {
+          const paymentId = paymentData.paymentId as string;
           addNotif(user.id, 'payment', '💳 상품 결제 완료', `[${productInfo.title}] 상품의 결제가 완료되었습니다. 마이페이지에서 확인하세요.`);
-          // 판매자에게도 알림
-          const targetProduct = ebooks.find(e => e.id === productInfo.id);
-          if (targetProduct) {
-            addNotif(targetProduct.authorId, 'ebook', '💰 상품 판매 알림', `축하합니다! 회원님의 [${targetProduct.title}] 상품이 판매되었습니다.`);
+          // 채널 상품: 구매 내역(ChannelOrder) 추가 → DB 연동은 App에서 channelOrders 변경 시 자동 저장
+          const channelProduct = channels.find((c: ChannelProduct) => c.id === productInfo.id) ?? (productInfo as ChannelProduct);
+          if (channelProduct && 'platform' in channelProduct) {
+            const newOrder: ChannelOrder = {
+              id: `CO_${Date.now()}_${user.id.slice(0, 6)}`,
+              userId: user.id,
+              userNickname: user.nickname ?? user.id,
+              orderTime: new Date().toISOString(),
+              productId: channelProduct.id,
+              productName: channelProduct.title ?? productInfo.title,
+              platform: channelProduct.platform ?? '',
+              price: finalPayAmount,
+              status: '결제완료',
+              paymentId,
+              paymentMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
+              paymentLog: response ? JSON.stringify(response) : undefined,
+            };
+            setChannelOrders((prev) => [...prev, newOrder]);
+            if (channelProduct.sellerId) {
+              addNotif(channelProduct.sellerId, 'channel', '💰 채널 판매 알림', `[${channelProduct.title}] 채널이 판매되었습니다.`);
+            }
+          } else {
+            // 이북 등 기타 상품: 판매자 알림
+            const targetProduct = ebooks.find(e => e.id === productInfo.id);
+            if (targetProduct) {
+              addNotif(targetProduct.authorId, 'ebook', '💰 상품 판매 알림', `축하합니다! 회원님의 [${targetProduct.title}] 상품이 판매되었습니다.`);
+            }
           }
         } else {
           // 포인트 충전 처리
