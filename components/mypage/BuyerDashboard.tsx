@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '@/types';
-import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, type OrderBuyerFlag } from '@/storeDb';
+import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, type OrderBuyerFlag } from '../../storeDb';
 
 interface Props {
   user: UserProfile;
