@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UserProfile, Coupon, AutoCouponCampaign } from '@/types';
-import { fetchCouponCampaigns, upsertCouponCampaigns, deleteCouponCampaign } from '@/campaignDb';
+import { fetchCouponCampaigns, upsertCouponCampaigns, deleteCouponCampaign } from '../../campaignDb';
 
 interface Props {
   user: UserProfile | null;
