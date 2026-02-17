@@ -75,7 +75,22 @@ SQL로 테이블을 만든 뒤, **App·각 페이지의 localStorage 사용을 S
 
 ---
 
+## ✅ 전체 데이터가 쿠키/캐시 삭제 후에도 유지되도록 (RLS 2개 스크립트)
+
+**지금처럼 모든 DB가 남고, "삭제되는 현상"이 없으려면** 다음 두 스크립트를 **모두** Supabase SQL Editor에서 실행해야 합니다.
+
+| 스크립트 | 대상 | 적용 후 |
+|----------|------|----------|
+| **supabase-rls-public-read-channel-store.sql** | channel_products, store_products | 채널·스토어 상품 등록/목록이 쿠키 삭제 후에도 유지 |
+| **supabase-rls-public-all-site-data.sql** | store_orders, channel_orders, reviews, smm_*, grade_configs, site_notices, site_posts, site_post_comments, coupon_campaigns | 주문·리뷰·공지·게시글·SNS활성화·쿠폰캠페인 등 **사이트 전체 공개 데이터**가 쿠키 삭제 후에도 그대로 노출 |
+
+- 두 스크립트 모두 **Run** 해 두면, 로그인 여부·쿠키/캐시 삭제와 관계없이 **등록한 정보가 DB에 저장되고, 화면에도 유지**됩니다.
+- 회원 목록(profiles)이 쿠키 삭제 후 비어 보이면, Supabase에서 `profiles` 테이블에 RLS가 켜져 있는지 확인한 뒤, 필요 시 동일한 방식으로 SELECT 정책을 추가하면 됩니다.
+
+---
+
 ## 결론
 
 - **핵심 비즈니스 데이터**와 **매출관리·쿠폰캠페인·채팅방 메타**까지 모두 **Supabase 연동 완료**되었습니다. 로드·저장이 DB 기준으로 동작하며, localStorage는 초기값·백업용으로만 사용합니다.
 - **전반적으로 연동이 완료된 상태**이며, 새 7단계 SQL 없이 기존 1·2·4단계 테이블만 사용했습니다.
+- **데이터가 “사라지는” 현상 방지**를 위해 위 두 RLS 스크립트 적용을 권장합니다.
