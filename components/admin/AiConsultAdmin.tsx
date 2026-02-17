@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/supabase';
+import { supabase } from '../../supabase';
 
 interface AiSession {
   id: string;
