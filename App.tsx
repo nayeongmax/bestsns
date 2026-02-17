@@ -5,12 +5,12 @@ import {
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
   SMMProvider, SMMProduct, NotificationType, GradeConfig
 } from '@/types';
-import { supabase } from '@/supabase';
-import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from '@/storeDb';
-import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from '@/channelDb';
-import { fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, upsertSmmOrders, upsertSmmProviders, upsertSmmProducts } from '@/smmDb';
-import { updateProfile } from '@/profileDb';
-import { fetchNotices, upsertNotices, fetchGradeConfigs, upsertGradeConfigs, fetchPosts, upsertPosts } from '@/siteDb';
+import { supabase } from './supabase';
+import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from './storeDb';
+import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from './channelDb';
+import { fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, upsertSmmOrders, upsertSmmProviders, upsertSmmProducts } from './smmDb';
+import { updateProfile } from './profileDb';
+import { fetchNotices, upsertNotices, fetchGradeConfigs, upsertGradeConfigs, fetchPosts, upsertPosts } from './siteDb';
 
 /** Supabase profiles 행 → UserProfile 변환 (profileUtils 의존 제거로 Netlify 빌드 안정화) */
 function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
