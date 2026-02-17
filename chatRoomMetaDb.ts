@@ -1,7 +1,7 @@
 /**
  * 채팅방 메타(메모/거래중/즐겨찾기) Supabase 연동 (1단계 chat_room_meta)
  */
-import { supabase } from '@/supabase';
+import { supabase } from './supabase';
 
 export interface ChatRoomMetaPatch {
   memo?: string;
