@@ -39,8 +39,8 @@ function toSnakePayload(partial: Partial<{
   return row;
 }
 
-const PROFILE_SELECT =
-  'id, email, nickname, profile_image, phone, role, points, coupons, total_purchase_amount, total_sales_amount, total_freelancer_earnings, join_date, seller_status, freelancer_status, seller_application, pending_application, freelancer_application, violation_count, withdrawn_at';
+/** 존재하는 컬럼만 조회 (manual_grade, coupons 등 없어도 조회 성공) */
+const PROFILE_SELECT = '*';
 
 /** 단일 회원 프로필 조회 (로그인 시 포인트·수익 등 금액 필드 동기화용) */
 export async function fetchProfileRow(userId: string): Promise<Record<string, unknown> | null> {
