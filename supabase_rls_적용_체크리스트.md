@@ -9,23 +9,7 @@
 콘솔에 **profiles.manual_grade does not exist** 또는 **profiles.coupons does not exist** 등이 보이면, **RLS가 아니라** `profiles` 테이블에 해당 컬럼이 없어서 조회가 실패하는 것입니다.
 
 - **앱 수정:** profiles 조회를 **select('*')** 로 바꿔 두었습니다. 테이블에 **있는 컬럼만** 내려오므로, `manual_grade`, `coupons` 등이 없어도 조회는 성공하고, 없는 값은 0/빈 배열로 처리됩니다.
-- **포인트·쿠폰·수익 등을 DB에 저장하려면:** Supabase에서 1단계 SQL(`supabase-setup-1단계.sql`)의 **profiles** 테이블 정의대로 컬럼을 맞추거나, 아래처럼 누락된 컬럼만 추가하면 됩니다.
-  ```sql
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS manual_grade TEXT;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS coupons JSONB DEFAULT '[]';
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS total_purchase_amount INTEGER DEFAULT 0;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS total_sales_amount INTEGER DEFAULT 0;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS total_freelancer_earnings INTEGER DEFAULT 0;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS join_date TEXT;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS seller_status TEXT DEFAULT 'none';
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS freelancer_status TEXT DEFAULT 'none';
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS seller_application JSONB;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS pending_application JSONB;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS freelancer_application JSONB;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS violation_count INTEGER DEFAULT 0;
-  ALTER TABLE profiles ADD COLUMN IF NOT EXISTS withdrawn_at TIMESTAMPTZ;
-  ```
+- **포인트·쿠폰·수익 등을 DB에 저장하려면:** 프로젝트 루트의 **`supabase-profiles-add-columns.sql`** 파일을 Supabase SQL Editor에서 실행하면, `profiles`에 `points`, `coupons`, `total_purchase_amount`, `total_sales_amount`, `total_freelancer_earnings` 등 누락된 컬럼이 한 번에 추가됩니다.
 
 ---
 
