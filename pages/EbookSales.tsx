@@ -95,82 +95,82 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         </div>
       </div>
 
-      {/* 필터 바 */}
+      {/* 필터 바: 검색창 + 상품등록 버튼 한 줄, 전체~전자책 공통 */}
       <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm mb-12 relative border border-gray-100 space-y-6">
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            {activeStoreType !== 'all' && (
-              <div className="flex-1 w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
-                {activeStoreType === 'marketing' ? (
-                  Object.keys(MARKETING_CATEGORIES).map(cat => (
-                    <button 
-                      key={cat}
-                      onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
-                      className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
-                        activeCategory === cat 
-                        ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
-                        : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))
-                ) : (
-                  EBOOK_CATEGORIES.map(cat => (
-                    <button 
-                      key={cat} 
-                      onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
-                      className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
-                        activeCategory === cat 
-                        ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
-                        : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-            <button 
-              onClick={handleRegisterClick} 
-              className="w-full md:w-auto bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black text-[13px] flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95 shrink-0 whitespace-nowrap"
-            >
-              <span className="text-xl">+</span> {activeStoreType === 'all' ? '상품 등록' : STORE_TABS.find(t => t.id === activeStoreType)?.label + ' 등록'}
-            </button>
+        {/* 검색창 + 상품 등록 버튼 한 줄 */}
+        <div className="flex flex-nowrap items-center gap-3 md:gap-4">
+          <div className="relative flex-1 min-w-0">
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={activeStoreType === 'all' ? '상품 제목이나 전문가를 검색해보세요' : `${STORE_TABS.find(t => t.id === activeStoreType)?.label} 제목이나 전문가를 검색해보세요`} 
+              className="w-full pl-12 md:pl-16 pr-6 py-4 md:py-5 bg-gray-50 rounded-[24px] md:rounded-[32px] border-none focus:ring-4 focus:ring-blue-50 text-base md:text-lg font-bold outline-none transition-all shadow-inner" 
+            />
+            <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-300 absolute left-6 md:left-8 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
           </div>
+          <button 
+            onClick={handleRegisterClick} 
+            className="shrink-0 bg-blue-600 text-white px-6 md:px-8 py-3.5 md:py-4 rounded-2xl font-black text-[13px] flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95 whitespace-nowrap"
+          >
+            <span className="text-xl">+</span> {activeStoreType === 'all' ? '상품 등록' : STORE_TABS.find(t => t.id === activeStoreType)?.label + ' 등록'}
+          </button>
+        </div>
 
-          {activeStoreType === 'marketing' && (
-            <div className="flex items-center gap-2 pt-4 border-t border-gray-50 overflow-x-auto no-scrollbar">
-              {MARKETING_CATEGORIES[activeCategory as keyof typeof MARKETING_CATEGORIES]?.map(sub => (
+        {/* 카테고리 필터: 전체가 아닐 때만 */}
+        {activeStoreType !== 'all' && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+            {activeStoreType === 'marketing' ? (
+              Object.keys(MARKETING_CATEGORIES).map(cat => (
                 <button 
-                  key={sub} 
-                  onClick={() => setActiveSubCategory(sub)}
-                  className={`px-6 py-2.5 rounded-2xl text-[12px] font-bold transition-all whitespace-nowrap shrink-0 ${
-                    activeSubCategory === sub 
-                    ? 'bg-gray-900 text-white shadow-lg' 
-                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                  key={cat}
+                  onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
+                  className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
+                    activeCategory === cat 
+                    ? 'bg-rose-500 border-rose-500 text-white shadow-lg' 
+                    : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
                   }`}
                 >
-                  {sub}
+                  {cat}
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
+              ))
+            ) : (
+              EBOOK_CATEGORIES.map(cat => (
+                <button 
+                  key={cat} 
+                  onClick={() => { setActiveCategory(cat); setActiveSubCategory('전체'); }}
+                  className={`px-5 py-3 rounded-xl text-[11px] font-black transition-all border-2 shrink-0 whitespace-nowrap ${
+                    activeCategory === cat 
+                    ? 'bg-gray-900 border-gray-900 text-white shadow-lg' 
+                    : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))
+            )}
+          </div>
+        )}
 
-        <div className="relative">
-          <input 
-            type="text" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={activeStoreType === 'all' ? '상품 제목이나 전문가를 검색해보세요' : `${STORE_TABS.find(t => t.id === activeStoreType)?.label} 제목이나 전문가를 검색해보세요`} 
-            className="w-full pl-12 md:pl-16 pr-6 py-4 md:py-5 bg-gray-50 rounded-[24px] md:rounded-[32px] border-none focus:ring-4 focus:ring-blue-50 text-base md:text-lg font-bold outline-none transition-all shadow-inner" 
-          />
-          <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-300 absolute left-6 md:left-8 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-        </div>
+        {activeStoreType === 'marketing' && (
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-50 overflow-x-auto no-scrollbar">
+            {MARKETING_CATEGORIES[activeCategory as keyof typeof MARKETING_CATEGORIES]?.map(sub => (
+              <button 
+                key={sub} 
+                onClick={() => setActiveSubCategory(sub)}
+                className={`px-6 py-2.5 rounded-2xl text-[12px] font-bold transition-all whitespace-nowrap shrink-0 ${
+                  activeSubCategory === sub 
+                  ? 'bg-gray-900 text-white shadow-lg' 
+                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 상품 리스트 그리드 복구: lg(4열) */}
