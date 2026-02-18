@@ -411,7 +411,7 @@ const App: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data, error } = await supabase.from('profiles').select('id, email, nickname, profile_image, phone, role, points, coupons, total_purchase_amount, total_sales_amount, total_freelancer_earnings, join_date, seller_status, freelancer_status, seller_application, pending_application, freelancer_application, violation_count, withdrawn_at');
+        const { data, error } = await supabase.from('profiles').select('*');
         if (cancelled) return;
         if (error) {
           console.warn('[Supabase] profiles 로드 실패 → RLS 또는 env 확인. 에러:', error.message);
@@ -482,7 +482,7 @@ const App: React.FC = () => {
 
   /** 어드민 회원 탭에서 Supabase profiles 전체 재조회 (RLS 적용 후 회원 목록 전체 노출) */
   const refreshMembers = useCallback(() => {
-    supabase.from('profiles').select('id, email, nickname, profile_image, phone, role, points, coupons, total_purchase_amount, total_sales_amount, total_freelancer_earnings, join_date, seller_status, freelancer_status, seller_application, pending_application, freelancer_application, violation_count, withdrawn_at').then(({ data, error }) => {
+    supabase.from('profiles').select('*').then(({ data, error }) => {
       if (error) {
         console.warn('[Supabase] 회원 목록 재조회 실패 → RLS 적용 여부 확인:', error.message);
         return;
