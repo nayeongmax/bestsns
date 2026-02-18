@@ -70,22 +70,29 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // Supabase 저장 (로드 완료 후 변경분만)
+  // Supabase 저장 (데이터 있으면 즉시 저장, 로드 완료 여부와 무관)
+  const saveErrShown = useRef<Record<string, boolean>>({});
+  const showSaveError = (key: string, err: unknown) => {
+    if (saveErrShown.current[key]) return;
+    saveErrShown.current[key] = true;
+    console.error(`매출관리 ${key} 저장 실패:`, err);
+    alert('DB 저장에 실패했습니다. Supabase에 매출관리 테이블이 있는지, RLS 정책이 적용되었는지 확인해 주세요. (supabase-setup-4단계-매출관리.sql 실행)');
+  };
   useEffect(() => {
-    if (!user?.id || !revenueDbLoaded.current) return;
-    upsertRevenueCompanies(user.id, companies).catch((err) => console.warn('rev_companies 저장:', err));
+    if (!user?.id) return;
+    upsertRevenueCompanies(user.id, companies).catch((err) => showSaveError('회사', err));
   }, [user?.id, companies]);
   useEffect(() => {
-    if (!user?.id || !revenueDbLoaded.current) return;
-    upsertRevenueProjects(user.id, projects).catch((err) => console.warn('rev_projects 저장:', err));
+    if (!user?.id) return;
+    upsertRevenueProjects(user.id, projects).catch((err) => showSaveError('프로젝트', err));
   }, [user?.id, projects]);
   useEffect(() => {
-    if (!user?.id || !revenueDbLoaded.current) return;
-    upsertRevenueTodos(user.id, todos).catch((err) => console.warn('rev_todos 저장:', err));
+    if (!user?.id) return;
+    upsertRevenueTodos(user.id, todos).catch((err) => showSaveError('할일', err));
   }, [user?.id, todos]);
   useEffect(() => {
-    if (!user?.id || !revenueDbLoaded.current) return;
-    upsertRevenueGeneralExpenses(user.id, generalExpenses).catch((err) => console.warn('rev_expenses 저장:', err));
+    if (!user?.id) return;
+    upsertRevenueGeneralExpenses(user.id, generalExpenses).catch((err) => showSaveError('지출', err));
   }, [user?.id, generalExpenses]);
 
   // localStorage 백업 (다른 페이지 갔다 와도 복원용)
