@@ -414,7 +414,7 @@ const App: React.FC = () => {
         const { data, error } = await supabase.from('profiles').select('id, email, nickname, profile_image, phone, role, points, manual_grade, coupons, total_purchase_amount, total_sales_amount, total_freelancer_earnings, join_date, seller_status, freelancer_status, seller_application, pending_application, freelancer_application, violation_count, withdrawn_at');
         if (cancelled) return;
         if (error) {
-          console.warn('profiles 로드 실패, localStorage 사용:', error.message);
+          console.warn('[Supabase] profiles 로드 실패 → RLS 또는 env 확인. 에러:', error.message);
           return;
         }
         if (data && data.length > 0) {
@@ -483,7 +483,10 @@ const App: React.FC = () => {
   /** 어드민 회원 탭에서 Supabase profiles 전체 재조회 (RLS 적용 후 회원 목록 전체 노출) */
   const refreshMembers = useCallback(() => {
     supabase.from('profiles').select('id, email, nickname, profile_image, phone, role, points, manual_grade, coupons, total_purchase_amount, total_sales_amount, total_freelancer_earnings, join_date, seller_status, freelancer_status, seller_application, pending_application, freelancer_application, violation_count, withdrawn_at').then(({ data, error }) => {
-      if (error) return;
+      if (error) {
+        console.warn('[Supabase] 회원 목록 재조회 실패 → RLS 적용 여부 확인:', error.message);
+        return;
+      }
       if (data?.length) {
         const parsed = data.map((r: Record<string, unknown>) => profileRowToUserProfile(r)).filter((p: UserProfile) => p.id);
         setMembers(parsed);
@@ -496,7 +499,9 @@ const App: React.FC = () => {
     if (!user?.id) return;
     fetchProfileRow(user.id).then((row) => {
       if (row) setUser(prev => prev ? { ...prev, ...profileRowToUserProfile(row) } : null);
-    }).catch(() => {});
+    }).catch((e) => {
+      console.warn('[Supabase] 프로필 재조회 실패(포인트/수익 0으로 보일 수 있음) → RLS 또는 supabase-rls-profiles-only.sql 적용:', e);
+    });
   }, [user?.id]);
 
   useEffect(() => {
