@@ -4,6 +4,17 @@
 
 ---
 
+## 0. `column profiles.manual_grade does not exist` 에러가 날 때
+
+콘솔에 **manual_grade does not exist** 가 보이면, **RLS가 아니라** `profiles` 테이블에 `manual_grade` 컬럼이 없어서 조회가 실패하는 것입니다.
+
+- **앱 수정:** select 목록에서 `manual_grade` 를 뺐으므로, 해당 에러 없이 조회됩니다. (등급은 `grade_configs` 등으로 처리 가능)
+- **컬럼을 쓰고 싶다면:** Supabase SQL Editor에서 아래 한 줄 실행  
+  `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS manual_grade TEXT;`  
+  실행 후 앱에서 다시 select에 `manual_grade` 를 넣어도 됩니다.
+
+---
+
 ## 1. Supabase 프로젝트가 앱과 같은지 확인
 
 - 브라우저 개발자도구(F12) → **Console** 탭에서 `[Supabase] profiles 로드 실패` 또는 `프로필 재조회 실패` 메시지가 나오는지 봅니다.
