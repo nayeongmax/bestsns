@@ -37,7 +37,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   const [todos, setTodos] = useState<RevenueTodo[]>(() => loadFromStorage('rev_todos', []));
   const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>(() => loadFromStorage('rev_general_expenses', []));
 
-  // Supabase 로드 (user 있으면)
+  // Supabase 로드 (user 있으면). DB가 비어 있으면 localStorage 값 유지(다른 페이지 갔다 와도 데이터 유지)
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
@@ -50,10 +50,10 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
           fetchRevenueGeneralExpenses(user.id),
         ]);
         if (!cancelled) {
-          setCompanies(c);
-          setProjects(p);
-          setTodos(t);
-          setGeneralExpenses(e);
+          setCompanies((prev) => (c.length > 0 ? c : prev));
+          setProjects((prev) => (p.length > 0 ? p : prev));
+          setTodos((prev) => (t.length > 0 ? t : prev));
+          setGeneralExpenses((prev) => (e.length > 0 ? e : prev));
           revenueDbLoaded.current = true;
         }
       } catch (err) {
