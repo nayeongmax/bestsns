@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Post, Notice, UserProfile, GradeConfig, getUserGrade } from '../types';
+import { Post, Notice, UserProfile, GradeConfig } from '@/types';
 
 interface Props {
   posts: Post[];
@@ -171,10 +171,7 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
                       </Link>
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className="text-[14px] font-black text-gray-600 italic truncate">{post.author}</span>
-                        {(() => { const u = members.find(m => String(m.id) === String(post.authorId) || m.nickname === post.author); const g = getUserGrade(u, gradeConfigs); return g ? <span className={`${g.color} text-white text-[10px] font-black px-2.5 py-0.5 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
-                      </div>
+                      <span className="text-[14px] font-black text-gray-600 italic truncate block max-w-[140px] mx-auto" title={post.author}>{post.author}</span>
                     </td>
                     <td className="px-4 py-4 text-center text-[13px] font-bold text-gray-400 italic whitespace-nowrap uppercase tracking-tighter">{post.date}</td>
                     <td className="px-4 py-4 text-center text-[14px] font-bold text-gray-400 italic whitespace-nowrap">{post.views.toLocaleString()}</td>
