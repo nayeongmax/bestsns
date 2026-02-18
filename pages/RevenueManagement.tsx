@@ -37,7 +37,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   const [todos, setTodos] = useState<RevenueTodo[]>(() => loadFromStorage('rev_todos', []));
   const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>(() => loadFromStorage('rev_general_expenses', []));
 
-  // Supabase 로드 (user 있으면). DB가 비어 있으면 localStorage 값 유지(다른 페이지 갔다 와도 데이터 유지)
+  // Supabase 로드 (user 있으면). DB가 비어 있거나 실패하면 localStorage에서 복원
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
@@ -50,15 +50,19 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
           fetchRevenueGeneralExpenses(user.id),
         ]);
         if (!cancelled) {
-          setCompanies((prev) => (c.length > 0 ? c : prev));
-          setProjects((prev) => (p.length > 0 ? p : prev));
-          setTodos((prev) => (t.length > 0 ? t : prev));
-          setGeneralExpenses((prev) => (e.length > 0 ? e : prev));
+          setCompanies(c.length > 0 ? c : loadFromStorage('rev_companies', []));
+          setProjects(p.length > 0 ? p : loadFromStorage('rev_projects', []));
+          setTodos(t.length > 0 ? t : loadFromStorage('rev_todos', []));
+          setGeneralExpenses(e.length > 0 ? e : loadFromStorage('rev_general_expenses', []));
           revenueDbLoaded.current = true;
         }
       } catch (err) {
         if (!cancelled) {
-          console.warn('매출관리 DB 로드 실패, localStorage 사용:', err);
+          console.warn('매출관리 DB 로드 실패, localStorage에서 복원:', err);
+          setCompanies(loadFromStorage('rev_companies', []));
+          setProjects(loadFromStorage('rev_projects', []));
+          setTodos(loadFromStorage('rev_todos', []));
+          setGeneralExpenses(loadFromStorage('rev_general_expenses', []));
           revenueDbLoaded.current = true;
         }
       }
@@ -84,7 +88,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     upsertRevenueGeneralExpenses(user.id, generalExpenses).catch((err) => console.warn('rev_expenses 저장:', err));
   }, [user?.id, generalExpenses]);
 
-  // localStorage 백업
+  // localStorage 백업 (다른 페이지 갔다 와도 복원용)
   useEffect(() => localStorage.setItem('rev_companies', JSON.stringify(companies)), [companies]);
   useEffect(() => localStorage.setItem('rev_projects', JSON.stringify(projects)), [projects]);
   useEffect(() => localStorage.setItem('rev_todos', JSON.stringify(todos)), [todos]);
