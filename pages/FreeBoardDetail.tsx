@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Post, UserProfile, BoardComment, GradeConfig, getUserGrade } from '../types';
+import { Post, UserProfile, BoardComment, GradeConfig } from '@/types';
 
 interface Props {
   user: UserProfile;
@@ -178,10 +178,7 @@ const FreeBoardDetail: React.FC<Props> = ({ user, posts, setPosts, members = [],
                   <img src={post.authorImage || 'https://picsum.photos/seed/user/200/200'} alt="author" className="w-full h-full object-cover" />
                </div>
                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-black text-gray-900 text-3xl tracking-tight">{post.author}</p>
-                    {(() => { const u = members.find(m => String(m.id) === String(post.authorId) || m.nickname === post.author); const g = getUserGrade(u, gradeConfigs); return g ? <span className={`${g.color} text-white text-xs font-black px-3 py-1 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
-                  </div>
+                  <p className="font-black text-gray-900 text-3xl tracking-tight">{post.author}</p>
                   <p className="text-[13px] font-bold text-gray-400 italic uppercase tracking-[0.2em]">{post.date}</p>
                </div>
              </div>
