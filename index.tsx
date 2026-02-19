@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App.tsx';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -42,7 +43,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <HashRouter><App /></HashRouter>
+      <HashRouter>
+        <ConfirmProvider>
+          <App />
+        </ConfirmProvider>
+      </HashRouter>
     </ErrorBoundary>
   </React.StrictMode>
 );
