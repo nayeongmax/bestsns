@@ -114,7 +114,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   };
 
   const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
-  const isOperator = user?.role === 'admin' || user?.role === 'manager';
+  /** 운영자: profile role 또는 어드민 비밀번호 로그인 여부 */
+  const isOperator =
+    user?.role === 'admin' ||
+    user?.role === 'manager' ||
+    (typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('admin_logged_in'));
 
   const handleApply = () => {
     if (!user || !task) return;
@@ -726,17 +730,24 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                           {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {a.selected ? (
-                            <>
-                              <button type="button" onClick={() => handleDeselect(a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all">
-                                선정취소
-                              </button>
-                              <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
-                            </>
-                          ) : (
-                            <button type="button" onClick={() => handleSelect(a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700 transition-all">
-                              선정
-                            </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSelect(a.userId)}
+                            disabled={!!a.selected}
+                            className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${a.selected ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                          >
+                            선정
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeselect(a.userId)}
+                            disabled={!a.selected}
+                            className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${!a.selected ? 'bg-amber-50 text-amber-300 cursor-not-allowed' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+                          >
+                            선정취소
+                          </button>
+                          {a.selected && (
+                            <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
                           )}
                           <button
                             type="button"
