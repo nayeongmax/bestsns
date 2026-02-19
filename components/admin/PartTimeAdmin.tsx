@@ -1125,23 +1125,24 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
           </div>
         )}
 
-        {/* 예시 이미지 크게 보기 (광고주 작업의뢰 상세에서 클릭 시) */}
+        {/* 예시 이미지 크게 보기 (광고주 작업의뢰 상세에서 클릭 시) — 팝업 창 크기로 확대 */}
         {zoomedExampleImage && (
           <div
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90"
             onClick={() => setZoomedExampleImage(null)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Escape' && setZoomedExampleImage(null)}
             aria-label="닫기"
           >
-            <button type="button" onClick={() => setZoomedExampleImage(null)} className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-white/90 text-gray-800 text-2xl font-black hover:bg-white shadow-lg">×</button>
-            <img
-              src={zoomedExampleImage}
-              alt="예시 크게 보기"
-              className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <button type="button" onClick={() => setZoomedExampleImage(null)} className="absolute top-4 right-4 z-10 w-14 h-14 rounded-full bg-white/95 text-gray-800 text-3xl font-black hover:bg-white shadow-xl leading-none">×</button>
+            <div className="w-[95vw] h-[90vh] flex items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={zoomedExampleImage}
+                alt="예시 크게 보기"
+                className="max-w-full max-h-full w-full h-full object-contain rounded-lg shadow-2xl"
+              />
+            </div>
           </div>
         )}
 
