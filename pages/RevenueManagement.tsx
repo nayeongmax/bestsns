@@ -10,6 +10,9 @@ import {
   fetchRevenueGeneralExpenses,
   upsertRevenueGeneralExpenses,
   deleteRevenueProject,
+  deleteRevenueCompany,
+  deleteRevenueTodo,
+  deleteRevenueGeneralExpense,
 } from '../revenueDb';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -261,8 +264,37 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     setTempExpense({ date: new Date().toISOString().split('T')[0], category: '운영비', note: '', amount: 0 });
   };
 
-  const deleteExpense = (id: string) => {
-    setGeneralExpenses(prev => prev.filter(e => e.id !== id));
+  const handleDeleteCompany = async (companyId: string) => {
+    if (!user?.id) return;
+    try {
+      await deleteRevenueCompany(user.id, companyId);
+      setCompanies(prev => prev.filter(item => item.id !== companyId));
+    } catch (err) {
+      console.error('운영사 삭제 실패:', err);
+      alert('DB 삭제에 실패했습니다. 다시 시도해 주세요.');
+    }
+  };
+
+  const handleDeleteTodo = async (todoId: string) => {
+    if (!user?.id) return;
+    try {
+      await deleteRevenueTodo(user.id, todoId);
+      setTodos(prev => prev.filter(item => item.id !== todoId));
+    } catch (err) {
+      console.error('할 일 삭제 실패:', err);
+      alert('DB 삭제에 실패했습니다. 다시 시도해 주세요.');
+    }
+  };
+
+  const deleteExpense = async (id: string) => {
+    if (!user?.id) return;
+    try {
+      await deleteRevenueGeneralExpense(user.id, id);
+      setGeneralExpenses(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      console.error('지출 삭제 실패:', err);
+      alert('DB 삭제에 실패했습니다. 다시 시도해 주세요.');
+    }
   };
 
   const handleCompanySubmit = () => {
@@ -645,7 +677,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
              <div key={t.id} className="flex items-center gap-6 p-8 bg-white border border-gray-100 rounded-[40px] hover:shadow-xl transition-all group">
                 <input type="checkbox" checked={t.completed} onChange={() => setTodos(prev => prev.map(item => item.id === t.id ? {...item, completed: !item.completed} : item))} className="w-10 h-10 rounded-full accent-blue-600 cursor-pointer" />
                 <div className="flex-1"><p className={`text-xl font-black ${t.completed ? 'text-gray-200 line-through' : 'text-gray-700'}`}>{t.text}</p><p className="text-[11px] font-black text-gray-300 mt-2 italic tracking-widest uppercase">{t.startDate} ~ {t.endDate}</p></div>
-                <button onClick={() => setTodos(prev => prev.filter(item => item.id !== t.id))} className="text-gray-100 group-hover:text-red-400 transition-colors font-black text-3xl">✕</button>
+                <button onClick={() => handleDeleteTodo(t.id)} className="text-gray-100 group-hover:text-red-400 transition-colors font-black text-3xl">✕</button>
              </div>
            ))}
         </div>
@@ -714,7 +746,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                  {companies.map(c => (
                    <div key={c.id} className="bg-gray-50 p-8 rounded-[40px] flex justify-between items-center group hover:bg-blue-50 transition-all border-2 border-transparent hover:border-blue-200">
                       <div><p className="font-black text-gray-900 text-xl italic">{c.name}</p><p className="text-[11px] font-bold text-blue-400 mt-1 uppercase tracking-widest italic">{c.type} / 개업일: {c.openingDate}</p></div>
-                      <div className="flex gap-3"><button onClick={() => startEditCompany(c)} className="w-12 h-12 bg-white text-orange-400 rounded-2xl shadow-sm flex items-center justify-center text-xl hover:bg-orange-50 transition-colors">✏️</button><button onClick={() => setCompanies(prev => prev.filter(item => item.id !== c.id))} className="w-12 h-12 bg-white text-red-300 rounded-2xl shadow-sm flex items-center justify-center text-xl hover:bg-red-50 transition-colors">✕</button></div>
+                      <div className="flex gap-3"><button onClick={() => startEditCompany(c)} className="w-12 h-12 bg-white text-orange-400 rounded-2xl shadow-sm flex items-center justify-center text-xl hover:bg-orange-50 transition-colors">✏️</button><button onClick={() => handleDeleteCompany(c.id)} className="w-12 h-12 bg-white text-red-300 rounded-2xl shadow-sm flex items-center justify-center text-xl hover:bg-red-50 transition-colors">✕</button></div>
                    </div>
                  ))}
                </div>
