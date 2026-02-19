@@ -2,6 +2,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade } from '@/types';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -17,6 +18,7 @@ interface Props {
 const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user, reviews, storeOrders, members, gradeConfigs = [] }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showConfirm } = useConfirm();
   const [activeTierIdx, setSelectedTierIdx] = useState(0);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
   
@@ -98,17 +100,24 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
 
   const handleBuyNow = () => {
     const selectedTier = tiers[activeTierIdx];
-    if (window.confirm(`${ebook.title} (${selectedTier.name}) 상품을 구매하시겠습니까?`)) {
-      navigate('/payment/point', {
-        state: {
-          amount: selectedTier.price,
-          product: { title: `${ebook.title} [${selectedTier.name}]`, id: ebook.id },
-          tier: selectedTier,
-          storeType: currentStoreType,
-          sellerNickname: ebook.author,
-        },
-      });
-    }
+    showConfirm({
+      title: '상품 구매',
+      description: `${ebook.title} (${selectedTier.name}) 상품을 구매하시겠습니까?`,
+      confirmLabel: '구매하기',
+      cancelLabel: '취소',
+      danger: false,
+      onConfirm: () => {
+        navigate('/payment/point', {
+          state: {
+            amount: selectedTier.price,
+            product: { title: `${ebook.title} [${selectedTier.name}]`, id: ebook.id },
+            tier: selectedTier,
+            storeType: currentStoreType,
+            sellerNickname: ebook.author,
+          },
+        });
+      },
+    });
   };
 
   const isServiceType = ['marketing', 'lecture', 'consulting'].includes(currentStoreType);
