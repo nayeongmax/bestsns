@@ -176,10 +176,10 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   { label: '회원 구분', value: expertTypeInfo.label, icon: '👤' },
                   { label: '세금계산서', value: expertTypeInfo.tax, icon: '🧾' }
                 ].map((item, i) => (
-                  <div key={i} className="flex-1 min-w-[72px] bg-white rounded-[12px] py-2 px-2 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
-                    <span className="text-base mb-0.5 group-hover:scale-105 transition-transform">{item.icon}</span>
-                    <p className="text-[8px] font-black text-gray-400 mb-0.5 uppercase tracking-wider italic leading-tight">{item.label}</p>
-                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-xs leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
+                  <div key={i} className="flex-1 min-w-[72px] bg-white rounded-[12px] py-2.5 px-2 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
+                    <span className="text-lg mb-1 group-hover:scale-105 transition-transform">{item.icon}</span>
+                    <p className="text-[10px] font-black text-gray-400 mb-1 uppercase tracking-wider italic leading-tight">{item.label}</p>
+                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-sm leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
                   </div>
                 ))}
              </div>
