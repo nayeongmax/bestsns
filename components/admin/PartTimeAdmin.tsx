@@ -48,6 +48,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [revenueSearch, setRevenueSearch] = useState('');
   const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean } | null>(null);
   const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
+  const [zoomedExampleImage, setZoomedExampleImage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -1075,10 +1076,17 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                 </div>
                 {(detailJr.exampleImages?.length ?? 0) > 0 && (
                   <div>
-                    <p className="text-xs font-black text-gray-500 uppercase mb-2">원하는 예시 첨부</p>
+                    <p className="text-xs font-black text-gray-500 uppercase mb-2">원하는 예시 첨부 (클릭하면 크게 보기)</p>
                     <div className="flex flex-wrap gap-2">
                       {detailJr.exampleImages!.map((src, i) => (
-                        <img key={i} src={src} alt={`예시 ${i + 1}`} className="w-24 h-24 object-cover rounded-xl border border-gray-200" />
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setZoomedExampleImage(src)}
+                          className="w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden hover:border-emerald-400 focus:ring-2 focus:ring-emerald-300 focus:outline-none transition-all"
+                        >
+                          <img src={src} alt={`예시 ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -1114,6 +1122,26 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                 <button type="button" onClick={() => { setDetailJr(null); handleRejectJobRequest(detailJr); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">거절</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* 예시 이미지 크게 보기 (광고주 작업의뢰 상세에서 클릭 시) */}
+        {zoomedExampleImage && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setZoomedExampleImage(null)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Escape' && setZoomedExampleImage(null)}
+            aria-label="닫기"
+          >
+            <button type="button" onClick={() => setZoomedExampleImage(null)} className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-white/90 text-gray-800 text-2xl font-black hover:bg-white shadow-lg">×</button>
+            <img
+              src={zoomedExampleImage}
+              alt="예시 크게 보기"
+              className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         )}
 
