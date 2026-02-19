@@ -3,8 +3,9 @@ import React, { useState, useRef, useMemo } from 'react';
 /**
  * Fixed: Removed .ts extension from import
  */
-import { ChannelProduct, ChannelOrder } from '../../types';
+import { ChannelProduct, ChannelOrder } from '@/types';
 import { CHANNEL_CATEGORIES } from '../../constants.tsx';
+import { deleteChannelProduct } from '../../channelDb';
 
 interface Props {
   channels: ChannelProduct[];
@@ -367,7 +368,16 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
                         </div>
                      </div>
                      <button 
-                      onClick={() => { if(window.confirm('정말 삭제하시겠습니까?')) setChannels(prev => prev.filter(c => c.id !== ch.id)) }}
+                      onClick={async () => {
+                        if (!window.confirm('정말 삭제하시겠습니까?')) return;
+                        try {
+                          await deleteChannelProduct(ch.id);
+                          setChannels(prev => prev.filter(c => c.id !== ch.id));
+                        } catch (e) {
+                          console.error(e);
+                          alert('삭제에 실패했습니다.');
+                        }
+                      }}
                       className="absolute -top-2 -right-2 w-10 h-10 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 flex items-center justify-center font-black z-20"
                      >
                        ✕
