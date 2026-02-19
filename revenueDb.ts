@@ -39,6 +39,11 @@ export async function upsertRevenueCompanies(userId: string, list: OperatingComp
   if (error) throw error;
 }
 
+export async function deleteRevenueCompany(userId: string, companyId: string): Promise<void> {
+  const { error } = await supabase.from('revenue_operating_companies').delete().eq('id', companyId).eq('user_id', userId);
+  if (error) throw error;
+}
+
 // ─── projects ─────────────────────────────────────────────────────────────
 function projectToRow(p: RevenueProject, userId: string): Record<string, unknown> {
   return {
@@ -138,6 +143,11 @@ export async function upsertRevenueTodos(userId: string, list: RevenueTodo[]): P
   if (error) throw error;
 }
 
+export async function deleteRevenueTodo(userId: string, todoId: string): Promise<void> {
+  const { error } = await supabase.from('revenue_todos').delete().eq('id', todoId).eq('user_id', userId);
+  if (error) throw error;
+}
+
 // ─── general expenses ─────────────────────────────────────────────────────
 function expenseToRow(e: GeneralExpense, userId: string): Record<string, unknown> {
   return {
@@ -169,5 +179,10 @@ export async function fetchRevenueGeneralExpenses(userId: string): Promise<Gener
 export async function upsertRevenueGeneralExpenses(userId: string, list: GeneralExpense[]): Promise<void> {
   if (list.length === 0) return;
   const { error } = await supabase.from('revenue_general_expenses').upsert(list.map((e) => expenseToRow(e, userId)), { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function deleteRevenueGeneralExpense(userId: string, expenseId: string): Promise<void> {
+  const { error } = await supabase.from('revenue_general_expenses').delete().eq('id', expenseId).eq('user_id', userId);
   if (error) throw error;
 }
