@@ -693,19 +693,22 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 })()}
               </>
             )}
+          </>
+        )}
 
-            {isOperator && (
-              <div className="border-t border-gray-100 pt-6">
-                <h3 className="text-lg font-black text-gray-800 mb-3">프리랜서 신청자 목록 (운영자 전용)</h3>
-                <p className="text-sm text-gray-500 mb-3">링크 확인 후 포인트 지급. 일반 회원은 이 목록·선정·지급 결과를 볼 수 없습니다.</p>
-                {task.applicants.length === 0 ? (
-                  <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
-                ) : (
-                <ul className="space-y-4">
-                  {task.applicants.map((a) => {
-                    const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
-                    const paid = task.paidUserIds?.includes(a.userId);
-                    return (
+        {/* 운영자 전용 목록 — 로그인한 운영자에게만 항상 표시 (닉네임·댓글·연락처·선정) */}
+        {user && isOperator && (
+          <div className="border-t border-gray-100 pt-6">
+            <h3 className="text-lg font-black text-gray-800 mb-3">프리랜서 신청자 목록 (운영자 전용)</h3>
+            <p className="text-sm text-gray-500 mb-3">링크 확인 후 포인트 지급. 일반 회원은 이 목록·선정·지급 결과를 볼 수 없습니다.</p>
+            {task.applicants.length === 0 ? (
+              <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
+            ) : (
+              <ul className="space-y-4">
+                {task.applicants.map((a) => {
+                  const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
+                  const paid = task.paidUserIds?.includes(a.userId);
+                  return (
                     <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
@@ -774,13 +777,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                         </div>
                       )}
                     </li>
-                  );})}
-                </ul>
-                )}
-                <p className="text-sm text-gray-500 mt-3">링크를 클릭해 확인 후, 수정요청이 필요하면 수정요청 버튼으로 알림을 보내거나 포인트 지급해 주세요.</p>
-              </div>
+                  );
+                })}
+              </ul>
             )}
-          </>
+            {task.applicants.length > 0 && (
+              <p className="text-sm text-gray-500 mt-3">링크를 클릭해 확인 후, 수정요청이 필요하면 수정요청 버튼으로 알림을 보내거나 포인트 지급해 주세요.</p>
+            )}
+          </div>
         )}
 
         {task.pointPaid && (
