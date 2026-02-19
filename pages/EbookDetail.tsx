@@ -153,7 +153,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
           </section>
 
           {/* 전문가 요약 정보 (최상단 고정) */}
-          <section className="bg-white border border-gray-100 rounded-[28px] p-4 md:p-5 shadow-sm space-y-3">
+          <section className="bg-white border border-gray-100 rounded-[28px] p-5 md:p-6 shadow-sm space-y-4">
              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                    <div className="relative shrink-0">
@@ -169,17 +169,17 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                 </div>
                 <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="bg-gray-900 text-white px-5 py-2.5 rounded-[20px] font-black text-sm hover:bg-blue-600 transition-all shadow italic uppercase tracking-wider active:scale-95 shrink-0">전문가 문의하기</button>
              </div>
-             <div className="bg-gray-50/80 rounded-[16px] p-1 flex flex-wrap lg:flex-nowrap gap-1 shadow-inner border border-gray-100">
+             <div className="bg-gray-50/80 rounded-[16px] p-2 flex flex-wrap lg:flex-nowrap gap-2 shadow-inner border border-gray-100">
                 {[
                   { label: '총 거래 건수', value: `${totalTransactions}건`, icon: '📊' },
                   { label: '만족도 점수', value: expertAvgRating, icon: '⭐' },
                   { label: '회원 구분', value: expertTypeInfo.label, icon: '👤' },
                   { label: '세금계산서', value: expertTypeInfo.tax, icon: '🧾' }
                 ].map((item, i) => (
-                  <div key={i} className="flex-1 min-w-[72px] bg-white rounded-[12px] py-2.5 px-2 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
-                    <span className="text-lg mb-1 group-hover:scale-105 transition-transform">{item.icon}</span>
-                    <p className="text-[10px] font-black text-gray-400 mb-1 uppercase tracking-wider italic leading-tight">{item.label}</p>
-                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-sm leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
+                  <div key={i} className="flex-1 min-w-[72px] bg-white rounded-[12px] py-3.5 px-2.5 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
+                    <span className="text-xl mb-1.5 group-hover:scale-105 transition-transform">{item.icon}</span>
+                    <p className="text-xs font-black text-gray-400 mb-1 uppercase tracking-wider italic leading-tight">{item.label}</p>
+                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-base leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
                   </div>
                 ))}
              </div>
