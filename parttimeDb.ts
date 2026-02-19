@@ -1,835 +1,398 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { UserProfile } from '@/types';
-import type { PartTimeTask } from '@/types';
-import { NotificationType } from '@/types';
-import {
-  fetchPartTimeTasks,
-  fetchPartTimeJobRequests,
-  upsertPartTimeTasks,
-  processAutoApprovalsInDb,
-  fetchFreelancerBalance,
-  setFreelancerBalance,
-  addFreelancerEarningToDb,
-} from '../parttimeDb';
+/**
+ * 누구나알바 / 프리랜서 워크페이스 Supabase DB 연동
+ * - parttime_tasks, parttime_job_requests, freelancer_balances, freelancer_earnings_history, freelancer_withdraw_requests, parttime_task_completed_checks
+ */
+import { supabase } from './supabase';
+import type {
+  PartTimeTask,
+  PartTimeJobRequest,
+  FreelancerEarningEntry,
+  PartTimeApplicant,
+  PartTimeTaskSections,
+} from '@/types';
+import type { FreelancerWithdrawRequest } from '@/constants';
 import { FREELANCER_FEE_RATE } from '@/constants';
 
-interface Props {
-  user: UserProfile | null;
-  members?: UserProfile[];
-  onUpdateUser?: (updated: UserProfile) => void;
-  addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+// ─── parttime_tasks ─────────────────────────────────────────────────────
+/** sections JSON이 너무 크면 DB/전송 한계로 실패할 수 있어, 용량 제한 적용 */
+const MAX_SECTIONS_BYTES = 700 * 1024; // 약 700KB
+const MAX_SINGLE_STRING_BYTES = 80 * 1024; // 항목당 약 80KB
+
+function shrinkSections(sections: PartTimeTaskSections): PartTimeTaskSections {
+  const str = JSON.stringify(sections);
+  if (str.length <= MAX_SECTIONS_BYTES) return sections;
+  const out: PartTimeTaskSections = {};
+  for (const [key, value] of Object.entries(sections)) {
+    if (value == null) { out[key as keyof PartTimeTaskSections] = value; continue; }
+    if (typeof value === 'string') {
+      out[key as keyof PartTimeTaskSections] = value.length <= MAX_SINGLE_STRING_BYTES
+        ? value
+        : value.slice(0, MAX_SINGLE_STRING_BYTES) + '...[용량 제한으로 잘림]';
+      continue;
+    }
+    if (Array.isArray(value)) {
+      const arr = value.map((item) =>
+        typeof item === 'string' && item.length > MAX_SINGLE_STRING_BYTES
+          ? item.slice(0, MAX_SINGLE_STRING_BYTES) + '...[잘림]'
+          : item
+      );
+      (out as Record<string, unknown>)[key] = arr;
+      continue;
+    }
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      (out as Record<string, unknown>)[key] = value;
+      continue;
+    }
+    (out as Record<string, unknown>)[key] = value;
+  }
+  return out;
 }
 
-const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
-
-const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) => {
-  const displayUser = useMemo(() => {
-    if (!user) return null;
-    const m = members.find((x) => x.id === user.id);
-    return m ? { ...user, ...m } : user;
-  }, [user, members]);
-  const { taskId } = useParams<{ taskId: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const focusWorkLink = (location.state as { focusWorkLink?: boolean; fromAdmin?: boolean })?.focusWorkLink;
-  const fromAdmin = (location.state as { fromAdmin?: boolean })?.fromAdmin;
-  const [tasks, setTasks] = useState<PartTimeTask[]>([]);
-  const [jobRequests, setJobRequests] = useState<Awaited<ReturnType<typeof fetchPartTimeJobRequests>>>([]);
-  const [isEditingWorkLinks, setIsEditingWorkLinks] = useState(false);
-  const [applyComment, setApplyComment] = useState('');
-  const [applyContact, setApplyContact] = useState('');
-  const [workLinks, setWorkLinks] = useState<string[]>(['']);
-  const [revisionModal, setRevisionModal] = useState<{ userId: string; nickname: string; text: string } | null>(null);
-  const [agree1, setAgree1] = useState(false);
-  const [agree2, setAgree2] = useState(false);
-  const [agree3, setAgree3] = useState(false);
-
-  const task = tasks.find((t) => t.id === taskId);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        await processAutoApprovalsInDb();
-        const [taskList, jrList] = await Promise.all([fetchPartTimeTasks(), fetchPartTimeJobRequests()]);
-        if (!cancelled) {
-          setTasks(taskList);
-          setJobRequests(jrList);
-        }
-      } catch (e) {
-        if (!cancelled) console.error('PartTimeTaskDetail load:', e);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [taskId]);
-
-  /** 작업 링크 수정 모드: focusWorkLink 또는 수정요청 시 workLinks에 제출된 링크 채우기 */
-  useEffect(() => {
-    if (!task || !user) return;
-    const me = task.applicants.find((a) => a.userId === user.id);
-    if (!me?.selected) return;
-    const submitted = me.workLinks?.length ? me.workLinks : (me.workLink ? [me.workLink] : []);
-    if (submitted.length > 0 && (focusWorkLink || me.revisionRequest)) {
-      setWorkLinks(submitted);
-      setIsEditingWorkLinks(true);
-    }
-  }, [task?.id, user?.id, focusWorkLink, task?.applicants]);
-
-  /** 작업일 이틀 전 / 작업당일 알림 (선정된 신청자에게 1회만) */
-  useEffect(() => {
-    if (!task || !addNotif || task.pointPaid) return;
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${yyyy}-${mm}-${dd}`;
-    const inTwo = new Date(today);
-    inTwo.setDate(today.getDate() + 2);
-    const twoDaysStr = `${inTwo.getFullYear()}-${String(inTwo.getMonth() + 1).padStart(2, '0')}-${String(inTwo.getDate()).padStart(2, '0')}`;
-    const start = task.workPeriod?.start;
-    if (!start) return;
-    const selected = task.applicants.filter((a) => a.selected);
-    if (selected.length === 0) return;
-
-    const key2day = `parttime_reminder_${task.id}_2day`;
-    const keyDay = `parttime_reminder_${task.id}_day`;
-    if (start === twoDaysStr && !localStorage.getItem(key2day)) {
-      localStorage.setItem(key2day, '1');
-      selected.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '작업일 안내', `[${task.title}] 작업일까지 이틀 전입니다. 기한 내에 완료해 주세요.`, '작업일까지 이틀 전입니다. 기한 내에 완료해 주세요.')
-      );
-    }
-    if (start === todayStr && !localStorage.getItem(keyDay)) {
-      localStorage.setItem(keyDay, '1');
-      selected.forEach((a) =>
-        addNotif(a.userId, 'freelancer', '작업당일', `[${task.title}] 오늘이 작업일입니다. 완료 후 링크를 제출해 주세요.`, '오늘이 작업일입니다. 완료 후 링크를 제출해 주세요.')
-      );
-    }
-  }, [task, addNotif]);
-
-  const saveTasks = (next: PartTimeTask[]) => {
-    setTasks(next);
-    upsertPartTimeTasks(next).catch((e) => console.error('saveTasks:', e));
+function taskToRow(t: PartTimeTask): Record<string, unknown> {
+  const sections = t.sections ?? {};
+  const sectionsSafe = shrinkSections(sections);
+  return {
+    id: t.id,
+    title: t.title,
+    description: t.description ?? null,
+    category: t.category,
+    reward: t.reward ?? 0,
+    max_applicants: t.maxApplicants ?? null,
+    sections: sectionsSafe,
+    application_period_start: t.applicationPeriod?.start ?? null,
+    application_period_end: t.applicationPeriod?.end ?? null,
+    work_period_start: t.workPeriod?.start ?? null,
+    work_period_end: t.workPeriod?.end ?? null,
+    created_at: t.createdAt ?? new Date().toISOString(),
+    created_by: t.createdBy ?? null,
+    applicants: (t.applicants ?? []) as unknown[],
+    point_paid: t.pointPaid ?? false,
+    paid_user_ids: (t.paidUserIds ?? []) as unknown[],
+    applicant_user_id: t.applicantUserId ?? null,
+    job_request_id: t.jobRequestId ?? null,
+    project_no: t.projectNo ?? null,
+    sent_to_advertiser_at: t.sentToAdvertiserAt ?? null,
   };
+}
 
-  const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
-  const isOperator = user?.role === 'admin' || user?.role === 'manager';
-
-  const handleApply = () => {
-    if (!user || !task) return;
-    const effectiveUser = displayUser || user;
-    if (effectiveUser.freelancerStatus !== 'approved') {
-      if (window.confirm('누구나알바에 신청하려면 프리랜서 등록이 필요합니다.\n프리랜서 워크페이스에서 등록을 먼저 진행해 주세요.\n\n마이페이지로 이동할까요?')) {
-        navigate('/mypage', { state: { activeTab: 'freelancer' } as any });
-      }
-      return;
-    }
-    if (task.applicants.some((a) => a.userId === user.id)) {
-      alert('이미 신청하셨습니다.');
-      return;
-    }
-    if (!agree1 || !agree2 || !agree3) {
-      alert('필수 동의 항목에 모두 체크해 주세요.');
-      return;
-    }
-    const next = tasks.map((t) =>
-      t.id !== task.id
-        ? t
-        : {
-            ...t,
-            applicants: [
-              ...t.applicants,
-              { userId: user.id, nickname: user.nickname, comment: applyComment.trim() || '신청합니다', contact: applyContact.trim() || undefined, selected: false, appliedAt: new Date().toISOString() },
-            ],
-          }
-    );
-    saveTasks(next);
-    setApplyComment('');
-    setApplyContact('');
-    alert('신청되었습니다.');
+function rowToTask(row: Record<string, unknown>): PartTimeTask {
+  return {
+    id: String(row.id),
+    title: String(row.title),
+    description: row.description != null ? String(row.description) : '',
+    category: String(row.category),
+    reward: Number(row.reward ?? 0),
+    maxApplicants: row.max_applicants != null ? Number(row.max_applicants) : undefined,
+    sections: (row.sections as PartTimeTaskSections) ?? {},
+    applicationPeriod: {
+      start: String(row.application_period_start ?? ''),
+      end: String(row.application_period_end ?? ''),
+    },
+    workPeriod: {
+      start: String(row.work_period_start ?? ''),
+      end: String(row.work_period_end ?? ''),
+    },
+    createdAt: row.created_at != null ? new Date(row.created_at as string).toISOString() : new Date().toISOString(),
+    createdBy: row.created_by != null ? String(row.created_by) : undefined,
+    applicants: (Array.isArray(row.applicants) ? row.applicants : []).map((a: Record<string, unknown>) => ({
+      ...a,
+      selected: Boolean((a as { selected?: unknown })?.selected),
+    })) as PartTimeApplicant[],
+    pointPaid: Boolean(row.point_paid),
+    paidUserIds: Array.isArray(row.paid_user_ids) ? (row.paid_user_ids as string[]) : [],
+    applicantUserId: row.applicant_user_id != null ? String(row.applicant_user_id) : undefined,
+    jobRequestId: row.job_request_id != null ? String(row.job_request_id) : undefined,
+    projectNo: row.project_no != null ? String(row.project_no) : undefined,
+    sentToAdvertiserAt: row.sent_to_advertiser_at != null ? new Date(row.sent_to_advertiser_at as string).toISOString() : undefined,
   };
+}
 
-  /** 운영자: 신청자 선정 → 선정자에게 알림, jobRequestId 자동 연결 */
-  const handleSelect = (userId: string) => {
-    if (!taskId) return;
-    const now = new Date().toISOString();
-    setTasks((prev) => {
-      const currentTask = prev.find((t) => t.id === taskId);
-      if (!currentTask) return prev;
-      const applicant = currentTask.applicants.find((a) => a.userId === userId);
-      let updatedTask: PartTimeTask = {
-        ...currentTask,
-        applicants: currentTask.applicants.map((a) =>
-          a.userId === userId ? { ...a, selected: true, selectedAt: now } : a
-        ),
-      };
-      if (currentTask.applicantUserId && !currentTask.jobRequestId) {
-        const jobReqs = jobRequests.filter((jr) => jr.applicantUserId === currentTask.applicantUserId && (jr.paid || jr.status === 'pending'));
-        const linkedIds = new Set(prev.filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
-        const unlinked = jobReqs.find((jr) => !linkedIds.has(jr.id));
-        if (unlinked) updatedTask = { ...updatedTask, jobRequestId: unlinked.id };
-      }
-      const next = prev.map((t) => (t.id !== taskId ? t : updatedTask));
-      upsertPartTimeTasks(next).catch((e) => {
-        console.error('선정 저장 실패:', e);
-        alert('선정은 반영됐으나 저장에 실패했습니다. 새로고침 시 되돌아갈 수 있습니다.');
-      });
-      if (applicant && addNotif) {
-        addNotif(userId, 'freelancer', '프리랜서 선정', `[${currentTask.title}]에 선정되었습니다. 작업 완료 후 작업 링크를 제출해 주세요.`, '작업 완료 후 작업 링크를 제출해 주세요.');
-      }
-      if (currentTask.applicantUserId && addNotif) {
-        addNotif(currentTask.applicantUserId, 'approval', '프리랜서 선정', `[${currentTask.title}]에 프리랜서가 선정되었습니다.`, '프리랜서 선정이 완료되었습니다.');
-      }
-      return next;
-    });
+export async function fetchPartTimeTasks(): Promise<PartTimeTask[]> {
+  const { data, error } = await supabase.from('parttime_tasks').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToTask(row as Record<string, unknown>));
+}
+
+export async function upsertPartTimeTask(task: PartTimeTask): Promise<void> {
+  const row = taskToRow(task);
+  const { error } = await supabase.from('parttime_tasks').upsert(row, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function upsertPartTimeTasks(tasks: PartTimeTask[]): Promise<void> {
+  if (tasks.length === 0) return;
+  const rows = tasks.map((t) => taskToRow(t));
+  const { error } = await supabase.from('parttime_tasks').upsert(rows, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function deletePartTimeTask(id: string): Promise<void> {
+  const { error } = await supabase.from('parttime_tasks').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ─── parttime_job_requests ──────────────────────────────────────────────
+function jobRequestToRow(r: PartTimeJobRequest): Record<string, unknown> {
+  return {
+    id: r.id,
+    applicant_user_id: r.applicantUserId ?? null,
+    title: r.title,
+    work_content: r.workContent ?? null,
+    platform_links: r.platformLinks ?? null,
+    platform_link: r.platformLink ?? null,
+    ad_amount: r.adAmount ?? 0,
+    unit_price: r.unitPrice ?? null,
+    quantity: r.quantity ?? null,
+    fee: r.fee ?? 0,
+    work_period_start: r.workPeriodStart ?? null,
+    work_period_end: r.workPeriodEnd ?? null,
+    contact: r.contact ?? null,
+    status: r.status ?? 'pending_review',
+    paid: r.paid ?? false,
+    reject_reason: r.rejectReason ?? null,
+    example_images: (r.exampleImages ?? null) as unknown,
+    operator_estimate: r.operatorEstimate ?? null,
+    created_at: r.createdAt ?? new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
+}
 
-  /** 운영자: 선정 취소 → 해당 신청자에게 알림 */
-  const handleDeselect = (userId: string) => {
-    if (!taskId) return;
-    setTasks((prev) => {
-      const currentTask = prev.find((t) => t.id === taskId);
-      if (!currentTask) return prev;
-      const applicant = currentTask.applicants.find((a) => a.userId === userId);
-      const next = prev.map((t) =>
-        t.id !== taskId
-          ? t
-          : { ...t, applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, selected: false } : a)) }
-      );
-      upsertPartTimeTasks(next).catch((e) => {
-        console.error('선정취소 저장 실패:', e);
-        alert('선정 취소가 저장에 실패했습니다. 새로고침 후 다시 시도해 주세요.');
-      });
-      if (applicant && addNotif) {
-        addNotif(userId, 'freelancer', '선정 취소', `[${currentTask.title}] 작업에서 선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.`, '선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.');
-      }
-      return next;
-    });
+function rowToJobRequest(row: Record<string, unknown>): PartTimeJobRequest {
+  return {
+    id: String(row.id),
+    title: String(row.title),
+    workContent: row.work_content != null ? String(row.work_content) : '',
+    platformLink: row.platform_link != null ? String(row.platform_link) : '',
+    platformLinks: Array.isArray(row.platform_links) ? (row.platform_links as string[]) : undefined,
+    contact: row.contact != null ? String(row.contact) : '',
+    workPeriodStart: String(row.work_period_start ?? ''),
+    workPeriodEnd: String(row.work_period_end ?? ''),
+    adAmount: Number(row.ad_amount ?? 0),
+    unitPrice: row.unit_price != null ? Number(row.unit_price) : undefined,
+    quantity: row.quantity != null ? Number(row.quantity) : undefined,
+    fee: Number(row.fee ?? 0),
+    applicantUserId: row.applicant_user_id != null ? String(row.applicant_user_id) : undefined,
+    status: (row.status as PartTimeJobRequest['status']) ?? 'pending_review',
+    rejectReason: row.reject_reason != null ? String(row.reject_reason) : undefined,
+    paid: Boolean(row.paid),
+    exampleImages: Array.isArray(row.example_images) ? (row.example_images as string[]) : undefined,
+    operatorEstimate: row.operator_estimate as PartTimeJobRequest['operatorEstimate'] | undefined,
+    createdAt: row.created_at != null ? new Date(row.created_at as string).toISOString() : new Date().toISOString(),
   };
+}
 
-  /** 선정된 프리랜서: 작업링크 여러 개 제출 */
-  const addWorkLinkInput = () => setWorkLinks((w) => [...w, '']);
-  const removeWorkLinkInput = (index: number) => setWorkLinks((w) => (w.length <= 1 ? w : w.filter((_, i) => i !== index)));
-  const updateWorkLinkInput = (index: number, value: string) => setWorkLinks((w) => w.map((v, i) => (i === index ? value : v)));
+export async function fetchPartTimeJobRequests(): Promise<PartTimeJobRequest[]> {
+  const { data, error } = await supabase.from('parttime_job_requests').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToJobRequest(row as Record<string, unknown>));
+}
 
-  const handleSubmitWorkLink = () => {
-    if (!user || !task) return;
-    const links = workLinks.map((s) => s.trim()).filter(Boolean);
-    if (links.length === 0) {
-      alert('작업 링크를 1개 이상 입력해 주세요.');
-      return;
-    }
-    const now = new Date().toISOString();
-    const next = tasks.map((t) =>
-      t.id !== task.id
-        ? t
-        : {
-            ...t,
-            applicants: t.applicants.map((a) =>
-              a.userId === user.id
-                ? { ...a, workLinks: links, workLink: links[0], revisionRequest: undefined, workLinkSubmittedAt: now, reApprovalRequestedAt: a.revisionRequest ? now : undefined }
-                : a
-            ),
-          }
-    );
-    saveTasks(next);
-    setWorkLinks(['']);
-    setIsEditingWorkLinks(false);
-    if (addNotif) {
-      addNotif(user.id, 'freelancer', '링크 제출 완료', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다. 수고많으셨습니다.', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.');
-    }
-    if (task.applicantUserId && addNotif) {
-      addNotif(task.applicantUserId, 'approval', '작업 완료', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 마이페이지 → 알바의뢰에서 확인해 주세요.`);
-    }
-    if (task.createdBy && addNotif && task.applicantUserId) {
-      addNotif(task.createdBy, 'approval', '작업이 완료되었습니다', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 어드민 패널 수익탭에서 작업확인 버튼으로 링크를 확인해 주세요.`);
-    }
-    alert('작업링크가 제출되었습니다.\n제대로 작업이 되었는지 확인 후 수익통장에 충전됩니다.\n수고많으셨습니다.');
+export async function upsertPartTimeJobRequest(req: PartTimeJobRequest): Promise<void> {
+  const row = jobRequestToRow(req);
+  const { error } = await supabase.from('parttime_job_requests').upsert(row, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function upsertPartTimeJobRequests(requests: PartTimeJobRequest[]): Promise<void> {
+  if (requests.length === 0) return;
+  const rows = requests.map((r) => jobRequestToRow(r));
+  const { error } = await supabase.from('parttime_job_requests').upsert(rows, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function deletePartTimeJobRequest(id: string): Promise<void> {
+  const { error } = await supabase.from('parttime_job_requests').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ─── freelancer_balances ────────────────────────────────────────────────
+export async function fetchFreelancerBalance(userId: string): Promise<number> {
+  const { data, error } = await supabase.from('freelancer_balances').select('balance').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return data?.balance != null ? Number(data.balance) : 0;
+}
+
+export async function setFreelancerBalance(userId: string, balance: number): Promise<void> {
+  const value = Math.max(0, Math.round(balance));
+  const { error } = await supabase.from('freelancer_balances').upsert(
+    { user_id: userId, balance: value, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id' }
+  );
+  if (error) throw error;
+}
+
+// ─── freelancer_earnings_history ────────────────────────────────────────
+function rowToEarningEntry(row: Record<string, unknown>): FreelancerEarningEntry {
+  const at = row.created_at != null ? new Date(row.created_at as string).toISOString() : new Date().toISOString();
+  return {
+    id: String(row.id),
+    type: (row.type as 'task' | 'withdraw') ?? 'task',
+    amount: Number(row.amount ?? 0),
+    label: row.label != null ? String(row.label) : '',
+    at,
   };
+}
 
-  /** 운영자: 통과 (3일 후 자동 지급) */
-  const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
-    (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
-  const handleApprovePass = (userId: string) => {
-    if (!task) return;
-    const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
-    if (!a) return;
-    const now = new Date();
-    const autoAt = new Date(now.getTime() + 72 * 60 * 60 * 1000);
-    const next = tasks.map((t) =>
-      t.id !== task.id ? t : {
-        ...t,
-        applicants: t.applicants.map((ap) =>
-          ap.userId === userId ? { ...ap, deliveryAt: now.toISOString(), autoApproveAt: autoAt.toISOString() } : ap
-        ),
-      }
-    );
-    saveTasks(next);
-    if (addNotif) {
-      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 3일 후 수익통장에 ${task.reward.toLocaleString()}원이 자동 적립됩니다.`, '3일 후 수익통장에 자동 적립됩니다.');
-    }
-    alert('통과 처리되었습니다. 3일 후 자동으로 수익통장에 지급됩니다.');
+export async function fetchFreelancerHistory(userId: string): Promise<FreelancerEarningEntry[]> {
+  const { data, error } = await supabase
+    .from('freelancer_earnings_history')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToEarningEntry(row as Record<string, unknown>));
+}
+
+export async function addFreelancerEarningToDb(
+  userId: string,
+  id: string,
+  type: 'task' | 'withdraw',
+  amount: number,
+  label: string
+): Promise<void> {
+  const { error } = await supabase.from('freelancer_earnings_history').insert({
+    id,
+    user_id: userId,
+    type,
+    amount,
+    label: label || null,
+  });
+  if (error) throw error;
+}
+
+// ─── freelancer_withdraw_requests ────────────────────────────────────────
+function rowToWithdrawRequest(row: Record<string, unknown>): FreelancerWithdrawRequest {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    nickname: String(row.nickname),
+    amount: Number(row.amount ?? 0),
+    bankName: String(row.bank_name),
+    accountNo: String(row.account_no),
+    ownerName: String(row.owner_name),
+    requestedAt: row.requested_at != null ? new Date(row.requested_at as string).toISOString() : new Date().toISOString(),
+    status: (row.status as 'pending' | 'completed' | 'failed') ?? 'pending',
   };
+}
 
-  /** 운영자: 즉시 지급 (기존 포인트 지급) - 작업건당 1회만 수익통장 입금 */
-  const handlePayPoints = async (userId?: string) => {
-    if (!task) return;
-    const freshTask = tasks.find((x) => x.id === task.id);
-    const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
-    const base = userId
-      ? task.applicants.filter((a) => a.userId === userId && a.selected && hasWorkLink(a))
-      : task.applicants.filter((a) => a.selected && hasWorkLink(a));
-    const target = base.filter((a) => !currentPaid.includes(a.userId));
-    if (target.length === 0) {
-      if (base.length > 0 && base.every((a) => currentPaid.includes(a.userId))) {
-        alert('이미 수익통장에 지급 완료된 상태입니다. 이중 지급되지 않습니다.');
-      } else {
-        alert('선정된 인원 중 작업 링크를 제출한 사람이 없습니다.');
-      }
-      return;
-    }
-    if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 즉시 지급합니다.`)) return;
-    try {
-      const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
-      for (const a of target) {
-        const cur = await fetchFreelancerBalance(a.userId);
-        await setFreelancerBalance(a.userId, cur + netAmount);
-        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
-      }
-      if (addNotif) {
-        target.forEach((a) =>
-          addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
-        );
-      }
-      const paidIds = target.map((a) => a.userId);
-      const allPaid = [...(freshTask?.paidUserIds ?? task.paidUserIds ?? []), ...paidIds];
-      const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
-      const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
-      const next = tasks.map((t) => (t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }));
-      setTasks(next);
-      await upsertPartTimeTasks(next);
-      alert('알바비가 지급되었습니다.');
-      if (!userId) navigate('/part-time');
-    } catch (err) {
-      console.error(err);
-      alert('지급 처리 중 오류가 발생했습니다.');
-    }
-  };
+export async function fetchFreelancerWithdrawRequests(): Promise<FreelancerWithdrawRequest[]> {
+  const { data, error } = await supabase.from('freelancer_withdraw_requests').select('*').order('requested_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToWithdrawRequest(row as Record<string, unknown>));
+}
 
-  /** 운영자: 수정요청 → 프리랜서에게 알림 */
-  const handleRevisionRequest = (userId: string, text: string) => {
-    if (!task || !text.trim()) return;
-    const next = tasks.map((t) =>
-      t.id !== task.id ? t : {
-        ...t,
-        applicants: t.applicants.map((a) =>
-          a.userId === userId ? { ...a, revisionRequest: text.trim() } : a
-        ),
-      }
-    );
-    saveTasks(next);
-    if (addNotif) {
-      addNotif(userId, 'revision', '작업 수정요청', `[${task.title}] 운영자가 수정을 요청했습니다. ${text.trim()}`, text.trim());
-    }
-    setRevisionModal(null);
-    alert('수정요청 알림이 전송되었습니다.');
-  };
+export async function addFreelancerWithdrawRequestToDb(req: Omit<FreelancerWithdrawRequest, 'id' | 'requestedAt' | 'status'>): Promise<string> {
+  const id = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const { error } = await supabase.from('freelancer_withdraw_requests').insert({
+    id,
+    user_id: req.userId,
+    nickname: req.nickname,
+    amount: req.amount,
+    bank_name: req.bankName,
+    account_no: req.accountNo,
+    owner_name: req.ownerName,
+    status: 'pending',
+  });
+  if (error) throw error;
+  return id;
+}
 
-  if (!task) {
-    return (
-      <div className="max-w-3xl mx-auto py-12 px-4 text-center">
-        <p className="text-gray-500 font-bold">작업을 찾을 수 없습니다.</p>
-        <button onClick={() => { fromAdmin ? navigate(-1) : navigate('/part-time'); }} className="mt-4 text-emerald-600 font-black hover:underline">
-          목록으로
-        </button>
-      </div>
-    );
+export async function updateFreelancerWithdrawRequestStatusToDb(id: string, status: 'pending' | 'completed' | 'failed'): Promise<void> {
+  const { error } = await supabase
+    .from('freelancer_withdraw_requests')
+    .update({ status, completed_at: status !== 'pending' ? new Date().toISOString() : null })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+/** 출금 실패 시 수익통장 환급 */
+export async function refundFreelancerWithdrawalInDb(userId: string, amount: number, label: string): Promise<void> {
+  const cur = await fetchFreelancerBalance(userId);
+  await setFreelancerBalance(userId, cur + Math.max(0, amount));
+  const id = `refund_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await addFreelancerEarningToDb(userId, id, 'task', amount, label);
+}
+
+/** 출금 신청: 잔액 차감 + 내역 추가 + 출금 요청 행 생성 */
+export async function withdrawFreelancerEarningsInDb(
+  userId: string,
+  amount: number,
+  req: { nickname: string; bankName: string; accountNo: string; ownerName: string }
+): Promise<{ success: boolean; newBalance: number }> {
+  const cur = await fetchFreelancerBalance(userId);
+  const minWithdraw = 5000; // MIN_WITHDRAW_FREELANCER
+  if (amount < minWithdraw || amount > cur) {
+    return { success: false, newBalance: cur };
+  }
+  const next = cur - amount;
+  await setFreelancerBalance(userId, next);
+  const entryId = `wd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await addFreelancerEarningToDb(userId, entryId, 'withdraw', -amount, '출금 신청');
+  await addFreelancerWithdrawRequestToDb({ userId, nickname: req.nickname, amount, bankName: req.bankName, accountNo: req.accountNo, ownerName: req.ownerName });
+  return { success: true, newBalance: next };
+}
+
+// ─── parttime_task_completed_checks (캘린더 완료 체크) ─────────────────────
+export async function fetchPartTimeCompletedIds(userId: string): Promise<Set<string>> {
+  const { data, error } = await supabase.from('parttime_task_completed_checks').select('task_id').eq('user_id', userId);
+  if (error) throw error;
+  return new Set((data ?? []).map((r) => String(r.task_id)));
+}
+
+export async function addPartTimeCompletedCheck(userId: string, taskId: string): Promise<void> {
+  const { error } = await supabase.from('parttime_task_completed_checks').upsert(
+    { user_id: userId, task_id: taskId },
+    { onConflict: 'user_id,task_id' }
+  );
+  if (error) throw error;
+}
+
+export async function removePartTimeCompletedCheck(userId: string, taskId: string): Promise<void> {
+  const { error } = await supabase.from('parttime_task_completed_checks').delete().eq('user_id', userId).eq('task_id', taskId);
+  if (error) throw error;
+}
+
+// ─── 자동 승인 (3일 경과 시 수익통장 지급) - DB 버전 ────────────────────────
+/** 3일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. DB에서 tasks/balance/history 반영 */
+export async function processAutoApprovalsInDb(): Promise<boolean> {
+  const tasks = await fetchPartTimeTasks();
+  const now = Date.now();
+  const threeDaysMs = 72 * 60 * 60 * 1000;
+  let changed = false;
+  const next: PartTimeTask[] = [];
+
+  for (const t of tasks) {
+    const selectedWithLink = t.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!(a.workLink || '').trim()));
+    if (selectedWithLink.length === 0) {
+      next.push(t);
+      continue;
+    }
+    const updated = { ...t, paidUserIds: [...(t.paidUserIds ?? [])] };
+    for (const a of selectedWithLink) {
+      if (updated.paidUserIds?.includes(a.userId)) continue;
+      let shouldPay = false;
+      if (a.autoApproveAt) {
+        if (new Date(a.autoApproveAt).getTime() <= now) shouldPay = true;
+      } else if (t.applicantUserId && a.workLinkSubmittedAt) {
+        if (now >= new Date(a.workLinkSubmittedAt).getTime() + threeDaysMs) shouldPay = true;
+      }
+      if (shouldPay) {
+        const grossAmount = t.reward;
+        const netAmount = Math.round(grossAmount * (1 - FREELANCER_FEE_RATE));
+        const curBalance = await fetchFreelancerBalance(a.userId);
+        await setFreelancerBalance(a.userId, curBalance + Math.max(0, netAmount));
+        const entryId = `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        await addFreelancerEarningToDb(a.userId, entryId, 'task', grossAmount, t.title);
+        updated.paidUserIds = [...(updated.paidUserIds ?? []), a.userId];
+        const allSelected = updated.applicants.filter((ap) => ap.selected && ((ap.workLinks?.length ?? 0) > 0 || !!(ap.workLink || '').trim()));
+        updated.pointPaid = allSelected.every((ap) => updated.paidUserIds?.includes(ap.userId));
+        changed = true;
+      }
+    }
+    next.push(updated);
   }
 
-  const sections = task.sections || {};
-
-  return (
-    <div className="max-w-6xl mx-auto py-12 px-4 md:px-8 animate-in fade-in duration-300">
-      <div className="bg-white rounded-[32px] p-8 md:p-10 shadow-xl border border-gray-100 space-y-8">
-        <div className="flex items-start justify-between gap-4 pb-6 border-b border-gray-100">
-          <div>
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black text-emerald-600 bg-emerald-50 uppercase tracking-wider">{task.category}</span>
-            <h1 className="text-2xl md:text-3xl font-black text-gray-900 mt-2 tracking-tight">{task.title}</h1>
-            <p className="text-gray-500 mt-2 leading-relaxed">{task.description}</p>
-            <div className="mt-4 flex items-center gap-3">
-              <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-black text-lg">+{task.reward.toLocaleString()}원</span>
-            </div>
-          </div>
-          <button onClick={() => { fromAdmin ? navigate(-1) : navigate('/part-time'); }} className="shrink-0 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-bold text-sm transition-colors">
-            {fromAdmin ? '← 이전' : '← 목록'}
-          </button>
-        </div>
-
-        <div className="grid gap-4">
-          <h3 className="text-sm font-black text-gray-500 uppercase">작업 내용 (작업자가 할 일)</h3>
-          {(() => {
-            const order = sections.sectionOrder;
-            if (order && order.length > 0) {
-              return order.map(({ type, index }, i) => {
-                if (type === '게시글' && sections.게시글목록?.[index]) {
-                  const block = sections.게시글목록[index];
-                  return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {index + 1}</p>
-                      {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
-                      {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
-                    </div>
-                  );
-                }
-                if (type === '댓글' && sections.댓글목록?.[index]) {
-                  const text = sections.댓글목록[index];
-                  return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {index + 1}</p>
-                      <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
-                    </div>
-                  );
-                }
-                if (type === '작업링크' && sections.작업링크목록?.[index]) {
-                  const text = sections.작업링크목록[index];
-                  const isUrl = text.startsWith('http://') || text.startsWith('https://');
-                  return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {index + 1}</p>
-                      {isUrl ? (
-                        <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
-                      ) : (
-                        <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
-                      )}
-                    </div>
-                  );
-                }
-                if (type === '제목' && sections.제목목록?.[index]) {
-                  return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">제목 {index + 1}</p>
-                      <p className="font-black text-gray-800">{sections.제목목록[index]}</p>
-                    </div>
-                  );
-                }
-                if (type === '내용' && sections.내용목록?.[index]) {
-                  return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {index + 1}</p>
-                      <p className="text-gray-800 whitespace-pre-wrap text-sm">{sections.내용목록[index]}</p>
-                    </div>
-                  );
-                }
-                return null;
-              });
-            }
-            return (
-              <>
-                {sections.게시글목록 && sections.게시글목록.length > 0 && (
-                  <div className="space-y-4">
-                    {sections.게시글목록.map((block, i) => (
-                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {i + 1}</p>
-                        {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
-                        {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {sections.댓글목록 && sections.댓글목록.length > 0 && (
-                  <div className="space-y-4">
-                    {sections.댓글목록.map((text, i) => (
-                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
-                        <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {sections.제목목록 && sections.제목목록.length > 0 && (
-                  <div className="space-y-4">
-                    {sections.제목목록.map((text, i) => (
-                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">제목 {i + 1}</p>
-                        <p className="font-black text-gray-800">{text}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {sections.내용목록 && sections.내용목록.length > 0 && (
-                  <div className="space-y-4">
-                    {sections.내용목록.map((text, i) => (
-                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {i + 1}</p>
-                        <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {sections.작업링크목록 && sections.작업링크목록.length > 0 && (
-                  <div className="space-y-4">
-                    {sections.작업링크목록.map((text, i) => {
-                      const isUrl = text.startsWith('http://') || text.startsWith('https://');
-                      return (
-                        <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                          <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {i + 1}</p>
-                          {isUrl ? (
-                            <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
-                          ) : (
-                            <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            );
-          })()}
-          {SECTIONS_ORDER.filter((key) => key !== '제목' && key !== '내용').map(
-            (key) => {
-              const hasImageList = key === '이미지' && sections.이미지목록?.length;
-              const hasImageContent = key === '이미지' && (sections[key] || hasImageList);
-              if (key === '이미지' && !hasImageContent) return null;
-              if (key === '댓글' && (sections.댓글목록?.length || !sections.댓글)) return null;
-              if (key === '작업링크' && (sections.작업링크목록?.length || !sections.작업링크)) return null;
-              if (key !== '이미지' && key !== '댓글' && key !== '작업링크' && key !== '동영상' && key !== 'gif' && !sections[key]) return null;
-              if (key === '동영상' && !sections.동영상) return null;
-              if (key === 'gif' && !sections.gif) return null;
-              const meSelected = user && task.applicants.some((a) => a.userId === user.id && a.selected);
-              const downloadMedia = (src: string, filename: string) => {
-                if (!meSelected) return;
-                fetch(src).then((r) => r.blob()).then((blob) => {
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = filename;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }).catch(() => {
-                  const a = document.createElement('a');
-                  a.href = src;
-                  a.download = filename;
-                  a.click();
-                });
-              };
-              return (
-                <div key={key} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{key}</p>
-                  {key === '이미지' ? (
-                    <>
-                      {sections.이미지목록 && sections.이미지목록.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {sections.이미지목록.map((src, i) => (
-                            <div key={i} className="relative">
-                              <img src={src} alt={`참고 ${i + 1}`} className="max-h-32 rounded-lg object-contain border border-gray-200" />
-                              {meSelected && (
-                                <button type="button" onClick={() => downloadMedia(src, `이미지_${i + 1}.png`)} className="absolute bottom-1 right-1 px-2 py-1 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {sections.이미지?.startsWith('data:') && !sections.이미지목록?.length ? (
-                        <div className="relative inline-block">
-                          <img src={sections.이미지} alt="참고" className="max-h-40 rounded-lg object-contain border border-gray-200" />
-                          {meSelected && (
-                            <button type="button" onClick={() => downloadMedia(sections.이미지!, '이미지.png')} className="absolute bottom-2 right-2 px-2 py-1 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>
-                          )}
-                        </div>
-                      ) : sections.이미지 ? (
-                        <p className="text-gray-800 whitespace-pre-wrap">{sections.이미지}</p>
-                      ) : null}
-                    </>
-                  ) : key === '동영상' && sections.동영상?.startsWith('data:') ? (
-                    <div className="space-y-2">
-                      <video src={sections.동영상} className="max-h-48 rounded-lg border border-gray-200" controls />
-                      {meSelected && (
-                        <button type="button" onClick={() => downloadMedia(sections.동영상!, '동영상.mp4')} className="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>
-                      )}
-                    </div>
-                  ) : key === 'gif' && sections.gif?.startsWith('data:') ? (
-                    <div className="space-y-2">
-                      <img src={sections.gif} alt="GIF 참고" className="max-h-40 rounded-lg border border-gray-200" />
-                      {meSelected && (
-                        <button type="button" onClick={() => downloadMedia(sections.gif!, '참고.gif')} className="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>
-                      )}
-                    </div>
-                  ) : key === '작업링크' && sections.작업링크 && (sections.작업링크.startsWith('http://') || sections.작업링크.startsWith('https://')) ? (
-                    <p className="text-gray-800 whitespace-pre-wrap"><a href={sections.작업링크} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{sections.작업링크}</a></p>
-                  ) : (key === '동영상' || key === 'gif') && sections[key] && !sections[key]?.startsWith('data:') ? (
-                    <p className="text-gray-800 whitespace-pre-wrap">{sections[key]}</p>
-                  ) : (
-                    <p className="text-gray-800 whitespace-pre-wrap">{sections[key]}</p>
-                  )}
-                </div>
-              );
-            }
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <div className="inline-flex items-center gap-2 bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
-            <span className="text-[10px] font-black text-blue-600 uppercase">신청기간</span>
-            <span className="text-gray-800 font-bold">{task.applicationPeriod.start} ~ {task.applicationPeriod.end}</span>
-          </div>
-          <div className="inline-flex items-center gap-2 bg-amber-50 rounded-xl px-4 py-3 border border-amber-100">
-            <span className="text-[10px] font-black text-amber-600 uppercase">작업기간</span>
-            <span className="text-gray-800 font-bold">{task.workPeriod.start} ~ {task.workPeriod.end}</span>
-          </div>
-        </div>
-
-        {/* 신청 댓글 — 모두 닉네임·댓글만 표시 (연락처는 운영자 전용 목록에서만) */}
-        <div className="border-t border-gray-100 pt-6">
-          <h3 className="text-lg font-black text-gray-800 mb-3">신청 댓글</h3>
-          {task.applicants.length === 0 ? (
-            <p className="text-gray-500 py-3">아직 신청한 사람이 없습니다.</p>
-          ) : (
-            <ul className="space-y-2">
-              {task.applicants.map((a) => (
-                <li key={a.userId} className="flex items-start gap-2 py-2 px-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="font-black text-gray-800 shrink-0">{a.nickname}</span>
-                  <span className="text-gray-600 text-sm">{a.comment || '신청합니다'}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {user && !task.pointPaid && (
-          <>
-            {!isApplicant ? (
-              <div className="border-t border-gray-100 pt-6">
-                <p className="text-sm font-bold text-gray-700 mb-2">내 신청 댓글 (선택)</p>
-                <input
-                  type="text"
-                  value={applyComment}
-                  onChange={(e) => setApplyComment(e.target.value)}
-                  placeholder="신청합니다"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
-                />
-                <p className="text-sm font-bold text-gray-700 mb-2">연락처 (급할 때 연락 가능)</p>
-                <input
-                  type="tel"
-                  value={applyContact}
-                  onChange={(e) => setApplyContact(e.target.value)}
-                  placeholder="010-0000-0000"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
-                />
-                <div className="space-y-3 p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
-                    <span className="text-sm">(필수) 본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</span>
-                  </label>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
-                    <span className="text-sm">(필수) 본 작업과 관련된 게시글 및 대화 기록은 임의로 삭제할 수 없음에 동의합니다.</span>
-                  </label>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
-                    <span className="text-sm">(필수) 직거래 시도 시 거래액의 10배 위약벌 청구 및 영구 제명 조치에 동의합니다.</span>
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleApply}
-                  className="mt-3 px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all"
-                >
-                  신청하기
-                </button>
-              </div>
-            ) : (
-              <>
-                <p className="text-gray-500 font-bold">신청 완료되었습니다. 선정 시 해당 작업 완료 후 운영자와 광고주가 결과물 확인 후 수익통장에 적립됩니다.</p>
-                {(() => {
-                  const me = task.applicants.find((a) => a.userId === user?.id);
-                  if (me?.selected) {
-                    const submitted = me.workLinks?.length ? me.workLinks : (me.workLink ? [me.workLink] : []);
-                    return (
-                      <div className="border-t border-gray-100 pt-6 mt-4">
-                        <h3 className="text-lg font-black text-gray-800 mb-2">작업 링크 제출</h3>
-                        <p className="text-sm text-gray-500 mb-3">작업을 완료한 후 결과 링크를 남겨 주세요. 링크를 여러 개 제출할 수 있습니다. 운영자 확인 후 포인트가 지급됩니다.</p>
-                        {submitted.length > 0 && !isEditingWorkLinks ? (
-                          <div className="space-y-2">
-                            <p className="text-gray-700 font-bold">제출된 링크:</p>
-                            {submitted.map((url, i) => (
-                              <p key={i} className="text-sm">
-                                <a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline break-all">{url}</a>
-                              </p>
-                            ))}
-                            <button type="button" onClick={() => setIsEditingWorkLinks(true)} className="mt-3 px-4 py-2 rounded-xl bg-amber-500 text-white font-black text-sm hover:bg-amber-600">
-                              수정
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="space-y-2 mb-3">
-                              {workLinks.map((url, idx) => (
-                                <div key={idx} className="flex gap-2 items-center">
-                                  <input
-                                    type="url"
-                                    value={url}
-                                    onChange={(e) => updateWorkLinkInput(idx, e.target.value)}
-                                    placeholder="https://..."
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none"
-                                  />
-                                  {workLinks.length > 1 && (
-                                    <button type="button" onClick={() => removeWorkLinkInput(idx)} className="px-3 py-2 rounded-lg text-red-500 text-sm font-bold hover:bg-red-50">삭제</button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                              <button type="button" onClick={addWorkLinkInput} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">
-                                + 링크 추가
-                              </button>
-                              <button type="button" onClick={handleSubmitWorkLink} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all">
-                                {me.revisionRequest ? '재승인 요청' : '작업 링크 제출'}
-                              </button>
-                              {submitted.length > 0 && (
-                                <button type="button" onClick={() => setIsEditingWorkLinks(false)} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">
-                                  취소
-                                </button>
-                              )}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </>
-            )}
-          </>
-        )}
-
-        {/* 운영자 전용 목록 — 로그인한 운영자에게만 항상 표시 (닉네임·댓글·연락처·선정) */}
-        {user && isOperator && (
-          <div className="border-t border-gray-100 pt-6">
-            <h3 className="text-lg font-black text-gray-800 mb-3">프리랜서 신청자 목록 (운영자 전용)</h3>
-            <p className="text-sm text-gray-500 mb-3">링크 확인 후 포인트 지급. 일반 회원은 이 목록·선정·지급 결과를 볼 수 없습니다.</p>
-            {task.applicants.length === 0 ? (
-              <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
-            ) : (
-              <ul className="space-y-4">
-                {task.applicants.map((a) => {
-                  const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
-                  const paid = task.paidUserIds?.includes(a.userId);
-                  return (
-                    <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div>
-                          <p className="font-black text-gray-800">{a.nickname}</p>
-                          <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
-                          {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {a.selected ? (
-                            <>
-                              <button type="button" onClick={() => handleDeselect(a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all">
-                                선정취소
-                              </button>
-                              <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
-                            </>
-                          ) : (
-                            <button type="button" onClick={() => handleSelect(a.userId)} className="px-4 py-2 rounded-lg text-sm font-black bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700 transition-all">
-                              선정
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => navigate('/chat', { state: { targetUser: { id: a.userId, nickname: a.nickname, profileImage: '' } } })}
-                            className="px-4 py-2 rounded-lg text-sm font-black bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all"
-                          >
-                            채팅하기
-                          </button>
-                        </div>
-                      </div>
-                      {a.selected && (
-                        <div className="text-sm space-y-2">
-                          {links.length > 0 ? (
-                            <div>
-                              <p className="text-gray-700 font-bold">작업 링크 ({links.length}개):</p>
-                              {links.map((url, i) => (
-                                <p key={i}><a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{url}</a></p>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-amber-600 font-bold">작업 링크 미제출</p>
-                          )}
-                          {links.length > 0 && !paid && (
-                            <div className="flex gap-2 flex-wrap items-center">
-                              <button type="button" onClick={() => setRevisionModal({ userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200">
-                                수정요청
-                              </button>
-                              {a.deliveryAt && a.autoApproveAt ? (
-                                new Date(a.autoApproveAt) > new Date() ? (
-                                  <span className="text-blue-600 font-bold text-xs">3일 후 자동 지급 예정 ({new Date(a.autoApproveAt).toLocaleString('ko-KR')})</span>
-                                ) : (
-                                  <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중...</span>
-                                )
-                              ) : (
-                                <>
-                                  <button type="button" onClick={() => handleApprovePass(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">
-                                    통과
-                                  </button>
-                                  <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
-                                    즉시 지급
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          )}
-                          {paid && <span className="text-gray-500 font-bold text-xs">✓ 지급 완료</span>}
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {task.applicants.length > 0 && (
-              <p className="text-sm text-gray-500 mt-3">링크를 클릭해 확인 후, 수정요청이 필요하면 수정요청 버튼으로 알림을 보내거나 포인트 지급해 주세요.</p>
-            )}
-          </div>
-        )}
-
-        {task.pointPaid && (
-          <p className="text-center text-gray-500 font-bold py-4">이 작업은 마감되었습니다.</p>
-        )}
-
-        {!user && (
-          <p className="text-center text-gray-500 font-bold">로그인 후 신청할 수 있습니다.</p>
-        )}
-      </div>
-
-      {revisionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
-            <h4 className="font-black text-gray-900 text-lg">수정요청 보내기 · {revisionModal.nickname}</h4>
-            <p className="text-sm text-gray-500">수정 요청 내용은 프리랜서에게 알림으로 전달됩니다.</p>
-            <textarea
-              value={revisionModal.text}
-              onChange={(e) => setRevisionModal({ ...revisionModal, text: e.target.value })}
-              placeholder="예: 제목을 더 구체적으로 수정해 주세요 / 이미지 링크가 열리지 않습니다"
-              rows={4}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
-            />
-            <div className="flex gap-3">
-              <button onClick={() => setRevisionModal(null)} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">
-                취소
-              </button>
-              <button onClick={() => handleRevisionRequest(revisionModal.userId, revisionModal.text)} className="flex-1 py-3 rounded-xl bg-orange-500 text-white font-black hover:bg-orange-600">
-                수정요청 전송
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default PartTimeTaskDetail;
+  if (changed) await upsertPartTimeTasks(next);
+  return changed;
+}
