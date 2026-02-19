@@ -252,7 +252,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     alert('작업링크가 제출되었습니다.\n제대로 작업이 되었는지 확인 후 수익통장에 충전됩니다.\n수고많으셨습니다.');
   };
 
-  /** 운영자: 통과 (3일 후 자동 지급) */
+  /** 운영자: 통과 (링크 제출 후 6일 경과 시 자동 지급, 안내 문구는 4~7일 이내) */
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
     (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
   const handleApprovePass = (userId: string) => {
@@ -260,7 +260,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
     if (!a) return;
     const now = new Date();
-    const autoAt = new Date(now.getTime() + 72 * 60 * 60 * 1000);
+    const autoAt = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000); // 6일 후 자동 지급
     const next = tasks.map((t) =>
       t.id !== task.id ? t : {
         ...t,
@@ -271,9 +271,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     );
     saveTasks(next);
     if (addNotif) {
-      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 3일 후 수익통장에 ${task.reward.toLocaleString()}원이 자동 적립됩니다.`, '3일 후 수익통장에 자동 적립됩니다.');
+      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 4~7일 이내 수익통장에 ${task.reward.toLocaleString()}원이 적립됩니다.`, '4~7일 이내 수익통장에 적립됩니다.');
     }
-    alert('통과 처리되었습니다. 3일 후 자동으로 수익통장에 지급됩니다.');
+    alert('통과 처리되었습니다. 4~7일 이내 수익통장에 지급됩니다.');
   };
 
   /** 운영자: 즉시 지급 (기존 포인트 지급) - 작업건당 1회만 수익통장 입금 */
@@ -777,7 +777,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                               </button>
                               {a.deliveryAt && a.autoApproveAt ? (
                                 new Date(a.autoApproveAt) > new Date() ? (
-                                  <span className="text-blue-600 font-bold text-xs">3일 후 자동 지급 예정 ({new Date(a.autoApproveAt).toLocaleString('ko-KR')})</span>
+                                  <span className="text-blue-600 font-bold text-xs">4~7일 이내 자동 지급 예정 ({new Date(a.autoApproveAt).toLocaleString('ko-KR')})</span>
                                 ) : (
                                   <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중...</span>
                                 )
