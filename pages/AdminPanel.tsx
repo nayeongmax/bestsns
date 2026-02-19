@@ -133,6 +133,7 @@ const AdminPanel: React.FC<Props> = ({
             addNotif={addNotif}
             currentUser={user}
             onUpdateUser={onUpdateUser}
+            onRefreshMembers={onRefreshMembers}
           />
         )}
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
