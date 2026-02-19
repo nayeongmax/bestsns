@@ -37,24 +37,18 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   const [todos, setTodos] = useState<RevenueTodo[]>(() => loadFromStorage('rev_todos', []));
   const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>(() => loadFromStorage('rev_general_expenses', []));
 
-  const [projects, setProjects] = useState<RevenueProject[]>(() => {
-    const saved = localStorage.getItem('rev_projects');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // DB 저장 실패 시 화면에 표시 (로컬에만 저장됨 안내)
+  const [dbSaveError, setDbSaveError] = useState<string | null>(null);
 
-  const [todos, setTodos] = useState<RevenueTodo[]>(() => {
-    const saved = localStorage.getItem('rev_todos');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Supabase 저장 (데이터 있으면 즉시 저장, 로드 완료 여부와 무관)
+  // Supabase 저장 (데이터 있으면 즉시 저장)
   const saveErrShown = useRef<Record<string, boolean>>({});
   const showSaveError = (key: string, err: unknown) => {
+    const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : String(err);
+    setDbSaveError(msg || 'DB 저장 실패');
     if (saveErrShown.current[key]) return;
     saveErrShown.current[key] = true;
-    const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : String(err);
     console.error(`매출관리 ${key} 저장 실패:`, err);
-    alert(`DB 저장에 실패했습니다.\n\n[에러] ${msg}\n\n해결: Supabase SQL Editor에서 supabase-setup-4단계-매출관리.sql 파일 내용을 붙여넣고 Run 실행해 주세요.`);
+    alert(`DB 저장에 실패했습니다.\n\n[에러] ${msg}\n\n지금 보이는 데이터는 이 기기 브라우저에만 저장됩니다. 다른 기기·캐시 삭제 시 사라집니다.\n\n해결: Supabase SQL Editor에서 supabase-setup-4단계-매출관리.sql 실행 후, 이메일+비밀번호로 다시 로그인해 주세요.`);
   };
   useEffect(() => {
     if (!user?.id) return;
@@ -604,6 +598,16 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
 
   return (
     <div className="max-w-[1600px] mx-auto pb-32 space-y-8 px-8">
+      {dbSaveError && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+          <span className="text-2xl">⚠️</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-amber-900 text-sm">DB에 저장되지 않고 이 기기 브라우저에만 저장됩니다.</p>
+            <p className="text-amber-800 text-xs mt-1">새로고침하면 보이지만, 다른 기기나 캐시 삭제 시 사라집니다. Supabase SQL Editor에서 supabase-setup-4단계-매출관리.sql 실행 후 이메일+비밀번호로 다시 로그인해 주세요.</p>
+          </div>
+          <button type="button" onClick={() => setDbSaveError(null)} className="text-amber-600 hover:text-amber-900 text-xl font-black shrink-0">×</button>
+        </div>
+      )}
       <div className="bg-white/80 backdrop-blur-md p-4 rounded-[40px] shadow-2xl border border-white/50 flex justify-between items-center sticky top-24 z-[45] transition-all">
         <div className="flex gap-3">
           {[
