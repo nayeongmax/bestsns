@@ -230,7 +230,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
     if (!a) return;
     const now = new Date();
-    const autoAt = new Date(now.getTime() + 72 * 60 * 60 * 1000);
+    const autoAt = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000); // 6일 후 자동 지급
     const next = tasks.map((t) =>
       t.id !== task.id ? t : {
         ...t,
@@ -241,9 +241,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     );
     saveTasks(next);
     if (addNotif) {
-      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 3일 후 수익통장에 ${task.reward.toLocaleString()}원이 자동 적립됩니다.`, '3일 후 수익통장에 자동 적립됩니다.');
+      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 4~7일 이내 수익통장에 ${task.reward.toLocaleString()}원이 적립됩니다.`, '4~7일 이내 수익통장에 적립됩니다.');
     }
-    alert('통과 처리되었습니다. 3일 후 자동으로 수익통장에 지급됩니다.');
+    alert('통과 처리되었습니다. 4~7일 이내 수익통장에 지급됩니다.');
   };
 
   const handlePayPoints = async (task: PartTimeTask, userId?: string) => {
