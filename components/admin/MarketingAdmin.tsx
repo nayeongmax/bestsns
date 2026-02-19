@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UserProfile, Coupon, AutoCouponCampaign } from '@/types';
 import { fetchCouponCampaigns, upsertCouponCampaigns, deleteCouponCampaign } from '../../campaignDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   user: UserProfile | null;
@@ -20,6 +21,7 @@ function loadCampaignsFromStorage(): AutoCouponCampaign[] {
 }
 
 const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
+  const { showConfirm, showAlert } = useConfirm();
   const [targetFilter, setTargetFilter] = useState<TargetType>('all');
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isAllSelected, setIsAllSelected] = useState(false);
@@ -88,7 +90,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
   };
 
   const handleIssueCoupon = () => {
-    if (!couponForm.title) return alert('쿠폰 제목을 입력해주세요.');
+    if (!couponForm.title) return void showAlert({ description: '쿠폰 제목을 입력해주세요.' });
     
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + couponForm.expiryDays);
@@ -103,7 +105,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
           ? { ...c, ...couponForm, targetType: targetFilter } 
           : c
         );
-        alert('캠페인 정보가 업데이트되었습니다.');
+        showAlert({ description: '캠페인 정보가 업데이트되었습니다.' });
       } else {
         const newCampaign: AutoCouponCampaign = {
           id: `CAMP_${Date.now()}`,
@@ -112,7 +114,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
           isActive: true
         };
         updatedCampaigns = [...campaigns, newCampaign];
-        alert('자동 발행(웰컴형) 캠페인이 활성화되었습니다.');
+        showAlert({ description: '자동 발행(웰컴형) 캠페인이 활성화되었습니다.' });
       }
 
       setCampaigns(updatedCampaigns);
@@ -122,7 +124,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
 
     // 수동 발행 로직 (이력을 아래 리스트에 추가)
     const targetIds = isAllSelected ? filteredMembers.map(m => m.id) : selectedMemberIds;
-    if (targetIds.length === 0) return alert('발행 대상을 선택해주세요.');
+    if (targetIds.length === 0) return void showAlert({ description: '발행 대상을 선택해주세요.' });
 
     setIsProcessing(true);
 
@@ -151,7 +153,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
     setTimeout(() => {
       setIsProcessing(false);
       resetForm();
-      alert(`${targetIds.length}명의 회원에게 쿠폰 발행 및 알림 발송이 완료되었습니다.`);
+      showAlert({ description: `${targetIds.length}명의 회원에게 쿠폰 발행 및 알림 발송이 완료되었습니다.` });
     }, 500);
   };
 
@@ -171,7 +173,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
 
   const startEditCampaign = (camp: AutoCouponCampaign) => {
     if (!camp.isActive && camp.id.startsWith('BLAST')) {
-      alert('수동 발행 이력은 수정할 수 없습니다. 설정을 복사하여 새로 발행해 주세요.');
+      showAlert({ description: '수동 발행 이력은 수정할 수 없습니다. 설정을 복사하여 새로 발행해 주세요.' });
       return;
     }
     setEditingCampaignId(camp.id);
@@ -204,10 +206,18 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
   };
 
   const deleteCampaign = (id: string) => {
-    if (!window.confirm('해당 캠페인/이력을 리스트에서 삭제하시겠습니까?')) return;
-    deleteCouponCampaign(id).catch((err) => console.warn('캠페인 삭제 실패:', err));
-    setCampaigns(prev => prev.filter(c => c.id !== id));
-    if (editingCampaignId === id) resetForm();
+    showConfirm({
+      title: '캠페인 삭제',
+      description: '해당 캠페인/이력을 리스트에서 삭제하시겠습니까?',
+      confirmLabel: '삭제하기',
+      cancelLabel: '취소',
+      danger: true,
+      onConfirm: () => {
+        deleteCouponCampaign(id).catch((err) => console.warn('캠페인 삭제 실패:', err));
+        setCampaigns(prev => prev.filter(c => c.id !== id));
+        if (editingCampaignId === id) resetForm();
+      },
+    });
   };
 
   return (
