@@ -114,7 +114,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   };
 
   const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
-  const isOperator = user?.role === 'admin';
+  const isOperator = user?.role === 'admin' || user?.role === 'manager';
 
   const handleApply = () => {
     if (!user || !task) return;
@@ -571,12 +571,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           </div>
         </div>
 
-        {/* 신청 댓글 — 운영자만 상세 목록 확인 가능 */}
+        {/* 신청 댓글 — 모두 닉네임·댓글만 표시 (연락처는 운영자 전용 목록에서만) */}
         <div className="border-t border-gray-100 pt-6">
           <h3 className="text-lg font-black text-gray-800 mb-3">신청 댓글</h3>
-          {!isOperator ? (
-            <p className="text-gray-500 py-3">신청자 {task.applicants.length}명 · 운영자만 신청 목록을 확인할 수 있습니다.</p>
-          ) : task.applicants.length === 0 ? (
+          {task.applicants.length === 0 ? (
             <p className="text-gray-500 py-3">아직 신청한 사람이 없습니다.</p>
           ) : (
             <ul className="space-y-2">
