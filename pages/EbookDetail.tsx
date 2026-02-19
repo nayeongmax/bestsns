@@ -153,33 +153,33 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
           </section>
 
           {/* 전문가 요약 정보 (최상단 고정) */}
-          <section className="bg-white border border-gray-100 rounded-[56px] p-10 md:p-14 shadow-sm space-y-12">
-             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                <div className="flex items-center gap-8">
-                   <div className="relative">
-                      <img src={displayProfileImg} className="w-24 h-24 rounded-[32px] object-cover shadow-2xl border-4 border-white" alt="expert" />
-                      <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl shadow-lg border-4 border-white">✓</div>
+          <section className="bg-white border border-gray-100 rounded-[40px] p-6 md:p-8 shadow-sm space-y-5">
+             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-5">
+                   <div className="relative shrink-0">
+                      <img src={displayProfileImg} className="w-16 h-16 md:w-20 md:h-20 rounded-[24px] object-cover shadow-xl border-2 border-white" alt="expert" />
+                      <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm shadow-md border-2 border-white">✓</div>
                    </div>
-                   <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-black text-4xl text-gray-900 italic tracking-tighter">{displayAuthor}</h4>
-                        {(() => { const g = getUserGrade(expertProfile, gradeConfigs); return g ? <span className={`${g.color} text-white text-xs font-black px-3 py-1 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
+                   <div className="space-y-0.5 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-black text-2xl md:text-3xl text-gray-900 italic tracking-tighter">{displayAuthor}</h4>
+                        {(() => { const g = getUserGrade(expertProfile, gradeConfigs); return g ? <span className={`${g.color} text-white text-[10px] font-black px-2.5 py-0.5 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
                       </div>
                    </div>
                 </div>
-                <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="bg-gray-900 text-white px-12 py-5 rounded-[28px] font-black text-xl hover:bg-blue-600 transition-all shadow-xl italic tracking-widest uppercase active:scale-95">전문가 문의하기</button>
+                <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="bg-gray-900 text-white px-8 py-3.5 rounded-[24px] font-black text-base hover:bg-blue-600 transition-all shadow-lg italic tracking-widest uppercase active:scale-95 shrink-0">전문가 문의하기</button>
              </div>
-             <div className="bg-gray-50/80 rounded-[40px] p-2 flex flex-wrap lg:flex-nowrap gap-2 shadow-inner border border-gray-100">
+             <div className="bg-gray-50/80 rounded-[24px] p-1.5 flex flex-wrap lg:flex-nowrap gap-1.5 shadow-inner border border-gray-100">
                 {[
                   { label: '총 거래 건수', value: `${totalTransactions}건`, icon: '📊' },
                   { label: '만족도 점수', value: expertAvgRating, icon: '⭐' },
                   { label: '회원 구분', value: expertTypeInfo.label, icon: '👤' },
                   { label: '세금계산서', value: expertTypeInfo.tax, icon: '🧾' }
                 ].map((item, i) => (
-                  <div key={i} className="flex-1 min-w-[140px] bg-white rounded-[32px] py-10 px-6 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
-                    <span className="text-3xl mb-4 group-hover:scale-110 transition-transform">{item.icon}</span>
-                    <p className="text-[11px] font-black text-gray-400 mb-3 uppercase tracking-[0.3em] italic">{item.label}</p>
-                    <p className={`font-black text-gray-900 italic tracking-tighter text-center ${item.label === '회원 구분' ? 'text-lg whitespace-nowrap' : 'text-2xl'}`}>{item.value}</p>
+                  <div key={i} className="flex-1 min-w-[100px] bg-white rounded-[20px] py-4 px-3 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
+                    <span className="text-xl mb-1.5 group-hover:scale-110 transition-transform">{item.icon}</span>
+                    <p className="text-[9px] font-black text-gray-400 mb-1 uppercase tracking-wider italic">{item.label}</p>
+                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-sm ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
                   </div>
                 ))}
              </div>
