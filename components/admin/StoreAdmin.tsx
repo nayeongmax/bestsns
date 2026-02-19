@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
-import { EbookProduct, SiteNotification, StoreOrder, UserProfile, NotificationType, StoreType } from '../../types';
+import { EbookProduct, SiteNotification, StoreOrder, UserProfile, NotificationType, StoreType } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { deleteStoreProduct } from '../../storeDb';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -85,9 +86,14 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
     setEbooks(prev => prev.map(e => e.id === id ? { ...e, isPaused: !e.isPaused } : e));
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('정말 이 상품을 영구 삭제하시겠습니까?')) {
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('정말 이 상품을 영구 삭제하시겠습니까?')) return;
+    try {
+      await deleteStoreProduct(id);
       setEbooks(prev => prev.filter(e => e.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert('삭제에 실패했습니다.');
     }
   };
 
