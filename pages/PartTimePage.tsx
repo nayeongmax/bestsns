@@ -468,9 +468,10 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
       await upsertPartTimeTask(newTask);
       alert('작업이 등록되었습니다.');
       navigate('/part-time');
-    } catch (err) {
-      console.error(err);
-      alert('작업 등록에 실패했습니다. 다시 시도해 주세요.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('작업 등록 실패:', err);
+      alert(`작업 등록에 실패했습니다. ${msg ? `\n\n원인: ${msg}` : ''}\n\n다시 시도해 주세요.`);
     } finally {
       setIsSubmitting(false);
     }
