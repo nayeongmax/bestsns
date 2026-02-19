@@ -37,46 +37,24 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   const [todos, setTodos] = useState<RevenueTodo[]>(() => loadFromStorage('rev_todos', []));
   const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>(() => loadFromStorage('rev_general_expenses', []));
 
-  // Supabase 로드 (user 있으면). DB가 비어 있거나 실패하면 localStorage에서 복원
-  useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const [c, p, t, e] = await Promise.all([
-          fetchRevenueCompanies(user.id),
-          fetchRevenueProjects(user.id),
-          fetchRevenueTodos(user.id),
-          fetchRevenueGeneralExpenses(user.id),
-        ]);
-        if (!cancelled) {
-          setCompanies(c.length > 0 ? c : loadFromStorage('rev_companies', []));
-          setProjects(p.length > 0 ? p : loadFromStorage('rev_projects', []));
-          setTodos(t.length > 0 ? t : loadFromStorage('rev_todos', []));
-          setGeneralExpenses(e.length > 0 ? e : loadFromStorage('rev_general_expenses', []));
-          revenueDbLoaded.current = true;
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.warn('매출관리 DB 로드 실패, localStorage에서 복원:', err);
-          setCompanies(loadFromStorage('rev_companies', []));
-          setProjects(loadFromStorage('rev_projects', []));
-          setTodos(loadFromStorage('rev_todos', []));
-          setGeneralExpenses(loadFromStorage('rev_general_expenses', []));
-          revenueDbLoaded.current = true;
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [user?.id]);
+  const [projects, setProjects] = useState<RevenueProject[]>(() => {
+    const saved = localStorage.getItem('rev_projects');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [todos, setTodos] = useState<RevenueTodo[]>(() => {
+    const saved = localStorage.getItem('rev_todos');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Supabase 저장 (데이터 있으면 즉시 저장, 로드 완료 여부와 무관)
   const saveErrShown = useRef<Record<string, boolean>>({});
   const showSaveError = (key: string, err: unknown) => {
     if (saveErrShown.current[key]) return;
     saveErrShown.current[key] = true;
+    const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : String(err);
     console.error(`매출관리 ${key} 저장 실패:`, err);
-    alert('DB 저장에 실패했습니다. Supabase에 매출관리 테이블이 있는지, RLS 정책이 적용되었는지 확인해 주세요. (supabase-setup-4단계-매출관리.sql 실행)');
+    alert(`DB 저장에 실패했습니다.\n\n[에러] ${msg}\n\n해결: Supabase SQL Editor에서 supabase-setup-4단계-매출관리.sql 파일 내용을 붙여넣고 Run 실행해 주세요.`);
   };
   useEffect(() => {
     if (!user?.id) return;
