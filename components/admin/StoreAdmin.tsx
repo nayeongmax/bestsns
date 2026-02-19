@@ -222,27 +222,27 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                         </span>
                      </div>
 
-                     <div className="grid grid-cols-2 gap-2 pt-2">
+                     <div className="grid grid-cols-3 gap-2 pt-2">
                         <button 
                           onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })} 
-                          className="py-3 bg-gray-900 text-white rounded-2xl font-black text-[11px] hover:bg-purple-600 transition-all shadow-sm italic uppercase tracking-tighter"
+                          className="py-3 bg-gray-900 text-white rounded-2xl font-black text-[10px] hover:bg-purple-600 transition-all shadow-sm italic uppercase tracking-tighter"
                         >
-                          수정하기
+                          수정
                         </button>
                         <button 
                           onClick={() => togglePause(eb.id)} 
-                          className={`py-3 rounded-2xl font-black text-[11px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}
+                          className={`py-3 rounded-2xl font-black text-[10px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}
                         >
-                          {eb.isPaused ? '판매 재개' : '판매 중지'}
+                          {eb.isPaused ? '재개' : '중지'}
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(eb.id)}
+                          className="py-3 rounded-2xl font-black text-[10px] bg-red-100 text-red-600 hover:bg-red-500 hover:text-white transition-all shadow-sm italic uppercase tracking-tighter"
+                        >
+                          삭제
                         </button>
                      </div>
                   </div>
-                  <button 
-                    onClick={() => handleDelete(eb.id)}
-                    className="absolute -top-2 -left-2 w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
-                  >
-                    ✕
-                  </button>
                </div>
              ))}
           </div>
