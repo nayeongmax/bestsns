@@ -9,6 +9,7 @@ import {
   upsertRevenueTodos,
   fetchRevenueGeneralExpenses,
   upsertRevenueGeneralExpenses,
+  deleteRevenueProject,
 } from '../revenueDb';
 
 const PROJECT_TYPES: WorkType[] = ['카페관리', '블로그대행', '블로그체험단', '유튜브', '인스타그램', '기타작업'];
@@ -239,6 +240,19 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     alert(`${p.clientName} 업체의 ${extendedProj.round}차 연장이 완료되었습니다.\n새 시작일: ${newStartDateStr} (주말 제외)\n해당 데이터는 ${extMonth}월 리스트에서 확인 가능합니다.`);
   };
 
+  const handleDeleteProject = async (projectId: string) => {
+    if (!user?.id) return;
+    if (!window.confirm('이 프로젝트를 삭제할까요? 삭제 후에는 복구할 수 없습니다.')) return;
+    try {
+      await deleteRevenueProject(user.id, projectId);
+      setProjects(prev => prev.filter(item => item.id !== projectId));
+      alert('삭제되었습니다.');
+    } catch (err) {
+      console.error('프로젝트 삭제 실패:', err);
+      alert('DB 삭제에 실패했습니다. 다시 시도해 주세요.');
+    }
+  };
+
   const addGeneralExpense = () => {
     if (!tempExpense.note || !tempExpense.amount) return alert('지출 항목과 금액을 입력하세요.');
     const entry: GeneralExpense = { id: `ex_${Date.now()}`, date: tempExpense.date!, category: tempExpense.category as any, note: tempExpense.note!, amount: tempExpense.amount! };
@@ -422,7 +436,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
            <table className="w-full text-left">
               <thead className="bg-gray-50/50 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
                 <tr>
-                  <th className="px-10 py-8">차수</th><th className="px-10 py-8">작업 종류</th><th className="px-10 py-8">업체명</th><th className="px-10 py-8 text-center">운영사</th><th className="px-10 py-8 text-center">마감일</th><th className="px-10 py-8 text-right">금액</th><th className="px-10 py-8 text-center">관리</th>
+                  <th className="px-10 py-8">차수</th><th className="px-10 py-8">작업 종류</th><th className="px-10 py-8">업체명</th><th className="px-10 py-8 text-center">운영사</th><th className="px-10 py-8 text-center">마감일</th><th className="px-10 py-8 text-right">금액</th><th className="px-10 py-8 text-center">링크</th><th className="px-10 py-8 text-center">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -437,10 +451,19 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                       <td className="px-10 py-8 text-center font-black text-red-400 text-[13px] italic">{p.endDate}</td>
                       <td className="px-10 py-8 text-right font-black text-gray-900 text-lg italic">₩{p.paymentAmount.toLocaleString()}</td>
                       <td className="px-10 py-8 text-center">
+                        {p.workLink?.trim() ? (
+                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-xs hover:underline break-all">
+                            링크 열기
+                          </a>
+                        ) : (
+                          <span className="text-gray-300 text-xs">-</span>
+                        )}
+                      </td>
+                      <td className="px-10 py-8 text-center">
                          <div className="flex justify-center gap-4">
                             <button onClick={() => handleExtendProject(p)} className="text-[11px] font-black text-green-500 hover:text-green-700 italic uppercase">재연장</button>
                             <button onClick={() => startEditProject(p)} className="text-[11px] font-black text-blue-400 hover:text-blue-600 italic uppercase">수정</button>
-                            <button onClick={() => setProjects(prev => prev.filter(item => item.id !== p.id))} className="text-[11px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>
+                            <button onClick={() => handleDeleteProject(p.id)} className="text-[11px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>
                          </div>
                       </td>
                     </tr>
