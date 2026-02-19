@@ -40,6 +40,11 @@ export async function upsertNotices(list: Notice[]): Promise<void> {
   if (error) throw error;
 }
 
+export async function deleteNotice(id: string): Promise<void> {
+  const { error } = await supabase.from('site_notices').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ─── grade_configs ──────────────────────────────────────────────────────
 function gradeToRow(g: GradeConfig): Record<string, unknown> {
   return {
