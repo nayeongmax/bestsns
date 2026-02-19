@@ -316,11 +316,11 @@ export function generateProjectNo(): string {
   return `ALBA-${String(maxN + 1).padStart(5, '0')}`;
 }
 
-/** 3일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. 광고주 작업의 경우 workLinkSubmittedAt + 3일 후 미확인 시 자동 지급 */
+/** 6일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. 광고주 작업의 경우 workLinkSubmittedAt + 6일 후 미확인 시 자동 지급 */
 export function processAutoApprovals(): boolean {
   const tasks = getPartTimeTasks();
   const now = Date.now();
-  const threeDaysMs = 72 * 60 * 60 * 1000;
+  const sixDaysMs = 6 * 24 * 60 * 60 * 1000;
   let changed = false;
   const next = tasks.map((t) => {
     const selectedWithLink = t.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!(a.workLink || '').trim()));
@@ -334,7 +334,7 @@ export function processAutoApprovals(): boolean {
         if (at <= now) shouldPay = true;
       } else if (t.applicantUserId && a.workLinkSubmittedAt) {
         const submittedAt = new Date(a.workLinkSubmittedAt).getTime();
-        if (now >= submittedAt + threeDaysMs) shouldPay = true;
+        if (now >= submittedAt + sixDaysMs) shouldPay = true;
       }
       if (shouldPay) {
         addFreelancerEarning(a.userId, t.reward, t.title);
