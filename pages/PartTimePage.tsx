@@ -211,6 +211,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                       <span className="font-black text-emerald-600 text-base">+{task.reward.toLocaleString()}원</span>
                       {done ? (
                         <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
+                      ) : task.applicants?.some((a) => a.selected) ? (
+                        <span className="px-4 py-2 rounded-xl bg-amber-100 text-amber-700 text-sm font-black">선정완료 →</span>
                       ) : (
                         <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-sm font-black">상세보기 →</span>
                       )}
