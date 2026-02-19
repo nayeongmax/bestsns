@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Notice, UserProfile } from '@/types';
 import { deleteNotice } from '../siteDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   notices: Notice[];
@@ -12,6 +13,7 @@ interface Props {
 
 const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
   const navigate = useNavigate();
+  const { showConfirm, showAlert } = useConfirm();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isWriting, setIsWriting] = useState(false);
   
@@ -59,7 +61,7 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
     if (!files) return;
 
     const remainingSlots = 10 - newImages.length;
-    if (remainingSlots <= 0) return alert('이미지는 최대 10장까지만 첨부 가능합니다.');
+    if (remainingSlots <= 0) return void showAlert({ description: '이미지는 최대 10장까지만 첨부 가능합니다.' });
 
     // Added explicit cast to File[] to resolve TypeScript argument type error in the loop
     const selectedFiles = Array.from(files).slice(0, remainingSlots) as File[];
@@ -77,7 +79,7 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
   };
 
   const handleSaveNotice = () => {
-    if (!newTitle.trim() || !newContent.trim()) return alert('제목과 내용을 모두 입력해주세요.');
+    if (!newTitle.trim() || !newContent.trim()) return void showAlert({ description: '제목과 내용을 모두 입력해주세요.' });
 
     const newNotice: Notice = {
       id: Date.now().toString(),
@@ -93,7 +95,7 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
     setNewTitle('');
     setNewContent('');
     setNewImages([]);
-    alert('공지사항이 등록되었습니다.');
+    showAlert({ description: '공지사항이 등록되었습니다.' });
   };
 
   const toggleVisibility = (id: string, e: React.MouseEvent) => {
@@ -263,18 +265,27 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
                     <div className="mt-12 pt-8 border-t border-gray-50 flex justify-between items-center">
                       <div className="flex items-center gap-4">
                         <span className="text-xs font-black text-gray-400 italic">ADMIN PRIVILEGE:</span>
-                        <button onClick={(e) => { e.stopPropagation(); alert('수정 기능 준비중'); }} className="bg-gray-100 px-6 py-2 rounded-xl text-[11px] font-black text-gray-500 hover:bg-gray-900 hover:text-white transition-all">EDIT</button>
+                        <button onClick={(e) => { e.stopPropagation(); showAlert({ description: '수정 기능 준비중' }); }} className="bg-gray-100 px-6 py-2 rounded-xl text-[11px] font-black text-gray-500 hover:bg-gray-900 hover:text-white transition-all">EDIT</button>
                         <button 
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            if (!window.confirm('정말로 이 공지사항을 영구 삭제하시겠습니까?')) return;
-                            try {
-                              await deleteNotice(n.id);
-                              setNotices(prev => prev.filter(notice => notice.id !== n.id));
-                            } catch (err) {
-                              console.error(err);
-                              alert('삭제에 실패했습니다.');
-                            }
+                            showConfirm({
+                              title: '공지 삭제',
+                              description: '정말로 이 공지사항을 영구 삭제하시겠습니까?',
+                              dangerLine: '삭제 후에는 복구할 수 없습니다.',
+                              confirmLabel: '삭제하기',
+                              cancelLabel: '취소',
+                              danger: true,
+                              onConfirm: async () => {
+                                try {
+                                  await deleteNotice(n.id);
+                                  setNotices(prev => prev.filter(notice => notice.id !== n.id));
+                                } catch (err) {
+                                  console.error(err);
+                                  showAlert({ description: '삭제에 실패했습니다.' });
+                                }
+                              },
+                            });
                           }}
                           className="bg-red-50 px-6 py-2 rounded-xl text-[11px] font-black text-red-400 hover:bg-red-500 hover:text-white transition-all"
                         >
