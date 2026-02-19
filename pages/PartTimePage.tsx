@@ -121,12 +121,13 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             <p className="text-gray-700 font-black mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
             <p className="text-gray-700 font-black mt-1">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {user?.role === 'admin' && (
+              {(user?.role === 'admin' || user?.role === 'manager') && (
                 <button
                   onClick={() => navigate('/part-time/register')}
-                  className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-emerald-700 transition-all"
+                  className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-700 transition-all ring-2 ring-gray-400/50"
+                  title="광고주 결제 후 여기서 작업을 등록하세요 (운영자 전용)"
                 >
-                  작업 등록
+                  작업 등록 (운영자)
                 </button>
               )}
               <button
@@ -336,7 +337,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
     setSectionItems((prev) => prev.map((s) => (s.id === id ? { ...s, ...upd } : s)));
   };
 
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
     navigate('/part-time', { replace: true });
     return null;
   }
