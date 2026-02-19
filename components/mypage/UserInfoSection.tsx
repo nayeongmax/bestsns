@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UserProfile, SellerApplication, NotificationType, FreelancerApplication } from '@/types';
 import { supabase } from '../../supabase';
 import { compressImageForStorage } from '@/constants';
@@ -67,6 +67,40 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     bankbook: savedApp?.proofs?.bankbookImg,
     license: savedApp?.proofs?.licenseImg
   });
+
+  // DB에 저장된 전문가/개인판매자 정보가 나중에 로드되면 폼에 반영 (저장된 내용이 안 보이던 문제 해결)
+  const lastSyncedSellerKey = useRef<string>('');
+  useEffect(() => {
+    const app = user.sellerApplication;
+    const fa = user.freelancerApplication;
+    const key = JSON.stringify({ app, fa, e: user.email, n: user.nickname, p: user.phone });
+    if (key === lastSyncedSellerKey.current) return;
+    lastSyncedSellerKey.current = key;
+    setSellerType((app?.sellerType as SellerType) || 'individual');
+    setIndividualForm({
+      email: app?.bankInfo?.email || user.email || '',
+      bankName: app?.bankInfo?.bankName || fa?.bankName || '',
+      accountNo: app?.bankInfo?.accountNo || fa?.accountNo || '',
+      ownerName: app?.bankInfo?.ownerName || fa?.ownerName || user.nickname || '',
+      residentNumber: app?.bankInfo?.residentNumber || fa?.residentNumber || '',
+      contact: fa?.contact || user.phone || ''
+    });
+    setBusinessForm({
+      companyName: app?.businessInfo?.companyName || '',
+      registrationNo: app?.businessInfo?.registrationNo || '',
+      businessType: app?.businessInfo?.businessType || '일반',
+      repName: app?.businessInfo?.repName || '',
+      location: app?.businessInfo?.location || '',
+      taxEmail: app?.bankInfo?.email || user.email || '',
+      bankName: app?.bankInfo?.bankName || '',
+      accountNo: app?.bankInfo?.accountNo || '',
+      ownerName: app?.bankInfo?.ownerName || ''
+    });
+    setProofImages({
+      bankbook: app?.proofs?.bankbookImg,
+      license: app?.proofs?.licenseImg
+    });
+  }, [user.id, user.email, user.nickname, user.phone, user.sellerApplication, user.freelancerApplication]);
 
   // --- 알림 설정 상태 (로컬 저장) ---
   const notifStorageKey = `user_notif_${user.id}`;
