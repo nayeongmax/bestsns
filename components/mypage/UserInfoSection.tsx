@@ -4,6 +4,7 @@ import { UserProfile, SellerApplication, NotificationType, FreelancerApplication
 import { supabase } from '../../supabase';
 import { compressImageForStorage } from '@/constants';
 import { updateProfile } from '../../profileDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   user: UserProfile;
@@ -19,6 +20,7 @@ type SettingsTab = 'profile' | 'expert' | 'notif' | 'pw' | 'quit';
 type SellerType = 'individual' | 'business';
 
 const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChange, expertRegistrationFor, onExpertRegistrationDone, addNotif }) => {
+  const { showConfirm, showAlert } = useConfirm();
   const [activeTab, setActiveTab] = useState<SettingsTab>(forcedTab || 'profile');
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [showApplySuccessModal, setShowApplySuccessModal] = useState(false);
@@ -204,21 +206,31 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     if (expertRegistrationFor === 'freelancer') {
       if (sellerType === 'individual') {
         if (!individualForm.bankName?.trim() || !individualForm.accountNo?.trim() || !individualForm.ownerName?.trim()) {
-          return alert('은행명, 계좌번호, 예금주를 모두 입력해 주세요.');
+          return void showAlert({ description: '은행명, 계좌번호, 예금주를 모두 입력해 주세요.' });
         }
         if (!individualForm.residentNumber?.trim()) {
-          return alert('주민등록번호를 입력해 주세요.');
+          return void showAlert({ description: '주민등록번호를 입력해 주세요.' });
         }
         if (!proofImages.bankbook) {
-          return alert('통장 사본 이미지를 등록해 주세요.');
+          return void showAlert({ description: '통장 사본 이미지를 등록해 주세요.' });
         }
       } else {
         if (!businessForm.bankName?.trim() || !businessForm.accountNo?.trim() || !businessForm.ownerName?.trim()) {
-          return alert('은행명, 계좌번호, 예금주를 모두 입력해 주세요.');
+          return void showAlert({ description: '은행명, 계좌번호, 예금주를 모두 입력해 주세요.' });
         }
-        if (!proofImages.bankbook) return alert('통장 사본 이미지를 등록해 주세요.');
+        if (!proofImages.bankbook) return void showAlert({ description: '통장 사본 이미지를 등록해 주세요.' });
       }
-      if (!window.confirm('프리랜서 등록 신청을 제출하시겠습니까? 운영자 승인 후 누구나알바에 신청할 수 있습니다.')) return;
+      showConfirm({
+      title: '프리랜서 등록 신청',
+      description: '프리랜서 등록 신청을 제출하시겠습니까? 운영자 승인 후 누구나알바에 신청할 수 있습니다.',
+      confirmLabel: '제출하기',
+      cancelLabel: '취소',
+      danger: false,
+      onConfirm: () => doSubmitFreelancer(),
+    });
+    return;
+  }
+  async function doSubmitFreelancer() {
       const freelancerApp: FreelancerApplication = {
         appliedAt: new Date().toISOString(),
         name: sellerType === 'individual' ? individualForm.ownerName : businessForm.ownerName,
@@ -234,16 +246,16 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
         await updateProfile(user.id, { freelancerStatus: 'pending', freelancerApplication: freelancerApp });
         setShowApplySuccessModal(true);
         onExpertRegistrationDone?.();
-        alert('프리랜서 등록 신청이 완료되었습니다.\n운영자 승인 후 누구나알바에 신청할 수 있습니다.');
+        showAlert({ description: '프리랜서 등록 신청이 완료되었습니다.\n운영자 승인 후 누구나알바에 신청할 수 있습니다.' });
       } catch (_) {}
       return;
     }
 
     if (sellerType === 'individual' && (!individualForm.bankName || !individualForm.accountNo || !proofImages.bankbook)) {
-      return alert('정산 계좌 정보와 통장 사본 이미지를 모두 등록해 주세요.');
+      return void showAlert({ description: '정산 계좌 정보와 통장 사본 이미지를 모두 등록해 주세요.' });
     }
     if (sellerType === 'business' && (!businessForm.registrationNo || !proofImages.license)) {
-      return alert('사업자 등록 정보와 사업자 등록증 이미지를 모두 등록해 주세요.');
+      return void showAlert({ description: '사업자 등록 정보와 사업자 등록증 이미지를 모두 등록해 주세요.' });
     }
 
     const newApp: SellerApplication = {
@@ -277,47 +289,69 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     if (user.sellerStatus === 'approved') {
       onUpdate({ ...user, sellerApplication: newApp });
       updateProfile(user.id, { sellerApplication: newApp }).catch((e) => console.warn('전문가 정보 DB 반영 실패:', e));
-      alert('전문가 정보가 성공적으로 수정되었습니다.');
+      showAlert({ description: '전문가 정보가 성공적으로 수정되었습니다.' });
     } else {
-      if (user.sellerStatus === 'none' && !window.confirm('전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.\n제출하시겠습니까?')) return;
-      try {
-        await onUpdate({ ...user, sellerStatus: 'pending', sellerApplication: newApp });
-        await updateProfile(user.id, { sellerStatus: 'pending', sellerApplication: newApp });
-        setShowApplySuccessModal(true);
-      } catch (_) {
-        // 저장 실패 시 App에서 이미 alert 함, 모달은 띄우지 않음
-      }
+      if (user.sellerStatus === 'none') {
+      showConfirm({
+        title: '전문가 등록 제출',
+        description: '전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.\n제출하시겠습니까?',
+        confirmLabel: '제출하기',
+        cancelLabel: '취소',
+        danger: false,
+        onConfirm: () => submitSellerApp(),
+      });
+      return;
     }
+    submitSellerApp();
+  }
+  async function submitSellerApp() {
+    try {
+      await onUpdate({ ...user, sellerStatus: 'pending', sellerApplication: newApp });
+      await updateProfile(user.id, { sellerStatus: 'pending', sellerApplication: newApp });
+      setShowApplySuccessModal(true);
+    } catch (_) {
+      // 저장 실패 시 App에서 이미 alert 함, 모달은 띄우지 않음
+    }
+  }
   };
 
   const handleQuit = async () => {
     if (!quitReason || quitEmail !== user.email || !quitAgreed) return;
-    if (!window.confirm('정말 탈퇴하시겠습니까? 로그인 정보가 삭제되며 복구할 수 없습니다.')) return;
+    showConfirm({
+      title: '회원 탈퇴',
+      description: '정말 탈퇴하시겠습니까? 로그인 정보가 삭제되며 복구할 수 없습니다.',
+      dangerLine: '삭제 후에는 복구할 수 없습니다.',
+      confirmLabel: '탈퇴하기',
+      cancelLabel: '취소',
+      danger: true,
+      onConfirm: async () => {
     await supabase.auth.signOut();
     try {
       await supabase.from('profiles').delete().eq('id', user.id);
     } catch (_) {}
     localStorage.removeItem('user_profile_v2');
     window.location.href = '/';
+      },
+    });
   };
 
   const handlePasswordUpdate = async () => {
-    if (!pwForm.current || !pwForm.next || !pwForm.confirm) return alert('모든 정보를 입력해 주세요.');
-    if (pwForm.next !== pwForm.confirm) return alert('새 비밀번호가 일치하지 않습니다.');
-    if (pwForm.next.length < 8) return alert('새 비밀번호는 8자 이상이어야 합니다.');
+    if (!pwForm.current || !pwForm.next || !pwForm.confirm) return void showAlert({ description: '모든 정보를 입력해 주세요.' });
+    if (pwForm.next !== pwForm.confirm) return void showAlert({ description: '새 비밀번호가 일치하지 않습니다.' });
+    if (pwForm.next.length < 8) return void showAlert({ description: '새 비밀번호는 8자 이상이어야 합니다.' });
     const email = user.email || (await supabase.auth.getUser()).data.user?.email;
-    if (!email) return alert('이메일 정보가 없어 비밀번호 변경을 할 수 없습니다.');
+    if (!email) return void showAlert({ description: '이메일 정보가 없어 비밀번호 변경을 할 수 없습니다.' });
     const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pwForm.current });
     if (signInErr) {
-      alert('현재 비밀번호가 올바르지 않습니다.');
+      showAlert({ description: '현재 비밀번호가 올바르지 않습니다.' });
       return;
     }
     const { error: updateErr } = await supabase.auth.updateUser({ password: pwForm.next });
     if (updateErr) {
-      alert('비밀번호 변경에 실패했습니다. ' + (updateErr.message || ''));
+      showAlert({ description: '비밀번호 변경에 실패했습니다. ' + (updateErr.message || '') });
       return;
     }
-    alert('비밀번호가 성공적으로 변경되었습니다.');
+    showAlert({ description: '비밀번호가 성공적으로 변경되었습니다.' });
     setPwForm({ current: '', next: '', confirm: '' });
   };
 
@@ -361,7 +395,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                          <div className="flex justify-between items-center px-2"><label className="text-[13px] font-bold text-gray-400 italic">휴대폰 번호</label><span className="text-[11px] font-black text-green-500">✓ 가입 정보</span></div>
                          <div className="flex gap-3">
                            <input value={user.phone || '등록된 번호 없음'} readOnly className="flex-1 p-5 bg-gray-50 rounded-2xl font-black text-[15px] text-gray-700 shadow-inner outline-none" />
-                           <button onClick={() => alert('번호 변경 기능은 준비 중입니다.')} className="px-8 py-5 border border-gray-200 rounded-2xl font-black text-[15px] text-gray-400 hover:bg-gray-50 transition-colors">번호변경</button>
+                           <button onClick={() => showAlert({ description: '번호 변경 기능은 준비 중입니다.' })} className="px-8 py-5 border border-gray-200 rounded-2xl font-black text-[15px] text-gray-400 hover:bg-gray-50 transition-colors">번호변경</button>
                          </div>
                          <p className="text-[11px] text-blue-500 font-bold px-2 leading-relaxed italic">* 가입 시 입력하신 번호입니다. 주문 및 채팅 알림 시 사용됩니다.</p>
                       </div>
@@ -369,7 +403,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                          <div className="flex justify-between items-center px-2"><label className="text-[13px] font-bold text-gray-400 italic">이메일 계정</label><span className="text-[11px] font-black text-green-500">✓ 가입 정보</span></div>
                          <div className="flex gap-3">
                            <input value={user.email || '등록된 이메일 없음'} readOnly className="flex-1 p-5 bg-gray-50 rounded-2xl font-black text-[15px] text-gray-700 shadow-inner outline-none" />
-                           <button onClick={() => alert('계정 변경 기능은 준비 중입니다.')} className="px-8 py-5 border border-gray-200 rounded-2xl font-black text-[15px] text-gray-400 hover:bg-gray-50 transition-colors">계정변경</button>
+                           <button onClick={() => showAlert({ description: '계정 변경 기능은 준비 중입니다.' })} className="px-8 py-5 border border-gray-200 rounded-2xl font-black text-[15px] text-gray-400 hover:bg-gray-50 transition-colors">계정변경</button>
                          </div>
                       </div>
                    </div>
