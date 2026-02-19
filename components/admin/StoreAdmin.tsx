@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { EbookProduct, SiteNotification, StoreOrder, UserProfile, NotificationType, StoreType } from '@/types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { deleteStoreProduct } from '../../storeDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
@@ -208,7 +208,9 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                   <div className="p-8 space-y-6">
                      <div className="space-y-1">
                         <p className="text-[10px] font-black text-purple-500 uppercase italic tracking-widest">{eb.storeType}</p>
-                        <h4 className="text-lg font-black text-gray-900 truncate leading-tight italic">{eb.title}</h4>
+                        <Link to={`/ebooks/${eb.id}`} className="block text-lg font-black text-gray-900 truncate leading-tight italic hover:text-purple-600 hover:underline focus:outline-none focus:underline">
+                          {eb.title}
+                        </Link>
                         <p className="text-[12px] font-bold text-gray-400 italic">By {eb.author} (@{eb.authorId})</p>
                      </div>
                      
@@ -222,26 +224,26 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                         </span>
                      </div>
 
-                     <div className="grid grid-cols-3 gap-2 pt-2">
+                     <div className="grid grid-cols-2 gap-2 pt-2">
                         <button 
                           onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })} 
-                          className="py-3 bg-gray-900 text-white rounded-2xl font-black text-[10px] hover:bg-purple-600 transition-all shadow-sm italic uppercase tracking-tighter"
+                          className="py-3 bg-gray-900 text-white rounded-2xl font-black text-[11px] hover:bg-purple-600 transition-all shadow-sm italic uppercase tracking-tighter"
                         >
-                          수정
+                          수정하기
                         </button>
                         <button 
                           onClick={() => togglePause(eb.id)} 
-                          className={`py-3 rounded-2xl font-black text-[10px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}
+                          className={`py-3 rounded-2xl font-black text-[11px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}
                         >
-                          {eb.isPaused ? '재개' : '중지'}
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(eb.id)}
-                          className="py-3 rounded-2xl font-black text-[10px] bg-red-100 text-red-600 hover:bg-red-500 hover:text-white transition-all shadow-sm italic uppercase tracking-tighter"
-                        >
-                          삭제
+                          {eb.isPaused ? '판매 재개' : '판매중지'}
                         </button>
                      </div>
+                     <button 
+                       onClick={() => handleDelete(eb.id)}
+                       className="w-full py-2.5 text-gray-300 hover:text-red-500 text-[10px] font-black uppercase italic transition-colors"
+                     >
+                       상품 영구 삭제 ✕
+                     </button>
                   </div>
                </div>
              ))}
