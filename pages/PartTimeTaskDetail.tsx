@@ -308,9 +308,19 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       }
       const paidIds = target.map((a) => a.userId);
       const allPaid = [...(freshTask?.paidUserIds ?? task.paidUserIds ?? []), ...paidIds];
+      const paidAtIso = new Date().toISOString();
       const selectedWithLink = task.applicants.filter((a) => a.selected && hasWorkLink(a));
       const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
-      const next = tasks.map((t) => (t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }));
+      const next = tasks.map((t) =>
+        t.id !== task.id ? t : {
+          ...t,
+          pointPaid,
+          paidUserIds: allPaid,
+          applicants: t.applicants.map((ap) =>
+            paidIds.includes(ap.userId) ? { ...ap, paidAt: paidAtIso } : ap
+          ),
+        }
+      );
       setTasks(next);
       await upsertPartTimeTasks(next);
       alert('알바비가 지급되었습니다.');
@@ -777,7 +787,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                               </button>
                               {a.deliveryAt && a.autoApproveAt ? (
                                 new Date(a.autoApproveAt) > new Date() ? (
-                                  <span className="text-blue-600 font-bold text-xs">4~7일 이내 자동 지급 예정 ({new Date(a.autoApproveAt).toLocaleString('ko-KR')})</span>
+                                  <span className="text-blue-600 font-bold text-xs">4~7일 이내 자동 지급 예정</span>
                                 ) : (
                                   <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중...</span>
                                 )
@@ -793,7 +803,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                               )}
                             </div>
                           )}
-                          {paid && <span className="text-gray-500 font-bold text-xs">✓ 지급 완료</span>}
+                          {paid && (
+                              <span className="text-gray-500 font-bold text-xs">
+                                ✓ 지급 완료{a.paidAt ? ` (적립일: ${new Date(a.paidAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })})` : ''}
+                              </span>
+                            )}
                         </div>
                       )}
                     </li>
