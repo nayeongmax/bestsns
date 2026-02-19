@@ -14,7 +14,43 @@ import type { FreelancerWithdrawRequest } from '@/constants';
 import { FREELANCER_FEE_RATE } from '@/constants';
 
 // ─── parttime_tasks ─────────────────────────────────────────────────────
+/** sections JSON이 너무 크면 DB/전송 한계로 실패할 수 있어, 용량 제한 적용 */
+const MAX_SECTIONS_BYTES = 700 * 1024; // 약 700KB
+const MAX_SINGLE_STRING_BYTES = 80 * 1024; // 항목당 약 80KB
+
+function shrinkSections(sections: PartTimeTaskSections): PartTimeTaskSections {
+  const str = JSON.stringify(sections);
+  if (str.length <= MAX_SECTIONS_BYTES) return sections;
+  const out: PartTimeTaskSections = {};
+  for (const [key, value] of Object.entries(sections)) {
+    if (value == null) { out[key as keyof PartTimeTaskSections] = value; continue; }
+    if (typeof value === 'string') {
+      out[key as keyof PartTimeTaskSections] = value.length <= MAX_SINGLE_STRING_BYTES
+        ? value
+        : value.slice(0, MAX_SINGLE_STRING_BYTES) + '...[용량 제한으로 잘림]';
+      continue;
+    }
+    if (Array.isArray(value)) {
+      const arr = value.map((item) =>
+        typeof item === 'string' && item.length > MAX_SINGLE_STRING_BYTES
+          ? item.slice(0, MAX_SINGLE_STRING_BYTES) + '...[잘림]'
+          : item
+      );
+      (out as Record<string, unknown>)[key] = arr;
+      continue;
+    }
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      (out as Record<string, unknown>)[key] = value;
+      continue;
+    }
+    (out as Record<string, unknown>)[key] = value;
+  }
+  return out;
+}
+
 function taskToRow(t: PartTimeTask): Record<string, unknown> {
+  const sections = t.sections ?? {};
+  const sectionsSafe = shrinkSections(sections);
   return {
     id: t.id,
     title: t.title,
@@ -22,7 +58,7 @@ function taskToRow(t: PartTimeTask): Record<string, unknown> {
     category: t.category,
     reward: t.reward ?? 0,
     max_applicants: t.maxApplicants ?? null,
-    sections: t.sections ?? {},
+    sections: sectionsSafe,
     application_period_start: t.applicationPeriod?.start ?? null,
     application_period_end: t.applicationPeriod?.end ?? null,
     work_period_start: t.workPeriod?.start ?? null,
