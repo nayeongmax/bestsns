@@ -1,7 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserProfile, EbookProduct, ChannelProduct, StoreOrder, Review, SMMOrder, ChannelOrder } from '../../types';
+import { UserProfile, EbookProduct, ChannelProduct, StoreOrder, Review, SMMOrder, ChannelOrder } from '@/types';
+import { deleteStoreProduct } from '../../storeDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   user: UserProfile;
@@ -24,6 +26,7 @@ const SellerDashboard: React.FC<Props> = ({
   onApplySeller, reviews, onUpdateReview 
 }) => {
   const navigate = useNavigate();
+  const { showConfirm, showAlert } = useConfirm();
   const [activeTab, setActiveTab] = useState<SellerTab>('orders');
   const [activeOrderCategory, setActiveOrderCategory] = useState<OrderCategory>('store');
   const [orderFilter, setOrderFilter] = useState<'all' | 'trading' | 'done'>('all');
@@ -307,7 +310,26 @@ const SellerDashboard: React.FC<Props> = ({
                           </button>
                         </div>
                         <button 
-                          onClick={() => { if(window.confirm('정말 삭제하시겠습니까? 등록된 모든 주문 및 리뷰 데이터에 영향을 줄 수 있습니다.')) setEbooks(prev => prev.filter(item => item.id !== eb.id)) }}
+                          onClick={() => {
+                            showConfirm({
+                              title: '상품 삭제',
+                              description: '정말 이 상품을 영구 삭제하시겠습니까?',
+                              dangerLine: '등록된 주문·리뷰 데이터에 영향을 줄 수 있으며, 삭제 후에는 복구할 수 없습니다.',
+                              confirmLabel: '삭제하기',
+                              cancelLabel: '취소',
+                              danger: true,
+                              onConfirm: async () => {
+                                try {
+                                  await deleteStoreProduct(eb.id);
+                                  setEbooks(prev => prev.filter(item => item.id !== eb.id));
+                                  showAlert({ description: '상품이 삭제되었습니다.' });
+                                } catch (e) {
+                                  console.error(e);
+                                  showAlert({ description: '삭제에 실패했습니다. 다시 시도해 주세요.' });
+                                }
+                              },
+                            });
+                          }}
                           className="w-full py-2.5 text-gray-300 hover:text-red-500 text-[10px] font-black uppercase italic transition-colors"
                         >
                           상품 영구 삭제 ✕
