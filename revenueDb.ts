@@ -99,6 +99,11 @@ export async function upsertRevenueProjects(userId: string, list: RevenueProject
   if (error) throw error;
 }
 
+export async function deleteRevenueProject(userId: string, projectId: string): Promise<void> {
+  const { error } = await supabase.from('revenue_projects').delete().eq('id', projectId).eq('user_id', userId);
+  if (error) throw error;
+}
+
 // ─── todos ─────────────────────────────────────────────────────────────────
 function todoToRow(t: RevenueTodo, userId: string): Record<string, unknown> {
   return {
