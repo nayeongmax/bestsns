@@ -4,6 +4,7 @@ import { UserProfile } from '@/types';
 import type { NotificationType, PartTimeJobRequest } from '@/types';
 import { compressImageForStorage } from '@/constants';
 import { upsertPartTimeJobRequest, deletePartTimeJobRequest } from '../parttimeDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 const todayStr = () => {
   const d = new Date();
@@ -18,6 +19,7 @@ interface Props {
 const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showConfirm, showAlert } = useConfirm();
   const editRequest = (location.state as { editJobRequest?: PartTimeJobRequest; fromAlba?: boolean })?.editJobRequest;
   const fromAlba = (location.state as { fromAlba?: boolean })?.fromAlba;
   const [title, setTitle] = useState('');
@@ -60,7 +62,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       }).then((dataUrl) => compressImageForStorage(dataUrl, 320, 0.35));
     Promise.all(toAdd.map(readAndCompress))
       .then((urls) => setExampleImages((prev) => [...prev, ...urls].slice(0, 10)))
-      .catch((err) => alert('이미지 처리 중 오류가 발생했습니다. 파일 크기를 줄이거나 다른 이미지를 시도해 주세요.'));
+      .catch((err) => showAlert({ description: '이미지 처리 중 오류가 발생했습니다. 파일 크기를 줄이거나 다른 이미지를 시도해 주세요.' }));
     e.target.value = '';
   };
 
@@ -82,15 +84,15 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      alert('알바광고 신청제목을 입력해 주세요.');
+      showAlert({ description: '알바광고 신청제목을 입력해 주세요.' });
       return;
     }
     if (!workContent.trim()) {
-      alert('작업내용을 입력해 주세요.');
+      showAlert({ description: '작업내용을 입력해 주세요.' });
       return;
     }
     if (!contact.trim()) {
-      alert('연락처를 입력해 주세요.');
+      showAlert({ description: '연락처를 입력해 주세요.' });
       return;
     }
     try {
@@ -141,9 +143,9 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : String(err);
       const isImageRelated = exampleImages.length > 0 && (/\b(size|payload|length|image|row.*security|policy)\b/i.test(msg) || msg.includes('413') || msg.includes('payload'));
       if (isImageRelated) {
-        alert('저장 중 오류가 발생했습니다. 첨부 이미지 개수를 줄이거나 용량이 큰 이미지를 제거한 후 다시 시도해 주세요.');
+        showAlert({ description: '저장 중 오류가 발생했습니다. 첨부 이미지 개수를 줄이거나 용량이 큰 이미지를 제거한 후 다시 시도해 주세요.' });
       } else {
-        alert('저장 중 오류가 발생했습니다.' + (msg ? `\n\n(오류: ${msg})` : '') + '\n\n이미지를 모두 제거해도 같은 메시지가 뜨면 Supabase에서 parttime_job_requests 테이블 RLS 정책을 확인해 주세요.');
+        showAlert({ description: '저장 중 오류가 발생했습니다.' + (msg ? `\n\n(오류: ${msg})` : '') + '\n\n이미지를 모두 제거해도 같은 메시지가 뜨면 Supabase에서 parttime_job_requests 테이블 RLS 정책을 확인해 주세요.' });
       }
     }
   };
@@ -159,18 +161,27 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
     else navigate('/part-time');
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!editRequest || editRequest.applicantUserId !== user.id) return;
-    if (!confirm('정말 이 의뢰를 삭제하시겠습니까?')) return;
-    try {
-      await deletePartTimeJobRequest(editRequest.id);
-      alert('삭제되었습니다.');
-      if (fromAlba) navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
-      else navigate('/part-time');
-    } catch (err) {
-      console.error(err);
-      alert('삭제에 실패했습니다.');
-    }
+    showConfirm({
+      title: '의뢰 삭제',
+      description: '정말 이 의뢰를 삭제하시겠습니까?',
+      dangerLine: '삭제 후에는 복구할 수 없습니다.',
+      confirmLabel: '삭제하기',
+      cancelLabel: '취소',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await deletePartTimeJobRequest(editRequest!.id);
+          showAlert({ description: '삭제되었습니다.' });
+          if (fromAlba) navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
+          else navigate('/part-time');
+        } catch (err) {
+          console.error(err);
+          showAlert({ description: '삭제에 실패했습니다.' });
+        }
+      },
+    });
   };
 
   return (
