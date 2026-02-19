@@ -136,9 +136,15 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
         await upsertPartTimeJobRequest(newRequest);
         setShowModal(true);
       }
-    } catch (err) {
-      console.error(err);
-      alert('저장 중 오류가 발생했습니다. 첨부 이미지 개수를 줄이거나 용량이 큰 이미지를 제거한 후 다시 시도해 주세요.');
+    } catch (err: unknown) {
+      console.error('작업의뢰 저장 실패:', err);
+      const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : String(err);
+      const isImageRelated = exampleImages.length > 0 && (/\b(size|payload|length|image|row.*security|policy)\b/i.test(msg) || msg.includes('413') || msg.includes('payload'));
+      if (isImageRelated) {
+        alert('저장 중 오류가 발생했습니다. 첨부 이미지 개수를 줄이거나 용량이 큰 이미지를 제거한 후 다시 시도해 주세요.');
+      } else {
+        alert('저장 중 오류가 발생했습니다.' + (msg ? `\n\n(오류: ${msg})` : '') + '\n\n이미지를 모두 제거해도 같은 메시지가 뜨면 Supabase에서 parttime_job_requests 테이블 RLS 정책을 확인해 주세요.');
+      }
     }
   };
 
