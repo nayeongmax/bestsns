@@ -280,12 +280,20 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                            <p className="text-[13px] font-bold text-gray-400">판매자: <span className="text-gray-700">{eb.author} (@{eb.authorId})</span></p>
                         </div>
                      </div>
-                     <button 
-                      onClick={() => setReviewingEbook(eb)}
-                      className="px-12 py-5 bg-purple-600 text-white rounded-[24px] font-black text-[15px] shadow-xl hover:bg-black transition-all italic uppercase tracking-widest"
-                     >
-                       상세 검수 및 승인하기
-                     </button>
+                     <div className="flex items-center gap-3">
+                       <button 
+                         onClick={() => setReviewingEbook(eb)}
+                         className="px-12 py-5 bg-purple-600 text-white rounded-[24px] font-black text-[15px] shadow-xl hover:bg-black transition-all italic uppercase tracking-widest"
+                        >
+                          상세 검수 및 승인하기
+                        </button>
+                       <button 
+                         onClick={() => handleDelete(eb.id)}
+                         className="px-8 py-5 bg-red-100 text-red-600 rounded-[24px] font-black text-[13px] hover:bg-red-500 hover:text-white transition-all italic uppercase tracking-widest"
+                        >
+                          삭제
+                        </button>
+                     </div>
                   </div>
                 ))}
              </div>
