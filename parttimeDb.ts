@@ -384,7 +384,11 @@ export async function processAutoApprovalsInDb(): Promise<boolean> {
         await setFreelancerBalance(a.userId, curBalance + Math.max(0, netAmount));
         const entryId = `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         await addFreelancerEarningToDb(a.userId, entryId, 'task', grossAmount, t.title);
+        const paidAtIso = new Date().toISOString();
         updated.paidUserIds = [...(updated.paidUserIds ?? []), a.userId];
+        updated.applicants = updated.applicants.map((ap) =>
+          ap.userId === a.userId ? { ...ap, paidAt: paidAtIso } : ap
+        );
         const allSelected = updated.applicants.filter((ap) => ap.selected && ((ap.workLinks?.length ?? 0) > 0 || !!(ap.workLink || '').trim()));
         updated.pointPaid = allSelected.every((ap) => updated.paidUserIds?.includes(ap.userId));
         changed = true;
