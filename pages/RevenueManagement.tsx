@@ -11,6 +11,7 @@ import {
   upsertRevenueGeneralExpenses,
   deleteRevenueProject,
 } from '../revenueDb';
+import ConfirmModal from '@/components/ConfirmModal';
 
 const PROJECT_TYPES: WorkType[] = ['카페관리', '블로그대행', '블로그체험단', '유튜브', '인스타그램', '기타작업'];
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ['운영비', '인건비', '식비', '집기구입비', '구독비', '기타비용'];
@@ -100,6 +101,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
 
   // UI 상태
   const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [deleteConfirmProjectId, setDeleteConfirmProjectId] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
   const [calendarFilter, setCalendarFilter] = useState<'all' | 'work' | 'todo'>('all');
@@ -242,7 +244,6 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
 
   const handleDeleteProject = async (projectId: string) => {
     if (!user?.id) return;
-    if (!window.confirm('이 프로젝트를 삭제할까요? 삭제 후에는 복구할 수 없습니다.')) return;
     try {
       await deleteRevenueProject(user.id, projectId);
       setProjects(prev => prev.filter(item => item.id !== projectId));
@@ -463,7 +464,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                          <div className="flex justify-center gap-4">
                             <button onClick={() => handleExtendProject(p)} className="text-[11px] font-black text-green-500 hover:text-green-700 italic uppercase">재연장</button>
                             <button onClick={() => startEditProject(p)} className="text-[11px] font-black text-blue-400 hover:text-blue-600 italic uppercase">수정</button>
-                            <button onClick={() => handleDeleteProject(p.id)} className="text-[11px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>
+                            <button onClick={() => setDeleteConfirmProjectId(p.id)} className="text-[11px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>
                          </div>
                       </td>
                     </tr>
@@ -686,6 +687,21 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
         {activeTab === 'data' && renderDataList()}
         {activeTab === 'profit' && renderProfitTab()}
       </main>
+
+      <ConfirmModal
+        open={deleteConfirmProjectId !== null}
+        title="프로젝트 삭제"
+        description="이 프로젝트를 정말로 삭제하시겠습니까?"
+        dangerLine="삭제 후에는 복구가 불가능합니다."
+        confirmLabel="삭제하기"
+        cancelLabel="취소"
+        onConfirm={() => {
+          const id = deleteConfirmProjectId;
+          setDeleteConfirmProjectId(null);
+          if (id) handleDeleteProject(id);
+        }}
+        onCancel={() => setDeleteConfirmProjectId(null)}
+      />
 
       {showCompanyModal && (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
