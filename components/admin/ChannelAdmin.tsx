@@ -6,6 +6,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { ChannelProduct, ChannelOrder } from '@/types';
 import { CHANNEL_CATEGORIES } from '../../constants.tsx';
 import { deleteChannelProduct } from '../../channelDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   channels: ChannelProduct[];
@@ -14,6 +15,7 @@ interface Props {
 }
 
 const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders }) => {
+  const { showConfirm, showAlert } = useConfirm();
   const [activeSubTab, setActiveSubTab] = useState<'manage' | 'order'>('manage');
   const [editingChannel, setEditingChannel] = useState<ChannelProduct | null>(null);
   const [isRegisteringChannel, setIsRegisteringChannel] = useState(false);
@@ -72,7 +74,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
     } else {
       const remaining = 10 - attachedImages.length;
       if (remaining <= 0) {
-        alert('상세 이미지는 최대 10장까지만 가능합니다.');
+        showAlert({ description: '상세 이미지는 최대 10장까지만 가능합니다.' });
         return;
       }
       const selectedFiles = Array.from(files).slice(0, remaining) as File[];
@@ -114,7 +116,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
 
   const handleSaveChannel = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!thumbnail) return alert('대표 썸네일을 등록해주세요.');
+    if (!thumbnail) return void showAlert({ description: '대표 썸네일을 등록해주세요.' });
 
     const formData = new FormData(e.currentTarget);
     const newCh: ChannelProduct = {
@@ -138,7 +140,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
     setChannels(prev => editingChannel ? prev.map(c => c.id === editingChannel.id ? newCh : c) : [...prev, newCh]);
     setEditingChannel(null);
     setIsRegisteringChannel(false);
-    alert('채널 정보가 성공적으로 저장되었습니다.');
+    showAlert({ description: '채널 정보가 성공적으로 저장되었습니다.' });
   };
 
   // --- 거래 현황 데이터 가공 및 필터링 ---
@@ -368,15 +370,24 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
                         </div>
                      </div>
                      <button 
-                      onClick={async () => {
-                        if (!window.confirm('정말 삭제하시겠습니까?')) return;
-                        try {
-                          await deleteChannelProduct(ch.id);
-                          setChannels(prev => prev.filter(c => c.id !== ch.id));
-                        } catch (e) {
-                          console.error(e);
-                          alert('삭제에 실패했습니다.');
-                        }
+                      onClick={() => {
+                        showConfirm({
+                          title: '채널 삭제',
+                          description: '정말 삭제하시겠습니까?',
+                          dangerLine: '삭제 후에는 복구할 수 없습니다.',
+                          confirmLabel: '삭제하기',
+                          cancelLabel: '취소',
+                          danger: true,
+                          onConfirm: async () => {
+                            try {
+                              await deleteChannelProduct(ch.id);
+                              setChannels(prev => prev.filter(c => c.id !== ch.id));
+                            } catch (e) {
+                              console.error(e);
+                              showAlert({ description: '삭제에 실패했습니다.' });
+                            }
+                          },
+                        });
                       }}
                       className="absolute -top-2 -right-2 w-10 h-10 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 flex items-center justify-center font-black z-20"
                      >
