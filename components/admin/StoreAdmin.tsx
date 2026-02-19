@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { EbookProduct, SiteNotification, StoreOrder, UserProfile, NotificationType, StoreType } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { deleteStoreProduct } from '../../storeDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -17,6 +18,7 @@ type StoreAdminTab = 'inventory' | 'approval' | 'orders';
 
 const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, addNotif }) => {
   const navigate = useNavigate();
+  const { showConfirm, showAlert } = useConfirm();
   const [activeSubTab, setActiveSubTab] = useState<StoreAdminTab>('inventory');
   
   // 상태 관리
@@ -52,12 +54,12 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
       rejectionReason: undefined 
     } : item));
     addNotif(eb.authorId, 'approval', '✅ 서비스 등록 승인 완료', `축하합니다! [${eb.title}] 서비스가 승인되어 판매가 시작되었습니다.`);
-    alert('승인 처리가 완료되었습니다.');
+    showAlert({ description: '승인 처리가 완료되었습니다.' });
     setReviewingEbook(null);
   };
 
   const handleReject = () => {
-    if (!rejectionReason.trim()) return alert('반려 또는 보완 요청 사유를 입력하세요.');
+    if (!rejectionReason.trim()) return void showAlert({ description: '반려 또는 보완 요청 사유를 입력하세요.' });
     if (!reviewingEbook) return;
 
     // 반려 시점의 모든 데이터를 snapshot으로 저장 (나중에 재심사 시 비교용)
@@ -75,7 +77,7 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
     setShowRejectModal(false);
     setReviewingEbook(null);
     setRejectionReason('');
-    alert('반려 처리가 완료되었습니다.');
+    showAlert({ description: '반려 처리가 완료되었습니다.' });
   };
 
   const toggleBadge = (id: string, field: 'isHot' | 'isPrime' | 'isNew') => {
@@ -86,20 +88,29 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
     setEbooks(prev => prev.map(e => e.id === id ? { ...e, isPaused: !e.isPaused } : e));
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('정말 이 상품을 영구 삭제하시겠습니까?')) return;
-    try {
-      await deleteStoreProduct(id);
-      setEbooks(prev => prev.filter(e => e.id !== id));
-    } catch (e) {
-      console.error(e);
-      alert('삭제에 실패했습니다.');
-    }
+  const handleDelete = (id: string) => {
+    showConfirm({
+      title: '상품 삭제',
+      description: '정말 이 상품을 영구 삭제하시겠습니까?',
+      dangerLine: '삭제 후에는 복구할 수 없습니다.',
+      confirmLabel: '삭제하기',
+      cancelLabel: '취소',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await deleteStoreProduct(id);
+          setEbooks(prev => prev.filter(e => e.id !== id));
+        } catch (e) {
+          console.error(e);
+          showAlert({ description: '삭제에 실패했습니다.' });
+        }
+      },
+    });
   };
 
   // --- 파일 다운로드 헬퍼 ---
   const downloadSourceFile = (dataUri: string | undefined, fileName: string) => {
-    if (!dataUri) return alert("판매자가 업로드한 원본 파일이 존재하지 않습니다.");
+    if (!dataUri) return void showAlert({ description: '판매자가 업로드한 원본 파일이 존재하지 않습니다.' });
     try {
       const link = document.createElement('a');
       link.href = dataUri;
@@ -108,7 +119,7 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
       link.click();
       document.body.removeChild(link);
     } catch (e) {
-      alert("파일 다운로드 중 오류가 발생했습니다.");
+      showAlert({ description: '파일 다운로드 중 오류가 발생했습니다.' });
     }
   };
 
