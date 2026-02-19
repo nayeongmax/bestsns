@@ -22,6 +22,8 @@ interface Props {
   addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
   currentUser?: UserProfile | null;
   onUpdateUser?: (u: UserProfile) => void;
+  /** 회원 목록(profiles) DB에서 다시 불러오기 — 프리랜서 승인 대기 누락 방지 */
+  onRefreshMembers?: () => void;
 }
 
 type SortKey = 'none' | 'purchase' | 'sales' | 'violations' | 'points' | 'join';
@@ -32,7 +34,7 @@ const DEFAULT_GRADE_CONFIGS: GradeConfig[] = [
   { id: 'g3', name: 'MASTER', target: 'seller', minSales: 50000000, minPurchase: 0, color: 'bg-gray-900', sortOrder: 20 },
 ];
 
-const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = (..._args: unknown[]) => {}, currentUser, onUpdateUser }) => {
+const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, smmOrders, channelOrders, storeOrders, ebooks, setEbooks, channels, gradeConfigs, setGradeConfigs, reviews = [], setReviews, addNotif = (..._args: unknown[]) => {}, currentUser, onUpdateUser, onRefreshMembers }) => {
   const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState<'list' | 'seller' | 'freelancer' | 'grades'>('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,18 +73,29 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
     members.filter(m => m.sellerStatus === 'pending' || !!m.pendingApplication), 
   [members]);
 
+  // 프리랜서 승인 대기: pending 또는 신청서 있으나 미승인(누락 방지)
   const pendingFreelancers = useMemo(() => 
-    members.filter(m => m.freelancerStatus === 'pending'), 
+    members.filter(m => m.freelancerStatus === 'pending' || (!!m.freelancerApplication && m.freelancerStatus !== 'approved')), 
   [members]);
 
-  const handleApproveFreelancer = (userId: string) => {
+  const handleApproveFreelancer = async (userId: string) => {
     const updated = members.find(m => m.id === userId);
     if (!updated) return;
     const approvedProfile = { ...updated, freelancerStatus: 'approved' as const };
     setMembers(prev => prev.map(m => m.id === userId ? approvedProfile : m));
     addNotif(userId, 'approval', '프리랜서 승인', '프리랜서 등록이 승인되었습니다. 누구나알바에 신청할 수 있습니다.');
     if (currentUser?.id === userId && onUpdateUser) onUpdateUser(approvedProfile);
-    alert('프리랜서 승인이 완료되었습니다.');
+    try {
+      await supabase.from('profiles').update({
+        freelancer_status: 'approved',
+        freelancer_application: updated.freelancerApplication ?? null,
+        updated_at: new Date().toISOString(),
+      }).eq('id', userId);
+      alert('프리랜서 승인이 완료되었습니다. DB에 반영되어 쿠키/새로고침 후에도 유지됩니다.');
+    } catch (err) {
+      console.error('프리랜서 승인 DB 반영 실패:', err);
+      alert('승인은 화면에 반영되었으나 DB 저장에 실패했습니다. 목록 새로고침을 눌러 확인해 주세요.');
+    }
   };
 
   const memberPurchaseHistory = useMemo(() => {
@@ -197,9 +210,14 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
 
       {activeSubTab === 'freelancer' && (
         <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 border-b border-gray-50">
-            <h3 className="text-xl font-black text-gray-900">프리랜서 승인 대기</h3>
-            <p className="text-[13px] text-gray-500 font-bold mt-1">실명, 연락처, 통장정보, 신분증/통장 이미지를 확인한 뒤 승인해 주세요.</p>
+          <div className="p-8 border-b border-gray-50 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-xl font-black text-gray-900">프리랜서 승인 대기</h3>
+              <p className="text-[13px] text-gray-500 font-bold mt-1">실명, 연락처, 통장정보, 신분증/통장 이미지를 확인한 뒤 승인해 주세요. DB에서 불러오므로 목록이 비어 있으면 새로고침을 눌러 주세요.</p>
+            </div>
+            <button type="button" onClick={() => onRefreshMembers?.()} className="px-6 py-3 rounded-xl bg-emerald-100 text-emerald-800 font-black text-[13px] hover:bg-emerald-200 transition-all">
+              목록 새로고침 (DB에서 다시 불러오기)
+            </button>
           </div>
           <div className="p-8 space-y-8">
             {pendingFreelancers.length === 0 ? (
