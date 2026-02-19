@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { SNS_PLATFORMS } from '../constants';
 import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource } from '@/types';
 import { updateProfile } from '../profileDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   smmProducts: SMMProduct[];
@@ -16,6 +17,7 @@ interface Props {
 
 const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices, onOrderComplete, onLogout }) => {
   const navigate = useNavigate();
+  const { showConfirm, showAlert } = useConfirm();
   const [selectedPlatform, setSelectedPlatform] = useState('인스타그램');
   const [selectedProductId, setSelectedProductId] = useState('');
   const [link, setLink] = useState('');
@@ -49,12 +51,19 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
 
   const handleAddOption = () => {
     if (isGuest) {
-      if (window.confirm('로그인 후 이용 가능합니다. 로그인 페이지로 이동할까요?')) navigate('/login');
+      showConfirm({
+        title: '로그인 필요',
+        description: '로그인 후 이용 가능합니다. 로그인 페이지로 이동할까요?',
+        confirmLabel: '이동',
+        cancelLabel: '취소',
+        danger: false,
+        onConfirm: () => navigate('/login'),
+      });
       return;
     }
-    if (!selectedProductId || !link || quantity <= 0) return alert('정보를 모두 입력하세요.');
+    if (!selectedProductId || !link || quantity <= 0) return void showAlert({ description: '정보를 모두 입력하세요.' });
     if (!selectedProduct) return;
-    if (quantity < (selectedProduct.minQuantity || 0)) return alert(`최소 주문량 ${(selectedProduct.minQuantity ?? 0).toLocaleString()}개 이상 가능합니다.`);
+    if (quantity < (selectedProduct.minQuantity || 0)) return void showAlert({ description: `최소 주문량 ${(selectedProduct.minQuantity ?? 0).toLocaleString()}개 이상 가능합니다.` });
 
     const newOption: SelectedOption = {
       id: Date.now().toString(),
@@ -74,11 +83,20 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
 
   const handleOrder = async () => {
     if (isGuest) return navigate('/login');
-    if (selectedOptions.length === 0) return alert('주문할 항목이 없습니다.');
-    if (totalOrderAmount > userPoints) return alert('보유 포인트가 부족합니다.');
+    if (selectedOptions.length === 0) return void showAlert({ description: '주문할 항목이 없습니다.' });
+    if (totalOrderAmount > userPoints) return void showAlert({ description: '보유 포인트가 부족합니다.' });
     
-    if (!window.confirm(`총 ${(totalOrderAmount ?? 0).toLocaleString()}P를 결제하고 주문을 접수할까요?`)) return;
+    showConfirm({
+      title: '주문 확인',
+      description: `총 ${(totalOrderAmount ?? 0).toLocaleString()}P를 결제하고 주문을 접수할까요?`,
+      confirmLabel: '결제하기',
+      cancelLabel: '취소',
+      danger: false,
+      onConfirm: () => doOrder(),
+    });
+  };
 
+  const doOrder = async () => {
     setIsProcessing(true);
     try {
       // 포인트 차감 처리 (전역 업데이트 요청)
@@ -125,18 +143,18 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       }
       
       window.dispatchEvent(new CustomEvent('user-new-order', { detail: { amount: totalOrderAmount } }));
-      alert('성공적으로 주문되었습니다! 마이페이지에서 현황을 확인하세요.');
+      showAlert({ description: '성공적으로 주문되었습니다! 마이페이지에서 현황을 확인하세요.' });
       setSelectedOptions([]);
       navigate('/mypage');
     } catch (err) {
-      alert('주문 처리 중 오류 발생');
+      showAlert({ description: '주문 처리 중 오류 발생' });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const checkLink = () => {
-    if (!link.trim()) return alert('게시물 링크를 입력해주세요.');
+    if (!link.trim()) return void showAlert({ description: '게시물 링크를 입력해주세요.' });
     window.open(link.startsWith('http') ? link : `https://${link}`, '_blank');
   };
 
