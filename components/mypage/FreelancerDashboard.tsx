@@ -30,6 +30,7 @@ import {
 } from '../../parttimeDb';
 import type { FreelancerEarningEntry } from '@/types';
 import type { NotificationType } from '@/types';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   user: UserProfile;
@@ -41,6 +42,7 @@ interface Props {
 
 const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelancer, initialSubTab, addNotif }) => {
   const navigate = useNavigate();
+  const { showConfirm, showAlert } = useConfirm();
   const [freelancerTab, setFreelancerTab] = useState<'tasks' | 'settlement' | 'alba'>(() => (initialSubTab === 'main' ? 'tasks' : initialSubTab ?? 'tasks'));
   const [settlementMonth, setSettlementMonth] = useState(() => {
     const d = new Date();
@@ -170,7 +172,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
   const handleWithdrawClick = () => {
     if (balance < MIN_WITHDRAW_FREELANCER) {
-      alert(`최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()}원입니다.`);
+      showAlert({ description: `최소 출금 가능 금액은 ${MIN_WITHDRAW_FREELANCER.toLocaleString()}원입니다.` });
       return;
     }
     const bank = user.freelancerStatus === 'approved' && user.freelancerApplication
@@ -178,9 +180,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       : (user.sellerApplication?.bankInfo ?? user.pendingApplication?.bankInfo);
     const bankInfo = bank;
     if (!bankInfo?.bankName?.trim() || !bankInfo?.accountNo?.trim()) {
-      alert(
-        '출금을 위해 전문가정보에 통장 정보를 먼저 등록해 주세요.\n마이페이지 → 전문가정보에서 은행/계좌를 등록해 주세요.'
-      );
+      showAlert({ description: '출금을 위해 전문가정보에 통장 정보를 먼저 등록해 주세요.\n마이페이지 → 전문가정보에서 은행/계좌를 등록해 주세요.' });
       return;
     }
     setShowWithdrawModal(true);
@@ -205,15 +205,15 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       setBalance(result.newBalance);
         const h = await fetchFreelancerHistory(user.id);
         setHistory(h);
-        alert(
-          `출금 신청이 완료되었습니다.\n출금일 기준 익일~3일 이내 신청한 계좌(${bankInfo.bankName} ${bankInfo.accountNo})로 입금됩니다.`
-        );
+        showAlert({
+          description: `출금 신청이 완료되었습니다.\n출금일 기준 익일~3일 이내 신청한 계좌(${bankInfo.bankName} ${bankInfo.accountNo})로 입금됩니다.`,
+        });
     } else {
-        alert('출금 처리에 실패했습니다.');
+        showAlert({ description: '출금 처리에 실패했습니다.' });
       }
     } catch (err) {
       console.error(err);
-      alert('출금 처리에 실패했습니다.');
+      showAlert({ description: '출금 처리에 실패했습니다.' });
     }
     setWithdrawing(false);
   };
@@ -241,7 +241,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               if (onApplyFreelancer) {
                 onApplyFreelancer();
               } else {
-                alert('전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.');
+                showAlert({ description: '전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.' });
               }
             }}
             className="px-12 py-4 rounded-xl bg-emerald-600 text-white font-black text-lg hover:bg-emerald-700 shadow-lg transition-all"
@@ -560,7 +560,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                             </>
                           )}
                           {!hasEstimate && <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="px-6 py-3 rounded-xl bg-gray-600 text-white font-black hover:bg-gray-700">수정하기</Link>}
-                          <button type="button" onClick={async () => { if (!confirm('정말 삭제하시겠습니까?')) return; try { await deletePartTimeJobRequest(jr.id); setJobRequests((prev) => prev.filter((r) => r.id !== jr.id)); alert('삭제되었습니다.'); } catch (e) { console.error(e); alert('삭제에 실패했습니다.'); } }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
+                          <button type="button" onClick={() => { showConfirm({ title: '의뢰 삭제', description: '정말 삭제하시겠습니까?', dangerLine: '삭제 후에는 복구할 수 없습니다.', confirmLabel: '삭제하기', cancelLabel: '취소', danger: true, onConfirm: async () => { try { await deletePartTimeJobRequest(jr.id); setJobRequests((prev) => prev.filter((r) => r.id !== jr.id)); showAlert({ description: '삭제되었습니다.' }); } catch (e) { console.error(e); showAlert({ description: '삭제에 실패했습니다.' }); } } }); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
                         </div>
                       </div>
                     );
@@ -582,7 +582,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     </div>
                   <div className="flex gap-2 flex-wrap">
                     <Link to="/part-time/request" state={{ editJobRequest: jr, fromAlba: true }} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700">수정하기</Link>
-                    <button type="button" onClick={async () => { if (!confirm('정말 삭제하시겠습니까?')) return; try { await deletePartTimeJobRequest(jr.id); setJobRequests((prev) => prev.filter((r) => r.id !== jr.id)); alert('삭제되었습니다.'); } catch (e) { console.error(e); alert('삭제에 실패했습니다.'); } }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
+                    <button type="button" onClick={() => { showConfirm({ title: '의뢰 삭제', description: '정말 삭제하시겠습니까?', dangerLine: '삭제 후에는 복구할 수 없습니다.', confirmLabel: '삭제하기', cancelLabel: '취소', danger: true, onConfirm: async () => { try { await deletePartTimeJobRequest(jr.id); setJobRequests((prev) => prev.filter((r) => r.id !== jr.id)); showAlert({ description: '삭제되었습니다.' }); } catch (e) { console.error(e); showAlert({ description: '삭제에 실패했습니다.' }); } } }); }} className="px-6 py-3 rounded-xl bg-red-100 text-red-700 font-black hover:bg-red-200">삭제</button>
                   </div>
                 </div>
               ))}
@@ -791,7 +791,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             : `<tr><td ${cell('center')}>1</td><td ${cell('left')}>${estimateViewJr.workContent}</td><td ${cell('right')}>${est.unitPrice?.toLocaleString() ?? '-'}</td><td ${cell('center')}>${est.quantity ?? 1}</td><td ${cell('right', true)}>${est.totalAmount.toLocaleString()}</td><td ${cell('left')}></td></tr>`;
           const printWindow = window.open('', '_blank');
           if (!printWindow) {
-            alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.');
+            showAlert({ description: '팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.' });
             return;
           }
           printWindow.document.write(`
@@ -893,10 +893,16 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
           const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
           const toPay = selectedWithLink.filter((a) => !currentPaid.includes(a.userId));
           if (toPay.length === 0) {
-            alert('이미 수익통장에 지급 완료된 상태입니다. 이중 지급되지 않습니다.');
+            showAlert({ description: '이미 수익통장에 지급 완료된 상태입니다. 이중 지급되지 않습니다.' });
             return;
           }
-          if (!confirm(`구매를 확정하시겠습니까? ${toPay.length}명에게 각 ${task.reward.toLocaleString()}원이 수익통장에 지급됩니다.`)) return;
+          showConfirm({
+            title: '구매 확정',
+            description: `구매를 확정하시겠습니까? ${toPay.length}명에게 각 ${task.reward.toLocaleString()}원이 수익통장에 지급됩니다.`,
+            confirmLabel: '확정하기',
+            cancelLabel: '취소',
+            danger: false,
+            onConfirm: async () => {
           try {
             const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
             for (const a of toPay) {
@@ -922,11 +928,13 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
             setTasks(nextTasks);
             await upsertPartTimeTasks(nextTasks);
             setWorkConfirmModal({ task: { ...task, pointPaid: true, paidUserIds: paidIds }, isAdvertiserView: true, step: 'confirmed' });
-            alert('구매확정완료했습니다. 프리랜서 수익통장에 작업 대금이 적립되었습니다.');
+            showAlert({ description: '구매확정완료했습니다. 프리랜서 수익통장에 작업 대금이 적립되었습니다.' });
           } catch (err) {
             console.error(err);
-            alert('처리 중 오류가 발생했습니다.');
+            showAlert({ description: '처리 중 오류가 발생했습니다.' });
           }
+            },
+          });
         };
 
         const handlePdfDownload = () => {
@@ -1078,7 +1086,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
               <button
                 onClick={() => {
                   const text = (document.getElementById('advertiser-revision-text') as HTMLTextAreaElement)?.value?.trim();
-                  if (!text) { alert('수정 요청 내용을 입력해 주세요.'); return; }
+                  if (!text) { showAlert({ description: '수정 요청 내용을 입력해 주세요.' }); return; }
                   const { task, userId } = advertiserRevisionModal;
                   const next = tasks.map((t) =>
                     t.id !== task.id ? t : {
@@ -1093,7 +1101,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                     if (task.createdBy && task.createdBy !== userId) addNotif(task.createdBy, 'revision', '광고주 수정요청', `[${task.title}] 광고주가 프리랜서에게 수정을 요청했습니다. (${advertiserRevisionModal.nickname}) ${text}`, text);
                   }
                   setAdvertiserRevisionModal(null);
-                  alert('수정요청 알림이 전송되었습니다.');
+                  showAlert({ description: '수정요청 알림이 전송되었습니다.' });
                 }}
                 className="flex-1 py-3 rounded-xl bg-orange-500 text-white font-black hover:bg-orange-600"
               >
