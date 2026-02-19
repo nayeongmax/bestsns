@@ -152,51 +152,60 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
 
   /** 운영자: 신청자 선정 → 선정자에게 알림, jobRequestId 자동 연결 */
   const handleSelect = (userId: string) => {
-    if (!task) return;
-    const applicant = task.applicants.find((a) => a.userId === userId);
+    if (!taskId) return;
     const now = new Date().toISOString();
-    let updatedTask: PartTimeTask = { ...task, applicants: task.applicants.map((a) => (a.userId === userId ? { ...a, selected: true, selectedAt: now } : a)) };
-    if (task.applicantUserId && !task.jobRequestId) {
-      const jobReqs = jobRequests.filter((jr) => jr.applicantUserId === task!.applicantUserId && (jr.paid || jr.status === 'pending'));
-      const linkedIds = new Set(tasks.filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
-      const unlinked = jobReqs.find((jr) => !linkedIds.has(jr.id));
-      if (unlinked) updatedTask = { ...updatedTask, jobRequestId: unlinked.id };
-    }
-    const next = tasks.map((t) => (t.id !== task.id ? t : updatedTask));
-    saveTasks(next);
-    if (applicant && addNotif) {
-      addNotif(
-        userId,
-        'freelancer',
-        '프리랜서 선정',
-        `[${task.title}]에 선정되었습니다. 작업 완료 후 작업 링크를 제출해 주세요.`,
-        '작업 완료 후 작업 링크를 제출해 주세요.'
-      );
-    }
-    if (task.applicantUserId && addNotif) {
-      addNotif(task.applicantUserId, 'approval', '프리랜서 선정', `[${task.title}]에 프리랜서가 선정되었습니다.`, '프리랜서 선정이 완료되었습니다.');
-    }
+    setTasks((prev) => {
+      const currentTask = prev.find((t) => t.id === taskId);
+      if (!currentTask) return prev;
+      const applicant = currentTask.applicants.find((a) => a.userId === userId);
+      let updatedTask: PartTimeTask = {
+        ...currentTask,
+        applicants: currentTask.applicants.map((a) =>
+          a.userId === userId ? { ...a, selected: true, selectedAt: now } : a
+        ),
+      };
+      if (currentTask.applicantUserId && !currentTask.jobRequestId) {
+        const jobReqs = jobRequests.filter((jr) => jr.applicantUserId === currentTask.applicantUserId && (jr.paid || jr.status === 'pending'));
+        const linkedIds = new Set(prev.filter((t) => t.jobRequestId).map((t) => t.jobRequestId!));
+        const unlinked = jobReqs.find((jr) => !linkedIds.has(jr.id));
+        if (unlinked) updatedTask = { ...updatedTask, jobRequestId: unlinked.id };
+      }
+      const next = prev.map((t) => (t.id !== taskId ? t : updatedTask));
+      upsertPartTimeTasks(next).catch((e) => {
+        console.error('선정 저장 실패:', e);
+        alert('선정은 반영됐으나 저장에 실패했습니다. 새로고침 시 되돌아갈 수 있습니다.');
+      });
+      if (applicant && addNotif) {
+        addNotif(userId, 'freelancer', '프리랜서 선정', `[${currentTask.title}]에 선정되었습니다. 작업 완료 후 작업 링크를 제출해 주세요.`, '작업 완료 후 작업 링크를 제출해 주세요.');
+      }
+      if (currentTask.applicantUserId && addNotif) {
+        addNotif(currentTask.applicantUserId, 'approval', '프리랜서 선정', `[${currentTask.title}]에 프리랜서가 선정되었습니다.`, '프리랜서 선정이 완료되었습니다.');
+      }
+      return next;
+    });
   };
 
   /** 운영자: 선정 취소 → 해당 신청자에게 알림 */
   const handleDeselect = (userId: string) => {
-    if (!task) return;
-    const applicant = task.applicants.find((a) => a.userId === userId);
-    const next = tasks.map((t) =>
-      t.id !== task.id
-        ? t
-        : { ...t, applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, selected: false } : a)) }
-    );
-    saveTasks(next);
-    if (applicant && addNotif) {
-      addNotif(
-        userId,
-        'freelancer',
-        '선정 취소',
-        `[${task.title}] 작업에서 선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.`,
-        '선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.'
+    if (!taskId) return;
+    setTasks((prev) => {
+      const currentTask = prev.find((t) => t.id === taskId);
+      if (!currentTask) return prev;
+      const applicant = currentTask.applicants.find((a) => a.userId === userId);
+      const next = prev.map((t) =>
+        t.id !== taskId
+          ? t
+          : { ...t, applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, selected: false } : a)) }
       );
-    }
+      upsertPartTimeTasks(next).catch((e) => {
+        console.error('선정취소 저장 실패:', e);
+        alert('선정 취소가 저장에 실패했습니다. 새로고침 후 다시 시도해 주세요.');
+      });
+      if (applicant && addNotif) {
+        addNotif(userId, 'freelancer', '선정 취소', `[${currentTask.title}] 작업에서 선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.`, '선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.');
+      }
+      return next;
+    });
   };
 
   /** 선정된 프리랜서: 작업링크 여러 개 제출 */
