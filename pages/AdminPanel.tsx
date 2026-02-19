@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
  * Fixed: Removed .ts extension from import
  */
 import { EbookProduct, ChannelProduct, SiteNotification, SMMProvider, SMMProduct, SMMOrder, UserProfile, ChannelOrder, StoreOrder, Coupon, NotificationType, GradeConfig, Review } from '@/types';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import SnsAdmin from '../components/admin/SnsAdmin.tsx';
 import ChannelAdmin from '../components/admin/ChannelAdmin.tsx';
 import StoreAdmin from '../components/admin/StoreAdmin.tsx';
@@ -48,6 +49,7 @@ const AdminPanel: React.FC<Props> = ({
   members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
   gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
+  const { showAlert } = useConfirm();
   const ADMIN_STORAGE_KEY = 'admin_logged_in';
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!sessionStorage.getItem(ADMIN_STORAGE_KEY));
   const [password, setPassword] = useState('');
@@ -65,7 +67,7 @@ const AdminPanel: React.FC<Props> = ({
     if (panelPassword && password === panelPassword) {
       sessionStorage.setItem(ADMIN_STORAGE_KEY, '1');
       setIsLoggedIn(true);
-    } else alert('비밀번호가 올바르지 않습니다.');
+    } else showAlert({ description: '비밀번호가 올바르지 않습니다.' });
   };
 
   if (!isLoggedIn) {
