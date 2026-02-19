@@ -177,9 +177,9 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   { label: '세금계산서', value: expertTypeInfo.tax, icon: '🧾' }
                 ].map((item, i) => (
                   <div key={i} className="flex-1 min-w-[72px] bg-white rounded-[12px] py-3.5 px-2.5 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
-                    <span className="text-xl mb-1.5 group-hover:scale-105 transition-transform">{item.icon}</span>
-                    <p className="text-xs font-black text-gray-400 mb-1 uppercase tracking-wider italic leading-tight">{item.label}</p>
-                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-base leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
+                    <span className="text-2xl mb-1.5 group-hover:scale-105 transition-transform">{item.icon}</span>
+                    <p className="text-sm font-black text-gray-400 mb-1 uppercase tracking-wider italic leading-tight">{item.label}</p>
+                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-lg leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
                   </div>
                 ))}
              </div>
