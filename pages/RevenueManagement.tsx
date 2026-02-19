@@ -50,6 +50,30 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     console.error(`매출관리 ${key} 저장 실패:`, err);
     alert(`DB 저장에 실패했습니다.\n\n[에러] ${msg}\n\n지금 보이는 데이터는 이 기기 브라우저에만 저장됩니다. 다른 기기·캐시 삭제 시 사라집니다.\n\n해결: Supabase SQL Editor에서 supabase-setup-4단계-매출관리.sql 실행 후, 이메일+비밀번호로 다시 로그인해 주세요.`);
   };
+
+  // 쿠키/캐시 삭제 후에도 DB에서 복원 — 마운트 시 1회 로드
+  useEffect(() => {
+    if (!user?.id || revenueDbLoaded.current) return;
+    revenueDbLoaded.current = true;
+    (async () => {
+      try {
+        const [companiesData, projectsData, todosData, expensesData] = await Promise.all([
+          fetchRevenueCompanies(user.id),
+          fetchRevenueProjects(user.id),
+          fetchRevenueTodos(user.id),
+          fetchRevenueGeneralExpenses(user.id),
+        ]);
+        setCompanies(companiesData);
+        setProjects(projectsData);
+        setTodos(todosData);
+        setGeneralExpenses(expensesData);
+      } catch (e) {
+        console.error('매출관리 DB 로드 실패:', e);
+        revenueDbLoaded.current = false;
+      }
+    })();
+  }, [user?.id]);
+
   useEffect(() => {
     if (!user?.id) return;
     upsertRevenueCompanies(user.id, companies).catch((err) => showSaveError('회사', err));
@@ -449,15 +473,24 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             <h4 className="text-xl font-black text-blue-600 flex items-center gap-2 italic"><span className="w-1.5 h-6 bg-blue-600 rounded-full"></span> 당월 수입 내역 (현황관리 연동)</h4>
             <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
               <table className="w-full text-left">
-                <thead className="bg-gray-50 text-[11px] font-black text-gray-400 uppercase tracking-widest"><tr><th className="px-6 py-4">업체명</th><th className="px-6 py-4 text-right">금액</th></tr></thead>
+                <thead className="bg-gray-50 text-[11px] font-black text-gray-400 uppercase tracking-widest"><tr><th className="px-6 py-4">업체명</th><th className="px-6 py-4 text-right">금액</th><th className="px-6 py-4 text-center">링크</th></tr></thead>
                 <tbody className="divide-y divide-gray-50">
                   {currentMonthProjects.map(p => (
                     <tr key={p.id} className="hover:bg-blue-50/20">
                       <td className="px-6 py-4 font-black text-sm">{p.clientName}</td>
                       <td className="px-6 py-4 text-right font-black">₩{p.paymentAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-center">
+                        {p.workLink?.trim() ? (
+                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-xs hover:underline break-all">
+                            링크 열기
+                          </a>
+                        ) : (
+                          <span className="text-gray-300 text-xs">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
-                  <tr className="bg-blue-50/50"><td className="px-6 py-5 font-black text-blue-600">총 수입 합계</td><td className="px-6 py-5 text-right font-black text-blue-600 text-lg">₩{totalIncome.toLocaleString()}</td></tr>
+                  <tr className="bg-blue-50/50"><td className="px-6 py-5 font-black text-blue-600">총 수입 합계</td><td className="px-6 py-5 text-right font-black text-blue-600 text-lg" colSpan={2}>₩{totalIncome.toLocaleString()}</td></tr>
                 </tbody>
               </table>
             </div>
