@@ -632,7 +632,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               </div>
             ) : (
               <>
-                <p className="text-gray-500 font-bold">신청 완료되었습니다. 선정 시 수익통장에 포인트가 적립됩니다.</p>
+                <p className="text-gray-500 font-bold">신청 완료되었습니다. 선정 시 해당 작업 완료 후 운영자와 광고주가 결과물 확인 후 수익통장에 적립됩니다.</p>
                 {(() => {
                   const me = task.applicants.find((a) => a.userId === user?.id);
                   if (me?.selected) {
