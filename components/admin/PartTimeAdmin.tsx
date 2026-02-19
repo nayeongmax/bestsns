@@ -276,9 +276,19 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       }
       const paidIds = target.map((a) => a.userId);
       const allPaid = [...(freshTask?.paidUserIds ?? []), ...paidIds];
+      const paidAtIso = new Date().toISOString();
       const selectedWithLink = (freshTask ?? task).applicants.filter((a) => a.selected && hasWorkLink(a));
       const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
-      const next = tasks.map((t) => (t.id !== task.id ? t : { ...t, pointPaid, paidUserIds: allPaid }));
+      const next = tasks.map((t) =>
+        t.id !== task.id ? t : {
+          ...t,
+          pointPaid,
+          paidUserIds: allPaid,
+          applicants: t.applicants.map((ap) =>
+            paidIds.includes(ap.userId) ? { ...ap, paidAt: paidAtIso } : ap
+          ),
+        }
+      );
       setTasks(next);
       await upsertPartTimeTasks(next);
       alert('알바비가 지급되었습니다.');
