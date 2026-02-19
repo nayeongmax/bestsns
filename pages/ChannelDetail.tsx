@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChannelProduct, WishlistItem, Review, UserProfile } from '../types';
+import { ChannelProduct, WishlistItem, Review, UserProfile } from '@/types';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   channels: ChannelProduct[];
@@ -14,6 +15,7 @@ interface Props {
 const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, reviews, members }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showConfirm } = useConfirm();
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
   
   const channel = channels.find(c => c.id === id);
@@ -60,9 +62,14 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
   };
 
   const handleBuyNow = () => {
-    if (window.confirm('해당 채널을 즉시 구매하시겠습니까?\n결제 페이지로 이동합니다.')) {
-      navigate('/payment/point', { state: { amount: channel.price, product: channel } });
-    }
+    showConfirm({
+      title: '채널 구매',
+      description: '해당 채널을 즉시 구매하시겠습니까?\n결제 페이지로 이동합니다.',
+      confirmLabel: '구매하기',
+      cancelLabel: '취소',
+      danger: false,
+      onConfirm: () => navigate('/payment/point', { state: { amount: channel.price, product: channel } }),
+    });
   };
 
   return (
