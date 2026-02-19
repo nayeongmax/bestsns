@@ -1,7 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Notice, UserProfile } from '../types';
+import { Notice, UserProfile } from '@/types';
+import { deleteNotice } from '../siteDb';
 
 interface Props {
   notices: Notice[];
@@ -264,10 +265,15 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
                         <span className="text-xs font-black text-gray-400 italic">ADMIN PRIVILEGE:</span>
                         <button onClick={(e) => { e.stopPropagation(); alert('수정 기능 준비중'); }} className="bg-gray-100 px-6 py-2 rounded-xl text-[11px] font-black text-gray-500 hover:bg-gray-900 hover:text-white transition-all">EDIT</button>
                         <button 
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            if (window.confirm('정말로 이 공지사항을 영구 삭제하시겠습니까?')) {
+                            if (!window.confirm('정말로 이 공지사항을 영구 삭제하시겠습니까?')) return;
+                            try {
+                              await deleteNotice(n.id);
                               setNotices(prev => prev.filter(notice => notice.id !== n.id));
+                            } catch (err) {
+                              console.error(err);
+                              alert('삭제에 실패했습니다.');
                             }
                           }}
                           className="bg-red-50 px-6 py-2 rounded-xl text-[11px] font-black text-red-400 hover:bg-red-500 hover:text-white transition-all"
