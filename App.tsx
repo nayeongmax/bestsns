@@ -349,17 +349,25 @@ const App: React.FC = () => {
     supabase.from('site_access_log').insert({ id, user_id: user.id, path: location.pathname || null }).then(() => {});
   }, [user?.id, location.pathname]);
 
-  // 찜(user_wishlist) 로드 - 로그인 시
+  // 찜(user_wishlist) 로드 - 로그인 시, DB 실패/빈값이면 localStorage 복원
   useEffect(() => {
-    if (!user?.id) {
-      setWishlist([]);
-      return;
-    }
+    if (!user?.id) return;
+    const storageKey = `wishlist_v2_${user.id}`;
     let cancelled = false;
     (async () => {
       try {
         const { data, error } = await supabase.from('user_wishlist').select('item_type, item_id').eq('user_id', user.id);
-        if (cancelled || error) return;
+        if (cancelled) return;
+        if (error) {
+          const fallback = (() => {
+            try {
+              const raw = localStorage.getItem(storageKey);
+              return raw ? (JSON.parse(raw) as WishlistItem[]) : [];
+            } catch { return []; }
+          })();
+          setWishlist(Array.isArray(fallback) ? fallback : []);
+          return;
+        }
         if (data && data.length > 0) {
           const items: WishlistItem[] = [];
           for (const row of data as { item_type: string; item_id: string }[]) {
@@ -373,21 +381,36 @@ const App: React.FC = () => {
           }
           setWishlist(items);
         } else {
-          setWishlist([]);
+          const fallback = (() => {
+            try {
+              const raw = localStorage.getItem(storageKey);
+              return raw ? (JSON.parse(raw) as WishlistItem[]) : [];
+            } catch { return []; }
+          })();
+          setWishlist(Array.isArray(fallback) ? fallback : []);
         }
-      } catch (_) {}
+      } catch (_) {
+        if (!cancelled) {
+          try {
+            const raw = localStorage.getItem(storageKey);
+            const fallback = raw ? (JSON.parse(raw) as WishlistItem[]) : [];
+            setWishlist(Array.isArray(fallback) ? fallback : []);
+          } catch { setWishlist([]); }
+        }
+      }
     })();
     return () => { cancelled = true; };
   }, [user?.id, channels, ebooks]);
 
-  // 알림(site_notifications) 로드 - 로그인 시
+  // 알림(site_notifications) 로드 - 로그인 시, DB 빈값/에러면 기존(localStorage) 유지
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
     (async () => {
       try {
         const { data, error } = await supabase.from('site_notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-        if (cancelled || error) return;
+        if (cancelled) return;
+        if (error) return; // 에러 시 setNotifications 호출 안 함 → 기존 값 유지
         if (data && data.length > 0) {
           const list: SiteNotification[] = (data as any[]).map((r: any) => ({
             id: r.id,
@@ -401,6 +424,7 @@ const App: React.FC = () => {
           }));
           setNotifications(list);
         }
+        // data가 빈 배열이면 setNotifications 호출 안 함 → 기존 값 유지
       } catch (_) {}
     })();
     return () => { cancelled = true; };
@@ -599,7 +623,15 @@ const App: React.FC = () => {
     }).catch((e) => console.warn('로그인 후 채널/스토어 재로드 실패:', e));
   };
 
-  const handleLogout = () => setUser(null);
+  const handleLogout = () => { setUser(null); setWishlist([]); };
+
+  // 찜 localStorage 백업 (DB와 별도로 유지, 페이지 리셋 방지)
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      localStorage.setItem('wishlist_v2_' + user.id, JSON.stringify(wishlist));
+    } catch (_) {}
+  }, [user?.id, wishlist]);
 
   const wishlistToggle = useCallback((item: WishlistItem) => {
     const itemId = item.data.id;
