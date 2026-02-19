@@ -94,7 +94,10 @@ function rowToTask(row: Record<string, unknown>): PartTimeTask {
     },
     createdAt: row.created_at != null ? new Date(row.created_at as string).toISOString() : new Date().toISOString(),
     createdBy: row.created_by != null ? String(row.created_by) : undefined,
-    applicants: (Array.isArray(row.applicants) ? row.applicants : []) as PartTimeApplicant[],
+    applicants: (Array.isArray(row.applicants) ? row.applicants : []).map((a: Record<string, unknown>) => ({
+      ...a,
+      selected: Boolean((a as { selected?: unknown })?.selected),
+    })) as PartTimeApplicant[],
     pointPaid: Boolean(row.point_paid),
     paidUserIds: Array.isArray(row.paid_user_ids) ? (row.paid_user_ids as string[]) : [],
     applicantUserId: row.applicant_user_id != null ? String(row.applicant_user_id) : undefined,
