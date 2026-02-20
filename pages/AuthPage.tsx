@@ -83,9 +83,27 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
 
     const checkHashToken = () => {
       const hash = window.location.hash;
-      if (hash.includes('type=recovery')) setMode('RESET_PW');
+      // 비밀번호 재설정: 해시에 토큰이 있으면 Supabase가 세션으로 교환함. 교환 완료될 때까지 잠시 대기 후 RESET_PW로 전환
+      if (hash.includes('type=recovery')) {
+        const trySetResetMode = (attempt: number) => {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+              setMode('RESET_PW');
+              // URL에서 토큰 제거(보안·재제출 시 혼동 방지)
+              if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
+            } else if (attempt < 8) {
+              setTimeout(() => trySetResetMode(attempt + 1), 400);
+            } else {
+              setMode('RESET_PW');
+            }
+          });
+        };
+        // Supabase가 해시로 세션 설정할 시간 확보
+        setTimeout(() => trySetResetMode(0), 200);
+        return;
+      }
       // 소셜 로그인 복귀: URL에 access_token이 있을 때만 세션 확인 후 로그인 (자동 로그인 아님)
-      if (hash.includes('access_token=')) {
+      if (hash.includes('access_token=') && !hash.includes('type=recovery')) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
             buildProfileFromSession(session.user).then(async (profile) => {
@@ -274,7 +292,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       }
 
       if (saveId) {
-        localStorage.setItem(SAVED_LOGIN_ID_KEY, profile.id);
+        localStorage.setItem(SAVED_LOGIN_ID_KEY, loginId);
       } else {
         localStorage.removeItem(SAVED_LOGIN_ID_KEY);
       }
@@ -302,7 +320,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
       if (error) throw error;
       const profile = await buildProfileFromSession(data.user);
-      if (saveId) localStorage.setItem(SAVED_LOGIN_ID_KEY, profile.id);
+      if (saveId) localStorage.setItem(SAVED_LOGIN_ID_KEY, email);
       else localStorage.removeItem(SAVED_LOGIN_ID_KEY);
       onLoginSuccess(profile);
       navigate('/sns');
@@ -488,11 +506,17 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     }
   };
 
-  // 최종 비밀번호 업데이트
+  // 최종 비밀번호 업데이트 (재설정 메일 링크 클릭 후 이 페이지에서만 유효한 세션 필요)
   const handleFinalPasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.pw.length < 6) return alert('비밀번호는 6자 이상이어야 합니다.');
     if (formData.pw !== formData.pwConfirm) return alert('비밀번호가 일치하지 않습니다.');
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      alert('비밀번호 재설정 세션이 없습니다.\n\n메일에서 받은 "비밀번호 재설정" 링크를 **이 브라우저**에서 **방금 클릭**한 뒤, 이 페이지로 돌아와 새 비밀번호를 입력해 주세요.\n\n이미 링크를 눌렀다면 링크가 만료되었을 수 있으니, 아래 [비밀번호 재설정]에서 이메일을 다시 입력해 새 메일을 받아 주세요.');
+      return;
+    }
 
     setLoading(true);
     try {
