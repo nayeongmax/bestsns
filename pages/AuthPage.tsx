@@ -1,8 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import { supabase } from '../supabase';
+
+const IconUser = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
+const IconEmail = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>);
+const IconLock = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>);
+const IconCheck = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>);
+const IconEye = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>);
+const IconEyeOff = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>);
 
 interface Props {
   onLoginSuccess: (user: UserProfile) => void;
@@ -30,6 +37,19 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   });
 
   const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [toast, setToast] = useState<{ show: boolean; message: string; success: boolean }>({ show: false, message: '', success: true });
+  const [showPwLogin, setShowPwLogin] = useState(false);
+  const [showPwJoin, setShowPwJoin] = useState(false);
+  const [showPwConfirm, setShowPwConfirm] = useState(false);
+  const toggleTrackRef = useRef<HTMLDivElement>(null);
+  const optJoinRef = useRef<HTMLDivElement>(null);
+  const optLoginRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (message: string, success = true) => {
+    setToast({ show: true, message, success });
+    setTimeout(() => setToast(t => ({ ...t, show: false })), 2800);
+  };
 
   const buildProfileFromSession = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
     const meta = user.user_metadata || {};
@@ -98,6 +118,25 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  // 슬라이딩 토글 썸 위치 (로그인 / 회원가입)
+  const positionThumb = () => {
+    const track = toggleTrackRef.current;
+    const thumb = thumbRef.current;
+    const opt = mode === 'JOIN' ? optJoinRef.current : optLoginRef.current;
+    if (!track || !thumb || !opt) return;
+    const trackRect = track.getBoundingClientRect();
+    const optRect = opt.getBoundingClientRect();
+    thumb.style.left = `${optRect.left - trackRect.left}px`;
+    thumb.style.width = `${optRect.width}px`;
+  };
+  useLayoutEffect(() => {
+    if (mode === 'LOGIN' || mode === 'JOIN') positionThumb();
+  }, [mode]);
+  useEffect(() => {
+    const t = setTimeout(positionThumb, 150);
+    return () => clearTimeout(t);
+  }, [mode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -475,159 +514,120 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
-  return (
-    <div className="max-w-md mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden relative">
-        {(mode === 'LOGIN' || mode === 'JOIN' || mode === 'RESET_PW') && (
-          <div className="flex border-b border-gray-200">
-            <button onClick={() => setMode('LOGIN')} className={`flex-1 py-5 font-bold text-[15px] transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-2 border-blue-600 bg-white text-gray-900' : 'text-gray-400 bg-gray-50/80 hover:text-gray-600'}`}>로그인</button>
-            <button onClick={() => setMode('JOIN')} className={`flex-1 py-5 font-bold text-[15px] transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-2 border-blue-600 bg-white text-gray-900' : 'text-gray-400 bg-gray-50/80 hover:text-gray-600'}`}>회원가입</button>
-          </div>
-        )}
+  const isFormMode = mode === 'LOGIN' || mode === 'JOIN';
 
-        <div className="p-8 md:p-12 space-y-8">
+  return (
+    <div className="min-h-screen flex items-center justify-center p-5 bg-[#eef2ff] font-['Noto_Sans_KR',sans-serif]">
+      <div className="w-full max-w-[920px] max-md:max-w-[440px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(37,99,235,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex min-h-[580px] overflow-hidden auth-card-enter">
+        {/* ─── LEFT PANEL (브랜딩) ─── */}
+        <div className="hidden md:flex w-[420px] flex-shrink-0 flex-col justify-between bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#3b82f6] p-11 relative overflow-hidden">
+          <div className="absolute w-[340px] h-[340px] rounded-full border border-white/10 -top-[120px] -left-[120px]" />
+          <div className="absolute w-[210px] h-[210px] rounded-full border border-white/[0.07] -bottom-[70px] -right-[70px]" />
+          <div className="absolute w-[120px] h-[120px] rounded-full border border-white/5 bottom-[130px] -left-[30px]" />
+          <div className="flex items-center gap-2.5 relative z-10">
+            <div className="w-9 h-9 rounded-lg bg-white/20 border border-white/20 flex items-center justify-center text-[17px]">✦</div>
+            <span className="font-['Plus_Jakarta_Sans',sans-serif] text-[17px] font-extrabold text-white tracking-wide">THEBESTSNS</span>
+          </div>
+          <div className="relative z-10 flex-1 flex flex-col justify-center py-7">
+            <div className="text-[11px] text-white/55 tracking-[2px] uppercase font-medium mb-3">SNS Marketing Platform</div>
+            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-[36px] font-black text-white leading-tight mb-2 tracking-tight">
+              마케팅의 <strong className="relative inline after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0.5 after:h-1 after:bg-white/35 after:rounded-sm">모든 것!</strong>
+            </h2>
+            <div className="text-[13px] text-white/65 tracking-wider font-semibold uppercase mb-5 font-['Plus_Jakarta_Sans',sans-serif]">ONE-STOP PLATFORM MARKETING</div>
+            <p className="text-[13.5px] text-white/80 leading-relaxed">
+              아직도 마케팅 회사에 돈 주고 맡기시나요?<br />
+              <span className="text-white font-bold">마케팅 회사들이 이용하는 THEBESTSNS!</span><br />
+              네이버 블로그·카페, 유튜브, 인스타그램 등<br />
+              마케팅을 직접 저렴하게 진행하세요!
+            </p>
+          </div>
+          <div className="relative z-10 text-[110px] leading-none -mb-2 auth-rocket-float" style={{ filter: 'drop-shadow(0 16px 28px rgba(0,0,0,0.25))' }}>🚀</div>
+          <div className="relative z-10 text-[11px] text-white/35">© 2025 THEBESTSNS. All rights reserved.</div>
+        </div>
+
+        {/* ─── RIGHT PANEL (폼) ─── */}
+        <div className="flex-1 flex flex-col justify-center p-8 md:p-12">
+          {isFormMode && (
+            <div className="flex items-center justify-center mb-8">
+              <div ref={toggleTrackRef} className="inline-flex bg-[#f1f5f9] rounded-full p-1 border border-[#e2e8f0] w-[220px] relative">
+                <div ref={thumbRef} className="absolute top-1 bottom-1 bg-[#2563EB] rounded-full transition-all duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] shadow-[0_2px_12px_rgba(37,99,235,0.28)]" style={{ left: 0, width: 0 }} />
+                <div ref={optJoinRef} onClick={() => setMode('JOIN')} className={`flex-1 text-center py-2.5 text-sm font-semibold rounded-full cursor-pointer select-none transition-colors ${mode === 'JOIN' ? 'text-white' : 'text-[#94a3b8]'}`}>회원가입</div>
+                <div ref={optLoginRef} onClick={() => setMode('LOGIN')} className={`flex-1 text-center py-2.5 text-sm font-semibold rounded-full cursor-pointer select-none transition-colors ${mode === 'LOGIN' ? 'text-white' : 'text-[#94a3b8]'}`}>로그인</div>
+              </div>
+            </div>
+          )}
+
           {mode === 'LOGIN' && (
             <>
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900">로그인</h2>
-                <p className="text-sm text-gray-500 mt-1">이메일과 비밀번호로 로그인하거나, 카카오·구글로 빠르게 접속하세요.</p>
-              </div>
-
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">아이디 또는 이메일</label>
-                  <input type="text" placeholder="아이디 또는 이메일 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required />
+              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-5">로그인</h3>
+              <form onSubmit={handleLogin} className="space-y-3">
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 text-[#94a3b8] pointer-events-none"><IconUser /></span>
+                  <input type="text" placeholder="아이디 또는 이메일" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">비밀번호</label>
-                  <input type="password" placeholder="비밀번호 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required />
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 text-[#94a3b8] pointer-events-none"><IconLock /></span>
+                  <input type={showPwLogin ? 'text' : 'password'} placeholder="비밀번호" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required />
+                  <button type="button" onClick={() => setShowPwLogin(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwLogin ? <IconEyeOff /> : <IconEye />}</button>
                 </div>
-                <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={saveId} onChange={e => setSaveId(e.target.checked)} className="w-4 h-4 rounded accent-blue-600" />
-                    <span className="text-sm text-gray-600">아이디 저장</span>
-                  </label>
+                <div className="flex justify-between items-center -mt-1 mb-1">
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={saveId} onChange={e => setSaveId(e.target.checked)} className="w-4 h-4 rounded accent-[#2563EB]" /><span className="text-sm text-[#475569]">아이디 저장</span></label>
                   <div className="flex gap-3">
-                    <button type="button" onClick={() => setMode('FIND_ID')} className="text-sm font-medium text-gray-500 hover:text-blue-600">ID 찾기</button>
-                    <button type="button" onClick={() => setMode('FIND_PW')} className="text-sm font-medium text-gray-500 hover:text-blue-600">비밀번호 재설정</button>
+                    <button type="button" onClick={() => setMode('FIND_ID')} className="text-xs text-[#94a3b8] hover:text-[#2563EB]">ID 찾기</button>
+                    <button type="button" onClick={() => setMode('FIND_PW')} className="text-xs text-[#94a3b8] hover:text-[#2563EB]">비밀번호 재설정</button>
                   </div>
                 </div>
-                <button type="submit" disabled={loading} className={`w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-base transition-all active:scale-[0.99] ${loading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
-                  {loading ? '처리 중...' : '로그인'}
-                </button>
+                <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-xl font-bold text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1.5">로그인</button>
               </form>
-
-              <div className="relative py-2">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-sm text-gray-400 font-medium">또는</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm bg-[#FEE500] text-[#191919] border border-[#FEE500] hover:opacity-90 disabled:opacity-50 transition-all">
-                  <span className="font-bold">K</span> 카카오로 계속하기
+              <div className="flex items-center gap-2.5 my-4"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
+              <div className="flex gap-2.5">
+                <button type="button" onClick={() => { showToast('Google 로그인 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[13px] font-medium hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                  <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+                  Google
                 </button>
-                <button type="button" onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-all">
-                  <span className="font-bold text-[#4285F4]">G</span> Google로 계속하기
+                <button type="button" onClick={() => { showToast('카카오 로그인 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[13px] font-medium hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
+                  카카오
                 </button>
               </div>
-
-              <div className="text-center space-y-1 pt-2">
-                <p className="text-sm text-gray-500">
-                  비밀번호를 잊으셨나요?{' '}
-                  <button type="button" onClick={() => setMode('FIND_PW')} className="font-medium text-blue-600 hover:underline">재설정</button>
-                </p>
-                <p className="text-sm text-gray-500">
-                  계정이 없으신가요?{' '}
-                  <button type="button" onClick={() => setMode('JOIN')} className="font-medium text-blue-600 hover:underline">회원가입</button>
-                </p>
-              </div>
-
+              <p className="text-right mt-3 text-xs"><button type="button" onClick={() => setMode('FIND_PW')} className="text-[#94a3b8] hover:text-[#2563EB]">비밀번호를 잊으셨나요?</button></p>
               {showEmailLogin && (
-                <form onSubmit={handleLoginWithEmailOnly} className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <form onSubmit={handleLoginWithEmailOnly} className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
                   <p className="text-sm text-gray-600">가입 시 사용한 이메일과 비밀번호로 로그인하세요.</p>
-                  <input type="email" placeholder="이메일 주소" className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
-                  <input type="password" placeholder="비밀번호" className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} required />
-                  <div className="flex gap-2">
-                    <button type="submit" disabled={loading} className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 disabled:opacity-50">이메일로 로그인</button>
-                    <button type="button" onClick={() => setShowEmailLogin(false)} className="py-3 px-4 text-gray-500 text-sm font-medium hover:text-gray-800">취소</button>
-                  </div>
+                  <input type="email" placeholder="이메일" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2563EB]" required />
+                  <input type="password" placeholder="비밀번호" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2563EB]" required />
+                  <div className="flex gap-2"><button type="submit" disabled={loading} className="flex-1 py-3 bg-[#2563EB] text-white rounded-lg text-sm font-medium disabled:opacity-50">이메일로 로그인</button><button type="button" onClick={() => setShowEmailLogin(false)} className="py-3 px-4 text-gray-500 text-sm">취소</button></div>
                 </form>
               )}
-              {!showEmailLogin && (
-                <p className="text-center">
-                  <button type="button" onClick={() => setShowEmailLogin(true)} className="text-sm text-gray-500 hover:text-blue-600 underline underline-offset-2">비밀번호 재설정 후 로그인이 안 되나요? (이메일로 로그인)</button>
-                </p>
-              )}
+              {!showEmailLogin && <p className="text-center mt-2"><button type="button" onClick={() => setShowEmailLogin(true)} className="text-xs text-gray-500 hover:text-[#2563EB] underline">비밀번호 재설정 후 로그인이 안 되나요?</button></p>}
             </>
           )}
 
           {mode === 'JOIN' && (
             <>
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900">회원가입</h2>
-                <p className="text-sm text-gray-500 mt-1">안전한 가입으로 서비스를 이용하세요.</p>
-              </div>
-
-              <form onSubmit={handleJoin} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">아이디 (5자 이상)</label>
-                  <input type="text" placeholder="아이디 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required minLength={5} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">비밀번호 (8자 이상)</label>
-                  <input type="password" placeholder="비밀번호 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required minLength={8} autoComplete="new-password" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">비밀번호 확인</label>
-                  <input type="password" placeholder="비밀번호 다시 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.pwConfirm} onChange={e => setFormData({...formData, pwConfirm: e.target.value})} required minLength={8} autoComplete="new-password" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">이름 (닉네임)</label>
-                  <input type="text" placeholder="이름 또는 닉네임" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">이메일 주소 (필수)</label>
-                  <input type="email" placeholder="이메일 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">휴대폰 번호 (- 제외)</label>
-                  <input type="text" placeholder="휴대폰 번호" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required />
-                </div>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input type="checkbox" checked={formData.agreeTerms} onChange={e => setFormData({...formData, agreeTerms: e.target.checked})} className="w-4 h-4 mt-0.5 rounded accent-blue-600" />
-                  <span className="text-sm text-gray-600">이용약관 및 개인정보 처리방침에 동의합니다 (필수)</span>
-                </label>
-                <button type="submit" disabled={loading} className={`w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-base transition-all active:scale-[0.99] ${loading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
-                  {loading ? '가입 처리 중...' : '가입하기'}
-                </button>
+              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-5">회원가입</h3>
+              <form onSubmit={handleJoin} className="space-y-3">
+                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="아이디 (5자 이상)" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={5} /></div>
+                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconEmail /></span><input type="email" placeholder="이메일" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required /></div>
+                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconLock /></span><input type={showPwJoin ? 'text' : 'password'} placeholder="비밀번호 (8자 이상)" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowPwJoin(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwJoin ? <IconEyeOff /> : <IconEye />}</button></div>
+                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconCheck /></span><input type={showPwConfirm ? 'text' : 'password'} placeholder="비밀번호 확인" value={formData.pwConfirm} onChange={e => setFormData({ ...formData, pwConfirm: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowPwConfirm(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwConfirm ? <IconEyeOff /> : <IconEye />}</button></div>
+                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="이름 (닉네임)" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required /></div>
+                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconEmail /></span><input type="text" placeholder="휴대폰 번호 (- 제외)" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required /></div>
+                <label className="flex items-start gap-3 cursor-pointer"><input type="checkbox" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} className="w-4 h-4 mt-0.5 rounded accent-[#2563EB]" /><span className="text-sm text-[#475569]">이용약관 및 개인정보 처리방침 동의 (필수)</span></label>
+                <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-xl font-bold text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1.5">가입하기</button>
               </form>
-
-              <div className="relative py-2">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-sm text-gray-400 font-medium">또는</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm bg-[#FEE500] text-[#191919] border border-[#FEE500] hover:opacity-90 disabled:opacity-50 transition-all">
-                  <span className="font-bold">K</span> 카카오로 가입
+              <div className="flex items-center gap-2.5 my-4"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
+              <div className="flex gap-2.5">
+                <button type="button" onClick={() => { showToast('Google 가입 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[13px] font-medium hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                  <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+                  Google
                 </button>
-                <button type="button" onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-all">
-                  <span className="font-bold text-[#4285F4]">G</span> Google로 가입
+                <button type="button" onClick={() => { showToast('카카오 가입 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[13px] font-medium hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
+                  카카오
                 </button>
               </div>
-
-              <p className="text-center text-sm text-gray-500 pt-2">
-                이미 계정이 있으신가요?{' '}
-                <button type="button" onClick={() => setMode('LOGIN')} className="font-medium text-blue-600 hover:underline">로그인</button>
-              </p>
+              <p className="text-center text-sm text-[#94a3b8] mt-3">이미 계정이 있으신가요? <button type="button" onClick={() => setMode('LOGIN')} className="font-medium text-[#2563EB] hover:underline">로그인</button></p>
             </>
           )}
 
@@ -720,7 +720,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
           )}
         </div>
       </div>
-      <p className="text-center mt-10 text-[11px] font-bold text-gray-300 uppercase tracking-[0.3em] italic">The Best SNS Marketing Platform © 2026</p>
+
+      {/* Toast */}
+      <div className={`fixed bottom-7 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full px-5 py-3 bg-[#0f172a] text-white text-[13px] shadow-lg z-[100] transition-transform duration-[0.4s] ease-[cubic-bezier(0.34,1.56,0.64,1)] ${toast.show ? 'translate-y-0' : 'translate-y-20'}`}>
+        <div className={`w-2 h-2 rounded-full ${toast.success ? 'bg-[#22c55e]' : 'bg-[#ef4444]'}`} />
+        <span>{toast.message}</span>
+      </div>
     </div>
   );
 };
