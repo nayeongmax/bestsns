@@ -8,9 +8,11 @@ interface Props {
   notifications: SiteNotification[];
   unreadChatCount: number;
   onLogout: () => void;
+  /** 제공 시 메인 화면에서 로그인 버튼 클릭 시 이 콜백 호출 (팝업 로그인) */
+  onOpenLoginModal?: () => void;
 }
 
-const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout }) => {
+const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadChatCount, onLogout, onOpenLoginModal }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
@@ -170,7 +172,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             ) : (
               <button 
                 type="button"
-                onClick={() => navigate('/login')}
+                onClick={() => (onOpenLoginModal ? onOpenLoginModal() : navigate('/login'))}
                 className="bg-gray-900 text-white px-6 py-2.5 rounded-xl text-[13px] font-black hover:bg-blue-600 transition-all shadow-lg active:scale-95 italic tracking-tighter uppercase"
               >
                 로그인
