@@ -343,8 +343,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     const email = formData.email.trim().toLowerCase();
     const pw = formData.pw;
     const pwConfirm = formData.pwConfirm;
-    const name = formData.name.trim();
-    const phone = formData.phone.trim();
+    const nickname = `유저_${id}`;
 
     if (idRaw.length < 5) return alert('아이디는 5자 이상이어야 합니다.');
     if (!isValidEmail(email)) return alert('올바른 이메일 주소를 입력해 주세요.');
@@ -359,8 +358,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         password: pw,
         options: {
           data: {
-            nickname: name,
-            phone,
+            nickname,
             user_id: id
           }
         }
@@ -369,15 +367,14 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       if (authError) {
         const msg = authError.message || '';
         // 이메일 발송 rate limit: 가입은 됐을 수 있으므로 로그인 시도 후 안내
-        // 이메일 발송 한도(rate limit): 가입은 됐을 수 있으므로 로그인 시도. 실패 시 대시보드 설정 안내.
         if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('rate_limit')) {
           const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
           if (!signInErr) {
             const newUser: UserProfile = {
               id,
-              nickname: name || `유저_${id}`,
+              nickname,
               email,
-              phone,
+              phone: '',
               profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
               role: 'user',
               points: 0,
@@ -406,9 +403,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
 
       const newUser: UserProfile = {
         id,
-        nickname: name || `유저_${id}`,
+        nickname,
         email,
-        phone,
+        phone: '',
         profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
         role: 'user',
         points: 0,
@@ -416,13 +413,13 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         coupons: []
       };
 
-      // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록 (Table Editor·어드민 목록과 동기화)
+      // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록
       const { error: profileErr } = await supabase.from('profiles').upsert({
         id,
         email,
-        nickname: name || `유저_${id}`,
+        nickname,
         profile_image: newUser.profileImage,
-        phone: phone || null,
+        phone: null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       if (profileErr) {
@@ -520,7 +517,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
 
   return (
     <div className={`flex items-center justify-center p-5 font-['Noto_Sans_KR',sans-serif] ${onClose ? '' : 'min-h-screen bg-slate-100'}`}>
-      <div className="w-full max-w-[920px] max-md:max-w-[440px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex min-h-[580px] overflow-hidden auth-card-enter relative">
+      <div className="w-full max-w-[920px] max-md:max-w-[440px] h-[620px] max-md:h-[580px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex overflow-hidden auth-card-enter relative flex-shrink-0">
         {onClose && (
           <button type="button" onClick={onClose} className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-xl font-bold transition-colors" aria-label="닫기">×</button>
         )}
@@ -554,8 +551,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           <div className="relative z-10 text-[11px] text-white/35 shrink-0 pt-4">© 2025 THEBESTSNS. All rights reserved.</div>
         </div>
 
-        {/* ─── RIGHT PANEL (폼) ─── */}
-        <div className="flex-1 flex flex-col justify-center p-8 md:p-12">
+        {/* ─── RIGHT PANEL (폼) ─── 고정 높이 안에서 스크롤 */}
+        <div className="flex-1 flex flex-col min-h-0 p-8 md:p-12 overflow-y-auto">
           {isFormMode && (
             <div className="flex items-center justify-center mb-8">
               <div ref={toggleTrackRef} className="inline-flex bg-[#f1f5f9] rounded-full p-1 border border-[#e2e8f0] w-[220px] relative">
@@ -567,7 +564,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           )}
 
           {mode === 'LOGIN' && (
-            <>
+            <div className="flex flex-col justify-center min-h-[340px] py-2">
               <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-5">로그인</h3>
               <form onSubmit={handleLogin} className="space-y-3">
                 <div className="relative flex items-center">
@@ -609,19 +606,17 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 </form>
               )}
               {!showEmailLogin && <p className="text-center mt-2"><button type="button" onClick={() => setShowEmailLogin(true)} className="text-xs text-gray-500 hover:text-[#2563EB] underline">비밀번호 재설정 후 로그인이 안 되나요?</button></p>}
-            </>
+            </div>
           )}
 
           {mode === 'JOIN' && (
-            <>
+            <div className="flex flex-col justify-center min-h-[340px] py-2">
               <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-5">회원가입</h3>
               <form onSubmit={handleJoin} className="space-y-3">
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="아이디 (5자 이상)" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={5} /></div>
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconEmail /></span><input type="email" placeholder="이메일" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required /></div>
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconLock /></span><input type={showPwJoin ? 'text' : 'password'} placeholder="비밀번호 (8자 이상)" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowPwJoin(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwJoin ? <IconEyeOff /> : <IconEye />}</button></div>
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconCheck /></span><input type={showPwConfirm ? 'text' : 'password'} placeholder="비밀번호 확인" value={formData.pwConfirm} onChange={e => setFormData({ ...formData, pwConfirm: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowPwConfirm(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwConfirm ? <IconEyeOff /> : <IconEye />}</button></div>
-                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="이름 (닉네임)" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required /></div>
-                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconEmail /></span><input type="text" placeholder="휴대폰 번호 (- 제외)" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required /></div>
                 <label className="flex items-start gap-3 cursor-pointer"><input type="checkbox" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} className="w-4 h-4 mt-0.5 rounded accent-[#2563EB]" /><span className="text-sm text-[#475569]">이용약관 및 개인정보 처리방침 동의 (필수)</span></label>
                 <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-xl font-bold text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1.5">가입하기</button>
               </form>
@@ -637,7 +632,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 </button>
               </div>
               <p className="text-center text-sm text-[#94a3b8] mt-3">이미 계정이 있으신가요? <button type="button" onClick={() => setMode('LOGIN')} className="font-medium text-[#2563EB] hover:underline">로그인</button></p>
-            </>
+            </div>
           )}
 
           {mode === 'FIND_PW' && (
