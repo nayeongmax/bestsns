@@ -13,13 +13,15 @@ const IconEyeOff = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" 
 
 interface Props {
   onLoginSuccess: (user: UserProfile) => void;
+  /** 모달로 띄울 때 닫기 콜백 (있으면 닫기 버튼 표시) */
+  onClose?: () => void;
 }
 
 type AuthMode = 'LOGIN' | 'JOIN' | 'FIND_ID' | 'FIND_PW' | 'RESET_PW';
 
 const SAVED_LOGIN_ID_KEY = 'saved_login_id';
 
-const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
+const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [loading, setLoading] = useState(false);
@@ -517,18 +519,26 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   const isFormMode = mode === 'LOGIN' || mode === 'JOIN';
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-5 bg-[#eef2ff] font-['Noto_Sans_KR',sans-serif]">
-      <div className="w-full max-w-[920px] max-md:max-w-[440px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(37,99,235,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex min-h-[580px] overflow-hidden auth-card-enter">
+    <div className={`flex items-center justify-center p-5 font-['Noto_Sans_KR',sans-serif] ${onClose ? '' : 'min-h-screen bg-slate-100'}`}>
+      <div className="w-full max-w-[920px] max-md:max-w-[440px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex min-h-[580px] overflow-hidden auth-card-enter relative">
+        {onClose && (
+          <button type="button" onClick={onClose} className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-xl font-bold transition-colors" aria-label="닫기">×</button>
+        )}
         {/* ─── LEFT PANEL (브랜딩) ─── */}
-        <div className="hidden md:flex w-[420px] flex-shrink-0 flex-col justify-between bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#3b82f6] p-11 relative overflow-hidden">
+        <div className="hidden md:flex w-[420px] flex-shrink-0 flex-col bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#3b82f6] p-11 relative overflow-hidden">
           <div className="absolute w-[340px] h-[340px] rounded-full border border-white/10 -top-[120px] -left-[120px]" />
           <div className="absolute w-[210px] h-[210px] rounded-full border border-white/[0.07] -bottom-[70px] -right-[70px]" />
           <div className="absolute w-[120px] h-[120px] rounded-full border border-white/5 bottom-[130px] -left-[30px]" />
-          <div className="flex items-center gap-2.5 relative z-10">
+          <div className="flex items-center gap-2.5 relative z-10 shrink-0">
             <div className="w-9 h-9 rounded-lg bg-white/20 border border-white/20 flex items-center justify-center text-[17px]">✦</div>
             <span className="font-['Plus_Jakarta_Sans',sans-serif] text-[17px] font-extrabold text-white tracking-wide">THEBESTSNS</span>
           </div>
-          <div className="relative z-10 flex-1 flex flex-col justify-center py-7">
+          {/* 로켓: 상단 가로 중앙 */}
+          <div className="relative z-10 flex justify-center w-full py-4 shrink-0">
+            <span className="text-[100px] leading-none auth-rocket-float block" style={{ filter: 'drop-shadow(0 16px 28px rgba(0,0,0,0.25))' }}>🚀</span>
+          </div>
+          {/* SNS Marketing Platform ~ 진행하세요! 세로 중앙 */}
+          <div className="relative z-10 flex-1 flex flex-col justify-center min-h-0">
             <div className="text-[11px] text-white/55 tracking-[2px] uppercase font-medium mb-3">SNS Marketing Platform</div>
             <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-[36px] font-black text-white leading-tight mb-2 tracking-tight">
               마케팅의 <strong className="relative inline after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0.5 after:h-1 after:bg-white/35 after:rounded-sm">모든 것!</strong>
@@ -541,8 +551,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
               마케팅을 직접 저렴하게 진행하세요!
             </p>
           </div>
-          <div className="relative z-10 text-[110px] leading-none -mb-2 auth-rocket-float" style={{ filter: 'drop-shadow(0 16px 28px rgba(0,0,0,0.25))' }}>🚀</div>
-          <div className="relative z-10 text-[11px] text-white/35">© 2025 THEBESTSNS. All rights reserved.</div>
+          <div className="relative z-10 text-[11px] text-white/35 shrink-0 pt-4">© 2025 THEBESTSNS. All rights reserved.</div>
         </div>
 
         {/* ─── RIGHT PANEL (폼) ─── */}
@@ -550,9 +559,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
           {isFormMode && (
             <div className="flex items-center justify-center mb-8">
               <div ref={toggleTrackRef} className="inline-flex bg-[#f1f5f9] rounded-full p-1 border border-[#e2e8f0] w-[220px] relative">
-                <div ref={thumbRef} className="absolute top-1 bottom-1 bg-[#2563EB] rounded-full transition-all duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] shadow-[0_2px_12px_rgba(37,99,235,0.28)]" style={{ left: 0, width: 0 }} />
-                <div ref={optJoinRef} onClick={() => setMode('JOIN')} className={`flex-1 text-center py-2.5 text-sm font-semibold rounded-full cursor-pointer select-none transition-colors ${mode === 'JOIN' ? 'text-white' : 'text-[#94a3b8]'}`}>회원가입</div>
-                <div ref={optLoginRef} onClick={() => setMode('LOGIN')} className={`flex-1 text-center py-2.5 text-sm font-semibold rounded-full cursor-pointer select-none transition-colors ${mode === 'LOGIN' ? 'text-white' : 'text-[#94a3b8]'}`}>로그인</div>
+                <div ref={thumbRef} className="absolute top-1 bottom-1 z-0 bg-[#2563EB] rounded-full transition-all duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] shadow-[0_2px_12px_rgba(37,99,235,0.28)]" style={{ left: 0, width: 0 }} />
+                <div ref={optJoinRef} onClick={() => setMode('JOIN')} className={`relative z-10 flex-1 text-center py-2.5 text-sm font-semibold rounded-full cursor-pointer select-none transition-colors ${mode === 'JOIN' ? 'text-white' : 'text-slate-500'}`}>회원가입</div>
+                <div ref={optLoginRef} onClick={() => setMode('LOGIN')} className={`relative z-10 flex-1 text-center py-2.5 text-sm font-semibold rounded-full cursor-pointer select-none transition-colors ${mode === 'LOGIN' ? 'text-white' : 'text-slate-500'}`}>로그인</div>
               </div>
             </div>
           )}
