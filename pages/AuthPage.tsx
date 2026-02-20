@@ -66,7 +66,15 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       if (hash.includes('access_token=')) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
-            buildProfileFromSession(session.user).then(profile => {
+            buildProfileFromSession(session.user).then(async (profile) => {
+              await supabase.from('profiles').upsert({
+                id: profile.id,
+                email: profile.email || null,
+                nickname: profile.nickname,
+                profile_image: profile.profileImage,
+                phone: profile.phone || null,
+                updated_at: new Date().toISOString()
+              }, { onConflict: 'id' });
               onLoginSuccess(profile);
               navigate('/sns', { replace: true });
             });
@@ -268,7 +276,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleSocialLogin = async (provider: 'kakao' | 'naver') => {
+  const providerNames: Record<'google' | 'kakao' | 'naver', string> = { google: '구글', kakao: '카카오', naver: '네이버' };
+  const handleSocialLogin = async (provider: 'google' | 'kakao' | 'naver') => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -277,7 +286,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
       });
       if (error) throw error;
     } catch (err: any) {
-      alert(`소셜 로그인 설정이 필요할 수 있습니다. Supabase 대시보드에서 ${provider === 'kakao' ? '카카오' : '네이버'} 로그인을 활성화해 주세요.\n${err?.message || ''}`);
+      alert(`소셜 로그인 설정이 필요할 수 있습니다. Supabase 대시보드에서 ${providerNames[provider]} 로그인을 활성화해 주세요.\n${err?.message || ''}`);
     } finally {
       setLoading(false);
     }
@@ -528,12 +537,15 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
               <div className="space-y-3 pt-2">
                 <p className="text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">소셜 로그인</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button type="button" onClick={() => handleSocialLogin('naver')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#03C75A] text-white hover:opacity-90 disabled:opacity-50 transition-all">
                     <span className="font-black">N</span> 네이버 로그인
                   </button>
                   <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#FEE500] text-[#191919] hover:opacity-90 disabled:opacity-50 transition-all">
                     <span className="font-black">K</span> 카카오 로그인
+                  </button>
+                  <button type="button" onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all">
+                    <span className="font-black">G</span> 구글 로그인
                   </button>
                 </div>
               </div>
@@ -567,6 +579,21 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                 <button type="submit" disabled={loading} className={`w-full py-6 bg-blue-600 text-white rounded-2xl font-black text-xl shadow-2xl transition-all active:scale-95 uppercase italic tracking-widest ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black'}`}>
                   {loading ? '가입 신청 중...' : 'JOIN NOW'}
                 </button>
+
+                <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <p className="text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">소셜로 가입하기</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button type="button" onClick={() => handleSocialLogin('naver')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#03C75A] text-white hover:opacity-90 disabled:opacity-50 transition-all">
+                      <span className="font-black">N</span> 네이버
+                    </button>
+                    <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#FEE500] text-[#191919] hover:opacity-90 disabled:opacity-50 transition-all">
+                      <span className="font-black">K</span> 카카오
+                    </button>
+                    <button type="button" onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all">
+                      <span className="font-black">G</span> 구글
+                    </button>
+                  </div>
+                </div>
               </form>
             </>
           )}
