@@ -183,6 +183,7 @@ const App: React.FC = () => {
     } catch { return []; }
   });
 
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const storeDbLoaded = useRef(false);
 
   useEffect(() => { localStorage.setItem('grade_configs_v2', JSON.stringify(gradeConfigs)); }, [gradeConfigs]);
@@ -656,8 +657,9 @@ const App: React.FC = () => {
   }, [user?.id]);
 
   const content = (
+    <>
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
-      <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} />
+      <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} onOpenLoginModal={() => setShowAuthModal(true)} />
       <LiveNotification />
       <div className="container mx-auto py-10 px-4 flex-1">
         <ContainerRoutes
@@ -701,6 +703,17 @@ const App: React.FC = () => {
       </div>
       <Footer />
     </div>
+    {showAuthModal && (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowAuthModal(false)}>
+        <div className="w-full max-w-[920px] max-md:max-w-[440px]" onClick={e => e.stopPropagation()}>
+          <AuthPage
+            onLoginSuccess={(u) => { handleLoginSuccess(u); setShowAuthModal(false); }}
+            onClose={() => setShowAuthModal(false)}
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 
   return content;
