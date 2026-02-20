@@ -276,8 +276,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     }
   };
 
-  const providerNames: Record<'google' | 'kakao' | 'naver', string> = { google: '구글', kakao: '카카오', naver: '네이버' };
-  const handleSocialLogin = async (provider: 'google' | 'kakao' | 'naver') => {
+  const providerNames: Record<'google' | 'kakao', string> = { google: '구글', kakao: '카카오' };
+  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -476,125 +476,158 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white rounded-[48px] shadow-2xl border border-gray-100 overflow-hidden relative">
+    <div className="max-w-md mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden relative">
         {(mode === 'LOGIN' || mode === 'JOIN' || mode === 'RESET_PW') && (
-          <div className="flex border-b border-gray-50">
-            <button onClick={() => setMode('LOGIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>LOG IN</button>
-            <button onClick={() => setMode('JOIN')} className={`flex-1 py-6 font-black text-sm tracking-widest transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-4 border-blue-600 bg-white' : 'text-gray-300 bg-gray-50/50'}`}>SIGN UP</button>
+          <div className="flex border-b border-gray-200">
+            <button onClick={() => setMode('LOGIN')} className={`flex-1 py-5 font-bold text-[15px] transition-all ${mode === 'LOGIN' ? 'text-blue-600 border-b-2 border-blue-600 bg-white text-gray-900' : 'text-gray-400 bg-gray-50/80 hover:text-gray-600'}`}>로그인</button>
+            <button onClick={() => setMode('JOIN')} className={`flex-1 py-5 font-bold text-[15px] transition-all ${mode === 'JOIN' ? 'text-blue-600 border-b-2 border-blue-600 bg-white text-gray-900' : 'text-gray-400 bg-gray-50/80 hover:text-gray-600'}`}>회원가입</button>
           </div>
         )}
 
-        <div className="p-10 md:p-14 space-y-10">
+        <div className="p-8 md:p-12 space-y-8">
           {mode === 'LOGIN' && (
             <>
-              <div className="text-center space-y-2">
-                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">Welcome</h2>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">대한민국 마케팅 원천 사이트</p>
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900">로그인</h2>
+                <p className="text-sm text-gray-500 mt-1">이메일과 비밀번호로 로그인하거나, 카카오·구글로 빠르게 접속하세요.</p>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-4">
-                <input type="text" placeholder="아이디 또는 이메일" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required />
-                <input type="password" placeholder="비밀번호" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-black shadow-inner outline-none focus:ring-4 focus:ring-blue-50 transition-all" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required />
-                <div className="flex justify-between items-center px-2">
-                  <label className="flex items-center gap-2 cursor-pointer group">
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">아이디 또는 이메일</label>
+                  <input type="text" placeholder="아이디 또는 이메일 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">비밀번호</label>
+                  <input type="password" placeholder="비밀번호 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required />
+                </div>
+                <div className="flex justify-between items-center">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={saveId} onChange={e => setSaveId(e.target.checked)} className="w-4 h-4 rounded accent-blue-600" />
-                    <span className="text-[12px] font-bold text-gray-400 group-hover:text-gray-600 transition-colors">아이디 저장</span>
+                    <span className="text-sm text-gray-600">아이디 저장</span>
                   </label>
-                  <div className="flex gap-4">
-                    <button type="button" onClick={() => setMode('FIND_ID')} className="text-[12px] font-black text-gray-400 hover:text-blue-600 transition-colors">ID 찾기</button>
-                    <button type="button" onClick={() => setMode('FIND_PW')} className="text-[12px] font-black text-gray-400 hover:text-blue-600 transition-colors">PW 재설정</button>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setMode('FIND_ID')} className="text-sm font-medium text-gray-500 hover:text-blue-600">ID 찾기</button>
+                    <button type="button" onClick={() => setMode('FIND_PW')} className="text-sm font-medium text-gray-500 hover:text-blue-600">비밀번호 재설정</button>
                   </div>
                 </div>
-                <button type="submit" disabled={loading} className={`w-full py-5 bg-black text-white rounded-2xl font-black text-lg shadow-xl transition-all active:scale-95 uppercase italic tracking-widest ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}>
-                  {loading ? '인증 처리 중...' : 'LOG IN'}
+                <button type="submit" disabled={loading} className={`w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-base transition-all active:scale-[0.99] ${loading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
+                  {loading ? '처리 중...' : '로그인'}
                 </button>
               </form>
 
-              {!showEmailLogin && (
-                <p className="text-center">
-                  <button type="button" onClick={() => setShowEmailLogin(true)} className="text-[12px] font-bold text-gray-500 hover:text-blue-600 underline underline-offset-2">
-                    비밀번호 재설정했는데 로그인이 안 되나요? (이메일로 로그인)
-                  </button>
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-sm text-gray-400 font-medium">또는</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm bg-[#FEE500] text-[#191919] border border-[#FEE500] hover:opacity-90 disabled:opacity-50 transition-all">
+                  <span className="font-bold">K</span> 카카오로 계속하기
+                </button>
+                <button type="button" onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-all">
+                  <span className="font-bold text-[#4285F4]">G</span> Google로 계속하기
+                </button>
+              </div>
+
+              <div className="text-center space-y-1 pt-2">
+                <p className="text-sm text-gray-500">
+                  비밀번호를 잊으셨나요?{' '}
+                  <button type="button" onClick={() => setMode('FIND_PW')} className="font-medium text-blue-600 hover:underline">재설정</button>
                 </p>
-              )}
+                <p className="text-sm text-gray-500">
+                  계정이 없으신가요?{' '}
+                  <button type="button" onClick={() => setMode('JOIN')} className="font-medium text-blue-600 hover:underline">회원가입</button>
+                </p>
+              </div>
 
               {showEmailLogin && (
-                <form onSubmit={handleLoginWithEmailOnly} className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                  <p className="text-[12px] font-bold text-gray-600">가입 시 사용한 이메일과 새 비밀번호로 로그인하세요.</p>
-                  <input type="email" placeholder="이메일 주소" className="w-full p-4 bg-white border border-gray-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
-                  <input type="password" placeholder="비밀번호" className="w-full p-4 bg-white border border-gray-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} required />
+                <form onSubmit={handleLoginWithEmailOnly} className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <p className="text-sm text-gray-600">가입 시 사용한 이메일과 비밀번호로 로그인하세요.</p>
+                  <input type="email" placeholder="이메일 주소" className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
+                  <input type="password" placeholder="비밀번호" className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} required />
                   <div className="flex gap-2">
-                    <button type="submit" disabled={loading} className={`flex-1 py-4 bg-blue-600 text-white rounded-xl font-black text-sm uppercase ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
-                      이메일로 로그인
-                    </button>
-                    <button type="button" onClick={() => setShowEmailLogin(false)} className="py-4 px-4 text-gray-500 font-bold text-sm hover:text-gray-800">
-                      취소
-                    </button>
+                    <button type="submit" disabled={loading} className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 disabled:opacity-50">이메일로 로그인</button>
+                    <button type="button" onClick={() => setShowEmailLogin(false)} className="py-3 px-4 text-gray-500 text-sm font-medium hover:text-gray-800">취소</button>
                   </div>
                 </form>
               )}
-
-              <div className="space-y-3 pt-2">
-                <p className="text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">소셜 로그인</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button type="button" onClick={() => handleSocialLogin('naver')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#03C75A] text-white hover:opacity-90 disabled:opacity-50 transition-all">
-                    <span className="font-black">N</span> 네이버 로그인
-                  </button>
-                  <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#FEE500] text-[#191919] hover:opacity-90 disabled:opacity-50 transition-all">
-                    <span className="font-black">K</span> 카카오 로그인
-                  </button>
-                  <button type="button" onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all">
-                    <span className="font-black">G</span> 구글 로그인
-                  </button>
-                </div>
-              </div>
+              {!showEmailLogin && (
+                <p className="text-center">
+                  <button type="button" onClick={() => setShowEmailLogin(true)} className="text-sm text-gray-500 hover:text-blue-600 underline underline-offset-2">비밀번호 재설정 후 로그인이 안 되나요? (이메일로 로그인)</button>
+                </p>
+              )}
             </>
           )}
 
           {mode === 'JOIN' && (
             <>
-              <div className="text-center space-y-2">
-                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">Create Account</h2>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">안전한 슈파베이스 보안 가입</p>
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900">회원가입</h2>
+                <p className="text-sm text-gray-500 mt-1">안전한 가입으로 서비스를 이용하세요.</p>
               </div>
 
-              <form onSubmit={handleJoin} className="space-y-4">
-                <div className="space-y-3">
-                  <input type="text" placeholder="아이디 (5자 이상)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required minLength={5} />
-                  <input type="password" placeholder="비밀번호 (8자 이상)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required minLength={8} autoComplete="new-password" />
-                  <input type="password" placeholder="비밀번호 확인" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.pwConfirm} onChange={e => setFormData({...formData, pwConfirm: e.target.value})} required minLength={8} autoComplete="new-password" />
-                  <input type="text" placeholder="이름 (닉네임)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
-                  <input type="email" placeholder="이메일 주소 (필수)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
-                  <input type="text" placeholder="휴대폰 번호 (- 제외)" className="w-full p-5 bg-gray-50 border-none rounded-2xl font-bold shadow-inner outline-none focus:ring-4 focus:ring-blue-50" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required />
+              <form onSubmit={handleJoin} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">아이디 (5자 이상)</label>
+                  <input type="text" placeholder="아이디 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.id} onChange={e => setFormData({...formData, id: e.target.value})} required minLength={5} />
                 </div>
-
-                <div className="bg-gray-50 p-6 rounded-2xl">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" checked={formData.agreeTerms} onChange={e => setFormData({...formData, agreeTerms: e.target.checked})} className="w-5 h-5 accent-blue-600" />
-                    <span className="text-[13px] font-bold text-gray-600">이용약관 및 개인정보 처리방침 동의 (필수)</span>
-                  </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">비밀번호 (8자 이상)</label>
+                  <input type="password" placeholder="비밀번호 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.pw} onChange={e => setFormData({...formData, pw: e.target.value})} required minLength={8} autoComplete="new-password" />
                 </div>
-
-                <button type="submit" disabled={loading} className={`w-full py-6 bg-blue-600 text-white rounded-2xl font-black text-xl shadow-2xl transition-all active:scale-95 uppercase italic tracking-widest ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black'}`}>
-                  {loading ? '가입 신청 중...' : 'JOIN NOW'}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">비밀번호 확인</label>
+                  <input type="password" placeholder="비밀번호 다시 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.pwConfirm} onChange={e => setFormData({...formData, pwConfirm: e.target.value})} required minLength={8} autoComplete="new-password" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">이름 (닉네임)</label>
+                  <input type="text" placeholder="이름 또는 닉네임" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">이메일 주소 (필수)</label>
+                  <input type="email" placeholder="이메일 입력" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">휴대폰 번호 (- 제외)</label>
+                  <input type="text" placeholder="휴대폰 번호" className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required />
+                </div>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={formData.agreeTerms} onChange={e => setFormData({...formData, agreeTerms: e.target.checked})} className="w-4 h-4 mt-0.5 rounded accent-blue-600" />
+                  <span className="text-sm text-gray-600">이용약관 및 개인정보 처리방침에 동의합니다 (필수)</span>
+                </label>
+                <button type="submit" disabled={loading} className={`w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-base transition-all active:scale-[0.99] ${loading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
+                  {loading ? '가입 처리 중...' : '가입하기'}
                 </button>
-
-                <div className="space-y-3 pt-4 border-t border-gray-100">
-                  <p className="text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">소셜로 가입하기</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <button type="button" onClick={() => handleSocialLogin('naver')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#03C75A] text-white hover:opacity-90 disabled:opacity-50 transition-all">
-                      <span className="font-black">N</span> 네이버
-                    </button>
-                    <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-[#FEE500] text-[#191919] hover:opacity-90 disabled:opacity-50 transition-all">
-                      <span className="font-black">K</span> 카카오
-                    </button>
-                    <button type="button" onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all">
-                      <span className="font-black">G</span> 구글
-                    </button>
-                  </div>
-                </div>
               </form>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-sm text-gray-400 font-medium">또는</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button" onClick={() => handleSocialLogin('kakao')} disabled={loading} className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm bg-[#FEE500] text-[#191919] border border-[#FEE500] hover:opacity-90 disabled:opacity-50 transition-all">
+                  <span className="font-bold">K</span> 카카오로 가입
+                </button>
+                <button type="button" onClick={() => handleSocialLogin('google')} disabled={loading} className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-all">
+                  <span className="font-bold text-[#4285F4]">G</span> Google로 가입
+                </button>
+              </div>
+
+              <p className="text-center text-sm text-gray-500 pt-2">
+                이미 계정이 있으신가요?{' '}
+                <button type="button" onClick={() => setMode('LOGIN')} className="font-medium text-blue-600 hover:underline">로그인</button>
+              </p>
             </>
           )}
 
@@ -632,15 +665,15 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                   </button>
                </div>
 
-               <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic transition-colors">Back to Login</button>
+               <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">로그인으로 돌아가기</button>
             </div>
           )}
 
           {mode === 'RESET_PW' && (
             <div className="space-y-10 animate-in zoom-in-95 duration-500">
               <div className="text-center space-y-2">
-                <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase">Welcome</h2>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">비밀번호 재설정</p>
+                <h2 className="text-2xl font-bold text-gray-900">비밀번호 변경</h2>
+                <p className="text-sm text-gray-500 mt-1">새 비밀번호를 입력하세요.</p>
               </div>
 
               <form onSubmit={handleFinalPasswordUpdate} className="space-y-4">
@@ -666,7 +699,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                   {loading ? '변경 중...' : '비밀번호 변경 완료'}
                 </button>
               </form>
-              <button type="button" onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic">취소하고 로그인으로</button>
+              <button type="button" onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-medium text-gray-500 hover:text-gray-900">취소하고 로그인으로</button>
             </div>
           )}
 
@@ -682,7 +715,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
                     {loading ? '조회 중...' : '아이디 찾기'}
                  </button>
                </div>
-               <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-black text-gray-300 hover:text-gray-900 uppercase italic transition-colors">Back to Login</button>
+               <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">로그인으로 돌아가기</button>
             </div>
           )}
         </div>
