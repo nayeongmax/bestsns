@@ -21,6 +21,14 @@ type AuthMode = 'LOGIN' | 'JOIN' | 'FIND_ID' | 'FIND_PW' | 'RESET_PW';
 
 const SAVED_LOGIN_ID_KEY = 'saved_login_id';
 
+/** URL 해시에서 쿼리/프래그먼트 파라미터 추출 (비밀번호 재설정 링크용) */
+function getParamFromHash(name: string): string | null {
+  const hash = window.location.hash || '';
+  const regex = new RegExp(`[#&]${name}=([^&]*)`);
+  const m = regex.exec(hash);
+  return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
+}
+
 const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('LOGIN');
@@ -83,23 +91,38 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
 
     const checkHashToken = () => {
       const hash = window.location.hash;
-      // 비밀번호 재설정: 해시에 토큰이 있으면 Supabase가 세션으로 교환함. 교환 완료될 때까지 잠시 대기 후 RESET_PW로 전환
+      // 비밀번호 재설정: 해시에 토큰이 있으면 수동으로 setSession 후 RESET_PW 전환 (해시 라우팅 #/login 환경에서 Supabase 자동 파싱이 안 될 수 있음)
       if (hash.includes('type=recovery')) {
-        const trySetResetMode = (attempt: number) => {
-          supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) {
+        const accessToken = getParamFromHash('access_token');
+        const refreshToken = getParamFromHash('refresh_token');
+        if (accessToken && refreshToken) {
+          supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ data: { session }, error }) => {
+            if (!error && session?.user) {
               setMode('RESET_PW');
-              // URL에서 토큰 제거(보안·재제출 시 혼동 방지)
               if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
-            } else if (attempt < 8) {
-              setTimeout(() => trySetResetMode(attempt + 1), 400);
             } else {
               setMode('RESET_PW');
             }
+          }).catch(() => setMode('RESET_PW'));
+        } else {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+              setMode('RESET_PW');
+              if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
+            } else {
+              const tryAgain = (attempt: number) => {
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                  if (session?.user) {
+                    setMode('RESET_PW');
+                    if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
+                  } else if (attempt < 6) setTimeout(() => tryAgain(attempt + 1), 300);
+                  else setMode('RESET_PW');
+                });
+              };
+              setTimeout(() => tryAgain(0), 200);
+            }
           });
-        };
-        // Supabase가 해시로 세션 설정할 시간 확보
-        setTimeout(() => trySetResetMode(0), 200);
+        }
         return;
       }
       // 소셜 로그인 복귀: URL에 access_token이 있을 때만 세션 확인 후 로그인 (자동 로그인 아님)
