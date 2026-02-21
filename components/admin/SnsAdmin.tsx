@@ -65,7 +65,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         const latestRates = result.data;
         setSmmProducts(prevProducts => prevProducts.map(prod => ({
           ...prod,
-          sources: (prod.sources || []).map(src => {
+          sources: (prod.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null).map(src => {
             const newPrice = latestRates[src.providerId]?.[src.serviceId];
             return newPrice ? { ...src, costPrice: newPrice } : src;
           })
@@ -153,8 +153,9 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         (i.category || '') === (productForm.category || '');
       const toMerge = prev.filter(sameKey);
       const filtered = prev.filter(i => !sameKey(i));
-      // 그룹수정 폼에서 수정·삭제한 소스 목록을 그대로 반영 (폼이 단일 소스 of truth)
-      const finalProduct = { ...productForm, id: editingProductId || toMerge[0]?.id || `prod_${Date.now()}`, sources: [...(productForm.sources || [])] };
+      // null/잘못된 소스 제거 후 저장 (providerId 읽기 오류 방지)
+      const validSources = (productForm.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null && s.serviceId != null);
+      const finalProduct = { ...productForm, id: editingProductId || toMerge[0]?.id || `prod_${Date.now()}`, sources: validSources };
       return [...filtered, finalProduct];
     });
     setProductForm(initialProductState);
@@ -178,7 +179,8 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   const startEditProduct = (p: SMMProduct) => {
     setEditingProductId(p.id);
-    setProductForm({ ...p, sources: [...(p.sources || [])] });
+    const validSources = (p.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null && s.serviceId != null);
+    setProductForm({ ...p, sources: validSources });
     setActiveTab('manage');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -197,7 +199,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       prev
         .map(prod => {
           if (!sameProductKey(prod, p)) return prod;
-          return { ...prod, sources: (prod.sources || []).filter(s => !(s.providerId === src.providerId && s.serviceId === src.serviceId)) };
+          return { ...prod, sources: (prod.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null && !(s.providerId === src.providerId && s.serviceId === src.serviceId)) };
         })
         .filter(prod => (prod.sources?.length ?? 0) > 0)
     );
@@ -269,11 +271,14 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       return matchSearch && matchPlatform;
     }).forEach(p => {
       const key = `${p.platform}_${p.name}_${p.category || ''}`;
-      if (!map.has(key)) map.set(key, JSON.parse(JSON.stringify(p)));
-      else {
+      if (!map.has(key)) {
+        const clone = JSON.parse(JSON.stringify(p));
+        clone.sources = (clone.sources || []).filter((s: SMMSource) => s != null && s.providerId != null);
+        map.set(key, clone);
+      } else {
         const existing = map.get(key)!;
-        (p.sources || []).forEach(newSrc => {
-          if (!existing.sources.find(s => s.providerId === newSrc.providerId && s.serviceId === newSrc.serviceId)) existing.sources.push(newSrc);
+        (p.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null).forEach(newSrc => {
+          if (!existing.sources.find(s => s && s.providerId === newSrc.providerId && s.serviceId === newSrc.serviceId)) existing.sources.push(newSrc);
         });
       }
     });
@@ -471,7 +476,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-4 no-scrollbar border-t border-gray-50 pt-4">
                    <p className="text-[11px] font-black text-gray-400 uppercase italic px-4 mb-2">현재 연결된 다중 소스 목록 ({productForm.sources.length})</p>
-                   {productForm.sources.map((s, idx) => (
+                   {(productForm.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null).map((s, idx) => (
                      <div key={`${s.providerId}_${s.serviceId}_${idx}`} className="flex items-center justify-between p-6 bg-gray-50 rounded-[32px] border border-gray-100 group transition-all hover:border-blue-200">
                         <div className="flex items-center gap-6">
                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic tracking-tighter">{s.providerId}</span>
@@ -524,22 +529,23 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                        {groupedInventory.length === 0 ? (
                          <tr><td colSpan={6} className="py-40 text-center text-gray-300 font-black italic">등록된 상품이 없습니다.</td></tr>
                        ) : groupedInventory.map(p => {
-                         const allSourcesDisabled = p.sources.every(s => !activeProviderIds.has(s.providerId));
+                         const safeSources = (p.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null);
+                         const allSourcesDisabled = safeSources.length === 0 || safeSources.every(s => !activeProviderIds.has(s.providerId));
                          return (
                            <React.Fragment key={p.id}>
                              <tr className={`transition-all hover:bg-blue-50/30 ${expandedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} ${allSourcesDisabled ? 'grayscale opacity-40 bg-gray-50' : ''}`}>
                                 <td className="px-10 py-8"><span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic tracking-tighter shadow-md ${allSourcesDisabled ? 'bg-gray-400 text-white' : 'bg-blue-600 text-white'}`}>{p.platform}</span></td>
-                                <td className="px-10 py-8"><div className="flex items-center gap-3"><p className="font-black text-gray-900 text-xl italic tracking-tight">{p.name}</p>{allSourcesDisabled && <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded font-black italic shadow-sm uppercase animate-pulse">공급중단</span>}</div><div className="flex flex-wrap gap-1 mt-2">{p.sources.map((s, si) => (<span key={si} className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${activeProviderIds.has(s.providerId) ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-red-50 text-red-500 border-red-100'}`}>#{s.serviceId}</span>))}</div></td>
+                                <td className="px-10 py-8"><div className="flex items-center gap-3"><p className="font-black text-gray-900 text-xl italic tracking-tight">{p.name}</p>{allSourcesDisabled && <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded font-black italic shadow-sm uppercase animate-pulse">공급중단</span>}</div><div className="flex flex-wrap gap-1 mt-2">{safeSources.map((s, si) => (<span key={si} className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${activeProviderIds.has(s.providerId) ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-red-50 text-red-500 border-red-100'}`}>#{s.serviceId}</span>))}</div></td>
                                 <td className="px-10 py-8"><span className="text-sm font-black text-gray-500 uppercase italic tracking-widest">{p.category}</span></td>
                                 <td className="px-10 py-8"><p className="text-[13px] font-black text-gray-600 italic">{p.minQuantity.toLocaleString()} ~ {p.maxQuantity.toLocaleString()}</p></td>
                                 <td className="px-10 py-8 text-right"><p className="text-2xl font-black text-blue-600 italic tracking-tighter">{p.sellingPrice.toLocaleString()}<span className="text-sm not-italic opacity-40 ml-1">P</span></p></td>
-                                <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${p.sources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(window.confirm('정말 삭제하시겠습니까?')) setSmmProducts(prev => prev.filter(i => !(i.platform === p.platform && i.name === p.name && (i.category || '') === (p.category || '')))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>
+                                <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${safeSources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(window.confirm('정말 삭제하시겠습니까?')) setSmmProducts(prev => prev.filter(i => !(i.platform === p.platform && i.name === p.name && (i.category || '') === (p.category || '')))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>
                              </tr>
                              {expandedProductIds.includes(p.id) && (
                                <tr className="bg-gray-50/50 animate-in slide-in-from-top-2 duration-300">
                                  <td colSpan={6} className="px-12 py-10">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                       {p.sources.map((src, sidx) => {
+                                       {safeSources.map((src, sidx) => {
                                          const provider = smmProviders.find(sp => sp.id === src.providerId);
                                          const isProviderDisabled = provider?.isHidden;
                                          const margin = p.sellingPrice - src.costPrice;
