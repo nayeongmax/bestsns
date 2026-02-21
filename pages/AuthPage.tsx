@@ -46,7 +46,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     agreeTerms: false
   });
 
-  const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; success: boolean }>({ show: false, message: '', success: true });
   const [showPwLogin, setShowPwLogin] = useState(false);
   const [showPwJoin, setShowPwJoin] = useState(false);
@@ -333,31 +332,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     }
   };
 
-  const handleLoginWithEmailOnly = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const email = formData.email.trim();
-    const pw = formData.pw;
-    if (!email || !pw) return alert('이메일과 비밀번호를 입력하세요.');
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
-      if (error) throw error;
-      const profile = await buildProfileFromSession(data.user);
-      if (saveId) localStorage.setItem(SAVED_LOGIN_ID_KEY, email);
-      else localStorage.removeItem(SAVED_LOGIN_ID_KEY);
-      onLoginSuccess(profile);
-      navigate('/sns');
-    } catch (err: any) {
-      if ((err?.message || '').includes('Invalid login credentials')) {
-        alert('이메일 또는 비밀번호가 일치하지 않습니다. 비밀번호 재설정 메일의 링크를 클릭해 새 비밀번호를 설정한 뒤, 그 비밀번호로 다시 시도해 주세요.');
-      } else {
-        alert(`로그인 실패: ${err?.message || err}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const providerNames: Record<'google' | 'kakao', string> = { google: '구글', kakao: '카카오' };
   const handleSocialLogin = async (provider: 'google' | 'kakao') => {
     setLoading(true);
@@ -520,7 +494,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       setResendCooldown(60); // 60초 대기 강제
     } catch (err: any) {
       if (err.message.includes('rate limit')) {
-        alert('서버 보안 정책상 요청이 거부되었습니다.\n현재 사용자님의 접속 환경에서 너무 많은 요청이 발생했습니다.\n\n[해결 방법]\n1. 이미 도착한 메일이 있는지 확인하세요.\n2. 약 5~10분 후 다시 시도해 주세요.\n3. 이미 인증 링크를 클릭하셨다면 같은 브라우저에서 아래 [비밀번호 변경하기]를 눌러 새 비밀번호를 설정할 수 있습니다.');
+        alert('서버 보안 정책상 요청이 거부되었습니다.\n현재 사용자님의 접속 환경에서 너무 많은 요청이 발생했습니다.\n\n[해결 방법]\n1. 이미 도착한 메일이 있는지 확인하세요.\n2. 약 5~10분 후 다시 시도해 주세요.\n3. 이미 인증 링크를 클릭하셨다면 메일의 링크로 들어가 새 비밀번호를 설정할 수 있습니다.');
       } else {
         alert(`오류: ${err.message}`);
       }
@@ -548,9 +522,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       });
       if (error) throw error;
       
-      alert('비밀번호가 성공적으로 변경되었습니다!\n아래에서 이메일과 새 비밀번호로 로그인해 주세요.');
+      alert('비밀번호가 성공적으로 변경되었습니다!\n이메일(또는 아이디)과 새 비밀번호로 로그인해 주세요.');
       setMode('LOGIN');
-      setShowEmailLogin(true); // 재설정 후 바로 이메일 로그인 폼 노출
       setFormData({ ...formData, pw: '', pwConfirm: '' });
       navigate('/login', { replace: true });
     } catch (err: any) {
@@ -645,15 +618,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 </button>
               </div>
               <p className="text-right mt-3 text-xs"><button type="button" onClick={() => setMode('FIND_PW')} className="text-[#94a3b8] hover:text-[#2563EB]">비밀번호를 잊으셨나요?</button></p>
-              {showEmailLogin && (
-                <form onSubmit={handleLoginWithEmailOnly} className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
-                  <p className="text-sm text-gray-600">가입 시 사용한 이메일과 비밀번호로 로그인하세요. (비밀번호 재설정 후에는 새 비밀번호를 입력하세요.)</p>
-                  <input type="email" placeholder="이메일" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2563EB]" required />
-                  <input type="password" placeholder="비밀번호" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2563EB]" required />
-                  <div className="flex gap-2"><button type="submit" disabled={loading} className="flex-1 py-3 bg-[#2563EB] text-white rounded-lg text-sm font-medium disabled:opacity-50">이메일로 로그인</button><button type="button" onClick={() => setShowEmailLogin(false)} className="py-3 px-4 text-gray-500 text-sm">취소</button></div>
-                </form>
-              )}
-              {!showEmailLogin && <p className="text-center mt-2"><button type="button" onClick={() => setShowEmailLogin(true)} className="text-xs text-gray-500 hover:text-[#2563EB] underline">비밀번호 재설정 후 로그인이 안 되나요?</button></p>}
             </div>
           )}
 
@@ -706,24 +670,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                     {loading ? '메일 발송 중...' : resendCooldown > 0 ? `${resendCooldown}초 후 재시도 가능` : '인증 메일 발송'}
                  </button>
                </form>
-               
-               <div className="pt-6 border-t border-gray-50 text-center space-y-4">
-                  <p className="text-[11px] text-gray-400 font-bold uppercase">메일 링크를 이미 클릭하셨나요?</p>
-                  <button 
-                    type="button"
-                    onClick={async () => {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      if (session?.user) {
-                        setMode('RESET_PW');
-                      } else {
-                        alert('재설정 메일의 링크를 먼저 클릭해 주세요.\n\n이 브라우저에서 메일 안의 링크를 연 뒤, 이 페이지로 돌아오면 비밀번호 변경이 가능합니다.\n(보안상 링크를 클릭하지 않으면 변경 화면을 열 수 없습니다.)');
-                      }
-                    }} 
-                    className="text-[12px] font-black text-blue-600 hover:underline underline-offset-4 decoration-2"
-                  >
-                    비밀번호 변경하기
-                  </button>
-               </div>
 
                <button onClick={() => setMode('LOGIN')} className="w-full text-center text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">로그인으로 돌아가기</button>
             </div>
