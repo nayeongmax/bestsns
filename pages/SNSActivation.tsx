@@ -145,8 +145,15 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         
         const validActiveSources = product.sources.filter(s => activeProviderIds.has(s.providerId));
         if (validActiveSources.length === 0) continue;
-        
-        const bestSource = [...validActiveSources].sort((a, b) => (a.costPrice ?? 0) - (b.costPrice ?? 0))[0];
+        // 금액·예상 소요시간을 고려해 소스 1개 선택: 원가 낮은 순, 동일하면 소요시간 짧은 순
+        const bestSource = [...validActiveSources].sort((a, b) => {
+          const costA = a.costPrice ?? 0;
+          const costB = b.costPrice ?? 0;
+          if (costA !== costB) return costA - costB;
+          const timeA = a.estimatedMinutes ?? 999999;
+          const timeB = b.estimatedMinutes ?? 999999;
+          return timeA - timeB;
+        })[0];
         const provider = providers.find(p => p.id === bestSource.providerId);
         if (!provider) continue;
 
