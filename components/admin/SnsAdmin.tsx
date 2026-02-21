@@ -571,6 +571,11 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                            </div>
                                          );
                                        })}
+                                       <button type="button" onClick={() => { startEditProduct(p); setActiveTab('manage'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="bg-blue-50 border-2 border-dashed border-blue-200 rounded-[32px] p-8 flex flex-col items-center justify-center gap-3 hover:bg-blue-100 hover:border-blue-400 transition-all min-h-[180px] group">
+                                         <span className="text-4xl text-blue-400 group-hover:text-blue-600">➕</span>
+                                         <span className="text-[13px] font-black text-blue-600 italic uppercase tracking-wider">소스 추가</span>
+                                         <span className="text-[10px] text-gray-500">클릭 시 그룹수정에서 추가</span>
+                                       </button>
                                     </div>
                                  </td>
                                </tr>
