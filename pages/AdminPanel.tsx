@@ -24,6 +24,7 @@ interface Props {
   setSmmProviders: React.Dispatch<React.SetStateAction<SMMProvider[]>>;
   smmProducts: SMMProduct[];
   setSmmProducts: React.Dispatch<React.SetStateAction<SMMProduct[]>>;
+  onDeleteSmmProducts?: (ids: string[]) => void;
   smmOrders: SMMOrder[];
   members: UserProfile[];
   setMembers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
@@ -45,7 +46,7 @@ interface Props {
  */
 const AdminPanel: React.FC<Props> = ({ 
   user, ebooks, setEbooks, channels, setChannels, setNotifications,
-  smmProviders, setSmmProviders, smmProducts, setSmmProducts, smmOrders,
+  smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders,
   members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
   gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
@@ -109,6 +110,7 @@ const AdminPanel: React.FC<Props> = ({
           <SnsAdmin 
             smmProviders={smmProviders} setSmmProviders={setSmmProviders} 
             smmProducts={smmProducts} setSmmProducts={setSmmProducts} 
+            onDeleteSmmProducts={onDeleteSmmProducts}
             smmOrders={smmOrders}
           />
         )}
