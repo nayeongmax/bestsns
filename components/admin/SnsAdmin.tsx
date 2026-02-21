@@ -35,6 +35,9 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPlatform, setFilterPlatform] = useState('전체 플랫폼');
   const [expandedProductIds, setExpandedProductIds] = useState<string[]>([]);
+  /** 인벤토리 상세에서 소스 수정 시: 해당 소스 식별 + 입력값 */
+  const [editingSourceInList, setEditingSourceInList] = useState<{ platform: string; name: string; category: string; providerId: string; serviceId: string } | null>(null);
+  const [editSourceForm, setEditSourceForm] = useState({ costPrice: 0, estimatedMinutes: undefined as number | undefined });
 
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('전체 상태');
@@ -189,6 +192,47 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   const toggleExpand = (id: string) => {
     setExpandedProductIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    setEditingSourceInList(null);
+  };
+
+  const sameProductKey = (a: SMMProduct, b: SMMProduct) =>
+    a.platform === b.platform && a.name === b.name && (a.category || '') === (b.category || '');
+
+  const deleteSourceFromInventory = (p: SMMProduct, src: SMMSource) => {
+    if (!window.confirm(`소스 #${src.serviceId}를 삭제하시겠습니까?`)) return;
+    setSmmProducts(prev =>
+      prev
+        .map(prod => {
+          if (!sameProductKey(prod, p)) return prod;
+          return { ...prod, sources: (prod.sources || []).filter(s => !(s.providerId === src.providerId && s.serviceId === src.serviceId)) };
+        })
+        .filter(prod => (prod.sources?.length ?? 0) > 0)
+    );
+    setEditingSourceInList(null);
+  };
+
+  const startEditSourceInList = (p: SMMProduct, src: SMMSource) => {
+    setEditingSourceInList({ platform: p.platform, name: p.name, category: p.category || '', providerId: src.providerId, serviceId: src.serviceId });
+    setEditSourceForm({ costPrice: src.costPrice ?? 0, estimatedMinutes: src.estimatedMinutes });
+  };
+
+  const saveEditSourceInList = () => {
+    if (!editingSourceInList) return;
+    setSmmProducts(prev =>
+      prev.map(prod => {
+        if (prod.platform !== editingSourceInList.platform || prod.name !== editingSourceInList.name || (prod.category || '') !== editingSourceInList.category)
+          return prod;
+        return {
+          ...prod,
+          sources: (prod.sources || []).map(s =>
+            s.providerId === editingSourceInList.providerId && s.serviceId === editingSourceInList.serviceId
+              ? { ...s, costPrice: editSourceForm.costPrice, estimatedMinutes: editSourceForm.estimatedMinutes }
+              : s
+          ),
+        };
+      })
+    );
+    setEditingSourceInList(null);
   };
 
   const availableMonths = useMemo(() => {
@@ -497,10 +541,24 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                          const provider = smmProviders.find(sp => sp.id === src.providerId);
                                          const isProviderDisabled = provider?.isHidden;
                                          const margin = p.sellingPrice - src.costPrice;
+                                         const isEditing = editingSourceInList?.providerId === src.providerId && editingSourceInList?.serviceId === src.serviceId && editingSourceInList?.platform === p.platform && editingSourceInList?.name === p.name && (editingSourceInList?.category || '') === (p.category || '');
                                          return (
                                            <div key={`${src.providerId}_${src.serviceId}_${sidx}`} className={`bg-white border rounded-[32px] p-8 shadow-sm flex flex-col gap-6 transition-all ${isProviderDisabled ? 'grayscale opacity-50 border-red-200 bg-red-50/20' : 'border-gray-100 hover:border-blue-200'}`}>
                                               <div className="flex justify-between items-start"><div><span className={`px-3 py-1 rounded-lg text-[9px] font-black italic uppercase tracking-widest ${isProviderDisabled ? 'bg-gray-400 text-white' : 'bg-gray-900 text-white'}`}>{src.providerId}</span><h5 className="font-black text-gray-900 text-lg mt-2 italic">{provider?.name || '공급처 미확인'}{isProviderDisabled && <span className="ml-2 text-red-500 text-[10px] font-black">(잠김)</span>}</h5></div><div className="text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic mb-1">Service ID</p><p className={`text-2xl font-black ${isProviderDisabled ? 'text-gray-400' : 'text-blue-600'}`}>#{src.serviceId}</p></div></div>
-                                              <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-50"><div className="space-y-1"><p className="text-[10px] font-black text-gray-400 uppercase italic">원가</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-400' : 'text-green-500'}`}>{src.costPrice.toLocaleString()}P</p></div><div className="space-y-1 text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic">마진</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-300' : (margin > 0 ? 'text-blue-500' : 'text-red-500')}`}>{margin.toLocaleString()}P</p></div></div>
+                                              {isEditing ? (
+                                                <div className="space-y-4 pt-4 border-t border-gray-100">
+                                                  <div className="grid grid-cols-2 gap-4">
+                                                    <div><label className="text-[10px] font-black text-gray-400 uppercase italic">원가(P)</label><input type="number" value={editSourceForm.costPrice} onChange={e => setEditSourceForm(f => ({ ...f, costPrice: Number(e.target.value) }))} className="w-full mt-1 p-3 rounded-xl border border-gray-200 font-black text-green-600" /></div>
+                                                    <div><label className="text-[10px] font-black text-gray-400 uppercase italic">예상 소요(분)</label><input type="number" min={0} placeholder="선택" value={editSourceForm.estimatedMinutes ?? ''} onChange={e => setEditSourceForm(f => ({ ...f, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value) }))} className="w-full mt-1 p-3 rounded-xl border border-gray-200 font-black" /></div>
+                                                  </div>
+                                                  <div className="flex gap-2"><button onClick={saveEditSourceInList} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-[12px] font-black">저장</button><button onClick={() => setEditingSourceInList(null)} className="flex-1 py-2.5 bg-gray-200 text-gray-700 rounded-xl text-[12px] font-black">취소</button></div>
+                                                </div>
+                                              ) : (
+                                                <>
+                                                  <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-50"><div className="space-y-1"><p className="text-[10px] font-black text-gray-400 uppercase italic">원가</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-400' : 'text-green-500'}`}>{src.costPrice.toLocaleString()}P</p></div><div className="space-y-1 text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic">마진</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-300' : (margin > 0 ? 'text-blue-500' : 'text-red-500')}`}>{margin.toLocaleString()}P</p></div></div>
+                                                  <div className="flex gap-2 pt-2"><button onClick={() => startEditSourceInList(p, src)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-xl text-[11px] font-black hover:bg-blue-100">수정</button><button onClick={() => deleteSourceFromInventory(p, src)} className="flex-1 py-2 bg-red-50 text-red-500 rounded-xl text-[11px] font-black hover:bg-red-100">삭제</button></div>
+                                                </>
+                                              )}
                                            </div>
                                          );
                                        })}
