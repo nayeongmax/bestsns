@@ -440,6 +440,10 @@ export interface SMMSource {
   costPrice: number;
   /** 예상 소요 시간(분). 주문 시 금액·시간을 고려해 소스 1개 선택용 */
   estimatedMinutes?: number;
+  /** 이 서비스 ID별 최소 주문 수량. 없으면 상품 기본값 사용 */
+  minQuantity?: number;
+  /** 이 서비스 ID별 최대 주문 수량. 없으면 상품 기본값 사용 */
+  maxQuantity?: number;
 }
 
 export interface SMMProduct {
