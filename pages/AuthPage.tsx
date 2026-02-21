@@ -559,10 +559,10 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           <div className="relative z-10 flex-1 flex flex-col justify-center min-h-0">
             <div className="text-[11px] text-white/55 tracking-[2px] uppercase font-medium mb-3">SNS Marketing Platform</div>
             <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-[36px] font-black text-white leading-tight mb-2 tracking-tight">
-              마케팅의 <strong className="relative inline after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0.5 after:h-1 after:bg-white/35 after:rounded-sm">모든 것!</strong>
+              마케팅의 <strong>모든 것!</strong>
             </h2>
             <div className="text-[13px] text-white/65 tracking-wider font-semibold uppercase mb-5 font-['Plus_Jakarta_Sans',sans-serif]">ONE-STOP PLATFORM MARKETING</div>
-            <p className="text-[13.5px] text-white/80 leading-relaxed">
+            <p className="text-[13.5px] text-white/80 leading-relaxed mt-12">
               아직도 마케팅 회사에 돈 주고 맡기시나요?<br />
               <span className="text-white font-bold">마케팅 회사들이 이용하는 THEBESTSNS!</span><br />
               네이버 블로그·카페, 유튜브, 인스타그램 등<br />
