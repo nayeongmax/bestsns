@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { SMMProvider, SMMProduct, SMMSource, SMMOrder } from '../../types';
+import { SMMProvider, SMMProduct, SMMSource, SMMOrder } from '@/types';
 import { SNS_PLATFORMS } from '../../constants.tsx';
 
 interface Props {
@@ -29,7 +29,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<SMMProduct>(initialProductState);
   
-  const [tempSource, setTempSource] = useState<SMMSource>({ providerId: '', serviceId: '', costPrice: 0 });
+  const [tempSource, setTempSource] = useState<SMMSource>({ providerId: '', serviceId: '', costPrice: 0, estimatedMinutes: undefined });
   const [editingSourceIdx, setEditingSourceIdx] = useState<number | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -144,14 +144,27 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const handleSaveProduct = () => {
     if (!productForm.name || (productForm.sources || []).length === 0) return alert('상품명과 최소 하나 이상의 소스 연결이 필요합니다.');
     setSmmProducts(prev => {
-      const filtered = prev.filter(i => !(i.platform === productForm.platform && i.name === productForm.name));
-      const finalProduct = { ...productForm, id: editingProductId || `prod_${Date.now()}` };
+      const sameKey = (i: SMMProduct) =>
+        i.platform === productForm.platform &&
+        i.name === productForm.name &&
+        (i.category || '') === (productForm.category || '');
+      const toMerge = prev.filter(sameKey);
+      const mergedSources: SMMSource[] = [];
+      const seen = new Set<string>();
+      [...toMerge.flatMap(i => i.sources || []), ...(productForm.sources || [])].forEach(src => {
+        const key = `${src.providerId}:${src.serviceId}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        mergedSources.push(src);
+      });
+      const filtered = prev.filter(i => !sameKey(i));
+      const finalProduct = { ...productForm, id: editingProductId || toMerge[0]?.id || `prod_${Date.now()}`, sources: mergedSources };
       return [...filtered, finalProduct];
     });
     setProductForm(initialProductState);
     setEditingProductId(null);
     setActiveTab('list');
-    alert('마스터 상품 통합 데이터 저장이 완료되었습니다.');
+    alert('마스터 상품 통합 데이터 저장이 완료되었습니다. 기존 소스가 모두 유지되었습니다.');
   };
 
   const handleAddOrUpdateSource = () => {
@@ -164,7 +177,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     } else {
       setProductForm({ ...productForm, sources: [...productForm.sources, { ...tempSource }] });
     }
-    setTempSource({ providerId: '', serviceId: '', costPrice: 0 });
+    setTempSource({ providerId: '', serviceId: '', costPrice: 0, estimatedMinutes: undefined });
   };
 
   const startEditProduct = (p: SMMProduct) => {
@@ -218,11 +231,11 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       const matchPlatform = filterPlatform === '전체 플랫폼' || p.platform === filterPlatform;
       return matchSearch && matchPlatform;
     }).forEach(p => {
-      const key = `${p.platform}_${p.name}`;
+      const key = `${p.platform}_${p.name}_${p.category || ''}`;
       if (!map.has(key)) map.set(key, JSON.parse(JSON.stringify(p)));
       else {
         const existing = map.get(key)!;
-        p.sources.forEach(newSrc => {
+        (p.sources || []).forEach(newSrc => {
           if (!existing.sources.find(s => s.providerId === newSrc.providerId && s.serviceId === newSrc.serviceId)) existing.sources.push(newSrc);
         });
       }
@@ -389,13 +402,17 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                          </div>
                       </div>
                       <div className="bg-white/5 p-8 rounded-[40px] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-10">
-                         <div className="flex items-center gap-6">
+                         <div className="flex items-center gap-8 flex-wrap">
                             <div className="space-y-1">
                                <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">실시간 원가 정보</span>
                                <div className="flex items-baseline gap-3">
                                   <input type="number" value={tempSource.costPrice || 0} onChange={e => setTempSource({...tempSource, costPrice: Number(e.target.value)})} className="bg-transparent text-5xl font-black text-green-400 italic outline-none w-32 border-b border-white/10" />
                                   <span className="text-2xl font-black text-green-400/30 italic">P</span>
                                </div>
+                            </div>
+                            <div className="space-y-1">
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">예상 소요(분, 선택)</span>
+                               <input type="number" min={0} placeholder="분" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-2xl font-black text-white italic outline-none w-20 border-b border-white/10" />
                             </div>
                          </div>
                          <button onClick={handleAddOrUpdateSource} className="w-full md:w-auto px-10 py-6 bg-white text-[#0f172a] rounded-[28px] font-black text-[15px] hover:bg-blue-400 transition-all uppercase italic shadow-2xl">
@@ -414,7 +431,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic tracking-tighter">{s.providerId}</span>
                            <div>
                               <p className="font-black text-gray-800 text-sm">Service ID: <span className="text-blue-600">#{s.serviceId}</span></p>
-                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P</p>
+                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''}</p>
                            </div>
                         </div>
                         <div className="flex gap-2">
@@ -470,7 +487,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                 <td className="px-10 py-8"><span className="text-sm font-black text-gray-500 uppercase italic tracking-widest">{p.category}</span></td>
                                 <td className="px-10 py-8"><p className="text-[13px] font-black text-gray-600 italic">{p.minQuantity.toLocaleString()} ~ {p.maxQuantity.toLocaleString()}</p></td>
                                 <td className="px-10 py-8 text-right"><p className="text-2xl font-black text-blue-600 italic tracking-tighter">{p.sellingPrice.toLocaleString()}<span className="text-sm not-italic opacity-40 ml-1">P</span></p></td>
-                                <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${p.sources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(window.confirm('정말 삭제하시겠습니까?')) setSmmProducts(prev => prev.filter(i=> !(i.platform === p.platform && i.name === p.name))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>
+                                <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${p.sources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(window.confirm('정말 삭제하시겠습니까?')) setSmmProducts(prev => prev.filter(i => !(i.platform === p.platform && i.name === p.name && (i.category || '') === (p.category || '')))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>
                              </tr>
                              {expandedProductIds.includes(p.id) && (
                                <tr className="bg-gray-50/50 animate-in slide-in-from-top-2 duration-300">
