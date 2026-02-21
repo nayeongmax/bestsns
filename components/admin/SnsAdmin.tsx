@@ -7,13 +7,14 @@ interface Props {
   setSmmProviders: React.Dispatch<React.SetStateAction<SMMProvider[]>>;
   smmProducts: SMMProduct[];
   setSmmProducts: React.Dispatch<React.SetStateAction<SMMProduct[]>>;
+  onDeleteSmmProducts?: (ids: string[]) => void;
   smmOrders: SMMOrder[];
 }
 
 type SnsTab = 'provider' | 'manage' | 'list' | 'order';
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
-const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts, setSmmProducts, smmOrders }) => {
+const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders }) => {
   const [activeTab, setActiveTab] = useState<SnsTab>('list');
   const [isFetchingSingle, setIsFetchingSingle] = useState(false);
   
@@ -539,7 +540,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                 <td className="px-10 py-8"><span className="text-sm font-black text-gray-500 uppercase italic tracking-widest">{p.category}</span></td>
                                 <td className="px-10 py-8"><p className="text-[13px] font-black text-gray-600 italic">{p.minQuantity.toLocaleString()} ~ {p.maxQuantity.toLocaleString()}</p></td>
                                 <td className="px-10 py-8 text-right"><p className="text-2xl font-black text-blue-600 italic tracking-tighter">{p.sellingPrice.toLocaleString()}<span className="text-sm not-italic opacity-40 ml-1">P</span></p></td>
-                                <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${safeSources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(window.confirm('정말 삭제하시겠습니까?')) setSmmProducts(prev => prev.filter(i => !(i.platform === p.platform && i.name === p.name && (i.category || '') === (p.category || '')))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>
+                                <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${safeSources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(!window.confirm('정말 삭제하시겠습니까?')) return; const idsToDelete = smmProducts.filter(i => sameProductKey(i, p)).map(i => i.id); if (onDeleteSmmProducts) onDeleteSmmProducts(idsToDelete); else setSmmProducts(prev => prev.filter(i => !sameProductKey(i, p))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>
                              </tr>
                              {expandedProductIds.includes(p.id) && (
                                <tr className="bg-gray-50/50 animate-in slide-in-from-top-2 duration-300">
