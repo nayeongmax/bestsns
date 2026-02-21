@@ -19,6 +19,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const navigate = useNavigate();
   const { showConfirm, showAlert } = useConfirm();
   const [selectedPlatform, setSelectedPlatform] = useState('인스타그램');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
   const [link, setLink] = useState('');
   const [quantity, setQuantity] = useState(0);
@@ -39,13 +40,41 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const isGuest = !user.id;
   const activeProviderIds = useMemo(() => new Set(providers.filter(p => !p.isHidden).map(p => p.id)), [providers]);
 
+  // 선택한 플랫폼에 해당하는 상품들 중에서 카테고리 목록 추출 (어드민에서 입력한 카테고리 분류)
+  const categoriesForPlatform = useMemo(() => {
+    const set = new Set<string>();
+    (smmProducts || []).forEach(p => {
+      if (p.platform !== selectedPlatform || p.isHidden) return;
+      const hasActiveSource = (p.sources || []).some(s => activeProviderIds.has(s.providerId));
+      if (!hasActiveSource) return;
+      const cat = (p.category || '').trim();
+      set.add(cat || '기타');
+    });
+    const list = Array.from(set).filter(Boolean).sort((a, b) => (a === '기타' ? 1 : 0) - (b === '기타' ? 1 : 0));
+    return list.length ? list : [];
+  }, [selectedPlatform, smmProducts, activeProviderIds]);
+
+  // 플랫폼 변경 시 카테고리·상품 초기화: 해당 플랫폼의 첫 번째 카테고리 선택
+  useEffect(() => {
+    if (categoriesForPlatform.length > 0) {
+      setSelectedCategory(categoriesForPlatform[0]);
+    } else {
+      setSelectedCategory('');
+    }
+    setSelectedProductId('');
+  }, [selectedPlatform, categoriesForPlatform]);
+
   const filteredProducts = useMemo(() => 
     (smmProducts || []).filter(p => {
       const isVisible = !p.isHidden;
       const hasActiveSource = (p.sources || []).some(s => activeProviderIds.has(s.providerId));
-      return p.platform === selectedPlatform && isVisible && hasActiveSource;
+      const platformMatch = p.platform === selectedPlatform && isVisible && hasActiveSource;
+      if (!platformMatch) return false;
+      if (categoriesForPlatform.length === 0) return true;
+      const cat = (p.category || '').trim() || '기타';
+      return selectedCategory === '' || cat === selectedCategory;
     }),
-  [selectedPlatform, smmProducts, activeProviderIds]);
+  [selectedPlatform, selectedCategory, smmProducts, activeProviderIds, categoriesForPlatform]);
 
   const selectedProduct = useMemo(() => (smmProducts || []).find(p => p.id === selectedProductId), [selectedProductId, smmProducts]);
 
@@ -189,7 +218,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               <h2 className="text-xl font-black flex items-center gap-4 mb-10 text-gray-900 italic uppercase"><span className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm shadow-xl font-black italic">01</span>플랫폼 선택</h2>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-6">
                 {SNS_PLATFORMS.map((p) => (
-                  <button key={p.id} onClick={() => { setSelectedPlatform(p.name); setSelectedProductId(''); }} className="flex flex-col items-center gap-4 group">
+                  <button key={p.id} onClick={() => { setSelectedPlatform(p.name); setSelectedProductId(''); setSelectedCategory(''); }} className="flex flex-col items-center gap-4 group">
                     <div className={`w-20 h-20 rounded-[36px] flex items-center justify-center transition-all border-4 relative ${selectedPlatform === p.name ? 'border-blue-600 bg-blue-50 shadow-2xl scale-110' : 'border-transparent bg-gray-50'}`}>
                       <img
                         src={p.icon}
@@ -209,6 +238,25 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                 ))}
               </div>
             </div>
+
+            {categoriesForPlatform.length > 0 && (
+              <div>
+                <h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4 mb-4">카테고리</h3>
+                <div className="flex flex-wrap gap-2">
+                  {categoriesForPlatform.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => { setSelectedCategory(cat); setSelectedProductId(''); }}
+                      className={`px-6 py-3 rounded-[20px] font-black text-[13px] italic transition-all ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-lg scale-105' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-12 pt-12 border-t border-gray-50">
               <div className="space-y-4"><h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4">상품 선택</h3><select className="w-full p-6 bg-gray-50 border-none rounded-[32px] outline-none font-black text-gray-700 shadow-inner focus:bg-white focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer" value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}><option value="">서비스를 선택하세요</option>{filteredProducts.map(p => (<option key={p.id} value={p.id}>{p.name} ({(p.sellingPrice ?? 0).toLocaleString()}P)</option>))}</select></div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
