@@ -35,17 +35,15 @@ interface Props {
 
 const RevenueManagement: React.FC<Props> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'todo' | 'project' | 'data' | 'profit'>('dashboard');
-  const revenueDbLoaded = useRef(false);
+  const revenueDbLoadedForUser = useRef<string | null>(null);
+  const initialDbLoadDone = useRef(false);
 
   const [companies, setCompanies] = useState<OperatingCompany[]>(() => loadFromStorage('rev_companies', []));
   const [projects, setProjects] = useState<RevenueProject[]>(() => loadFromStorage('rev_projects', []));
   const [todos, setTodos] = useState<RevenueTodo[]>(() => loadFromStorage('rev_todos', []));
   const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>(() => loadFromStorage('rev_general_expenses', []));
 
-  // DB 저장 실패 시 화면에 표시 (로컬에만 저장됨 안내)
   const [dbSaveError, setDbSaveError] = useState<string | null>(null);
-
-  // Supabase 저장 (데이터 있으면 즉시 저장)
   const saveErrShown = useRef<Record<string, boolean>>({});
   const showSaveError = (key: string, err: unknown) => {
     const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : String(err);
@@ -56,10 +54,17 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     alert(`DB 저장에 실패했습니다.\n\n[에러] ${msg}\n\n지금 보이는 데이터는 이 기기 브라우저에만 저장됩니다. 다른 기기·캐시 삭제 시 사라집니다.\n\n해결: Supabase SQL Editor에서 supabase-setup-4단계-매출관리.sql 실행 후, 이메일+비밀번호로 다시 로그인해 주세요.`);
   };
 
-  // 쿠키/캐시 삭제 후에도 DB에서 복원 — 마운트 시 1회 로드
+  // user가 없어지면(로그아웃) 다음 로그인 시 다시 DB 로드하도록 ref 초기화
   useEffect(() => {
-    if (!user?.id || revenueDbLoaded.current) return;
-    revenueDbLoaded.current = true;
+    if (!user?.id) revenueDbLoadedForUser.current = null;
+  }, [user?.id]);
+
+  // 1) DB에서 먼저 로드. user.id가 바뀌면 다시 로드. 로드 완료 후에만 DB로 저장 허용(로컬이 DB 덮어쓰는 것 방지)
+  useEffect(() => {
+    if (!user?.id) return;
+    if (revenueDbLoadedForUser.current === user.id) return;
+    revenueDbLoadedForUser.current = user.id;
+    initialDbLoadDone.current = false;
     (async () => {
       try {
         const [companiesData, projectsData, todosData, expensesData] = await Promise.all([
@@ -74,25 +79,28 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
         setGeneralExpenses(expensesData);
       } catch (e) {
         console.error('매출관리 DB 로드 실패:', e);
-        revenueDbLoaded.current = false;
+        revenueDbLoadedForUser.current = null;
+      } finally {
+        initialDbLoadDone.current = true;
       }
     })();
   }, [user?.id]);
 
+  // 2) DB 저장 — "첫 DB 로드가 끝난 뒤"에만 실행 (로컬 초기값으로 DB 덮어쓰기 방지)
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !initialDbLoadDone.current) return;
     upsertRevenueCompanies(user.id, companies).catch((err) => showSaveError('회사', err));
   }, [user?.id, companies]);
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !initialDbLoadDone.current) return;
     upsertRevenueProjects(user.id, projects).catch((err) => showSaveError('프로젝트', err));
   }, [user?.id, projects]);
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !initialDbLoadDone.current) return;
     upsertRevenueTodos(user.id, todos).catch((err) => showSaveError('할일', err));
   }, [user?.id, todos]);
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !initialDbLoadDone.current) return;
     upsertRevenueGeneralExpenses(user.id, generalExpenses).catch((err) => showSaveError('지출', err));
   }, [user?.id, generalExpenses]);
 
