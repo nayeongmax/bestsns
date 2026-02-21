@@ -438,6 +438,8 @@ export interface SMMSource {
   providerId: string;
   serviceId: string;
   costPrice: number;
+  /** 예상 소요 시간(분). 주문 시 금액·시간을 고려해 소스 1개 선택용 */
+  estimatedMinutes?: number;
 }
 
 export interface SMMProduct {
