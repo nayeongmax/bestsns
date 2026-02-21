@@ -37,7 +37,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [expandedProductIds, setExpandedProductIds] = useState<string[]>([]);
   /** 인벤토리 상세에서 소스 수정 시: 해당 소스 식별 + 입력값 */
   const [editingSourceInList, setEditingSourceInList] = useState<{ platform: string; name: string; category: string; providerId: string; serviceId: string } | null>(null);
-  const [editSourceForm, setEditSourceForm] = useState({ costPrice: 0, estimatedMinutes: undefined as number | undefined, minQuantity: undefined as number | undefined, maxQuantity: undefined as number | undefined });
+  const [editSourceForm, setEditSourceForm] = useState({ costPrice: 0, estimatedMinutes: undefined as number | undefined });
 
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('전체 상태');
@@ -206,7 +206,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   const startEditSourceInList = (p: SMMProduct, src: SMMSource) => {
     setEditingSourceInList({ platform: p.platform, name: p.name, category: p.category || '', providerId: src.providerId, serviceId: src.serviceId });
-    setEditSourceForm({ costPrice: src.costPrice ?? 0, estimatedMinutes: src.estimatedMinutes, minQuantity: src.minQuantity, maxQuantity: src.maxQuantity });
+    setEditSourceForm({ costPrice: src.costPrice ?? 0, estimatedMinutes: src.estimatedMinutes });
   };
 
   const saveEditSourceInList = () => {
@@ -219,7 +219,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
           ...prod,
           sources: (prod.sources || []).map(s =>
             s.providerId === editingSourceInList.providerId && s.serviceId === editingSourceInList.serviceId
-              ? { ...s, costPrice: editSourceForm.costPrice, estimatedMinutes: editSourceForm.estimatedMinutes, minQuantity: editSourceForm.minQuantity, maxQuantity: editSourceForm.maxQuantity }
+              ? { ...s, costPrice: editSourceForm.costPrice, estimatedMinutes: editSourceForm.estimatedMinutes }
               : s
           ),
         };
@@ -438,31 +438,21 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                             </div>
                          </div>
                       </div>
-                      <div className="bg-white/5 p-8 rounded-[40px] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-10">
-                         <div className="flex items-center gap-8 flex-wrap">
+                      <div className="bg-white/5 p-5 rounded-[32px] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+                         <div className="flex items-center gap-6 flex-wrap">
                             <div className="space-y-1">
                                <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">실시간 원가 정보</span>
-                               <div className="flex items-baseline gap-3">
-                                  <input type="number" value={tempSource.costPrice || 0} onChange={e => setTempSource({...tempSource, costPrice: Number(e.target.value)})} className="bg-transparent text-5xl font-black text-green-400 italic outline-none w-32 border-b border-white/10" />
-                                  <span className="text-2xl font-black text-green-400/30 italic">P</span>
+                               <div className="flex items-baseline gap-2">
+                                  <input type="number" value={tempSource.costPrice || 0} onChange={e => setTempSource({...tempSource, costPrice: Number(e.target.value)})} className="bg-transparent text-4xl font-black text-green-400 italic outline-none w-28 border-b border-white/10" />
+                                  <span className="text-xl font-black text-green-400/30 italic">P</span>
                                </div>
                             </div>
                             <div className="space-y-1">
                                <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">예상 소요(분, 선택)</span>
-                               <input type="number" min={0} placeholder="분" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-2xl font-black text-white italic outline-none w-20 border-b border-white/10" />
-                            </div>
-                            <div className="space-y-1">
-                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest block">이 소스만 최소 <span className="text-gray-400 font-normal normal-case">(선택)</span></span>
-                               <span className="text-[9px] text-gray-400 italic block -mt-0.5">비워두셔도 됩니다 → 왼쪽 상품 MIN 사용</span>
-                               <input type="number" min={0} placeholder="비우면 상품값" value={tempSource.minQuantity ?? ''} onChange={e => setTempSource({...tempSource, minQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
-                            </div>
-                            <div className="space-y-1">
-                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest block">이 소스만 최대 <span className="text-gray-400 font-normal normal-case">(선택)</span></span>
-                               <span className="text-[9px] text-gray-400 italic block -mt-0.5">비워두셔도 됩니다 → 왼쪽 상품 MAX 사용</span>
-                               <input type="number" min={0} placeholder="비우면 상품값" value={tempSource.maxQuantity ?? ''} onChange={e => setTempSource({...tempSource, maxQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
+                               <input type="number" min={0} placeholder="분" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-20 border-b border-white/10" />
                             </div>
                          </div>
-                         <button onClick={handleAddOrUpdateSource} className="w-full md:w-auto px-10 py-6 bg-white text-[#0f172a] rounded-[28px] font-black text-[15px] hover:bg-blue-400 transition-all uppercase italic shadow-2xl">
+                         <button onClick={handleAddOrUpdateSource} className="w-full md:w-auto px-6 py-3.5 bg-white text-[#0f172a] rounded-[20px] font-black text-[13px] hover:bg-blue-400 transition-all uppercase italic shadow-lg shrink-0">
                             {editingSourceIdx !== null ? '소스 수정 완료' : '+ 리스트에 추가'}
                          </button>
                       </div>
@@ -478,7 +468,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic tracking-tighter">{s.providerId}</span>
                            <div>
                               <p className="font-black text-gray-800 text-sm">Service ID: <span className="text-blue-600">#{s.serviceId}</span></p>
-                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''}{(s.minQuantity != null || s.maxQuantity != null) ? ` · 수량 ${s.minQuantity ?? '?'}~${s.maxQuantity ?? '?'}` : ''}</p>
+                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''}</p>
                            </div>
                         </div>
                         <div className="flex gap-2">
@@ -550,18 +540,15 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                               <div className="flex justify-between items-start"><div><span className={`px-3 py-1 rounded-lg text-[9px] font-black italic uppercase tracking-widest ${isProviderDisabled ? 'bg-gray-400 text-white' : 'bg-gray-900 text-white'}`}>{src.providerId}</span><h5 className="font-black text-gray-900 text-lg mt-2 italic">{provider?.name || '공급처 미확인'}{isProviderDisabled && <span className="ml-2 text-red-500 text-[10px] font-black">(잠김)</span>}</h5></div><div className="text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic mb-1">Service ID</p><p className={`text-2xl font-black ${isProviderDisabled ? 'text-gray-400' : 'text-blue-600'}`}>#{src.serviceId}</p></div></div>
                                               {isEditing ? (
                                                 <div className="space-y-4 pt-4 border-t border-gray-100">
-                                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                  <div className="grid grid-cols-2 gap-4">
                                                     <div><label className="text-[10px] font-black text-gray-400 uppercase italic">원가(P)</label><input type="number" value={editSourceForm.costPrice} onChange={e => setEditSourceForm(f => ({ ...f, costPrice: Number(e.target.value) }))} className="w-full mt-1 p-3 rounded-xl border border-gray-200 font-black text-green-600" /></div>
                                                     <div><label className="text-[10px] font-black text-gray-400 uppercase italic">예상 소요(분)</label><input type="number" min={0} placeholder="선택" value={editSourceForm.estimatedMinutes ?? ''} onChange={e => setEditSourceForm(f => ({ ...f, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value) }))} className="w-full mt-1 p-3 rounded-xl border border-gray-200 font-black" /></div>
-                                                    <div><label className="text-[10px] font-black text-gray-400 uppercase italic">최소 수량</label><input type="number" min={0} placeholder="상품값" value={editSourceForm.minQuantity ?? ''} onChange={e => setEditSourceForm(f => ({ ...f, minQuantity: e.target.value === '' ? undefined : Number(e.target.value) }))} className="w-full mt-1 p-3 rounded-xl border border-gray-200 font-black" /></div>
-                                                    <div><label className="text-[10px] font-black text-gray-400 uppercase italic">최대 수량</label><input type="number" min={0} placeholder="상품값" value={editSourceForm.maxQuantity ?? ''} onChange={e => setEditSourceForm(f => ({ ...f, maxQuantity: e.target.value === '' ? undefined : Number(e.target.value) }))} className="w-full mt-1 p-3 rounded-xl border border-gray-200 font-black" /></div>
                                                   </div>
                                                   <div className="flex gap-2"><button onClick={saveEditSourceInList} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-[12px] font-black">저장</button><button onClick={() => setEditingSourceInList(null)} className="flex-1 py-2.5 bg-gray-200 text-gray-700 rounded-xl text-[12px] font-black">취소</button></div>
                                                 </div>
                                               ) : (
                                                 <>
                                                   <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-50"><div className="space-y-1"><p className="text-[10px] font-black text-gray-400 uppercase italic">원가</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-400' : 'text-green-500'}`}>{src.costPrice.toLocaleString()}P</p></div><div className="space-y-1 text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic">마진</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-300' : (margin > 0 ? 'text-blue-500' : 'text-red-500')}`}>{margin.toLocaleString()}P</p></div></div>
-                                                  {(src.minQuantity != null || src.maxQuantity != null) && <p className="text-[10px] font-black text-gray-400 italic">수량: {(src.minQuantity ?? '-')} ~ {(src.maxQuantity ?? '-')}</p>}
                                                   <div className="flex gap-2 pt-2"><button onClick={() => startEditSourceInList(p, src)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-xl text-[11px] font-black hover:bg-blue-100">수정</button><button onClick={() => deleteSourceFromInventory(p, src)} className="flex-1 py-2 bg-red-50 text-red-500 rounded-xl text-[11px] font-black hover:bg-red-100">삭제</button></div>
                                                 </>
                                               )}
