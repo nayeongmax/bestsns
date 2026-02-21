@@ -452,14 +452,14 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                <input type="number" min={0} placeholder="분" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-2xl font-black text-white italic outline-none w-20 border-b border-white/10" />
                             </div>
                             <div className="space-y-1">
-                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest block">이 소스만 최소</span>
-                               <span className="text-[9px] text-gray-400 italic block -mt-0.5">비워두면 왼쪽 상품 MIN 사용</span>
-                               <input type="number" min={0} placeholder="상품값" value={tempSource.minQuantity ?? ''} onChange={e => setTempSource({...tempSource, minQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest block">이 소스만 최소 <span className="text-gray-400 font-normal normal-case">(선택)</span></span>
+                               <span className="text-[9px] text-gray-400 italic block -mt-0.5">비워두셔도 됩니다 → 왼쪽 상품 MIN 사용</span>
+                               <input type="number" min={0} placeholder="비우면 상품값" value={tempSource.minQuantity ?? ''} onChange={e => setTempSource({...tempSource, minQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
                             </div>
                             <div className="space-y-1">
-                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest block">이 소스만 최대</span>
-                               <span className="text-[9px] text-gray-400 italic block -mt-0.5">비워두면 왼쪽 상품 MAX 사용</span>
-                               <input type="number" min={0} placeholder="상품값" value={tempSource.maxQuantity ?? ''} onChange={e => setTempSource({...tempSource, maxQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest block">이 소스만 최대 <span className="text-gray-400 font-normal normal-case">(선택)</span></span>
+                               <span className="text-[9px] text-gray-400 italic block -mt-0.5">비워두셔도 됩니다 → 왼쪽 상품 MAX 사용</span>
+                               <input type="number" min={0} placeholder="비우면 상품값" value={tempSource.maxQuantity ?? ''} onChange={e => setTempSource({...tempSource, maxQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
                             </div>
                          </div>
                          <button onClick={handleAddOrUpdateSource} className="w-full md:w-auto px-10 py-6 bg-white text-[#0f172a] rounded-[28px] font-black text-[15px] hover:bg-blue-400 transition-all uppercase italic shadow-2xl">
