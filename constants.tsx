@@ -18,7 +18,7 @@ export const SNS_PLATFORMS = [
   { id: 'twitter', name: '트위터(X)', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/X_icon_2.svg/512px-X_icon_2.svg.png' },
   { id: 'pinterest', name: '핀터레스트', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Pinterest-logo.png' },
   { id: 'tumblr', name: '텀블러', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Tumblr.svg/512px-Tumblr.svg.png' },
-  { id: 'daangn', name: '당근', icon: 'https://postfiles.pstatic.net/MjAyNjAyMTJfMjY3/MDAxNzcwODk0Mjk0MzI2.f3S1vd3SVxRrKlxLQ42a_dDfm1h4pg1ThjpKHGlRcxwg.-6WUrPOKqEq8piC9uVioOeJwogE-LEZXkiMSg1xZWVUg.JPEG/%EB%8B%B9%EA%B7%BC.jpg?type=w966' },
+  { id: 'daangn', name: '당근', icon: '/images/danggeun.jpg' },
   { id: 'kakaotalk', name: '카카오톡', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/KakaoTalk_logo.svg/512px-KakaoTalk_logo.svg.png' },
   { id: 'appdownload', name: '앱다운로드', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Google_Play_Arrow_logo.svg/512px-Google_Play_Arrow_logo.svg.png' },
 ];
@@ -54,11 +54,11 @@ export const MIN_WITHDRAW_FREELANCER = 5000;
 export const ADVERTISER_FEE_RATE = 0.25;        // 광고주 수수료 25%
 export const FREELANCER_SETTLEMENT_FEE_RATE = 0.05;  // 프리랜서 정산 수수료 5%
 export const FREELANCER_WITHHOLDING_RATE = 0.033;   // 프리랜서 원천징수 3.3%
-export const PAYMENT_GATEWAY_FEE_RATE = 0.033;      // 결제수수료/결제망 수수료 3.3%
-export const VAT_RATE = 0.1;                        // 부가세 10% (광고주 수수료에 대한)
+export const PAYMENT_GATEWAY_FEE_RATE = 0.033;      // 결제망 수수료 3.3%
+export const VAT_RATE = 0.1;                        // 부가세 10% (수수료+결제망에 대한)
 
-/** 프리랜서 실지급액 = 계약금액 × (1 - 5% - 3.3% - 3.3%) = 88.4% */
-export const FREELANCER_FEE_RATE = FREELANCER_SETTLEMENT_FEE_RATE + FREELANCER_WITHHOLDING_RATE + PAYMENT_GATEWAY_FEE_RATE;
+/** 프리랜서 실지급액 = 계약금액 × (1 - 5% - 3.3%) = 91.7% */
+export const FREELANCER_FEE_RATE = FREELANCER_SETTLEMENT_FEE_RATE + FREELANCER_WITHHOLDING_RATE;
 
 export function getFreelancerBalance(userId: string): number {
   try {
@@ -316,11 +316,11 @@ export function generateProjectNo(): string {
   return `ALBA-${String(maxN + 1).padStart(5, '0')}`;
 }
 
-/** 6일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. 광고주 작업의 경우 workLinkSubmittedAt + 6일 후 미확인 시 자동 지급 */
+/** 3일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. 광고주 작업의 경우 workLinkSubmittedAt + 3일 후 미확인 시 자동 지급 */
 export function processAutoApprovals(): boolean {
   const tasks = getPartTimeTasks();
   const now = Date.now();
-  const sixDaysMs = 6 * 24 * 60 * 60 * 1000;
+  const threeDaysMs = 72 * 60 * 60 * 1000;
   let changed = false;
   const next = tasks.map((t) => {
     const selectedWithLink = t.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!(a.workLink || '').trim()));
@@ -334,7 +334,7 @@ export function processAutoApprovals(): boolean {
         if (at <= now) shouldPay = true;
       } else if (t.applicantUserId && a.workLinkSubmittedAt) {
         const submittedAt = new Date(a.workLinkSubmittedAt).getTime();
-        if (now >= submittedAt + sixDaysMs) shouldPay = true;
+        if (now >= submittedAt + threeDaysMs) shouldPay = true;
       }
       if (shouldPay) {
         addFreelancerEarning(a.userId, t.reward, t.title);
@@ -352,11 +352,10 @@ export function processAutoApprovals(): boolean {
 
 // ----- 누구나알바 작업의뢰 (광고주→운영진) -----
 const PARTTIME_JOB_REQUESTS_KEY = 'parttime_job_requests_v1';
-const PARTTIME_JOB_IMAGES_KEY = (id: string) => `parttime_job_images_v1_${id}`;
 
-export function getPartTimeJobRequestImages(id: string): string[] {
+export function getPartTimeJobRequests(): PartTimeJobRequest[] {
   try {
-    const raw = localStorage.getItem(PARTTIME_JOB_IMAGES_KEY(id));
+    const raw = localStorage.getItem(PARTTIME_JOB_REQUESTS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
@@ -365,49 +364,15 @@ export function getPartTimeJobRequestImages(id: string): string[] {
   return [];
 }
 
-export function setPartTimeJobRequestImages(id: string, images: string[]): void {
-  if (images.length === 0) localStorage.removeItem(PARTTIME_JOB_IMAGES_KEY(id));
-  else localStorage.setItem(PARTTIME_JOB_IMAGES_KEY(id), JSON.stringify(images));
-}
-
-export function getPartTimeJobRequests(): PartTimeJobRequest[] {
-  try {
-    const raw = localStorage.getItem(PARTTIME_JOB_REQUESTS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.map((r: PartTimeJobRequest) => {
-          const imgs = getPartTimeJobRequestImages(r.id);
-          return imgs.length > 0 ? { ...r, exampleImages: imgs } : r;
-        });
-      }
-    }
-  } catch {}
-  return [];
-}
-
 export function setPartTimeJobRequests(requests: PartTimeJobRequest[]): void {
-  const toStore = requests.map((r) => {
-    const { exampleImages, ...rest } = r;
-    setPartTimeJobRequestImages(r.id, exampleImages ?? []);
-    return rest;
-  });
-  localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(toStore));
+  localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(requests));
 }
 
-/** 광고금액 기준 플랫폼 수수료: 광고주 수수료 25% + 부가세 10% */
+/** 광고금액 기준 수수료 계산: 25% + 수수료의 부가세 10% */
 export function calcJobRequestFee(adAmount: number): number {
   const baseFee = Math.round(adAmount * ADVERTISER_FEE_RATE); // 25%
-  const vat = Math.round(baseFee * VAT_RATE); // 10%
+  const vat = Math.round(baseFee * 0.1);
   return baseFee + vat;
-}
-
-/** 광고주 총 결제금액: 광고금액 + 플랫폼수수료(25%+부가세10%) + 결제망수수료 3.3% */
-export function calcAdvertiserTotalPayment(adAmount: number): number {
-  const platformFee = calcJobRequestFee(adAmount);
-  const beforePg = adAmount + platformFee;
-  const pgFee = Math.round(beforePg * PAYMENT_GATEWAY_FEE_RATE);
-  return beforePg + pgFee;
 }
 
 /** localStorage 용량 제한(약 5MB) 방지 - 증빙 이미지 강력 압축. 최대 480px, JPEG 0.45 → 약 30~80KB */
