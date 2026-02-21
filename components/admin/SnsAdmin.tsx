@@ -29,7 +29,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<SMMProduct>(initialProductState);
   
-  const [tempSource, setTempSource] = useState<SMMSource>({ providerId: '', serviceId: '', costPrice: 0, estimatedMinutes: undefined });
+  const [tempSource, setTempSource] = useState<SMMSource>({ providerId: '', serviceId: '', costPrice: 0, estimatedMinutes: undefined, minQuantity: undefined, maxQuantity: undefined });
   const [editingSourceIdx, setEditingSourceIdx] = useState<number | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,22 +152,15 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         i.name === productForm.name &&
         (i.category || '') === (productForm.category || '');
       const toMerge = prev.filter(sameKey);
-      const mergedSources: SMMSource[] = [];
-      const seen = new Set<string>();
-      [...toMerge.flatMap(i => i.sources || []), ...(productForm.sources || [])].forEach(src => {
-        const key = `${src.providerId}:${src.serviceId}`;
-        if (seen.has(key)) return;
-        seen.add(key);
-        mergedSources.push(src);
-      });
       const filtered = prev.filter(i => !sameKey(i));
-      const finalProduct = { ...productForm, id: editingProductId || toMerge[0]?.id || `prod_${Date.now()}`, sources: mergedSources };
+      // 그룹수정 폼에서 수정·삭제한 소스 목록을 그대로 반영 (폼이 단일 소스 of truth)
+      const finalProduct = { ...productForm, id: editingProductId || toMerge[0]?.id || `prod_${Date.now()}`, sources: [...(productForm.sources || [])] };
       return [...filtered, finalProduct];
     });
     setProductForm(initialProductState);
     setEditingProductId(null);
     setActiveTab('list');
-    alert('마스터 상품 통합 데이터 저장이 완료되었습니다. 기존 소스가 모두 유지되었습니다.');
+    alert('마스터 상품 통합 데이터 저장이 완료되었습니다.');
   };
 
   const handleAddOrUpdateSource = () => {
@@ -180,7 +173,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     } else {
       setProductForm({ ...productForm, sources: [...productForm.sources, { ...tempSource }] });
     }
-    setTempSource({ providerId: '', serviceId: '', costPrice: 0, estimatedMinutes: undefined });
+    setTempSource({ providerId: '', serviceId: '', costPrice: 0, estimatedMinutes: undefined, minQuantity: undefined, maxQuantity: undefined });
   };
 
   const startEditProduct = (p: SMMProduct) => {
@@ -458,6 +451,14 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">예상 소요(분, 선택)</span>
                                <input type="number" min={0} placeholder="분" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-2xl font-black text-white italic outline-none w-20 border-b border-white/10" />
                             </div>
+                            <div className="space-y-1">
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">소스별 최소(선택)</span>
+                               <input type="number" min={0} placeholder="상품값" value={tempSource.minQuantity ?? ''} onChange={e => setTempSource({...tempSource, minQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
+                            </div>
+                            <div className="space-y-1">
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">소스별 최대(선택)</span>
+                               <input type="number" min={0} placeholder="상품값" value={tempSource.maxQuantity ?? ''} onChange={e => setTempSource({...tempSource, maxQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
+                            </div>
                          </div>
                          <button onClick={handleAddOrUpdateSource} className="w-full md:w-auto px-10 py-6 bg-white text-[#0f172a] rounded-[28px] font-black text-[15px] hover:bg-blue-400 transition-all uppercase italic shadow-2xl">
                             {editingSourceIdx !== null ? '소스 수정 완료' : '+ 리스트에 추가'}
@@ -475,7 +476,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic tracking-tighter">{s.providerId}</span>
                            <div>
                               <p className="font-black text-gray-800 text-sm">Service ID: <span className="text-blue-600">#{s.serviceId}</span></p>
-                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''}</p>
+                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''}{(s.minQuantity != null || s.maxQuantity != null) ? ` · 수량 ${s.minQuantity ?? '?'}~${s.maxQuantity ?? '?'}` : ''}</p>
                            </div>
                         </div>
                         <div className="flex gap-2">
