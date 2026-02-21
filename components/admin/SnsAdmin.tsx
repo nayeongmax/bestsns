@@ -451,6 +451,15 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">예상 소요(분, 선택)</span>
                                <input type="number" min={0} placeholder="분" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-20 border-b border-white/10" />
                             </div>
+                            <div className="space-y-1">
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">소스별 수량(선택)</span>
+                               <div className="flex items-baseline gap-2 flex-wrap">
+                                  <span className="text-[9px] text-gray-400">최소</span>
+                                  <input type="number" min={0} placeholder="상품" value={tempSource.minQuantity ?? ''} onChange={e => setTempSource({...tempSource, minQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-lg font-black text-white italic outline-none w-14 border-b border-white/10" />
+                                  <span className="text-[9px] text-gray-400">~ 최대</span>
+                                  <input type="number" min={0} placeholder="상품" value={tempSource.maxQuantity ?? ''} onChange={e => setTempSource({...tempSource, maxQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-lg font-black text-white italic outline-none w-14 border-b border-white/10" />
+                               </div>
+                            </div>
                          </div>
                          <button onClick={handleAddOrUpdateSource} className="w-full md:w-auto px-6 py-3.5 bg-white text-[#0f172a] rounded-[20px] font-black text-[13px] hover:bg-blue-400 transition-all uppercase italic shadow-lg shrink-0">
                             {editingSourceIdx !== null ? '소스 수정 완료' : '+ 리스트에 추가'}
@@ -468,7 +477,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic tracking-tighter">{s.providerId}</span>
                            <div>
                               <p className="font-black text-gray-800 text-sm">Service ID: <span className="text-blue-600">#{s.serviceId}</span></p>
-                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''}</p>
+                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''} · 최소~최대: {(s.minQuantity ?? productForm.minQuantity).toLocaleString()}~{(s.maxQuantity ?? productForm.maxQuantity).toLocaleString()}</p>
                            </div>
                         </div>
                         <div className="flex gap-2">
