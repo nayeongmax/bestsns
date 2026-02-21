@@ -78,6 +78,16 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
 
   const selectedProduct = useMemo(() => (smmProducts || []).find(p => p.id === selectedProductId), [selectedProductId, smmProducts]);
 
+  // 공통 교집합 수량: 모든 활성 소스의 min 중 최대값 ~ max 중 최소값 (예: A 10~1000, B 20~10000, C 50~100000 → 50~1000)
+  const effectiveQuantityRange = useMemo(() => {
+    if (!selectedProduct) return { min: 0, max: 999999999 };
+    const active = (selectedProduct.sources || []).filter(s => activeProviderIds.has(s.providerId));
+    if (active.length === 0) return { min: selectedProduct.minQuantity ?? 0, max: selectedProduct.maxQuantity ?? 999999999 };
+    const mins = active.map(s => s.minQuantity ?? selectedProduct.minQuantity ?? 0);
+    const maxs = active.map(s => s.maxQuantity ?? selectedProduct.maxQuantity ?? 999999999);
+    return { min: Math.max(...mins), max: Math.min(...maxs) };
+  }, [selectedProduct, activeProviderIds]);
+
   const handleAddOption = () => {
     if (isGuest) {
       showConfirm({
@@ -92,8 +102,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     }
     if (!selectedProductId || !link || quantity <= 0) return void showAlert({ description: '정보를 모두 입력하세요.' });
     if (!selectedProduct) return;
-    const minQ = selectedProduct.minQuantity ?? 0;
-    const maxQ = selectedProduct.maxQuantity ?? 999999999;
+    const { min: minQ, max: maxQ } = effectiveQuantityRange;
     if (quantity < minQ) return void showAlert({ description: `최소 주문량 ${minQ.toLocaleString()}개 이상 가능합니다.` });
     if (quantity > maxQ) return void showAlert({ description: `최대 주문량 ${maxQ.toLocaleString()}개 이하로 입력해주세요.` });
 
@@ -131,24 +140,15 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const doOrder = async () => {
     setIsProcessing(true);
     try {
-      // 소스별 최소/최대 수량 검증: 실제 주문 시 선택될 소스(bestSource) 기준으로 허용 범위 확인
+      // 주문 수량 검증: 공통 교집합(모든 소스 교집합) 기준
       for (const opt of selectedOptions) {
         const product = smmProducts.find(p => p.id === opt.serviceId);
-        if (!product || !product.sources?.length) continue;
-        const validActiveSources = product.sources.filter(s => activeProviderIds.has(s.providerId));
-        if (validActiveSources.length === 0) continue;
-        const bestSource = [...validActiveSources].sort((a, b) => {
-          const costA = a.costPrice ?? 0;
-          const costB = b.costPrice ?? 0;
-          if (costA !== costB) return costA - costB;
-          const timeA = a.estimatedMinutes ?? 999999;
-          const timeB = b.estimatedMinutes ?? 999999;
-          return timeA - timeB;
-        })[0];
-        const minQ = bestSource.minQuantity ?? product.minQuantity ?? 0;
-        const maxQ = bestSource.maxQuantity ?? product.maxQuantity ?? 999999999;
+        if (!product) continue;
+        const active = (product.sources || []).filter(s => activeProviderIds.has(s.providerId));
+        const minQ = active.length === 0 ? (product.minQuantity ?? 0) : Math.max(...active.map(s => s.minQuantity ?? product.minQuantity ?? 0));
+        const maxQ = active.length === 0 ? (product.maxQuantity ?? 999999999) : Math.min(...active.map(s => s.maxQuantity ?? product.maxQuantity ?? 999999999));
         if (opt.quantity < minQ || opt.quantity > maxQ) {
-          showAlert({ description: `"${product.name}" 주문 수량이 선택된 소스 기준 허용 범위(최소 ${minQ.toLocaleString()}~최대 ${maxQ.toLocaleString()}개)를 벗어났습니다.` });
+          showAlert({ description: `"${product.name}" 주문 수량이 허용 범위(최소 ${minQ.toLocaleString()}~최대 ${maxQ.toLocaleString()}개)를 벗어났습니다.` });
           setIsProcessing(false);
           return;
         }
@@ -294,11 +294,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                     <h3 className="text-[13px] font-black text-gray-400 uppercase italic truncate">수량</h3>
                     {selectedProduct && (
                       <span className="text-[11px] font-bold text-blue-600 italic whitespace-nowrap">
-                        최소 {(selectedProduct.minQuantity ?? 0).toLocaleString()} ~ 최대 {selectedProduct.maxQuantity != null ? selectedProduct.maxQuantity.toLocaleString() : '제한없음'}
+                        최소 {effectiveQuantityRange.min.toLocaleString()} ~ 최대 {effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max.toLocaleString() : '제한없음'} (공통 교집합)
                       </span>
                     )}
                   </div>
-                  <input type="number" placeholder="0" min={selectedProduct?.minQuantity} max={selectedProduct?.maxQuantity ?? undefined} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} />
+                  <input type="number" placeholder="0" min={effectiveQuantityRange.min} max={effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max : undefined} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} />
                 </div>
               </div>
               <button onClick={handleAddOption} className="w-full py-8 bg-blue-600 text-white rounded-[32px] font-black text-2xl hover:bg-black shadow-2xl transition-all italic uppercase tracking-widest active:scale-[0.98]">+ 장바구니 담기</button>
