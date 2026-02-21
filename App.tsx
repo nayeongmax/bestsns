@@ -8,7 +8,7 @@ import {
 import { supabase } from './supabase';
 import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from './storeDb';
 import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from './channelDb';
-import { fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, upsertSmmOrders, upsertSmmProviders, upsertSmmProducts } from './smmDb';
+import { fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, upsertSmmOrders, upsertSmmProviders, upsertSmmProducts, deleteSmmProductsByIds } from './smmDb';
 import { updateProfile, fetchProfileRow } from './profileDb';
 import { fetchNotices, upsertNotices, fetchGradeConfigs, upsertGradeConfigs, fetchPosts, upsertPosts } from './siteDb';
 
@@ -87,6 +87,7 @@ function ContainerRoutes(props: {
   gradeConfigs: GradeConfig[]; setGradeConfigs: React.Dispatch<React.SetStateAction<GradeConfig[]>>;
   onRefreshMembers?: () => void;
   onRefetchProfile?: () => void;
+  onDeleteSmmProducts?: (ids: string[]) => void;
 }) {
   const location = useLocation();
   const pathname = location.pathname || '';
@@ -129,7 +130,7 @@ function ContainerRoutes(props: {
       <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} channels={props.channels} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} setChannelOrders={props.setChannelOrders} setStoreOrders={props.setStoreOrders} /> : <Navigate to="/login" />} />
       <Route path="/payment/alba" element={props.user ? <AlbaPaymentPage user={props.user} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
-      <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} onRefreshMembers={props.onRefreshMembers} /> : <Navigate to="/login" />} />
+      <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} onDeleteSmmProducts={props.onDeleteSmmProducts} smmOrders={props.smmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} onRefreshMembers={props.onRefreshMembers} /> : <Navigate to="/login" />} />
       <Route path="/notices" element={<NoticePage notices={props.notices} setNotices={props.setNotices} user={props.user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -500,6 +501,13 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('site_smm_providers_v2', JSON.stringify(smmProviders)); }, [smmProviders]);
   useEffect(() => { localStorage.setItem('site_smm_products_v2', JSON.stringify(smmProducts)); }, [smmProducts]);
 
+  /** 상품 인벤토리에서 삭제 시 DB에서 즉시 삭제 (새로고침 후에도 삭제 유지) */
+  const handleDeleteSmmProducts = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    deleteSmmProductsByIds(ids).catch((e) => console.warn('smm_products 삭제 실패:', e));
+    setSmmProducts((prev) => prev.filter((p) => !ids.includes(p.id)));
+  }, []);
+
   const handleGlobalUserUpdate = useCallback((updated: UserProfile) => {
     setUser(updated);
     setMembers(prev => prev.map(m => m.id === updated.id ? updated : m));
@@ -693,6 +701,7 @@ const App: React.FC = () => {
             handleLoginSuccess={handleLoginSuccess}
             setSmmProviders={setSmmProviders}
             setSmmProducts={setSmmProducts}
+            onDeleteSmmProducts={handleDeleteSmmProducts}
             setNotices={setNotices}
             handleMassIssueCoupons={handleMassIssueCoupons}
             gradeConfigs={gradeConfigs}
