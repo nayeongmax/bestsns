@@ -394,10 +394,10 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                       <div className="space-y-3"><label className="text-[12px] font-black text-gray-400 px-6 uppercase italic">최소 주문량 (Min)</label><input type="number" value={productForm.minQuantity} onChange={e => setProductForm({...productForm, minQuantity: Number(e.target.value)})} className="w-full p-6 bg-gray-50 rounded-[32px] font-black shadow-inner outline-none text-right px-10" /></div>
                       <div className="space-y-3"><label className="text-[12px] font-black text-gray-400 px-6 uppercase italic">최대 주문량 (Max)</label><input type="number" value={productForm.maxQuantity} onChange={e => setProductForm({...productForm, maxQuantity: Number(e.target.value)})} className="w-full p-6 bg-gray-50 rounded-[32px] font-black shadow-inner outline-none text-right px-10" /></div>
                    </div>
-                   <div className="bg-[#F0F7FF] p-10 rounded-[56px] border-2 border-blue-100 flex flex-col gap-6 shadow-sm overflow-hidden">
+                   <div className="bg-[#F0F7FF] p-10 rounded-[56px] border-2 border-blue-100 flex flex-col gap-6 shadow-sm">
                       <label className="text-[12px] font-black text-blue-500 px-4 uppercase italic block tracking-widest leading-none">최종 판매 단가 (1개 기준 Point)</label>
-                      <div className="flex items-center gap-6 w-full">
-                         <input type="number" value={productForm.sellingPrice || ''} onChange={e => setProductForm({...productForm, sellingPrice: Number(e.target.value)})} className="flex-1 min-0 p-8 bg-white rounded-[32px] font-black text-4xl text-blue-600 shadow-sm text-right outline-none ring-4 ring-blue-50/50" />
+                      <div className="flex items-center gap-6 w-full min-w-0">
+                         <input type="number" value={productForm.sellingPrice || ''} onChange={e => setProductForm({...productForm, sellingPrice: Number(e.target.value)})} className="w-full min-w-[8rem] max-w-[20rem] p-8 bg-white rounded-[32px] font-black text-4xl text-blue-600 shadow-sm text-right outline-none ring-4 ring-blue-50/50" />
                          <span className="text-3xl font-black text-blue-300 italic shrink-0">P</span>
                       </div>
                    </div>
@@ -452,11 +452,13 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                <input type="number" min={0} placeholder="분" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-2xl font-black text-white italic outline-none w-20 border-b border-white/10" />
                             </div>
                             <div className="space-y-1">
-                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">소스별 최소(선택)</span>
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest block">이 소스만 최소</span>
+                               <span className="text-[9px] text-gray-400 italic block -mt-0.5">비워두면 왼쪽 상품 MIN 사용</span>
                                <input type="number" min={0} placeholder="상품값" value={tempSource.minQuantity ?? ''} onChange={e => setTempSource({...tempSource, minQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
                             </div>
                             <div className="space-y-1">
-                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">소스별 최대(선택)</span>
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest block">이 소스만 최대</span>
+                               <span className="text-[9px] text-gray-400 italic block -mt-0.5">비워두면 왼쪽 상품 MAX 사용</span>
                                <input type="number" min={0} placeholder="상품값" value={tempSource.maxQuantity ?? ''} onChange={e => setTempSource({...tempSource, maxQuantity: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-16 border-b border-white/10" />
                             </div>
                          </div>
