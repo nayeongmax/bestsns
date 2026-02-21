@@ -190,7 +190,20 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-6">
                 {SNS_PLATFORMS.map((p) => (
                   <button key={p.id} onClick={() => { setSelectedPlatform(p.name); setSelectedProductId(''); }} className="flex flex-col items-center gap-4 group">
-                    <div className={`w-20 h-20 rounded-[36px] flex items-center justify-center transition-all border-4 ${selectedPlatform === p.name ? 'border-blue-600 bg-blue-50 shadow-2xl scale-110' : 'border-transparent bg-gray-50'}`}><img src={p.icon} alt={p.name} className="w-10 h-10 object-contain" /></div>
+                    <div className={`w-20 h-20 rounded-[36px] flex items-center justify-center transition-all border-4 relative ${selectedPlatform === p.name ? 'border-blue-600 bg-blue-50 shadow-2xl scale-110' : 'border-transparent bg-gray-50'}`}>
+                      <img
+                        src={p.icon}
+                        alt={p.name}
+                        className="w-10 h-10 object-contain"
+                        onError={(e) => {
+                          const el = e.currentTarget;
+                          el.style.display = 'none';
+                          const fallback = el.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.classList.remove('hidden');
+                        }}
+                      />
+                      <span className="hidden absolute inset-0 flex items-center justify-center text-2xl font-black text-gray-400 pointer-events-none" aria-hidden>{p.name[0]}</span>
+                    </div>
                     <span className={`text-[13px] font-black italic ${selectedPlatform === p.name ? 'text-blue-600' : 'text-gray-400'}`}>{p.name}</span>
                   </button>
                 ))}
