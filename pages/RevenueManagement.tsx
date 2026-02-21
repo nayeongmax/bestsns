@@ -59,7 +59,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     if (!user?.id) revenueDbLoadedForUser.current = null;
   }, [user?.id]);
 
-  // 1) DB에서 먼저 로드. user.id가 바뀌면 다시 로드. 로드 완료 후에만 DB로 저장 허용(로컬이 DB 덮어쓰는 것 방지)
+  // 1) DB에서 먼저 로드. user.id로 조회 후 비어 있으면 예전 id(이메일 @ 앞)로 한 번 더 시도 → 테이블에만 있고 화면에 안 나오는 현상 해결
   useEffect(() => {
     if (!user?.id) return;
     if (revenueDbLoadedForUser.current === user.id) return;
@@ -67,12 +67,28 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     initialDbLoadDone.current = false;
     (async () => {
       try {
-        const [companiesData, projectsData, todosData, expensesData] = await Promise.all([
+        let [companiesData, projectsData, todosData, expensesData] = await Promise.all([
           fetchRevenueCompanies(user.id),
           fetchRevenueProjects(user.id),
           fetchRevenueTodos(user.id),
           fetchRevenueGeneralExpenses(user.id),
         ]);
+        const isEmpty = companiesData.length === 0 && projectsData.length === 0 && todosData.length === 0 && expensesData.length === 0;
+        const fallbackId = user.email?.trim() ? user.email.split('@')[0]?.trim() : undefined;
+        if (isEmpty && fallbackId && fallbackId !== user.id) {
+          const [c, p, t, e] = await Promise.all([
+            fetchRevenueCompanies(fallbackId),
+            fetchRevenueProjects(fallbackId),
+            fetchRevenueTodos(fallbackId),
+            fetchRevenueGeneralExpenses(fallbackId),
+          ]);
+          if (c.length > 0 || p.length > 0 || t.length > 0 || e.length > 0) {
+            companiesData = c;
+            projectsData = p;
+            todosData = t;
+            expensesData = e;
+          }
+        }
         setCompanies(companiesData);
         setProjects(projectsData);
         setTodos(todosData);
@@ -84,7 +100,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
         initialDbLoadDone.current = true;
       }
     })();
-  }, [user?.id]);
+  }, [user?.id, user?.email]);
 
   // 2) DB 저장 — "첫 DB 로드가 끝난 뒤"에만 실행 (로컬 초기값으로 DB 덮어쓰기 방지)
   useEffect(() => {
