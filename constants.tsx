@@ -375,6 +375,14 @@ export function calcJobRequestFee(adAmount: number): number {
   return baseFee + vat;
 }
 
+/** 광고주 총 결제금액: 광고금액 + 플랫폼수수료(25%+부가세10%) + 결제망수수료 3.3% */
+export function calcAdvertiserTotalPayment(adAmount: number): number {
+  const platformFee = calcJobRequestFee(adAmount);
+  const beforePg = adAmount + platformFee;
+  const pgFee = Math.round(beforePg * PAYMENT_GATEWAY_FEE_RATE);
+  return beforePg + pgFee;
+}
+
 /** localStorage 용량 제한(약 5MB) 방지 - 증빙 이미지 강력 압축. 최대 480px, JPEG 0.45 → 약 30~80KB */
 export function compressImageForStorage(dataUrl: string, maxSize = 480, quality = 0.45): Promise<string> {
   return new Promise((resolve, reject) => {
