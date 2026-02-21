@@ -289,7 +289,17 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               <div className="space-y-4"><h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4">상품 선택</h3><select className="w-full p-6 bg-gray-50 border-none rounded-[32px] outline-none font-black text-gray-700 shadow-inner focus:bg-white focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer" value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}><option value="">서비스를 선택하세요</option>{filteredProducts.map(p => (<option key={p.id} value={p.id}>{p.name} ({(p.sellingPrice ?? 0).toLocaleString()}P)</option>))}</select></div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                 <div className="md:col-span-8 space-y-4"><h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4">작업 링크</h3><div className="relative"><input type="text" placeholder="https://..." className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" value={link} onChange={(e) => setLink(e.target.value)} /><button onClick={checkLink} className="absolute right-3 top-1/2 -translate-y-1/2 bg-black text-white px-6 py-3 rounded-[20px] font-black text-[11px] hover:bg-blue-600 transition-all">확인 ↗</button></div></div>
-                <div className="md:col-span-4 space-y-4"><h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4 truncate">수량</h3><input type="number" placeholder={selectedProduct ? `${(selectedProduct.minQuantity ?? 0).toLocaleString()} ~ ${selectedProduct.maxQuantity != null ? selectedProduct.maxQuantity.toLocaleString() : '제한없음'} (상품 기준)` : '0'} min={selectedProduct?.minQuantity} max={selectedProduct?.maxQuantity ?? undefined} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} /></div>
+                <div className="md:col-span-4 space-y-4">
+                  <div className="flex items-center justify-between gap-3 px-4">
+                    <h3 className="text-[13px] font-black text-gray-400 uppercase italic truncate">수량</h3>
+                    {selectedProduct && (
+                      <span className="text-[11px] font-bold text-blue-600 italic whitespace-nowrap">
+                        최소 {(selectedProduct.minQuantity ?? 0).toLocaleString()} ~ 최대 {selectedProduct.maxQuantity != null ? selectedProduct.maxQuantity.toLocaleString() : '제한없음'}
+                      </span>
+                    )}
+                  </div>
+                  <input type="number" placeholder="0" min={selectedProduct?.minQuantity} max={selectedProduct?.maxQuantity ?? undefined} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} />
+                </div>
               </div>
               <button onClick={handleAddOption} className="w-full py-8 bg-blue-600 text-white rounded-[32px] font-black text-2xl hover:bg-black shadow-2xl transition-all italic uppercase tracking-widest active:scale-[0.98]">+ 장바구니 담기</button>
             </div>
