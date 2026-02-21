@@ -92,7 +92,10 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     }
     if (!selectedProductId || !link || quantity <= 0) return void showAlert({ description: '정보를 모두 입력하세요.' });
     if (!selectedProduct) return;
-    if (quantity < (selectedProduct.minQuantity || 0)) return void showAlert({ description: `최소 주문량 ${(selectedProduct.minQuantity ?? 0).toLocaleString()}개 이상 가능합니다.` });
+    const minQ = selectedProduct.minQuantity ?? 0;
+    const maxQ = selectedProduct.maxQuantity ?? 999999999;
+    if (quantity < minQ) return void showAlert({ description: `최소 주문량 ${minQ.toLocaleString()}개 이상 가능합니다.` });
+    if (quantity > maxQ) return void showAlert({ description: `최대 주문량 ${maxQ.toLocaleString()}개 이하로 입력해주세요.` });
 
     const newOption: SelectedOption = {
       id: Date.now().toString(),
@@ -128,12 +131,31 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const doOrder = async () => {
     setIsProcessing(true);
     try {
-      // 포인트 차감 처리 (전역 업데이트 요청)
-      // 실제로는 App.tsx의 handleGlobalUserUpdate와 같은 핸들러를 통해 전체 회원 데이터도 함께 고쳐야 함.
-      // 여기서는 데모 목적으로 부모로부터 전달받은 상태를 업데이트하도록 구성됨.
-      const nextPoints = userPoints - totalOrderAmount;
+      // 소스별 최소/최대 수량 검증: 실제 주문 시 선택될 소스(bestSource) 기준으로 허용 범위 확인
+      for (const opt of selectedOptions) {
+        const product = smmProducts.find(p => p.id === opt.serviceId);
+        if (!product || !product.sources?.length) continue;
+        const validActiveSources = product.sources.filter(s => activeProviderIds.has(s.providerId));
+        if (validActiveSources.length === 0) continue;
+        const bestSource = [...validActiveSources].sort((a, b) => {
+          const costA = a.costPrice ?? 0;
+          const costB = b.costPrice ?? 0;
+          if (costA !== costB) return costA - costB;
+          const timeA = a.estimatedMinutes ?? 999999;
+          const timeB = b.estimatedMinutes ?? 999999;
+          return timeA - timeB;
+        })[0];
+        const minQ = bestSource.minQuantity ?? product.minQuantity ?? 0;
+        const maxQ = bestSource.maxQuantity ?? product.maxQuantity ?? 999999999;
+        if (opt.quantity < minQ || opt.quantity > maxQ) {
+          showAlert({ description: `"${product.name}" 주문 수량이 선택된 소스 기준 허용 범위(최소 ${minQ.toLocaleString()}~최대 ${maxQ.toLocaleString()}개)를 벗어났습니다.` });
+          setIsProcessing(false);
+          return;
+        }
+      }
 
-      // 전역 상태 + DB 반영
+      // 포인트 차감 처리 (전역 업데이트 요청)
+      const nextPoints = userPoints - totalOrderAmount;
       window.dispatchEvent(new CustomEvent('site-user-update', {
         detail: { ...user, points: nextPoints },
       }));
@@ -145,7 +167,6 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         
         const validActiveSources = product.sources.filter(s => activeProviderIds.has(s.providerId));
         if (validActiveSources.length === 0) continue;
-        // 금액·예상 소요시간을 고려해 소스 1개 선택: 원가 낮은 순, 동일하면 소요시간 짧은 순
         const bestSource = [...validActiveSources].sort((a, b) => {
           const costA = a.costPrice ?? 0;
           const costB = b.costPrice ?? 0;
@@ -268,7 +289,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               <div className="space-y-4"><h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4">상품 선택</h3><select className="w-full p-6 bg-gray-50 border-none rounded-[32px] outline-none font-black text-gray-700 shadow-inner focus:bg-white focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer" value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}><option value="">서비스를 선택하세요</option>{filteredProducts.map(p => (<option key={p.id} value={p.id}>{p.name} ({(p.sellingPrice ?? 0).toLocaleString()}P)</option>))}</select></div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                 <div className="md:col-span-8 space-y-4"><h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4">작업 링크</h3><div className="relative"><input type="text" placeholder="https://..." className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" value={link} onChange={(e) => setLink(e.target.value)} /><button onClick={checkLink} className="absolute right-3 top-1/2 -translate-y-1/2 bg-black text-white px-6 py-3 rounded-[20px] font-black text-[11px] hover:bg-blue-600 transition-all">확인 ↗</button></div></div>
-                <div className="md:col-span-4 space-y-4"><h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4 truncate">수량</h3><input type="number" placeholder="0" className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} /></div>
+                <div className="md:col-span-4 space-y-4"><h3 className="text-[13px] font-black text-gray-400 uppercase italic px-4 truncate">수량</h3><input type="number" placeholder={selectedProduct ? `${(selectedProduct.minQuantity ?? 0).toLocaleString()} ~ ${selectedProduct.maxQuantity != null ? selectedProduct.maxQuantity.toLocaleString() : '제한없음'} (상품 기준)` : '0'} min={selectedProduct?.minQuantity} max={selectedProduct?.maxQuantity ?? undefined} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} /></div>
               </div>
               <button onClick={handleAddOption} className="w-full py-8 bg-blue-600 text-white rounded-[32px] font-black text-2xl hover:bg-black shadow-2xl transition-all italic uppercase tracking-widest active:scale-[0.98]">+ 장바구니 담기</button>
             </div>
