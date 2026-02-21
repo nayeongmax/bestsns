@@ -601,6 +601,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={saveId} onChange={e => setSaveId(e.target.checked)} className="w-4 h-4 rounded accent-[#2563EB]" /><span className="text-sm text-[#475569]">아이디 저장</span></label>
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setMode('FIND_ID')} className="text-xs text-[#94a3b8] hover:text-[#2563EB]">ID 찾기</button>
+                    <button type="button" onClick={() => setMode('FIND_PW')} className="text-xs text-[#94a3b8] hover:text-[#2563EB]">비밀번호를 잊으셨나요?</button>
                   </div>
                 </div>
                 <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-xl font-bold text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1.5">로그인</button>
@@ -616,7 +617,6 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                   카카오
                 </button>
               </div>
-              <p className="text-right mt-3 text-xs"><button type="button" onClick={() => setMode('FIND_PW')} className="text-[#94a3b8] hover:text-[#2563EB]">비밀번호를 잊으셨나요?</button></p>
             </div>
           )}
 
