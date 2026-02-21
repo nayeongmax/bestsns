@@ -483,7 +483,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic tracking-tighter">{s.providerId}</span>
                            <div>
                               <p className="font-black text-gray-800 text-sm">Service ID: <span className="text-blue-600">#{s.serviceId}</span></p>
-                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''} · 최소~최대: {(s.minQuantity ?? productForm.minQuantity).toLocaleString()}~{(s.maxQuantity ?? productForm.maxQuantity).toLocaleString()}</p>
+                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''} · 최소~최대: {s.minQuantity != null ? s.minQuantity.toLocaleString() : '상품'}~{s.maxQuantity != null ? s.maxQuantity.toLocaleString() : '상품'}</p>
                            </div>
                         </div>
                         <div className="flex gap-2">
