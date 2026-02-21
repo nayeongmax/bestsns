@@ -18,7 +18,7 @@ export const SNS_PLATFORMS = [
   { id: 'twitter', name: '트위터(X)', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/X_icon_2.svg/512px-X_icon_2.svg.png' },
   { id: 'pinterest', name: '핀터레스트', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Pinterest-logo.png' },
   { id: 'tumblr', name: '텀블러', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Tumblr.svg/512px-Tumblr.svg.png' },
-  { id: 'daangn', name: '당근', icon: 'https://cdn-icons-png.flaticon.com/512/5968/5968841.png' },
+  { id: 'daangn', name: '당근', icon: 'https://postfiles.pstatic.net/MjAyNjAyMTJfMjY3/MDAxNzcwODk0Mjk0MzI2.f3S1vd3SVxRrKlxLQ42a_dDfm1h4pg1ThjpKHGlRcxwg.-6WUrPOKqEq8piC9uVioOeJwogE-LEZXkiMSg1xZWVUg.JPEG/%EB%8B%B9%EA%B7%BC.jpg?type=w966' },
   { id: 'kakaotalk', name: '카카오톡', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/KakaoTalk_logo.svg/512px-KakaoTalk_logo.svg.png' },
   { id: 'appdownload', name: '앱다운로드', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Google_Play_Arrow_logo.svg/512px-Google_Play_Arrow_logo.svg.png' },
 ];
