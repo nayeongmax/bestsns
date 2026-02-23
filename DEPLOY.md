@@ -244,3 +244,6 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
 3. 배포 후에는 탈퇴 시 해당 함수가 호출되어 **profiles 삭제 + auth.users 삭제**가 한 번에 이루어지고, **Users** 목록에서도 사라집니다.
 
 Edge Function을 **배포하지 않은 경우**에는 기존처럼 **profiles만 삭제**되고 로그아웃되며, **Users**에는 계정이 남습니다. 이때는 Supabase **Authentication → Users**에서 해당 사용자를 **수동 삭제**하면 됩니다.
+
+**"탈퇴했는데 Users에 아직 있다"** → delete-user Edge Function이 **아직 배포되지 않았거나** 호출에 실패한 경우입니다.  
+1) `supabase functions deploy delete-user` 로 배포했는지 확인하고, 2) 배포 후 새로 탈퇴한 계정은 Users에서도 삭제됩니다. **이미 탈퇴 처리된 계정**은 대시보드 **Authentication → Users**에서 해당 사용자를 **수동 삭제**하세요.
