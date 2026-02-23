@@ -337,6 +337,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
           headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         });
         if (res.ok) {
+          await supabase.auth.signOut();
           localStorage.removeItem('user_profile_v2');
           window.location.href = '/';
           return;
