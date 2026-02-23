@@ -131,7 +131,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
             buildProfileFromSession(session.user).then(async (profile) => {
-              await supabase.from('profiles').upsert({
+              const { error: profileErr } = await supabase.from('profiles').upsert({
                 id: profile.id,
                 email: profile.email || null,
                 nickname: profile.nickname,
@@ -139,6 +139,10 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 phone: profile.phone || null,
                 updated_at: new Date().toISOString()
               }, { onConflict: 'id' });
+              if (profileErr) {
+                console.error('소셜 로그인 후 profiles 저장 실패:', profileErr.message);
+                alert('로그인은 완료되었지만, 회원 목록 저장에 실패했습니다.\n\nSupabase 대시보드 → SQL Editor에서 아래 정책을 실행해 주세요:\n\nDROP POLICY IF EXISTS "profiles_insert_public" ON profiles;\nCREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);\n\n실행 후 다시 구글/카카오 로그인을 시도해 보세요.');
+              }
               onLoginSuccess(profile);
               navigate('/sns', { replace: true });
             });
