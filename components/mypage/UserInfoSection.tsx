@@ -328,6 +328,21 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       cancelLabel: '취소',
       danger: true,
       onConfirm: async () => {
+    const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (supabaseUrl && session?.access_token) {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        });
+        if (res.ok) {
+          localStorage.removeItem('user_profile_v2');
+          window.location.href = '/';
+          return;
+        }
+      } catch (_) {}
+    }
     await supabase.auth.signOut();
     try {
       await supabase.from('profiles').delete().eq('id', user.id);
