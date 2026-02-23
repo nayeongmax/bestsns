@@ -228,3 +228,19 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
 
 - **Database** → **Tables** → **profiles** 테이블 선택 후, 상단 또는 테이블 설정에서 **RLS** 표시가 있는지 확인합니다. (Supabase UI 버전에 따라 "RLS enabled" 토글이나 방패 아이콘으로 보입니다.)
 - SQL로 확인: `SELECT relrowsecurity FROM pg_class WHERE relname = 'profiles';` → `t`이면 RLS 켜짐.
+
+---
+
+## 6. 회원 탈퇴 시 Authentication → Users에서도 삭제되게 하기
+
+마이페이지에서 "회원 탈퇴"를 하면 **profiles** 테이블에서는 삭제되지만, **Authentication → Users**에는 그대로 남습니다. (브라우저에서는 auth.users 삭제 권한이 없기 때문입니다.)
+
+**Users 목록에서도 완전히 없애려면** Supabase **Edge Function**을 배포해야 합니다.
+
+1. [Supabase 대시보드](https://supabase.com/dashboard) → 프로젝트 선택
+2. **Edge Functions** 메뉴에서 **delete-user** 함수를 배포합니다.  
+   - 로컬에 **`supabase/functions/delete-user/index.ts`** 파일이 있으면, Supabase CLI로 배포:  
+     `supabase functions deploy delete-user`
+3. 배포 후에는 탈퇴 시 해당 함수가 호출되어 **profiles 삭제 + auth.users 삭제**가 한 번에 이루어지고, **Users** 목록에서도 사라집니다.
+
+Edge Function을 **배포하지 않은 경우**에는 기존처럼 **profiles만 삭제**되고 로그아웃되며, **Users**에는 계정이 남습니다. 이때는 Supabase **Authentication → Users**에서 해당 사용자를 **수동 삭제**하면 됩니다.
