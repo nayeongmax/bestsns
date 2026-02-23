@@ -10,6 +10,7 @@ const IconLock = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fi
 const IconCheck = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>);
 const IconEye = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>);
 const IconEyeOff = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>);
+const IconPhone = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>);
 
 interface Props {
   onLoginSuccess: (user: UserProfile) => void;
@@ -358,7 +359,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     const email = formData.email.trim().toLowerCase();
     const pw = formData.pw;
     const pwConfirm = formData.pwConfirm;
-    const nickname = `유저_${id}`;
+    const nameTrim = formData.name.trim();
+    const phoneTrim = formData.phone.trim();
+    const nickname = nameTrim || `유저_${id}`;
 
     if (idRaw.length < 5) return alert('아이디는 5자 이상이어야 합니다.');
     if (!isValidEmail(email)) return alert('올바른 이메일 주소를 입력해 주세요.');
@@ -374,7 +377,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         options: {
           data: {
             nickname,
-            user_id: id
+            user_id: id,
+            phone: phoneTrim || undefined
           }
         }
       });
@@ -389,7 +393,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               id,
               nickname,
               email,
-              phone: '',
+              phone: phoneTrim || '',
               profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
               role: 'user',
               points: 0,
@@ -420,7 +424,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         id,
         nickname,
         email,
-        phone: '',
+        phone: phoneTrim || '',
         profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
         role: 'user',
         points: 0,
@@ -428,13 +432,13 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         coupons: []
       };
 
-      // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록
+      // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록 (이름·휴대폰 포함 → 소셜 로그인 연동 시 동일 프로필 사용)
       const { error: profileErr } = await supabase.from('profiles').upsert({
         id,
         email,
         nickname,
         profile_image: newUser.profileImage,
-        phone: null,
+        phone: phoneTrim || null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       if (profileErr) {
@@ -625,6 +629,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-5">회원가입</h3>
               <form onSubmit={handleJoin} className="space-y-3">
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="아이디 (5자 이상)" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={5} /></div>
+                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="이름" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" /></div>
+                <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconPhone /></span><input type="tel" placeholder="휴대폰 번호 (010-0000-0000)" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" /></div>
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconEmail /></span><input type="email" placeholder="이메일" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required /></div>
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconLock /></span><input type={showPwJoin ? 'text' : 'password'} placeholder="비밀번호 (8자 이상)" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowPwJoin(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwJoin ? <IconEyeOff /> : <IconEye />}</button></div>
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconCheck /></span><input type={showPwConfirm ? 'text' : 'password'} placeholder="비밀번호 확인" value={formData.pwConfirm} onChange={e => setFormData({ ...formData, pwConfirm: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowPwConfirm(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwConfirm ? <IconEyeOff /> : <IconEye />}</button></div>
