@@ -30,10 +30,19 @@ function getParamFromHash(name: string): string | null {
   return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
 }
 
+/** URL 해시에 OAuth 복귀 토큰이 있는지 (로그인 폼 깜빡임 방지용) */
+function hasOAuthReturnHash(): boolean {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hash || '';
+  return h.includes('access_token=') && !h.includes('type=recovery');
+}
+
 const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [loading, setLoading] = useState(false);
+  /** 구글/카카오 로그인 복귀 시 폼 대신 로딩만 표시해 로그인 화면 깜빡임 제거 */
+  const [isProcessingOAuth, setIsProcessingOAuth] = useState(hasOAuthReturnHash);
   const [saveId, setSaveId] = useState(() => !!localStorage.getItem(SAVED_LOGIN_ID_KEY));
   const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -156,12 +165,16 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         if (accessToken && refreshToken) {
           supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ data: { session }, error }) => {
             if (!error && session?.user) setSessionThenLogin(session);
-          });
+            else setIsProcessingOAuth(false);
+          }).catch(() => setIsProcessingOAuth(false));
         } else {
           supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) setSessionThenLogin(session);
+            else setIsProcessingOAuth(false);
           });
         }
+      } else {
+        setIsProcessingOAuth(false);
       }
     };
     checkHashToken();
@@ -558,6 +571,18 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   };
 
   const isFormMode = mode === 'LOGIN' || mode === 'JOIN';
+
+  // 구글/카카오 로그인 복귀 직후: 폼 대신 로딩만 표시해 로그인 화면 깜빡임 제거
+  if (isProcessingOAuth) {
+    return (
+      <div className={`flex items-center justify-center p-5 font-['Noto_Sans_KR',sans-serif] ${onClose ? '' : 'min-h-screen bg-slate-100'}`}>
+        <div className="w-full max-w-[320px] bg-white rounded-2xl shadow-xl p-10 flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[#0f172a] font-semibold">로그인 처리 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex items-center justify-center p-5 font-['Noto_Sans_KR',sans-serif] ${onClose ? '' : 'min-h-screen bg-slate-100'}`}>
