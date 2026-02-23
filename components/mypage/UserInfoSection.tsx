@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UserProfile, SellerApplication, NotificationType, FreelancerApplication } from '@/types';
-import { supabase } from '../../supabase';
+import { supabase, getSupabaseUrl } from '../../supabase';
 import { compressImageForStorage } from '@/constants';
 import { updateProfile } from '../../profileDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -328,7 +328,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       cancelLabel: '취소',
       danger: true,
       onConfirm: async () => {
-    const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+    const supabaseUrl = getSupabaseUrl();
     const { data: { session } } = await supabase.auth.getSession();
     if (supabaseUrl && session?.access_token) {
       try {
@@ -341,7 +341,14 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
           window.location.href = '/';
           return;
         }
-      } catch (_) {}
+        const body = await res.json().catch(() => ({}));
+        const msg = body?.error || res.statusText || '서버 오류';
+        showAlert({ description: `탈퇴 처리 실패: ${msg}. 프로필만 삭제하고 로그아웃합니다. 계정은 Authentication → Users에 남을 수 있으니, 관리자에게 문의하세요.` });
+      } catch (e) {
+        showAlert({ description: '탈퇴 요청 연결에 실패했습니다. Edge Function(delete-user) 배포 여부와 네트워크를 확인한 뒤 다시 시도하거나, 관리자에게 문의하세요.' });
+      }
+    } else if (!supabaseUrl) {
+      showAlert({ description: 'Supabase URL이 설정되지 않았습니다. 탈퇴 시 Users 목록에서 삭제하려면 배포 환경에 VITE_SUPABASE_URL을 설정하고 delete-user 함수를 배포하세요.' });
     }
     await supabase.auth.signOut();
     try {
