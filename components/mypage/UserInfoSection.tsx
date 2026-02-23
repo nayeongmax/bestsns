@@ -27,6 +27,9 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
 
   // 비밀번호 변경 폼 상태
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  // 휴대폰 번호 수정 (마이페이지 개인정보)
+  const [editingPhone, setEditingPhone] = useState<string | null>(null);
+  const [savingPhone, setSavingPhone] = useState(false);
 
   useEffect(() => {
     if (forcedTab) {
@@ -335,6 +338,21 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     });
   };
 
+  const handlePhoneSave = async () => {
+    const value = (editingPhone ?? (user.phone || '')).trim();
+    setSavingPhone(true);
+    try {
+      await updateProfile(user.id, { phone: value || '' });
+      onUpdate({ ...user, phone: value || undefined });
+      setEditingPhone(null);
+      showAlert({ description: '휴대폰 번호가 저장되었습니다.' });
+    } catch (e) {
+      showAlert({ description: '저장에 실패했습니다. 다시 시도해 주세요.' });
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
   const handlePasswordUpdate = async () => {
     if (!pwForm.current || !pwForm.next || !pwForm.confirm) return void showAlert({ description: '모든 정보를 입력해 주세요.' });
     if (pwForm.next !== pwForm.confirm) return void showAlert({ description: '새 비밀번호가 일치하지 않습니다.' });
@@ -392,10 +410,15 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                    <h4 className="text-[20px] font-black text-gray-900 italic">본인인증 및 연락처 관리</h4>
                    <div className="space-y-8">
                       <div className="space-y-3">
+                         <div className="flex justify-between items-center px-2"><label className="text-[13px] font-bold text-gray-400 italic">이름</label><span className="text-[11px] font-black text-green-500">✓ 가입 정보</span></div>
+                         <input value={user.nickname || '등록된 이름 없음'} readOnly className="w-full p-5 bg-gray-50 rounded-2xl font-black text-[15px] text-gray-700 shadow-inner outline-none" />
+                         <p className="text-[11px] text-blue-500 font-bold px-2 leading-relaxed italic">* 회원가입 또는 소셜 로그인 시 연동된 이름입니다.</p>
+                      </div>
+                      <div className="space-y-3">
                          <div className="flex justify-between items-center px-2"><label className="text-[13px] font-bold text-gray-400 italic">휴대폰 번호</label><span className="text-[11px] font-black text-green-500">✓ 가입 정보</span></div>
                          <div className="flex gap-3">
-                           <input value={user.phone || '등록된 번호 없음'} readOnly className="flex-1 p-5 bg-gray-50 rounded-2xl font-black text-[15px] text-gray-700 shadow-inner outline-none" />
-                           <button onClick={() => showAlert({ description: '번호 변경 기능은 준비 중입니다.' })} className="px-8 py-5 border border-gray-200 rounded-2xl font-black text-[15px] text-gray-400 hover:bg-gray-50 transition-colors">번호변경</button>
+                           <input value={editingPhone ?? (user.phone || '')} onChange={e => setEditingPhone(e.target.value)} placeholder="등록된 번호 없음" className="flex-1 p-5 bg-gray-50 rounded-2xl font-black text-[15px] text-gray-700 shadow-inner outline-none focus:ring-2 focus:ring-blue-200" />
+                           <button onClick={handlePhoneSave} disabled={savingPhone || (editingPhone ?? (user.phone || '')) === (user.phone || '')} className="px-8 py-5 border border-gray-200 rounded-2xl font-black text-[15px] text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">저장</button>
                          </div>
                          <p className="text-[11px] text-blue-500 font-bold px-2 leading-relaxed italic">* 가입 시 입력하신 번호입니다. 주문 및 채팅 알림 시 사용됩니다.</p>
                       </div>
