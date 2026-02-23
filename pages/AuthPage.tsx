@@ -65,7 +65,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     const meta = user.user_metadata || {};
     const email = (user.email || '').trim().toLowerCase();
     const { data: profileRow } = await supabase.from('profiles').select('id, nickname, profile_image, phone').eq('email', email).maybeSingle();
-    const id = (profileRow?.id || (meta.user_id as string) || (meta.sub as string) || email.split('@')[0] || user.id).toString();
+    // 기존 프로필이 있으면 그 id 유지, 없으면 Supabase Auth UUID 사용 → profiles INSERT/upsert 정상 동작
+    const id = (profileRow?.id ?? user.id).toString();
     const nickname = (profileRow?.nickname || (meta.nickname as string) || (meta.name as string) || (meta.full_name as string) || id).toString();
     const profileImage = (profileRow?.profile_image || (meta.avatar_url as string) || (meta.picture as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`).toString();
     return {
@@ -612,13 +613,13 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               </form>
               <div className="flex items-center gap-2.5 my-3"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
               <div className="flex flex-col gap-2.5">
-                <button type="button" onClick={() => { showToast('Google 로그인 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                <button type="button" onClick={() => { showToast('구글 로그인 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
-                  Google 로그인
+                  구글로 로그인
                 </button>
                 <button type="button" onClick={() => { showToast('카카오 로그인 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
-                  카카오 로그인
+                  카카오로 로그인
                 </button>
               </div>
             </div>
@@ -639,13 +640,13 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               </form>
               <div className="flex items-center gap-2.5 my-3"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
               <div className="flex flex-col gap-2.5">
-                <button type="button" onClick={() => { showToast('Google 가입 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                <button type="button" onClick={() => { showToast('구글 회원가입 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
-                  Google 로그인
+                  구글로 회원가입
                 </button>
-                <button type="button" onClick={() => { showToast('카카오 가입 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                <button type="button" onClick={() => { showToast('카카오 회원가입 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
-                  카카오 로그인
+                  카카오로 회원가입
                 </button>
               </div>
               <p className="text-center text-sm text-[#94a3b8] mt-2">이미 계정이 있으신가요? <button type="button" onClick={() => setMode('LOGIN')} className="font-medium text-[#2563EB] hover:underline">로그인</button></p>
