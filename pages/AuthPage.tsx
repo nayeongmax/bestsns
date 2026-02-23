@@ -589,9 +589,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           )}
 
           {mode === 'LOGIN' && (
-            <div className="flex flex-col justify-center min-h-[340px] py-2">
-              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-5">로그인</h3>
-              <form onSubmit={handleLogin} className="space-y-3">
+            <div className="flex flex-col justify-center min-h-0 py-1">
+              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-3">로그인</h3>
+              <form onSubmit={handleLogin} className="space-y-2.5">
                 <div className="relative flex items-center">
                   <span className="absolute left-3.5 text-[#94a3b8] pointer-events-none"><IconUser /></span>
                   <input type="text" placeholder="아이디 또는 이메일" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required />
@@ -601,33 +601,33 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                   <input type={showPwLogin ? 'text' : 'password'} placeholder="비밀번호" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required />
                   <button type="button" onClick={() => setShowPwLogin(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwLogin ? <IconEyeOff /> : <IconEye />}</button>
                 </div>
-                <div className="flex justify-between items-center -mt-1 mb-1">
+                <div className="flex justify-between items-center -mt-0.5 mb-0.5">
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={saveId} onChange={e => setSaveId(e.target.checked)} className="w-4 h-4 rounded accent-[#2563EB]" /><span className="text-sm text-[#475569]">아이디 저장</span></label>
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setMode('FIND_ID')} className="text-xs text-[#94a3b8] hover:text-[#2563EB]">ID 찾기</button>
                     <button type="button" onClick={() => setMode('FIND_PW')} className="text-xs text-[#94a3b8] hover:text-[#2563EB]">비밀번호를 잊으셨나요?</button>
                   </div>
                 </div>
-                <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-xl font-bold text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1.5">로그인</button>
+                <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-xl font-bold text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1">로그인</button>
               </form>
-              <div className="flex items-center gap-2.5 my-4"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
-              <div className="flex gap-2.5">
-                <button type="button" onClick={() => { showToast('Google 로그인 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[13px] font-medium hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
-                  <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
-                  Google
+              <div className="flex items-center gap-2.5 my-3"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
+              <div className="flex flex-col gap-2.5">
+                <button type="button" onClick={() => { showToast('Google 로그인 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                  <svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+                  Google 로그인
                 </button>
-                <button type="button" onClick={() => { showToast('카카오 로그인 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[13px] font-medium hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
-                  카카오
+                <button type="button" onClick={() => { showToast('카카오 로그인 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                  <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
+                  카카오 로그인
                 </button>
               </div>
             </div>
           )}
 
           {mode === 'JOIN' && (
-            <div className="flex flex-col justify-center min-h-[340px] py-2">
-              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-5">회원가입</h3>
-              <form onSubmit={handleJoin} className="space-y-3">
+            <div className="flex flex-col justify-center min-h-0 py-1">
+              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-3">회원가입</h3>
+              <form onSubmit={handleJoin} className="space-y-2.5">
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="아이디 (5자 이상)" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={5} /></div>
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="이름" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" /></div>
                 <div className="relative flex items-center"><span className="absolute left-3.5 text-[#94a3b8]"><IconPhone /></span><input type="tel" placeholder="휴대폰 번호 (010-0000-0000)" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" /></div>
@@ -637,18 +637,18 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 <label className="flex items-start gap-3 cursor-pointer"><input type="checkbox" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} className="w-4 h-4 mt-0.5 rounded accent-[#2563EB]" /><span className="text-sm text-[#475569]">이용약관 및 개인정보 처리방침 동의 (필수)</span></label>
                 <button type="submit" disabled={loading} className="w-full py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-xl font-bold text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1.5">가입하기</button>
               </form>
-              <div className="flex items-center gap-2.5 my-4"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
-              <div className="flex gap-2.5">
-                <button type="button" onClick={() => { showToast('Google 가입 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[13px] font-medium hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
-                  <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
-                  Google
+              <div className="flex items-center gap-2.5 my-3"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
+              <div className="flex flex-col gap-2.5">
+                <button type="button" onClick={() => { showToast('Google 가입 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                  <svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+                  Google 로그인
                 </button>
-                <button type="button" onClick={() => { showToast('카카오 가입 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[13px] font-medium hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
-                  카카오
+                <button type="button" onClick={() => { showToast('카카오 가입 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                  <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
+                  카카오 로그인
                 </button>
               </div>
-              <p className="text-center text-sm text-[#94a3b8] mt-3">이미 계정이 있으신가요? <button type="button" onClick={() => setMode('LOGIN')} className="font-medium text-[#2563EB] hover:underline">로그인</button></p>
+              <p className="text-center text-sm text-[#94a3b8] mt-2">이미 계정이 있으신가요? <button type="button" onClick={() => setMode('LOGIN')} className="font-medium text-[#2563EB] hover:underline">로그인</button></p>
             </div>
           )}
 
