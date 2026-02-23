@@ -246,7 +246,11 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
 1. [Supabase 대시보드](https://supabase.com/dashboard) → 프로젝트 선택
 2. **Edge Functions** 메뉴에서 **delete-user** 함수를 배포합니다.  
    - **배포는 사용자 PC 터미널에서** Supabase CLI로 실행해야 합니다. (이 프로젝트 폴더에서 아래 명령 실행.)  
-   - Supabase CLI가 없다면: [Supabase CLI 설치](https://supabase.com/docs/guides/cli) 후 `supabase login`, `supabase link`(프로젝트 연결)까지 진행한 뒤:
+   - **Supabase CLI 설치 (Windows):** `npm install -g supabase`는 지원 중단됨. **winget** 사용:
+     ```powershell
+     winget install Supabase.CLI
+     ```
+     약관이 나오면 `Y` 입력 후 Enter. 설치 후 터미널을 다시 열고 `supabase login` → `supabase link` → 아래 배포 명령 실행.
    ```bash
    supabase functions deploy delete-user
    ```
