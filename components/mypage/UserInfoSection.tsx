@@ -19,6 +19,18 @@ interface Props {
 type SettingsTab = 'profile' | 'expert' | 'notif' | 'pw' | 'quit';
 type SellerType = 'individual' | 'business';
 
+/** 탈퇴 시 Supabase Auth가 localStorage에 남긴 세션 키(sb-*) 완전 제거 → 재방문 시 구글 로그인 자동 복원 방지 */
+function clearSupabaseAuthStorage(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('sb-')) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+  } catch (_) {}
+}
+
 const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChange, expertRegistrationFor, onExpertRegistrationDone, addNotif }) => {
   const { showConfirm, showAlert } = useConfirm();
   const [activeTab, setActiveTab] = useState<SettingsTab>(forcedTab || 'profile');
@@ -337,7 +349,8 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
           headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         });
         if (res.ok) {
-          await supabase.auth.signOut();
+          await supabase.auth.signOut({ scope: 'global' });
+          clearSupabaseAuthStorage();
           localStorage.removeItem('user_profile_v2');
           window.location.href = '/';
           return;
@@ -346,7 +359,8 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
         // Edge Function 미배포/연결 실패 시에도 프로필 삭제 + 로그아웃으로 탈퇴 완료 처리
       }
     }
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'global' });
+    clearSupabaseAuthStorage();
     try {
       await supabase.from('profiles').delete().eq('id', user.id);
     } catch (_) {}
