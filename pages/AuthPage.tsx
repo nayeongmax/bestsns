@@ -542,7 +542,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
 
   return (
     <div className={`flex items-center justify-center p-5 font-['Noto_Sans_KR',sans-serif] ${onClose ? '' : 'min-h-screen bg-slate-100'}`}>
-      <div className="w-full max-w-[920px] max-md:max-w-[440px] h-[620px] max-md:h-[580px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex overflow-hidden auth-card-enter relative flex-shrink-0">
+      <div className="w-full max-w-[920px] max-md:max-w-[440px] h-[780px] max-md:h-[720px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex overflow-hidden auth-card-enter relative flex-shrink-0">
         {onClose && (
           <button type="button" onClick={onClose} className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-xl font-bold transition-colors" aria-label="닫기">×</button>
         )}
