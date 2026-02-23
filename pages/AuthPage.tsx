@@ -67,14 +67,16 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     const { data: profileRow } = await supabase.from('profiles').select('id, nickname, profile_image, phone').eq('email', email).maybeSingle();
     // 기존 프로필이 있으면 그 id 유지, 없으면 Supabase Auth UUID 사용 → profiles INSERT/upsert 정상 동작
     const id = (profileRow?.id ?? user.id).toString();
-    const nickname = (profileRow?.nickname || (meta.nickname as string) || (meta.name as string) || (meta.full_name as string) || id).toString();
-    const profileImage = (profileRow?.profile_image || (meta.avatar_url as string) || (meta.picture as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`).toString();
+    // 현재 로그인한 사용자(session)와 같은 행일 때만 profileRow 값 사용 → 다른 계정(예: 네이버) 데이터가 섞여 보이는 것 방지
+    const isSameUser = profileRow && profileRow.id === user.id;
+    const nickname = ((isSameUser ? (profileRow.nickname || '') : '') || (meta.nickname as string) || (meta.name as string) || (meta.full_name as string) || id).toString();
+    const profileImage = ((isSameUser ? (profileRow.profile_image || '') : '') || (meta.avatar_url as string) || (meta.picture as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`).toString();
     return {
       id,
       nickname,
       profileImage,
       email: user.email || email,
-      phone: (profileRow?.phone as string) || '',
+      phone: (isSameUser && profileRow?.phone ? (profileRow.phone as string) : '') || '',
       role: 'user' as const,
       points: 0,
       joinDate: new Date().toISOString().split('T')[0],
@@ -126,11 +128,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         }
         return;
       }
-      // 소셜 로그인 복귀: URL에 access_token이 있을 때만 세션 확인 후 로그인 (자동 로그인 아님)
+      // 소셜 로그인 복귀: 해시의 토큰으로 먼저 세션을 갱신한 뒤 프로필 생성 (이전 계정(네이버 등) 세션이 보이던 문제 방지)
       if (hash.includes('access_token=') && !hash.includes('type=recovery')) {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (session?.user) {
-            buildProfileFromSession(session.user).then(async (profile) => {
+        const accessToken = getParamFromHash('access_token');
+        const refreshToken = getParamFromHash('refresh_token');
+        const setSessionThenLogin = (session: { user: any }) => {
+          buildProfileFromSession(session.user).then(async (profile) => {
               const { error: profileErr } = await supabase.from('profiles').upsert({
                 id: profile.id,
                 email: profile.email || null,
@@ -149,8 +152,16 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               onLoginSuccess(profile);
               navigate('/sns', { replace: true });
             });
-          }
-        });
+        };
+        if (accessToken && refreshToken) {
+          supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ data: { session }, error }) => {
+            if (!error && session?.user) setSessionThenLogin(session);
+          });
+        } else {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) setSessionThenLogin(session);
+          });
+        }
       }
     };
     checkHashToken();
