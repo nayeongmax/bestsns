@@ -142,7 +142,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               if (profileErr) {
                 console.error('[THEBESTSNS] 소셜 로그인 후 profiles 저장 실패:', profileErr);
                 console.error('[THEBESTSNS] 저장 시도한 profile.id:', profile.id, 'email:', profile.email);
-                alert('로그인은 완료되었지만, 회원 목록 저장에 실패했습니다.\n\n콘솔(F12)에서 "[THEBESTSNS] 소셜 로그인 후 profiles 저장 실패" 메시지의 내용을 확인해 주세요.\n\nSupabase 대시보드 → SQL Editor에서 아래 정책을 실행했는지도 확인해 주세요:\n\nDROP POLICY IF EXISTS "profiles_insert_public" ON profiles;\nCREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);');
+                alert('로그인은 완료되었지만, 회원 목록 저장에 실패했습니다.\n\nDEPLOY.md 5-2절 "방법 A(트리거)"를 적용해 보세요. supabase-auth-profiles-trigger.sql 을 SQL Editor에서 실행하면, 다음부터 구글/카카오 가입 시 테이블에 자동으로 추가됩니다.');
+              } else {
+                console.info('[THEBESTSNS] 소셜 로그인 후 profiles 저장 성공, id:', profile.id);
               }
               onLoginSuccess(profile);
               navigate('/sns', { replace: true });
