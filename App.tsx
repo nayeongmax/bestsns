@@ -591,7 +591,15 @@ const App: React.FC = () => {
     const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
     let targetProfile: UserProfile;
     if (existingMember) {
-      targetProfile = { ...existingMember, role: isAdminLogin ? 'admin' : existingMember.role };
+      // 이메일·닉네임·휴대폰은 방금 로그인한 userData 우선 (다른 계정 데이터가 섞여 보이는 것 방지)
+      targetProfile = {
+        ...existingMember,
+        email: userData.email ?? existingMember.email,
+        nickname: userData.nickname ?? existingMember.nickname,
+        phone: userData.phone ?? existingMember.phone,
+        profileImage: userData.profileImage ?? existingMember.profileImage,
+        role: isAdminLogin ? 'admin' : existingMember.role
+      };
     } else {
       const isAdmin = userData.id?.toLowerCase() === 'admin';
       targetProfile = {
