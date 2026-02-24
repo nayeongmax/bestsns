@@ -333,38 +333,30 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       danger: true,
       onConfirm: async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      try {
-        const res = await fetch(`${window.location.origin}/api/delete-user`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        });
-        if (res.ok) {
-          await supabase.auth.signOut({ scope: 'global' });
-          clearSupabaseAuthStorage();
-          localStorage.removeItem('user_profile_v2');
-          window.location.href = '/';
-          return;
-        }
-        const body = await res.json().catch(() => ({}));
-        const msg = body?.error || (res.status === 404
-          ? '탈퇴 API(함수)를 찾을 수 없습니다. Netlify 대시보드 → Deploys → 최신 배포에서 Functions에 delete-user가 있는지 확인하고, 없으면 코드 푸시 후 Trigger deploy를 해 주세요.'
-          : `서버 오류 (${res.status}). Netlify에 SUPABASE_URL, SUPABASE_SERVICE_KEY(서비스 역할 키)가 설정되어 있는지 확인해 주세요.`);
-        showAlert({ description: `계정 삭제에 실패했습니다. ${msg}` });
-        return;
-      } catch (e) {
-        showAlert({ description: '탈퇴 요청 중 오류가 발생했습니다. 네트워크와 Netlify 함수 배포를 확인해 주세요.' });
+    if (!session?.access_token) {
+      showAlert({ description: '세션이 만료되었습니다. 다시 로그인한 뒤 탈퇴를 진행해 주세요. (로그인 없이는 서버에서 계정을 삭제할 수 없습니다.)' });
+      return;
+    }
+    try {
+      const res = await fetch(`${window.location.origin}/api/delete-user`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        await supabase.auth.signOut({ scope: 'global' });
+        clearSupabaseAuthStorage();
+        localStorage.removeItem('user_profile_v2');
+        window.location.href = '/';
         return;
       }
+      const body = await res.json().catch(() => ({}));
+      const msg = body?.error || (res.status === 404
+        ? '탈퇴 API(함수)를 찾을 수 없습니다. Netlify 대시보드 → Deploys → 최신 배포에서 Functions에 delete-user가 있는지 확인하고, 없으면 코드 푸시 후 Trigger deploy를 해 주세요.'
+        : `서버 오류 (${res.status}). Netlify에 SUPABASE_URL, SUPABASE_SERVICE_KEY(서비스 역할 키)가 설정되어 있는지 확인해 주세요.`);
+      showAlert({ description: `계정 삭제에 실패했습니다. ${msg}` });
+    } catch (e) {
+      showAlert({ description: '탈퇴 요청 중 오류가 발생했습니다. 네트워크와 Netlify 함수 배포를 확인해 주세요.' });
     }
-    await supabase.auth.signOut({ scope: 'global' });
-    clearSupabaseAuthStorage();
-    try {
-      await supabase.from('profiles').delete().eq('id', user.id);
-    } catch (_) {}
-    localStorage.removeItem('user_profile_v2');
-    showAlert({ description: '탈퇴가 완료되었습니다.' });
-    setTimeout(() => { window.location.href = '/'; }, 1200);
       },
     });
   };
