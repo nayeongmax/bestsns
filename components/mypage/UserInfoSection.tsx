@@ -340,31 +340,28 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       cancelLabel: '취소',
       danger: true,
       onConfirm: async () => {
-    const supabaseUrl = getSupabaseUrl();
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token;
     let authDeleted = false;
 
-    // 1순위: Netlify Function (SUPABASE_SERVICE_KEY 필요)
-    if (accessToken) {
-      try {
-        const netlifyRes = await fetch('/.netlify/functions/delete-user', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        });
-        if (netlifyRes.ok) authDeleted = true;
-      } catch (_) {}
-    }
+    // 1순위: supabase.rpc('delete_own_account') — SQL 함수로 auth.users 직접 삭제
+    // (supabase-auth-profiles-trigger.sql의 delete_own_account() 함수 실행 필요)
+    try {
+      const { error: rpcErr } = await supabase.rpc('delete_own_account');
+      if (!rpcErr) authDeleted = true;
+    } catch (_) {}
 
-    // 2순위: Supabase Edge Function (배포한 경우)
-    if (!authDeleted && supabaseUrl && accessToken) {
-      try {
-        const edgeRes = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        });
-        if (edgeRes.ok) authDeleted = true;
-      } catch (_) {}
+    // 2순위: Netlify Function (SUPABASE_SERVICE_KEY 환경변수 설정 시)
+    if (!authDeleted) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (accessToken) {
+        try {
+          const netlifyRes = await fetch('/.netlify/functions/delete-user', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          });
+          if (netlifyRes.ok) authDeleted = true;
+        } catch (_) {}
+      }
     }
 
     // auth 삭제 성공 시: 트리거가 profiles도 자동 삭제
@@ -377,6 +374,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     }
 
     // fallback: auth.users 삭제 불가 → profiles만 삭제 + 로그아웃
+    // (supabase-auth-profiles-trigger.sql을 실행하지 않은 경우)
     await supabase.auth.signOut({ scope: 'global' });
     clearSupabaseAuthStorage();
     try {

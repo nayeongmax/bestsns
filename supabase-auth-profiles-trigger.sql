@@ -80,6 +80,24 @@ CREATE TRIGGER on_auth_user_deleted
   FOR EACH ROW EXECUTE PROCEDURE public.handle_user_deleted();
 
 -- ============================================================
+-- 6) 본인 계정 삭제 RPC (클라이언트에서 supabase.rpc('delete_own_account') 호출)
+--    SECURITY DEFINER로 실행되어 auth.users 삭제 가능 → 트리거가 profiles도 자동 삭제
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.delete_own_account()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$;
+
+-- 로그인한 사용자 누구나 자신의 계정을 삭제할 수 있도록 실행 권한 부여
+GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
+
+-- ============================================================
 -- 기존 auth.users 유저 중 profiles에 없는 유저 일괄 동기화
 -- (트리거 적용 전에 이미 가입한 소셜/이메일 유저 백필)
 -- ============================================================
