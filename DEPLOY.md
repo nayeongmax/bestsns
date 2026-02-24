@@ -261,7 +261,7 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
 | 이름 | 값 | 비고 |
 |------|-----|------|
 | `SUPABASE_URL` | `https://xxxx.supabase.co` | Supabase 대시보드 → Settings → API 의 Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | `eyJ...` (긴 키) | Supabase 대시보드 → Settings → API 의 **service_role** (secret 키). **절대 프론트엔드 코드나 Git에 넣지 마세요.** |
+| `SUPABASE_SERVICE_ROLE_KEY` 또는 `SUPABASE_SERVICE_KEY` | `eyJ...` (긴 키) | Supabase 대시보드 → Settings → API 의 **service_role** (secret 키). 둘 중 아무 이름으로 넣어도 됨. **절대 프론트엔드 코드나 Git에 넣지 마세요.** |
 
 4. **Save** 후, **Deploys**에서 **Trigger deploy** → **Deploy site** 로 한 번 재배포합니다. (환경 변수 반영)
 
