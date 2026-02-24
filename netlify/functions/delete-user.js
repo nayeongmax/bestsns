@@ -1,6 +1,5 @@
 // 회원 탈퇴: profiles 삭제 + auth.users(Users) 삭제 (Netlify에서만 배포하면 됨, Supabase CLI 불필요)
-const { createClient } = require('@supabase/supabase-js');
-
+// ESM 프로젝트라 require() 사용 시 Netlify에서 실패함 → handler 안에서 import() 사용
 const headers = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -45,6 +44,7 @@ exports.handler = async (event) => {
   }
 
   try {
+    const { createClient } = await import('@supabase/supabase-js');
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey || '', {
       global: { headers: { Authorization: authHeader } },
     });
