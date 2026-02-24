@@ -61,15 +61,24 @@ exports.handler = async (event) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    await supabaseAdmin.from('profiles').delete().eq('id', user.id);
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
-
-    if (deleteError) {
+    // 1) auth.users 삭제를 먼저 수행 (실패 시 profiles는 건드리지 않음)
+    const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+    if (deleteAuthError) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: deleteError.message }),
+        body: JSON.stringify({
+          error: deleteAuthError.message,
+          code: 'AUTH_DELETE_FAILED',
+        }),
       };
+    }
+
+    // 2) auth 삭제 성공 후 profiles 삭제
+    const { error: deleteProfileError } = await supabaseAdmin.from('profiles').delete().eq('id', user.id);
+    if (deleteProfileError) {
+      // auth는 이미 삭제됨 — profiles만 실패. 클라이언트에는 성공으로 처리해도 됨
+      console.warn('profiles 삭제 실패 (auth는 삭제됨):', deleteProfileError.message);
     }
 
     return {
