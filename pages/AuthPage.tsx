@@ -169,6 +169,16 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           try { sessionStorage.removeItem('oauth_intent'); } catch (_) {}
           const { data: existingProfile } = await supabase.from('profiles').select('id, updated_at').eq('id', userId).maybeSingle();
           if (!existingProfile) {
+            // OAuth로 새 user가 생성됐지만 profile 없음(트리거 실패 등). 남기면 users에만 쌓이므로 삭제 후 안내.
+            try {
+              const token = (session as any).access_token;
+              if (token) {
+                await fetch(`${window.location.origin}/api/delete-user`, {
+                  method: 'POST',
+                  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                });
+              }
+            } catch (_) {}
             await supabase.auth.signOut({ scope: 'local' });
             if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
             setIsProcessingOAuth(false);
@@ -181,6 +191,16 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
             if (updatedAt) {
               const ageMs = Date.now() - new Date(updatedAt).getTime();
               if (ageMs < 120000) {
+                // 탈퇴한 계정이 "로그인" 버튼으로 소셜 연동 시 Supabase가 새 user+profile을 만들고 트리거가 profile을 넣음. 그대로 두면 users/profiles에 허공 계정이 쌓이므로 즉시 삭제.
+                try {
+                  const token = (session as any).access_token;
+                  if (token) {
+                    await fetch(`${window.location.origin}/api/delete-user`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    });
+                  }
+                } catch (_) {}
                 await supabase.auth.signOut({ scope: 'local' });
                 if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
                 setIsProcessingOAuth(false);
@@ -709,11 +729,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               <form onSubmit={handleLogin} className="space-y-2.5">
                 <div className="relative flex items-center">
                   <span className="absolute left-3.5 text-[#94a3b8] pointer-events-none"><IconUser /></span>
-                  <input type="text" placeholder="아이디 또는 이메일" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-10 pr-4 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required />
+                  <input type="text" placeholder="아이디 또는 이메일" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-10 pr-4 py-4 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required />
                 </div>
                 <div className="relative flex items-center">
                   <span className="absolute left-3.5 text-[#94a3b8] pointer-events-none"><IconLock /></span>
-                  <input type={showPwLogin ? 'text' : 'password'} placeholder="비밀번호" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full pl-10 pr-10 py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required />
+                  <input type={showPwLogin ? 'text' : 'password'} placeholder="비밀번호" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full pl-10 pr-10 py-4 bg-[#f8faff] border border-[#e2e8f0] rounded-xl text-[#0f172a] text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required />
                   <button type="button" onClick={() => setShowPwLogin(v => !v)} className="absolute right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwLogin ? <IconEyeOff /> : <IconEye />}</button>
                 </div>
                 <div className="flex justify-between items-center -mt-0.5 mb-0.5">
