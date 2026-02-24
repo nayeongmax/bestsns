@@ -528,12 +528,10 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                               <label className="text-[12px] font-bold text-gray-400 italic px-2">주민등록번호</label>
                               <input value={individualForm.residentNumber} onChange={e => setIndividualForm({...individualForm, residentNumber: e.target.value})} placeholder="000000-0000000" className="w-full p-5 bg-white border border-gray-100 rounded-2xl font-bold text-[15px] outline-none shadow-sm focus:border-blue-400 transition-all" />
                             </div>
-                            {(expertRegistrationFor === 'freelancer' || !!user.freelancerApplication) && (
-                              <div className="space-y-2">
-                                <label className="text-[12px] font-bold text-gray-400 italic px-2">연락처 (급할 때 연락)</label>
-                                <input value={individualForm.contact} onChange={e => setIndividualForm({...individualForm, contact: e.target.value})} placeholder="010-0000-0000" className="w-full p-5 bg-white border border-gray-100 rounded-2xl font-bold text-[15px] outline-none shadow-sm focus:border-blue-400 transition-all" />
-                              </div>
-                            )}
+                            <div className="space-y-2">
+                              <label className="text-[12px] font-bold text-gray-400 italic px-2">연락처 (급할 때 연락)</label>
+                              <input value={individualForm.contact} onChange={e => setIndividualForm({...individualForm, contact: e.target.value})} placeholder="010-0000-0000" className="w-full p-5 bg-white border border-gray-100 rounded-2xl font-bold text-[15px] outline-none shadow-sm focus:border-blue-400 transition-all" />
+                            </div>
                           </>
                         )}
                      </div>
