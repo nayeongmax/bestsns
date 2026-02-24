@@ -267,6 +267,15 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
 
 이후 회원이 **마이페이지 → 회원 탈퇴**를 하면 **Auth(Users) 삭제 후 profiles 삭제**가 한 번에 되고, 목록에서 사라집니다.
 
+**▶ "계정 삭제에 실패했습니다. 서버 오류 (404)"가 뜰 때**
+
+- **의미:** 브라우저가 `/api/delete-user`를 호출했는데 **Netlify가 404를 반환**한 상태입니다. 탈퇴용 **Netlify 함수가 배포되지 않았거나** 요청이 함수로 가지 못한 경우입니다.
+- **확인:** Netlify 대시보드 → 해당 사이트 → **Deploys** → 가장 최근 배포 클릭 → **Functions** 섹션에 **delete-user**가 목록에 있는지 봅니다.
+- **조치:**  
+  1) `netlify/functions/delete-user.js` 파일이 저장된 상태에서 **Git push** 후 자동 배포되거나, **Trigger deploy**로 다시 배포합니다.  
+  2) 환경 변수 `SUPABASE_URL`(또는 `VITE_SUPABASE_URL`), `SUPABASE_SERVICE_KEY`가 **Production**에 설정되어 있는지 확인합니다.  
+  3) **Production** 도메인(메인 사이트 주소)에서만 탈퇴를 테스트합니다. (미리보기/브랜치 배포에서는 함수가 없을 수 있음)
+
 **▶ 탈퇴해도 Authentication → Users에 계정이 남을 때**
 
 - **원인:** Netlify에 **anon 키**를 넣었거나, **service_role 키가 비어 있는 경우**입니다. `auth.admin.deleteUser()`는 **service_role 키에서만** 동작합니다.
