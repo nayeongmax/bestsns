@@ -228,27 +228,23 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
   if (!isFreelancerApproved && !isFreelancerPending) {
     return (
-      <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
-        <div>
-          <h3 className="text-2xl font-black text-gray-900 italic">프리랜서 워크페이스</h3>
-          <p className="text-sm text-gray-500 mt-1">누구나알바에 신청하려면 프리랜서 등록을 먼저 완료해 주세요.</p>
-        </div>
-        <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[24px] border border-emerald-100">
-          <p className="text-gray-600 font-bold mb-6 text-center">프리랜서 자격으로 누구나알바에 신청하려면<br />프리랜서 등록을 해주세요.</p>
-          <button
-            type="button"
-            onClick={() => {
-              if (onApplyFreelancer) {
-                onApplyFreelancer();
-              } else {
-                showAlert({ description: '전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.' });
-              }
-            }}
-            className="px-12 py-4 rounded-xl bg-emerald-600 text-white font-black text-lg hover:bg-emerald-700 shadow-lg transition-all"
-          >
-            프리랜서 등록하기
-          </button>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 py-16 bg-gradient-to-b from-gray-50 to-white rounded-[48px] border-2 border-dashed border-gray-200 animate-in fade-in duration-500">
+        <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center text-5xl mb-8">🔒</div>
+        <h3 className="text-2xl font-black text-gray-900 italic tracking-tighter text-center mb-3">프리랜서 워크스페이스</h3>
+        <p className="text-gray-500 font-bold text-center mb-10 max-w-md">프리랜서 등록을 완료한 후 이용할 수 있습니다.<br/>전문가 정보를 작성하고 운영자 승인을 받아 주세요.</p>
+        <button
+          type="button"
+          onClick={() => {
+            if (onApplyFreelancer) {
+              onApplyFreelancer();
+            } else {
+              showAlert({ description: '전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.' });
+            }
+          }}
+          className="px-14 py-5 bg-blue-600 text-white rounded-[32px] font-black text-lg shadow-xl hover:bg-black transition-all italic uppercase tracking-widest"
+        >
+          프리랜서 등록
+        </button>
       </div>
     );
   }
