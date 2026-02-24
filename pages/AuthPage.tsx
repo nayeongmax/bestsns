@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserProfile, Coupon } from '@/types';
 import { supabase } from '../supabase';
 import { updateProfile } from '../profileDb';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 /** 가입 축하 5,000원 웰컴 쿠폰 (이메일/소셜 가입 공통) */
 function createWelcomeCoupon(userId: string): Coupon {
@@ -81,6 +82,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   const optJoinRef = useRef<HTMLDivElement>(null);
   const optLoginRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
+  const { showAlert } = useConfirm();
 
   const showToast = (message: string, success = true) => {
     setToast({ show: true, message, success });
@@ -372,7 +374,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
 
       // 이메일을 찾지 못하면 가짜 이메일로 시도하지 않음 (Supabase Auth에 없는 계정이라 실패함)
       if (!targetEmail || !targetEmail.includes('@')) {
-        alert('등록된 아이디/이메일을 찾을 수 없습니다.\n\n가입 시 사용한 이메일로 로그인하려면 아래 "비밀번호 재설정했는데 로그인이 안 되나요?"를 눌러 이메일+비밀번호로 로그인해 보세요.');
+        showAlert({ title: '로그인 실패', description: '등록된 아이디/이메일을 찾을 수 없습니다. 비밀번호를 잊으신 경우 비밀번호 찾기를 이용해 주세요.' });
         setLoading(false);
         return;
       }
@@ -430,9 +432,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('Invalid login credentials')) {
-        alert('아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다.\n\n비밀번호 재설정하셨다면 아래 "이메일로 로그인"을 사용해 주세요.');
+        showAlert({ title: '로그인 실패', description: '아이디(또는 이메일) 또는 비밀번호가 일치하지 않습니다. 비밀번호를 잊으신 경우 비밀번호 찾기를 이용해 주세요.' });
       } else {
-        alert(`로그인 실패: ${msg}`);
+        showAlert({ title: '로그인 실패', description: `로그인 실패: ${msg}` });
       }
     } finally {
       setLoading(false);
