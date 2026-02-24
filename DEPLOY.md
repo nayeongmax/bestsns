@@ -11,9 +11,11 @@
 |-----------|------|
 | `VITE_SUPABASE_URL` | Supabase 프로젝트 URL (예: `https://xxxx.supabase.co`) |
 | `VITE_SUPABASE_ANON_KEY` | Supabase 프로젝트의 anon(public) key |
+| `SUPABASE_URL` | (탈퇴 기능용) 위와 같은 Supabase 프로젝트 URL. **6절** 참고. |
+| `SUPABASE_SERVICE_ROLE_KEY` | (탈퇴 기능용) Supabase **service_role** 키. **6절** 참고. 절대 프론트/Git에 넣지 마세요. |
 
 Supabase 키는 [Supabase 대시보드](https://supabase.com/dashboard) → 프로젝트 선택 → Settings → API 에서 확인할 수 있습니다.  
-**anon key는 공개되어도 되는 키이지만, 서버용 secret key는 절대 프론트엔드나 Git에 넣지 마세요.**
+**anon key는 공개되어도 되는 키이지만, service_role 키는 절대 프론트엔드나 Git에 넣지 마세요.**
 
 ### 회원 정보 로직 (단일 소스: Supabase `profiles`)
 
@@ -244,30 +246,31 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
 
 ---
 
-## 6. 회원 탈퇴 시 Authentication → Users에서도 삭제되게 하기
+## 6. 회원 탈퇴 시 Users + profiles 둘 다 삭제되게 하기
 
-**증상:** 마이페이지에서 회원 탈퇴했는데 **profiles에는 없는데 users(Authentication → Users)에는 계정이 남아 있고**, 같은 구글로 다시 로그인되면 계속 로그인됨.  
-**원인:** `auth.users`는 클라이언트에서 지울 수 없고, **delete-user Edge Function**을 배포해야 서버에서 삭제됩니다.  
-**해결:** 아래대로 함수를 배포하면, 이후 탈퇴 시 **profiles + Users** 둘 다 삭제되고 같은 계정으로 재로그인되지 않습니다.
+**원하는 동작:** 탈퇴하면 **profiles**와 **Authentication → Users** 둘 다 삭제. 가입/로그인하면 **profiles**에 추가.
 
-마이페이지에서 "회원 탈퇴"를 하면 **profiles** 테이블에서는 삭제되지만, **Authentication → Users**에는 그대로 남습니다. (브라우저에서는 auth.users 삭제 권한이 없기 때문입니다.)
+이 프로젝트는 **Netlify 함수**로 탈퇴 처리를 합니다. **터미널(Supabase CLI) 없이** Netlify 환경 변수만 넣고 **Git push → 자동 배포**하면 됩니다.
 
-**Users 목록에서도 완전히 없애려면** Supabase **Edge Function**을 배포해야 합니다.
+### 6-1. Netlify 환경 변수 추가 (한 번만)
 
-1. [Supabase 대시보드](https://supabase.com/dashboard) → 프로젝트 선택
-2. **Edge Functions** 메뉴에서 **delete-user** 함수를 배포합니다.  
-   - **배포는 사용자 PC 터미널에서** Supabase CLI로 실행해야 합니다. (이 프로젝트 폴더에서 아래 명령 실행.)  
-   - **Supabase CLI 설치 (Windows):** `npm install -g supabase`는 지원 중단됨. **winget** 사용:
-     ```powershell
-     winget install Supabase.CLI
-     ```
-     약관이 나오면 `Y` 입력 후 Enter. 설치 후 터미널을 다시 열고 `supabase login` → `supabase link` → 아래 배포 명령 실행.
-   ```bash
-   supabase functions deploy delete-user
-   ```
-3. 배포 후에는 탈퇴 시 해당 함수가 호출되어 **profiles 삭제 + auth.users 삭제**가 한 번에 이루어지고, **Users** 목록에서도 사라집니다.
+1. [Netlify 대시보드](https://app.netlify.com) → 해당 사이트 → **Site configuration** → **Environment variables**
+2. **Add a variable** → **Add single variable** (또는 기존에 추가)
+3. 아래 두 개를 추가합니다.
 
-Edge Function을 **배포하지 않은 경우**에는 기존처럼 **profiles만 삭제**되고 로그아웃되며, **Users**에는 계정이 남습니다. 이때는 Supabase **Authentication → Users**에서 해당 사용자를 **수동 삭제**하면 됩니다.
+| 이름 | 값 | 비고 |
+|------|-----|------|
+| `SUPABASE_URL` | `https://xxxx.supabase.co` | Supabase 대시보드 → Settings → API 의 Project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | `eyJ...` (긴 키) | Supabase 대시보드 → Settings → API 의 **service_role** (secret 키). **절대 프론트엔드 코드나 Git에 넣지 마세요.** |
 
-**"탈퇴했는데 Users에 아직 있다"** → delete-user Edge Function이 **아직 배포되지 않았거나** 호출에 실패한 경우입니다.  
-1) `supabase functions deploy delete-user` 로 배포했는지 확인하고, 2) 배포 후 새로 탈퇴한 계정은 Users에서도 삭제됩니다. **이미 탈퇴 처리된 계정**은 대시보드 **Authentication → Users**에서 해당 사용자를 **수동 삭제**하세요.
+4. **Save** 후, **Deploys**에서 **Trigger deploy** → **Deploy site** 로 한 번 재배포합니다. (환경 변수 반영)
+
+이후 회원이 **마이페이지 → 회원 탈퇴**를 하면 **profiles 삭제 + Users 삭제**가 한 번에 되고, 목록에서 사라집니다.
+
+### 6-2. 가입/로그인 시 profiles에 추가
+
+**소셜(구글/카카오) 가입 시 profiles에 안 들어오는 경우** → **5-2절**대로 **트리거** + **백필** 한 번 실행하면, 가입/로그인하는 대로 profiles에 추가됩니다.
+
+### 6-3. (참고) 이미 탈퇴했는데 Users에만 남아 있는 계정
+
+Netlify 함수 배포 전에 탈퇴한 계정은 **profiles만** 삭제된 상태일 수 있습니다. Supabase **Authentication → Users**에서 해당 사용자를 **수동 삭제**하면 됩니다.
