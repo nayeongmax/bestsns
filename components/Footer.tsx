@@ -21,7 +21,7 @@ const Footer: React.FC = () => {
             <p className="text-xs font-black text-gray-500 uppercase">등록 정보</p>
             <div className="text-sm text-gray-700 space-y-1">
               <p><strong>사업자번호</strong> 409-30-51469</p>
-              <p><strong>통신판매업신고번호</strong> 2022-대구달성-0164</p>
+              <p className="whitespace-nowrap"><strong>통신판매업신고번호</strong> 2022-대구달성-0164</p>
             </div>
           </div>
           <div className="space-y-2 flex flex-col items-center md:items-start">
