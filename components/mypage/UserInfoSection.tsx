@@ -621,13 +621,13 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                   onClick={handleCertificationRequest} 
                   disabled={
                     expertRegistrationFor === 'freelancer' 
-                      ? (user.freelancerStatus === 'pending' || (!isExpertFormChanged && user.freelancerStatus !== 'approved'))
-                      : (!isExpertFormChanged && user.sellerStatus !== 'none')
+                      ? (user.freelancerStatus === 'pending' || (user.freelancerStatus === 'approved' && !isExpertFormChanged))
+                      : (user.sellerStatus === 'pending' || (user.sellerStatus === 'approved' && !isExpertFormChanged))
                   } 
                   className={`px-12 py-5 rounded-[48px] font-black text-[18px] shadow-2xl transition-all italic ${
                     expertRegistrationFor === 'freelancer'
-                      ? (isExpertFormChanged || user.freelancerStatus === 'approved' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-[#E4E8ED] text-gray-400 cursor-default')
-                      : (isExpertFormChanged || user.sellerStatus === 'approved' ? 'bg-blue-600 text-white hover:bg-black' : 'bg-[#E4E8ED] text-gray-400 cursor-default')
+                      ? (user.freelancerStatus === 'pending' ? 'bg-[#E4E8ED] text-gray-400 cursor-default' : (user.freelancerStatus === 'approved' && !isExpertFormChanged ? 'bg-[#E4E8ED] text-gray-400 cursor-default' : 'bg-emerald-600 text-white hover:bg-emerald-700'))
+                      : (user.sellerStatus === 'pending' ? 'bg-[#E4E8ED] text-gray-400 cursor-default' : (user.sellerStatus === 'approved' && !isExpertFormChanged ? 'bg-[#E4E8ED] text-gray-400 cursor-default' : 'bg-blue-600 text-white hover:bg-black'))
                   }`}
                 >
                   {expertRegistrationFor === 'freelancer' 
