@@ -136,11 +136,25 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         }
         return;
       }
-      // 소셜 로그인 복귀: 해시의 토큰으로 먼저 세션을 갱신한 뒤 프로필 생성 (이전 계정(네이버 등) 세션이 보이던 문제 방지)
+      // 소셜 로그인 복귀: 해시의 토큰으로 세션 갱신 후, profiles에 등록된 계정인지 확인
       if (hash.includes('access_token=') && !hash.includes('type=recovery')) {
         const accessToken = getParamFromHash('access_token');
         const refreshToken = getParamFromHash('refresh_token');
-        const setSessionThenLogin = (session: { user: any }) => {
+        const setSessionThenLogin = async (session: { user: any }) => {
+          const userId = session.user?.id;
+          if (!userId) {
+            setIsProcessingOAuth(false);
+            return;
+          }
+          const { data: existingProfile } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+          if (!existingProfile) {
+            await supabase.auth.signOut({ scope: 'local' });
+            if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
+            setIsProcessingOAuth(false);
+            setMode('JOIN');
+            alert('등록된 계정이 아닙니다. 아래 회원가입에서 구글로 회원가입을 진행해 주세요.');
+            return;
+          }
           buildProfileFromSession(session.user).then(async (profile) => {
               const { error: profileErr } = await supabase.from('profiles').upsert({
                 id: profile.id,
@@ -365,15 +379,16 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   };
 
   const providerNames: Record<'google' | 'kakao', string> = { google: '구글', kakao: '카카오' };
-  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
+  /** isSignUp: true면 회원가입 탭에서 호출 → 구글 동의 화면 강제. false면 로그인 탭 → 동의 생략 */
+  const handleSocialLogin = async (provider: 'google' | 'kakao', isSignUp: boolean) => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/#/login`,
-          // 재가입 시에도 구글 동의 화면(수락 선택)이 나오도록 강제
-          queryParams: provider === 'google' ? { prompt: 'consent' } : undefined,
+          // 회원가입에서만 구글 동의 화면(수락) 강제. 로그인에서는 이미 가입 시 동의했으므로 생략
+          queryParams: provider === 'google' && isSignUp ? { prompt: 'consent' } : undefined,
         },
       });
       if (error) throw error;
@@ -659,11 +674,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               </form>
               <div className="flex items-center gap-2.5 my-3"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
               <div className="flex flex-col gap-2.5">
-                <button type="button" onClick={() => { showToast('구글 로그인 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                <button type="button" onClick={() => { showToast('구글 로그인 연동 중...', true); handleSocialLogin('google', false); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
                   구글로 로그인
                 </button>
-                <button type="button" onClick={() => { showToast('카카오 로그인 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                <button type="button" onClick={() => { showToast('카카오 로그인 연동 중...', true); handleSocialLogin('kakao', false); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
                   카카오로 로그인
                 </button>
@@ -686,11 +701,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               </form>
               <div className="flex items-center gap-2.5 my-3"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
               <div className="flex flex-col gap-2.5">
-                <button type="button" onClick={() => { showToast('구글 회원가입 연동 중...', true); handleSocialLogin('google'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                <button type="button" onClick={() => { showToast('구글 회원가입 연동 중...', true); handleSocialLogin('google', true); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
                   구글로 회원가입
                 </button>
-                <button type="button" onClick={() => { showToast('카카오 회원가입 연동 중...', true); handleSocialLogin('kakao'); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                <button type="button" onClick={() => { showToast('카카오 회원가입 연동 중...', true); handleSocialLogin('kakao', true); }} disabled={loading} className="w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl border border-[#FEE500] bg-[#FEE500] text-[#191919] text-[14px] font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.1 1.5 7.3c0 2.07 1.35 3.9 3.4 4.96L4.1 15l3.6-2.37c.42.06.85.09 1.3.09 4.14 0 7.5-2.6 7.5-5.82C16.5 4.1 13.14 1.5 9 1.5z" fill="#191919"/></svg>
                   카카오로 회원가입
                 </button>
