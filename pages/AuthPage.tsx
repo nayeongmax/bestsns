@@ -1,7 +1,25 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserProfile } from '@/types';
+import { UserProfile, Coupon } from '@/types';
 import { supabase } from '../supabase';
+import { updateProfile } from '../profileDb';
+
+/** 가입 축하 5,000원 웰컴 쿠폰 (이메일/소셜 가입 공통) */
+function createWelcomeCoupon(userId: string): Coupon {
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + 30);
+  const expiryStr = expiry.toISOString().split('T')[0];
+  return {
+    id: `CPN_welcome_${Date.now()}_${userId}`,
+    title: '가입 축하 5,000원 웰컴 쿠폰',
+    discount: 5000,
+    discountLabel: '5,000원',
+    type: '가입 축하 쿠폰',
+    expiry: expiryStr,
+    color: 'rose',
+    status: 'available',
+  };
+}
 
 const IconUser = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
 const IconEmail = () => (<svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>);
@@ -187,6 +205,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 alert('로그인은 완료되었지만, 회원 목록 저장에 실패했습니다.\n\nDEPLOY.md 5-2절 "방법 A(트리거)"를 적용해 보세요. supabase-auth-profiles-trigger.sql 을 SQL Editor에서 실행하면, 다음부터 구글/카카오 가입 시 테이블에 자동으로 추가됩니다.');
               } else {
                 console.info('[THEBESTSNS] 소셜 로그인 후 profiles 저장 성공, id:', profile.id);
+              }
+              // 소셜 회원가입 시 가입 축하 5,000원 웰컴 쿠폰 발급
+              if (intent === 'signup') {
+                const welcomeCoupon = createWelcomeCoupon(profile.id);
+                profile = { ...profile, coupons: [welcomeCoupon] };
+                await updateProfile(profile.id, { coupons: [welcomeCoupon] }).catch((e) => console.warn('가입 쿠폰 DB 반영 실패:', e));
               }
               onLoginSuccess(profile);
               navigate('/sns', { replace: true });
@@ -459,6 +483,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('rate_limit')) {
           const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
           if (!signInErr) {
+            const welcomeCoupon = createWelcomeCoupon(id);
             const newUser: UserProfile = {
               id,
               nickname,
@@ -468,8 +493,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
               role: 'user',
               points: 0,
               joinDate: new Date().toISOString().split('T')[0],
-              coupons: []
+              coupons: [welcomeCoupon]
             };
+            await updateProfile(id, { coupons: [welcomeCoupon] }).catch((e) => console.warn('가입 쿠폰 DB 반영 실패:', e));
             onLoginSuccess(newUser);
             alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
             navigate('/sns');
@@ -490,6 +516,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         throw authError;
       }
 
+      const welcomeCoupon = createWelcomeCoupon(id);
       const newUser: UserProfile = {
         id,
         nickname,
@@ -499,7 +526,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         role: 'user',
         points: 0,
         joinDate: new Date().toISOString().split('T')[0],
-        coupons: []
+        coupons: [welcomeCoupon]
       };
 
       // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록 (이름·휴대폰 포함 → 소셜 로그인 연동 시 동일 프로필 사용)
@@ -514,6 +541,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       if (profileErr) {
         console.error('Profiles 저장 실패(회원가입):', profileErr.message, '- supabase-profiles-alter-and-backfill.sql 실행 여부를 확인하세요.');
       }
+      await updateProfile(id, { coupons: [welcomeCoupon] }).catch((e) => console.warn('가입 쿠폰 DB 반영 실패:', e));
 
       onLoginSuccess(newUser);
       alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
