@@ -347,7 +347,8 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     try {
       const { error: rpcErr } = await supabase.rpc('delete_own_account');
       if (!rpcErr) authDeleted = true;
-    } catch (_) {}
+      else console.error('[탈퇴] RPC delete_own_account 실패:', rpcErr);
+    } catch (e) { console.error('[탈퇴] RPC 예외:', e); }
 
     // 2순위: Netlify Function (SUPABASE_SERVICE_KEY 환경변수 설정 시)
     if (!authDeleted) {
@@ -360,7 +361,13 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
             headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           });
           if (netlifyRes.ok) authDeleted = true;
-        } catch (_) {}
+          else {
+            const body = await netlifyRes.text();
+            console.error('[탈퇴] Netlify 함수 실패:', netlifyRes.status, body);
+          }
+        } catch (e) { console.error('[탈퇴] Netlify fetch 예외:', e); }
+      } else {
+        console.error('[탈퇴] accessToken 없음 - 세션 만료?');
       }
     }
 
