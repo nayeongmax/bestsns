@@ -6,9 +6,11 @@ export interface UserProfile {
   nickname: string;
   profileImage: string;
   role: 'user' | 'admin' | 'manager';
+  realName?: string;
   email?: string;
   phone?: string;
   password?: string; // 보안상 실제 DB에서는 암호화하지만 현재는 가입 로직을 위해 추가
+  isDeleted?: boolean;
   points?: number;
   sellerStatus?: 'none' | 'pending' | 'approved' | 'revision';
   sellerApplication?: SellerApplication;

@@ -68,10 +68,11 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       const s = localStorage.getItem(notifStorageKey);
       if (s) {
         const parsed = JSON.parse(s);
-        if (parsed?.marketing) return parsed.marketing;
+        if (typeof parsed?.marketing === 'boolean') return parsed.marketing;
+        if (typeof parsed?.marketing === 'object') return parsed.marketing.app ?? true;
       }
     } catch (_) {}
-    return { app: true, sms: false, email: false };
+    return true;
   });
   const [notifChat, setNotifChat] = useState(() => {
     try {
@@ -104,12 +105,17 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     return true;
   });
   useEffect(() => {
-    localStorage.setItem(notifStorageKey, JSON.stringify({
+    const settings = {
       marketing: notifMarketing,
       chat: notifChat,
       orderStatus: notifOrderStatus,
       profilePublic: isProfilePublic
-    }));
+    };
+    localStorage.setItem(notifStorageKey, JSON.stringify(settings));
+    // 프로필 공개 설정은 UserProfile에도 반영
+    if (user.isOnline !== isProfilePublic) {
+      onUpdate({ ...user, isOnline: isProfilePublic });
+    }
   }, [notifStorageKey, notifMarketing, notifChat, notifOrderStatus, isProfilePublic]);
 
   // --- 탈퇴 관련 상태 ---
@@ -197,12 +203,36 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
   const handleQuit = async () => {
     if (!quitReason || quitEmail !== user.email || !quitAgreed) return;
     if (!window.confirm('정말 탈퇴하시겠습니까? 로그인 정보가 삭제되며 복구할 수 없습니다.')) return;
-    await supabase.auth.signOut();
+
     try {
+      // 1. Supabase profiles 테이블에서 삭제
       await supabase.from('profiles').delete().eq('id', user.id);
+      // 이메일로도 삭제 시도 (혹시 id가 다를 경우)
+      if (user.email) {
+        await supabase.from('profiles').delete().eq('email', user.email);
+      }
     } catch (_) {}
+
+    // 2. localStorage members에서 isDeleted 마킹 (재로그인 차단용)
+    try {
+      const members = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
+      const updatedMembers = members.map((m: any) =>
+        (m.id === user.id || m.email === user.email)
+          ? { ...m, isDeleted: true }
+          : m
+      );
+      localStorage.setItem('site_members_v2', JSON.stringify(updatedMembers));
+    } catch (_) {}
+
+    // 3. Supabase Auth 세션 종료
+    await supabase.auth.signOut();
+
+    // 4. 현재 유저 프로필 삭제
     localStorage.removeItem('user_profile_v2');
-    window.location.href = '/';
+
+    alert('회원 탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.');
+    window.location.href = '/#/login';
+    window.location.reload();
   };
 
   const handlePasswordUpdate = async () => {
@@ -262,6 +292,11 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                    <h4 className="text-[20px] font-black text-gray-900 italic">본인인증 및 연락처 관리</h4>
                    <div className="space-y-8">
                       <div className="space-y-3">
+                         <div className="flex justify-between items-center px-2"><label className="text-[13px] font-bold text-gray-400 italic">이름</label><span className="text-[11px] font-black text-green-500">✓ 가입 정보</span></div>
+                         <input value={user.realName || ''} readOnly className="w-full p-5 bg-gray-50 rounded-2xl font-black text-[15px] text-gray-700 shadow-inner outline-none" placeholder="소셜 로그인으로 정보가 없습니다" />
+                         <p className="text-[11px] text-blue-500 font-bold px-2 leading-relaxed italic">* 가입 시 입력하신 이름입니다. 닉네임과 별도로 변경되지 않습니다.</p>
+                      </div>
+                      <div className="space-y-3 pt-4">
                          <div className="flex justify-between items-center px-2"><label className="text-[13px] font-bold text-gray-400 italic">휴대폰 번호</label><span className="text-[11px] font-black text-green-500">✓ 가입 정보</span></div>
                          <div className="flex gap-3">
                            <input value={user.phone || '등록된 번호 없음'} readOnly className="flex-1 p-5 bg-gray-50 rounded-2xl font-black text-[15px] text-gray-700 shadow-inner outline-none" />
@@ -434,43 +469,23 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
 
         {/* 알림 설정 */}
         {activeTab === 'notif' && (
-          <div className="animate-in fade-in duration-300 space-y-16">
-             <div className="space-y-10">
-                <div className="flex justify-between items-center border-b border-gray-100 pb-6">
-                   <h4 className="text-[20px] font-black text-gray-900">마케팅 혜택 알림 설정</h4>
-                   <div className="flex gap-12 text-[13px] font-black text-gray-400 italic">
-                      <span className="w-14 text-center">앱 알림</span><span className="w-14 text-center">SMS</span><span className="w-14 text-center">이메일</span>
-                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                   <div className="space-y-1.5 flex-1 pr-10">
-                      <p className="font-black text-gray-800 text-[16px]">이벤트·쿠폰 등의 할인 혜택 알림</p>
-                      <p className="text-[13.5px] text-gray-400 font-bold leading-relaxed">계정보안, 주문, 약관변경, 공지 등과 관련된 중요 정보는 혜택 알림 수신 동의와 상관없이 발송돼요.</p>
-                   </div>
-                   <div className="flex gap-12 shrink-0">
-                      <ToggleSwitch active={notifMarketing.app} onClick={() => setNotifMarketing({...notifMarketing, app: !notifMarketing.app})} />
-                      <ToggleSwitch active={notifMarketing.sms} onClick={() => setNotifMarketing({...notifMarketing, sms: !notifMarketing.sms})} />
-                      <ToggleSwitch active={notifMarketing.email} onClick={() => setNotifMarketing({...notifMarketing, email: !notifMarketing.email})} />
-                   </div>
-                </div>
-             </div>
-             <div className="pt-10 border-t border-gray-100 space-y-10">
-                <h4 className="text-[20px] font-black text-gray-900">서비스 및 공개 설정</h4>
-                <div className="space-y-8">
-                   {[
-                     { label: '실시간 채팅 알림', desc: '새로운 메시지가 도착하면 카카오톡으로 실시간 알림을 받습니다.', state: notifChat, onClick: () => setNotifChat(!notifChat) },
-                     { label: '주문/결제 상태 알림', desc: '내 주문 건의 진행 상태 변화를 카카오톡으로 즉시 확인합니다.', state: notifOrderStatus, onClick: () => setNotifOrderStatus(!notifOrderStatus) },
-                     { label: '프로필 공개', desc: '다른 사용자에게 내 활동 프로필 정보를 공개합니다.', state: isProfilePublic, onClick: () => setIsProfilePublic(!isProfilePublic) },
-                   ].map((item, i) => (
-                     <div key={i} className="flex items-center justify-between bg-gray-50/50 p-6 rounded-[32px] border border-gray-100">
-                        <div className="space-y-1">
-                          <p className="font-black text-gray-800 text-[15.5px]">{item.label}</p>
-                          <p className="text-[13px] text-gray-400 font-bold">{item.desc}</p>
-                        </div>
-                        <ToggleSwitch active={item.state} onClick={item.onClick} />
+          <div className="animate-in fade-in duration-300 space-y-10">
+             <h4 className="text-[20px] font-black text-gray-900">알림 설정</h4>
+             <div className="space-y-6">
+                {[
+                  { label: '채팅 알림', desc: '새로운 메시지가 도착하면 실시간 알림을 받습니다.', state: notifChat, onClick: () => setNotifChat(!notifChat) },
+                  { label: '주문/결제 상태 알림', desc: '내 주문 건의 진행 상태 변화를 즉시 확인합니다.', state: notifOrderStatus, onClick: () => setNotifOrderStatus(!notifOrderStatus) },
+                  { label: '프로필 공개', desc: '다른 사용자에게 내 활동 프로필 정보를 공개합니다.', state: isProfilePublic, onClick: () => setIsProfilePublic(!isProfilePublic) },
+                  { label: '이벤트·쿠폰·할인 혜택 알림', desc: '이벤트, 쿠폰, 할인 등의 혜택 알림을 받습니다. 계정보안·주문·공지 등 중요 정보는 이 설정과 상관없이 발송됩니다.', state: notifMarketing, onClick: () => setNotifMarketing(!notifMarketing) },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between bg-gray-50/50 p-6 rounded-[32px] border border-gray-100">
+                     <div className="space-y-1 flex-1 pr-6">
+                       <p className="font-black text-gray-800 text-[15.5px]">{item.label}</p>
+                       <p className="text-[13px] text-gray-400 font-bold leading-relaxed">{item.desc}</p>
                      </div>
-                   ))}
-                </div>
+                     <ToggleSwitch active={item.state} onClick={item.onClick} />
+                  </div>
+                ))}
              </div>
           </div>
         )}

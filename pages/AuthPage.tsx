@@ -191,6 +191,20 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
         throw error;
       }
 
+      // 탈퇴된 계정 체크: profiles 테이블에서 삭제된 경우 로그인 거부
+      const { data: profileCheck } = await supabase.from('profiles').select('id').or(`id.eq.${resolvedId},email.eq.${targetEmail.trim().toLowerCase()}`).maybeSingle();
+      if (!profileCheck) {
+        // localStorage에서도 탈퇴 여부 확인
+        const localMembers = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
+        const localMember = localMembers.find((m: any) => m.id?.toLowerCase() === idLower || m.email?.toLowerCase() === targetEmail.trim().toLowerCase());
+        if (localMember?.isDeleted) {
+          await supabase.auth.signOut();
+          alert('탈퇴된 계정입니다. 더 이상 로그인할 수 없습니다.');
+          setLoading(false);
+          return;
+        }
+      }
+
       let profile: UserProfile;
       if (localUser) {
         profile = { ...localUser, email: data.user?.email || localUser.email };
@@ -252,6 +266,20 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
       if (error) throw error;
+
+      // 탈퇴된 계정 체크
+      const { data: profileCheck } = await supabase.from('profiles').select('id').eq('email', email.toLowerCase()).maybeSingle();
+      if (!profileCheck) {
+        const localMembers = JSON.parse(localStorage.getItem('site_members_v2') || '[]');
+        const localMember = localMembers.find((m: any) => m.email?.toLowerCase() === email.toLowerCase());
+        if (localMember?.isDeleted) {
+          await supabase.auth.signOut();
+          alert('탈퇴된 계정입니다. 더 이상 로그인할 수 없습니다.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const profile = await buildProfileFromSession(data.user);
       if (saveId) localStorage.setItem(SAVED_LOGIN_ID_KEY, profile.id);
       else localStorage.removeItem(SAVED_LOGIN_ID_KEY);
@@ -325,6 +353,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
           if (!signInErr) {
             const newUser: UserProfile = {
               id,
+              realName: name || '',
               nickname: name || `유저_${id}`,
               email,
               phone,
@@ -356,6 +385,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
       const newUser: UserProfile = {
         id,
+        realName: name || '',
         nickname: name || `유저_${id}`,
         email,
         phone,

@@ -147,6 +147,20 @@ const App: React.FC = () => {
   }, [handleGlobalUserUpdate]);
 
   const addNotif = useCallback((userId: string, type: NotificationType, title: string, message: string, reason?: string) => {
+    // 알림 설정 확인: 유저가 해당 알림 유형을 끈 경우 생성하지 않음
+    try {
+      const settingsRaw = localStorage.getItem(`user_notif_${userId}`);
+      if (settingsRaw) {
+        const settings = JSON.parse(settingsRaw);
+        // 채팅 알림 끔
+        if (type === 'chat' && settings.chat === false) return;
+        // 주문/결제 알림 끔
+        if ((type === 'payment' || type === 'sns_activation') && settings.orderStatus === false) return;
+        // 이벤트/쿠폰/할인 알림 끔
+        if (type === 'coupon' && settings.marketing === false) return;
+      }
+    } catch (_) {}
+
     const newNotif: SiteNotification = {
       id: `NOTIF_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       userId, type, title, message, reason, isRead: false, createdAt: new Date().toISOString()
