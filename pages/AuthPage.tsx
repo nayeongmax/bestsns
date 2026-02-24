@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/types';
@@ -371,7 +370,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/#/login` }
+        options: {
+          redirectTo: `${window.location.origin}/#/login`,
+          // 재가입 시에도 구글 동의 화면(수락 선택)이 나오도록 강제
+          queryParams: provider === 'google' ? { prompt: 'consent' } : undefined,
+        },
       });
       if (error) throw error;
     } catch (err: any) {
