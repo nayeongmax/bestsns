@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { UserProfile, SellerApplication, NotificationType, FreelancerApplication } from '@/types';
-import { supabase, getSupabaseUrl } from '../../supabase';
+import { supabase } from '../../supabase';
 import { compressImageForStorage } from '@/constants';
 import { updateProfile } from '../../profileDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -340,11 +340,10 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       cancelLabel: '취소',
       danger: true,
       onConfirm: async () => {
-    const supabaseUrl = getSupabaseUrl();
     const { data: { session } } = await supabase.auth.getSession();
-    if (supabaseUrl && session?.access_token) {
+    if (session?.access_token) {
       try {
-        const res = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+        const res = await fetch(`${window.location.origin}/api/delete-user`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         });
@@ -356,7 +355,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
           return;
         }
       } catch (_) {
-        // Edge Function 미배포/연결 실패 시에도 프로필 삭제 + 로그아웃으로 탈퇴 완료 처리
+        // Netlify 함수 호출 실패 시 아래에서 profiles만 삭제 후 로그아웃
       }
     }
     await supabase.auth.signOut({ scope: 'global' });
