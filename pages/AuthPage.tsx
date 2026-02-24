@@ -420,19 +420,24 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   };
 
   const providerNames: Record<'google' | 'kakao', string> = { google: '구글', kakao: '카카오' };
-  /** isSignUp: true면 회원가입 탭에서 호출 → 구글 동의 화면 강제. false면 로그인 탭 → 동의 생략 */
+  /** isSignUp: true면 회원가입 탭, false면 로그인 탭. 매번 구글/카카오 계정 선택(또는 로그인) 화면이 나오도록 prompt 사용 */
   const handleSocialLogin = async (provider: 'google' | 'kakao', isSignUp: boolean) => {
     try {
       sessionStorage.setItem('oauth_intent', isSignUp ? 'signup' : 'login');
     } catch (_) {}
     setLoading(true);
     try {
+      // 로그인 시: 항상 계정 선택 화면 표시(다른 계정으로 로그인 가능, 보안·명시적 동의)
+      // 회원가입 시: 구글은 동의 화면(consent), 카카오는 계정 선택(select_account) 또는 로그인(login) 강제
+      const queryParams =
+        provider === 'google'
+          ? { prompt: isSignUp ? 'consent' : 'select_account' }
+          : { prompt: isSignUp ? 'select_account' : 'login' };
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/#/login`,
-          // 회원가입에서만 구글 동의 화면(수락) 강제. 로그인에서는 이미 가입 시 동의했으므로 생략
-          queryParams: provider === 'google' && isSignUp ? { prompt: 'consent' } : undefined,
+          queryParams,
         },
       });
       if (error) throw error;
