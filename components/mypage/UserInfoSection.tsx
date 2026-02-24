@@ -125,10 +125,12 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       const s = localStorage.getItem(notifStorageKey);
       if (s) {
         const parsed = JSON.parse(s);
-        if (parsed?.marketing) return parsed.marketing;
+        if (typeof parsed?.marketing === 'boolean') return parsed.marketing;
+        if (parsed?.marketing && typeof parsed.marketing === 'object')
+          return !!(parsed.marketing.app || parsed.marketing.sms || parsed.marketing.email);
       }
     } catch (_) {}
-    return { app: true, sms: false, email: false };
+    return true;
   });
   const [notifChat, setNotifChat] = useState(() => {
     try {
@@ -150,24 +152,15 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
     } catch (_) {}
     return true;
   });
-  const [isProfilePublic, setIsProfilePublic] = useState(() => {
-    try {
-      const s = localStorage.getItem(notifStorageKey);
-      if (s) {
-        const parsed = JSON.parse(s);
-        if (typeof parsed?.profilePublic === 'boolean') return parsed.profilePublic;
-      }
-    } catch (_) {}
-    return true;
-  });
+  const [isProfilePublic] = useState(true);
   useEffect(() => {
     localStorage.setItem(notifStorageKey, JSON.stringify({
       marketing: notifMarketing,
       chat: notifChat,
       orderStatus: notifOrderStatus,
-      profilePublic: isProfilePublic
+      profilePublic: true
     }));
-  }, [notifStorageKey, notifMarketing, notifChat, notifOrderStatus, isProfilePublic]);
+  }, [notifStorageKey, notifMarketing, notifChat, notifOrderStatus]);
 
   // --- 탈퇴 관련 상태 ---
   const [quitReason, setQuitReason] = useState('');
@@ -650,40 +643,38 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
         {activeTab === 'notif' && (
           <div className="animate-in fade-in duration-300 space-y-16">
              <div className="space-y-10">
-                <div className="flex justify-between items-center border-b border-gray-100 pb-6">
-                   <h4 className="text-[20px] font-black text-gray-900">마케팅 혜택 알림 설정</h4>
-                   <div className="flex gap-12 text-[13px] font-black text-gray-400 italic">
-                      <span className="w-14 text-center">앱 알림</span><span className="w-14 text-center">SMS</span><span className="w-14 text-center">이메일</span>
-                   </div>
-                </div>
-                <div className="flex items-center justify-between">
-                   <div className="space-y-1.5 flex-1 pr-10">
-                      <p className="font-black text-gray-800 text-[16px]">이벤트·쿠폰 등의 할인 혜택 알림</p>
-                      <p className="text-[13.5px] text-gray-400 font-bold leading-relaxed">계정보안, 주문, 약관변경, 공지 등과 관련된 중요 정보는 혜택 알림 수신 동의와 상관없이 발송돼요.</p>
-                   </div>
-                   <div className="flex gap-12 shrink-0">
-                      <ToggleSwitch active={notifMarketing.app} onClick={() => setNotifMarketing({...notifMarketing, app: !notifMarketing.app})} />
-                      <ToggleSwitch active={notifMarketing.sms} onClick={() => setNotifMarketing({...notifMarketing, sms: !notifMarketing.sms})} />
-                      <ToggleSwitch active={notifMarketing.email} onClick={() => setNotifMarketing({...notifMarketing, email: !notifMarketing.email})} />
-                   </div>
-                </div>
-             </div>
-             <div className="pt-10 border-t border-gray-100 space-y-10">
-                <h4 className="text-[20px] font-black text-gray-900">서비스 및 공개 설정</h4>
+                <h4 className="text-[20px] font-black text-gray-900">알림 설정</h4>
                 <div className="space-y-8">
-                   {[
-                     { label: '실시간 채팅 알림', desc: '새로운 메시지가 도착하면 카카오톡으로 실시간 알림을 받습니다.', state: notifChat, onClick: () => setNotifChat(!notifChat) },
-                     { label: '주문/결제 상태 알림', desc: '내 주문 건의 진행 상태 변화를 카카오톡으로 즉시 확인합니다.', state: notifOrderStatus, onClick: () => setNotifOrderStatus(!notifOrderStatus) },
-                     { label: '프로필 공개', desc: '다른 사용자에게 내 활동 프로필 정보를 공개합니다.', state: isProfilePublic, onClick: () => setIsProfilePublic(!isProfilePublic) },
-                   ].map((item, i) => (
-                     <div key={i} className="flex items-center justify-between bg-gray-50/50 p-6 rounded-[32px] border border-gray-100">
-                        <div className="space-y-1">
-                          <p className="font-black text-gray-800 text-[15.5px]">{item.label}</p>
-                          <p className="text-[13px] text-gray-400 font-bold">{item.desc}</p>
-                        </div>
-                        <ToggleSwitch active={item.state} onClick={item.onClick} />
-                     </div>
-                   ))}
+                   <div className="flex items-center justify-between bg-gray-50/50 p-6 rounded-[32px] border border-gray-100">
+                      <div className="space-y-1">
+                        <p className="font-black text-gray-800 text-[15.5px]">이벤트·쿠폰 등의 할인 혜택 알림</p>
+                        <p className="text-[13px] text-gray-400 font-bold">카카오톡 등으로 이벤트·쿠폰 할인 혜택 알림을 받을 수 있도록 허용합니다. 계정보안, 주문, 약관변경, 공지 등 중요 정보는 수신 동의와 관계없이 발송됩니다.</p>
+                      </div>
+                      <ToggleSwitch active={notifMarketing} onClick={() => setNotifMarketing(!notifMarketing)} />
+                   </div>
+                   <div className="flex items-center justify-between bg-gray-50/50 p-6 rounded-[32px] border border-gray-100">
+                      <div className="space-y-1">
+                        <p className="font-black text-gray-800 text-[15.5px]">실시간 채팅 알림</p>
+                        <p className="text-[13px] text-gray-400 font-bold">새로운 메시지가 도착하면 카카오톡으로 실시간 알림을 받습니다.</p>
+                      </div>
+                      <ToggleSwitch active={notifChat} onClick={() => setNotifChat(!notifChat)} />
+                   </div>
+                   <div className="flex items-center justify-between bg-gray-50/50 p-6 rounded-[32px] border border-gray-100">
+                      <div className="space-y-1">
+                        <p className="font-black text-gray-800 text-[15.5px]">주문/결제 상태 알림</p>
+                        <p className="text-[13px] text-gray-400 font-bold">내 주문 건의 진행 상태 변화를 카카오톡으로 즉시 확인합니다.</p>
+                      </div>
+                      <ToggleSwitch active={notifOrderStatus} onClick={() => setNotifOrderStatus(!notifOrderStatus)} />
+                   </div>
+                   <div className="flex items-center justify-between bg-gray-50/50 p-6 rounded-[32px] border border-gray-100">
+                      <div className="space-y-1">
+                        <p className="font-black text-gray-800 text-[15.5px]">프로필 공개</p>
+                        <p className="text-[13px] text-gray-400 font-bold">다른 사용자에게 내 활동 프로필 정보를 공개합니다. (항상 공개)</p>
+                      </div>
+                      <div className="opacity-90 cursor-not-allowed" title="프로필은 항상 공개됩니다.">
+                        <ToggleSwitch active={true} onClick={() => {}} />
+                      </div>
+                   </div>
                 </div>
              </div>
           </div>
