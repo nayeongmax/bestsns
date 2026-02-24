@@ -44,28 +44,7 @@ exports.handler = async (event) => {
       return err(401, '사용자 정보를 읽을 수 없습니다.');
     }
 
-    // 2) Auth(Users) 삭제 — GoTrue Admin DELETE
-    const deleteAuthRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${serviceKey}`,
-        'apikey': serviceKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ should_soft_delete: false }),
-    });
-
-    if (!deleteAuthRes.ok) {
-      const errBody = await deleteAuthRes.text();
-      let msg = errBody;
-      try {
-        const j = JSON.parse(errBody);
-        msg = j.msg || j.message || j.error_description || errBody;
-      } catch (_) {}
-      return err(400, `Auth 삭제 실패: ${msg}`);
-    }
-
-    // 3) profiles 삭제 — PostgREST DELETE
+    // 2) profiles 먼저 삭제 (Auth 삭제 시 FK/트리거 이슈·락 감소, 연속 탈퇴 시에도 안정)
     const profilesRes = await fetch(
       `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`,
       {
@@ -77,8 +56,37 @@ exports.handler = async (event) => {
         },
       }
     );
-    if (!profilesRes.ok) {
-      console.warn('profiles 삭제 실패:', profilesRes.status);
+    if (!profilesRes.ok && profilesRes.status !== 404) {
+      console.warn('profiles 삭제 실패:', profilesRes.status, await profilesRes.text());
+    }
+
+    // 3) Auth(Users) 삭제 — GoTrue Admin DELETE
+    const deleteAuthRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${serviceKey}`,
+        'apikey': serviceKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ should_soft_delete: false }),
+    });
+
+    // 이미 삭제된 사용자(404)면 성공으로 처리 (중복 요청·재시도 시 안정)
+    if (deleteAuthRes.status === 404) {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ success: true }),
+      };
+    }
+    if (!deleteAuthRes.ok) {
+      const errBody = await deleteAuthRes.text();
+      let msg = errBody;
+      try {
+        const j = JSON.parse(errBody);
+        msg = j.msg || j.message || j.error_description || errBody;
+      } catch (_) {}
+      return err(400, `Auth 삭제 실패: ${msg}`);
     }
 
     return {
