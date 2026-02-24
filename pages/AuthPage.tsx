@@ -143,10 +143,13 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         const setSessionThenLogin = async (session: { user: any }) => {
           const userId = session.user?.id;
           if (!userId) {
+            try { sessionStorage.removeItem('oauth_intent'); } catch (_) {}
             setIsProcessingOAuth(false);
             return;
           }
-          const { data: existingProfile } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+          const intent = (() => { try { return sessionStorage.getItem('oauth_intent'); } catch { return null; } })();
+          try { sessionStorage.removeItem('oauth_intent'); } catch (_) {}
+          const { data: existingProfile } = await supabase.from('profiles').select('id, updated_at').eq('id', userId).maybeSingle();
           if (!existingProfile) {
             await supabase.auth.signOut({ scope: 'local' });
             if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
@@ -154,6 +157,20 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
             setMode('JOIN');
             alert('등록된 계정이 아닙니다. 아래 회원가입에서 구글로 회원가입을 진행해 주세요.');
             return;
+          }
+          if (intent === 'login') {
+            const updatedAt = existingProfile?.updated_at;
+            if (updatedAt) {
+              const ageMs = Date.now() - new Date(updatedAt).getTime();
+              if (ageMs < 120000) {
+                await supabase.auth.signOut({ scope: 'local' });
+                if (window.history.replaceState) window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/login');
+                setIsProcessingOAuth(false);
+                setMode('JOIN');
+                alert('등록된 계정이 아닙니다. 아래 회원가입에서 구글로 회원가입을 진행해 주세요.');
+                return;
+              }
+            }
           }
           buildProfileFromSession(session.user).then(async (profile) => {
               const { error: profileErr } = await supabase.from('profiles').upsert({
@@ -381,6 +398,9 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   const providerNames: Record<'google' | 'kakao', string> = { google: '구글', kakao: '카카오' };
   /** isSignUp: true면 회원가입 탭에서 호출 → 구글 동의 화면 강제. false면 로그인 탭 → 동의 생략 */
   const handleSocialLogin = async (provider: 'google' | 'kakao', isSignUp: boolean) => {
+    try {
+      sessionStorage.setItem('oauth_intent', isSignUp ? 'signup' : 'login');
+    } catch (_) {}
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
