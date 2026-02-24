@@ -104,8 +104,11 @@ const SellerDashboard: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => {
-            alert('전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.');
-            onApplySeller();
+            showAlert({
+              title: '판매자 등록',
+              description: '전문가 정보에서 수익화할 내용을 작성하고, 운영자 승인을 받아야 합니다.',
+              onClose: () => onApplySeller(),
+            });
           }}
           className="px-14 py-5 bg-blue-600 text-white rounded-[32px] font-black text-lg shadow-xl hover:bg-black transition-all italic uppercase tracking-widest"
         >
