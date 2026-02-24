@@ -24,7 +24,7 @@ const PrivacyPolicy: React.FC = () => {
     {
       title: "4. 개인정보의 제3자 제공 및 위탁",
       icon: "🔒",
-      content: "회사는 원활한 서비스 제공을 위해 아래와 같은 외부 솔루션을 이용하며 보안을 철저히 관리합니다.\n• 사용자 인증 및 보안: Clerk (Global Auth Engine)\n• 결제 및 보안 전송: PortOne (Safe Payment Gateway)"
+      content: "회사는 원활한 서비스 제공을 위해 아래와 같은 외부 솔루션을 이용하며 보안을 철저히 관리합니다.\n• 사용자 인증 및 보안: Supabase (Auth & Database)\n• 결제 및 보안 전송: PortOne (Safe Payment Gateway)"
     },
     {
       title: "5. 이용자 및 법정대리인의 권리와 그 행사방법",
@@ -47,7 +47,7 @@ const PrivacyPolicy: React.FC = () => {
         <div className="p-10 md:p-16 space-y-16">
           <div className="bg-blue-50 p-8 rounded-[32px] border border-blue-100 italic">
             <p className="text-blue-700 font-bold leading-relaxed text-[15px]">
-              "THEBESTSNS는 사용자의 개인정보를 최우선 가치로 생각하며, 관련 법령을 준수하고 최첨단 보안 솔루션(Clerk & PortOne)을 통해 안전하게 보호하고 있습니다. 본 방침은 서비스 이용자가 신뢰할 수 있는 환경을 제공하기 위해 마련되었습니다."
+              "THEBESTSNS는 사용자의 개인정보를 최우선 가치로 생각하며, 관련 법령을 준수하고 최첨단 보안 솔루션(Supabase & PortOne)을 통해 안전하게 보호하고 있습니다. 본 방침은 서비스 이용자가 신뢰할 수 있는 환경을 제공하기 위해 마련되었습니다."
             </p>
           </div>
 
