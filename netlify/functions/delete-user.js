@@ -7,57 +7,45 @@ const headers = {
   'Content-Type': 'application/json; charset=UTF-8',
 };
 
+function json(body) {
+  return { statusCode: 200, headers, body: JSON.stringify(body) };
+}
+function err(status, message) {
+  return { statusCode: status, headers, body: JSON.stringify({ error: message }) };
+}
+
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'POST만 지원합니다.' }),
-    };
-  }
-
-  const authHeader = event.headers.authorization || event.headers.Authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return {
-      statusCode: 401,
-      headers,
-      body: JSON.stringify({ error: '로그인이 필요합니다.' }),
-    };
-  }
-
-  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: '서버 설정이 없습니다. Netlify Production 환경 변수에 SUPABASE_URL(또는 VITE_SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY(또는 SUPABASE_SERVICE_KEY) 를 넣어 주세요. Functions에는 Production 키가 적용됩니다.',
-      }),
-    };
-  }
-
   try {
+    if (event.httpMethod === 'OPTIONS') {
+      return { statusCode: 200, headers, body: '' };
+    }
+    if (event.httpMethod !== 'POST') {
+      return err(405, 'POST만 지원합니다.');
+    }
+
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return err(401, '로그인이 필요합니다.');
+    }
+
+    // Functions 런타임에서는 VITE_* 변수가 없을 수 있음 → SUPABASE_URL 반드시 별도 설정 권장
+    const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return err(500, '서버 설정이 없습니다. Netlify 환경 변수에 SUPABASE_URL과 SUPABASE_SERVICE_KEY(서비스 역할 키)를 **둘 다** 넣어 주세요. (Functions는 VITE_SUPABASE_URL을 사용하지 못할 수 있습니다.)');
+    }
+
     const { createClient } = await import('@supabase/supabase-js');
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey || '', {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
     if (userError || !user) {
-      return {
-        statusCode: 401,
-        headers,
-        body: JSON.stringify({ error: '세션이 만료되었거나 유효하지 않습니다.' }),
-      };
+      return err(401, '세션이 만료되었거나 유효하지 않습니다.');
     }
 
-    // 1) Supabase Auth Admin API 직접 호출 — auth.users(Users) 완전 삭제 (soft delete 아님)
     const authAdminUrl = `${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(user.id)}`;
     const authDeleteRes = await fetch(authAdminUrl, {
       method: 'DELETE',
@@ -76,18 +64,9 @@ exports.handler = async (event) => {
         const errJson = JSON.parse(errText);
         errMsg = errJson.msg || errJson.message || errJson.error_description || errText;
       } catch (_) {}
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          error: `Auth(Users) 삭제 실패: ${errMsg}`,
-          code: 'AUTH_DELETE_FAILED',
-          status: authDeleteRes.status,
-        }),
-      };
+      return err(400, `Auth(Users) 삭제 실패: ${errMsg}`);
     }
 
-    // 2) auth 삭제 성공 후 profiles 삭제
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -96,16 +75,8 @@ exports.handler = async (event) => {
       console.warn('profiles 삭제 실패 (auth는 삭제됨):', deleteProfileError.message);
     }
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ success: true }),
-    };
+    return json({ success: true });
   } catch (e) {
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: String(e.message || e) }),
-    };
+    return err(500, String(e && (e.message || e)) || '함수 실행 중 오류가 발생했습니다.');
   }
 };
