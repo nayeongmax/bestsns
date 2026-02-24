@@ -640,7 +640,11 @@ const App: React.FC = () => {
     }).catch((e) => console.warn('로그인 후 채널/스토어 재로드 실패:', e));
   };
 
-  const handleLogout = () => { setUser(null); setWishlist([]); };
+  const handleLogout = () => {
+    supabase.auth.signOut().catch(() => {});
+    setUser(null);
+    setWishlist([]);
+  };
 
   // 찜 localStorage 백업 (DB와 별도로 유지, 페이지 리셋 방지)
   useEffect(() => {

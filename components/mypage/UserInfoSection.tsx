@@ -342,23 +342,41 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
       onConfirm: async () => {
     const supabaseUrl = getSupabaseUrl();
     const { data: { session } } = await supabase.auth.getSession();
-    if (supabaseUrl && session?.access_token) {
+    const accessToken = session?.access_token;
+    let authDeleted = false;
+
+    // 1순위: Netlify Function (SUPABASE_SERVICE_KEY 필요)
+    if (accessToken) {
       try {
-        const res = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+        const netlifyRes = await fetch('/.netlify/functions/delete-user', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         });
-        if (res.ok) {
-          await supabase.auth.signOut({ scope: 'global' });
-          clearSupabaseAuthStorage();
-          localStorage.removeItem('user_profile_v2');
-          window.location.href = '/';
-          return;
-        }
-      } catch (_) {
-        // Edge Function 미배포/연결 실패 시에도 프로필 삭제 + 로그아웃으로 탈퇴 완료 처리
-      }
+        if (netlifyRes.ok) authDeleted = true;
+      } catch (_) {}
     }
+
+    // 2순위: Supabase Edge Function (배포한 경우)
+    if (!authDeleted && supabaseUrl && accessToken) {
+      try {
+        const edgeRes = await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        });
+        if (edgeRes.ok) authDeleted = true;
+      } catch (_) {}
+    }
+
+    // auth 삭제 성공 시: 트리거가 profiles도 자동 삭제
+    if (authDeleted) {
+      await supabase.auth.signOut({ scope: 'global' });
+      clearSupabaseAuthStorage();
+      localStorage.removeItem('user_profile_v2');
+      window.location.href = '/';
+      return;
+    }
+
+    // fallback: auth.users 삭제 불가 → profiles만 삭제 + 로그아웃
     await supabase.auth.signOut({ scope: 'global' });
     clearSupabaseAuthStorage();
     try {

@@ -73,19 +73,18 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   const buildProfileFromSession = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
     const meta = user.user_metadata || {};
     const email = (user.email || '').trim().toLowerCase();
-    const { data: profileRow } = await supabase.from('profiles').select('id, nickname, profile_image, phone').eq('email', email).maybeSingle();
-    // 기존 프로필이 있으면 그 id 유지, 없으면 Supabase Auth UUID 사용 → profiles INSERT/upsert 정상 동작
-    const id = (profileRow?.id ?? user.id).toString();
-    // 현재 로그인한 사용자(session)와 같은 행일 때만 profileRow 값 사용 → 다른 계정(예: 네이버) 데이터가 섞여 보이는 것 방지
-    const isSameUser = profileRow && profileRow.id === user.id;
-    const nickname = ((isSameUser ? (profileRow.nickname || '') : '') || (meta.nickname as string) || (meta.name as string) || (meta.full_name as string) || id).toString();
-    const profileImage = ((isSameUser ? (profileRow.profile_image || '') : '') || (meta.avatar_url as string) || (meta.picture as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`).toString();
+    // 소셜 로그인은 항상 auth.users.id (UUID)를 profiles.id로 사용 → RLS auth.uid() = id 일치
+    const id = user.id;
+    // 기존 profiles에 같은 UUID로 저장된 행이 있으면 그 값을 사용 (재로그인 시 기존 데이터 유지)
+    const { data: profileRow } = await supabase.from('profiles').select('id, nickname, profile_image, phone').eq('id', id).maybeSingle();
+    const nickname = ((profileRow?.nickname as string) || (meta.nickname as string) || (meta.name as string) || (meta.full_name as string) || email.split('@')[0] || id).toString();
+    const profileImage = ((profileRow?.profile_image as string) || (meta.avatar_url as string) || (meta.picture as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`).toString();
     return {
       id,
       nickname,
       profileImage,
       email: user.email || email,
-      phone: (isSameUser && profileRow?.phone ? (profileRow.phone as string) : '') || '',
+      phone: (profileRow?.phone as string) || '',
       role: 'user' as const,
       points: 0,
       joinDate: new Date().toISOString().split('T')[0],
@@ -419,14 +418,15 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         const msg = authError.message || '';
         // 이메일 발송 rate limit: 가입은 됐을 수 있으므로 로그인 시도 후 안내
         if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('rate_limit')) {
-          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
-          if (!signInErr) {
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
+          if (!signInErr && signInData.user) {
+            const profileId = signInData.user.id;
             const newUser: UserProfile = {
-              id,
+              id: profileId,
               nickname,
               email,
               phone: phoneTrim || '',
-              profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
+              profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileId}`,
               role: 'user',
               points: 0,
               joinDate: new Date().toISOString().split('T')[0],
@@ -452,29 +452,34 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         throw authError;
       }
 
+      // auth.users.id (UUID)를 profiles.id로 사용 → RLS auth.uid() = id 일치
+      const profileId = authData.user?.id || id;
+      const profileImage = `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileId}`;
+
       const newUser: UserProfile = {
-        id,
+        id: profileId,
         nickname,
         email,
         phone: phoneTrim || '',
-        profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
+        profileImage,
         role: 'user',
         points: 0,
         joinDate: new Date().toISOString().split('T')[0],
         coupons: []
       };
 
-      // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록 (이름·휴대폰 포함 → 소셜 로그인 연동 시 동일 프로필 사용)
+      // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록
+      // profiles.id = auth.users.id (UUID) → Supabase RLS 및 트리거와 일치
       const { error: profileErr } = await supabase.from('profiles').upsert({
-        id,
+        id: profileId,
         email,
         nickname,
-        profile_image: newUser.profileImage,
+        profile_image: profileImage,
         phone: phoneTrim || null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       if (profileErr) {
-        console.error('Profiles 저장 실패(회원가입):', profileErr.message, '- supabase-profiles-alter-and-backfill.sql 실행 여부를 확인하세요.');
+        console.error('Profiles 저장 실패(회원가입):', profileErr.message, '- supabase-auth-profiles-trigger.sql 실행 여부를 확인하세요.');
       }
 
       onLoginSuccess(newUser);
