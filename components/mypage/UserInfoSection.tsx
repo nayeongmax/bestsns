@@ -354,7 +354,9 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
           return;
         }
         const body = await res.json().catch(() => ({}));
-        const msg = body?.error || `서버 오류 (${res.status}). Netlify에 SUPABASE_SERVICE_ROLE_KEY(서비스 역할 키)가 설정되어 있는지 확인해 주세요.`;
+        const msg = body?.error || (res.status === 404
+          ? '탈퇴 API(함수)를 찾을 수 없습니다. Netlify 대시보드 → Deploys → 최신 배포에서 Functions에 delete-user가 있는지 확인하고, 없으면 코드 푸시 후 Trigger deploy를 해 주세요.'
+          : `서버 오류 (${res.status}). Netlify에 SUPABASE_URL, SUPABASE_SERVICE_KEY(서비스 역할 키)가 설정되어 있는지 확인해 주세요.`);
         showAlert({ description: `계정 삭제에 실패했습니다. ${msg}` });
         return;
       } catch (e) {
