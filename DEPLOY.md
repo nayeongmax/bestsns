@@ -261,11 +261,17 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
 | 이름 | 값 | 비고 |
 |------|-----|------|
 | `SUPABASE_URL` | `https://xxxx.supabase.co` | Supabase 대시보드 → Settings → API 의 Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` 또는 `SUPABASE_SERVICE_KEY` | `eyJ...` (긴 키) | Supabase 대시보드 → Settings → API 의 **service_role** (secret 키). 둘 중 아무 이름으로 넣어도 됨. **절대 프론트엔드 코드나 Git에 넣지 마세요.** |
+| `SUPABASE_SERVICE_ROLE_KEY` 또는 `SUPABASE_SERVICE_KEY` | `eyJ...` (긴 키) | Supabase 대시보드 → **Settings → API** → **Project API keys**에서 **`service_role`** (secret) 복사. **anon 키가 아니라 반드시 service_role 키**를 넣어야 Auth(Users) 삭제가 됩니다. 둘 중 아무 이름으로 넣어도 됨. **절대 프론트엔드 코드나 Git에 넣지 마세요.** |
 
 4. **Save** 후, **Deploys**에서 **Trigger deploy** → **Deploy site** 로 한 번 재배포합니다. (환경 변수 반영)
 
-이후 회원이 **마이페이지 → 회원 탈퇴**를 하면 **profiles 삭제 + Users 삭제**가 한 번에 되고, 목록에서 사라집니다.
+이후 회원이 **마이페이지 → 회원 탈퇴**를 하면 **Auth(Users) 삭제 후 profiles 삭제**가 한 번에 되고, 목록에서 사라집니다.
+
+**▶ 탈퇴해도 Authentication → Users에 계정이 남을 때**
+
+- **원인:** Netlify에 **anon 키**를 넣었거나, **service_role 키가 비어 있는 경우**입니다. `auth.admin.deleteUser()`는 **service_role 키에서만** 동작합니다.
+- **확인:** Supabase 대시보드 → **Settings → API** → **Project API keys**에서 **anon (public)** 과 **service_role (secret)** 이 둘 다 있습니다. Netlify에는 **service_role** 값만 넣어야 합니다.
+- **조치:** Netlify 환경 변수에서 `SUPABASE_SERVICE_ROLE_KEY`(또는 `SUPABASE_SERVICE_KEY`) 값을 **service_role (secret)** 로 바꾼 뒤 **Trigger deploy**로 재배포하세요. 탈퇴 시 화면에 "계정 삭제에 실패했습니다" 메시지가 나오면 서버가 반환한 오류 내용을 확인해 보세요.
 
 ### 6-2. 가입/로그인 시 profiles에 추가
 
