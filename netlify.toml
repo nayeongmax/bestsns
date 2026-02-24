@@ -3,6 +3,9 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[build.environment]
+  NODE_VERSION = "20"
+
 # Functions 경로는 SPA catch-all에서 제외 — 반드시 catch-all보다 위에 둠
 [[redirects]]
   from = "/.netlify/functions/*"
@@ -19,6 +22,12 @@
 [[redirects]]
   from = "/api/ai-consult"
   to = "/.netlify/functions/ai-consult"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/delete-user"
+  to = "/.netlify/functions/delete-user"
   status = 200
   force = true
 
