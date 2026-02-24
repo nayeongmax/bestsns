@@ -276,6 +276,14 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
   2) 환경 변수 `SUPABASE_URL`(또는 `VITE_SUPABASE_URL`), `SUPABASE_SERVICE_KEY`가 **Production**에 설정되어 있는지 확인합니다.  
   3) **Production** 도메인(메인 사이트 주소)에서만 탈퇴를 테스트합니다. (미리보기/브랜치 배포에서는 함수가 없을 수 있음)
 
+**▶ "서버 오류 (502)"가 뜰 때**
+
+- **의미:** 요청은 함수까지 도달했지만, 함수 실행 중 **크래시**가 났습니다. Netlify **Functions**는 **빌드용** 환경 변수(`VITE_SUPABASE_URL` 등)를 쓰지 못할 수 있습니다.
+- **조치:** Netlify **Environment variables**에 **반드시 아래 두 개를 모두** 넣어 주세요. (이름이 정확해야 합니다.)
+  - **`SUPABASE_URL`** — 값: Supabase 프로젝트 URL (예: `https://abcdefgh.supabase.co`). **VITE_SUPABASE_URL과 같은 값**을 그대로 넣으면 됩니다.
+  - **`SUPABASE_SERVICE_KEY`** (또는 `SUPABASE_SERVICE_ROLE_KEY`) — 값: Supabase **service_role** (secret) 키.
+- 저장 후 **Trigger deploy**로 한 번 재배포한 뒤, 다시 탈퇴를 시도해 보세요.
+
 **▶ 탈퇴해도 Authentication → Users에 계정이 남을 때**
 
 - **원인:** Netlify에 **anon 키**를 넣었거나, **service_role 키가 비어 있는 경우**입니다. `auth.admin.deleteUser()`는 **service_role 키에서만** 동작합니다.
