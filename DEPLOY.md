@@ -244,6 +244,71 @@ CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT WITH CHECK (true);
 - **Database** → **Tables** → **profiles** 테이블 선택 후, 상단 또는 테이블 설정에서 **RLS** 표시가 있는지 확인합니다. (Supabase UI 버전에 따라 "RLS enabled" 토글이나 방패 아이콘으로 보입니다.)
 - SQL로 확인: `SELECT relrowsecurity FROM pg_class WHERE relname = 'profiles';` → `t`이면 RLS 켜짐.
 
+### 5-3. 카카오 로그인/회원가입 세팅 (승인 받은 후)
+
+카카오에서 **카카오 로그인** 사용 승인을 받았다면, 아래 순서대로 설정하면 로그인·회원가입 버튼이 동작합니다.
+
+#### 1) 카카오 개발자 콘솔에서 앱·키 확인
+
+1. [Kakao Developers](https://developers.kakao.com) 로그인 후 **내 애플리케이션** 이동.
+2. 사용할 앱 선택(또는 **애플리케이션 추가하기**로 새 앱 생성 후 앱 이름·카테고리 등 입력).
+3. **앱 설정** → **앱** → **플랫폼**:
+   - **REST API 키**를 복사해 둡니다. → 이게 Supabase에 넣을 **Client ID**입니다.
+   - **카카오 로그인**이 **활성화**인지 확인. 비활성이면 **활성화 설정** 후 저장.
+
+#### 2) Supabase에서 Redirect URL 복사
+
+1. [Supabase 대시보드](https://supabase.com/dashboard) → 프로젝트 선택.
+2. **Authentication** → **Sign In / Providers** (또는 **Providers**) 이동.
+3. **Kakao** 행을 펼친 뒤 **Callback URL**을 복사합니다.  
+   형식: `https://<프로젝트-ref>.supabase.co/auth/v1/callback`  
+   (로컬 테스트 시: `http://localhost:54321/auth/v1/callback`)
+
+#### 3) 카카오에 Redirect URI 등록
+
+1. Kakao Developers → 해당 앱 → **앱 설정** → **앱** → **플랫폼**.
+2. **REST API 키** 행에서 **카카오 로그인** 관련 설정(또는 **Redirect URI** 설정)으로 들어갑니다.
+3. **Redirect URI**에 위에서 복사한 **Supabase Callback URL**을 그대로 붙여넣고 **저장**합니다.  
+   예: `https://abcdefgh.supabase.co/auth/v1/callback`
+
+#### 4) 카카오 Client Secret 발급(필요 시)
+
+1. Kakao Developers → 해당 앱 → **앱 설정** → **앱** → **플랫폼**.
+2. **REST API 키**에서 **카카오 로그인** 설정으로 들어가 **Client Secret**을 **활성화**합니다.
+3. 생성된 **Client Secret 코드**를 복사합니다. → Supabase에 넣을 **Client Secret**입니다.
+
+#### 5) 동의 항목(권한) 설정
+
+1. Kakao Developers → 해당 앱 → **제품 설정** → **카카오 로그인** → **동의 항목**.
+2. 아래 항목을 **동의**로 설정해 둡니다.
+   - **프로필 정보**: `닉네임`(profile_nickname), `프로필 이미지`(profile_image).
+   - **이메일**(account_email): 선택. 이메일 없이 쓰려면 Supabase에서 "Allow users without an email"을 켜면 됩니다.
+
+#### 6) Supabase에 카카오 프로바이더 설정
+
+1. Supabase 대시보드 → **Authentication** → **Sign In / Providers**.
+2. **Kakao** 행을 펼친 뒤:
+   - **Enable** 을 **ON**으로 켜기.
+   - **Client ID**: 카카오 **REST API 키** 붙여넣기.
+   - **Client Secret**: 카카오에서 발급한 **Client Secret** 붙여넣기.
+3. **Save** 클릭.
+
+#### 7) Redirect URL 허용 목록(선택, 배포 도메인 사용 시)
+
+앱이 `https://your-site.com/#/login` 처럼 **배포된 도메인**으로 로그인 후 돌아온다면:
+
+1. Supabase → **Authentication** → **URL Configuration** (또는 **Redirect URLs**).
+2. **Redirect URLs** 목록에 다음을 추가합니다.  
+   - 배포 주소: `https://your-site.com/#/login`  
+   - 로컬 테스트: `http://localhost:5173/#/login` (실제 사용하는 포트로 변경)
+
+이 프로젝트는 로그인 성공 후 `redirectTo: window.location.origin + '/#/login'` 으로 돌아오므로, **사용하는 도메인 + `/#/login`** 이 허용 목록에 있으면 됩니다.
+
+---
+
+위 설정이 끝나면 **로그인** / **회원가입** 화면의 **카카오** 버튼으로 로그인·가입이 가능합니다.  
+가입 후 **profiles**에 계정이 안 보이면 **5-2** 절의 **트리거 + 백필**을 적용하세요.
+
 ---
 
 ## 6. 회원 탈퇴 시 Users + profiles 둘 다 삭제되게 하기
