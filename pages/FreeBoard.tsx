@@ -73,12 +73,11 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
         </div>
       )}
 
-      {/* 상단 헤더 섹션 */}
+      {/* 상단 헤더 섹션: 데스크톱은 검색+글쓰기 1줄, 모바일/태블릿은 세로 배치 */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl md:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 flex-1 w-full">
+        <div className="flex flex-col xl:flex-row xl:items-center gap-3 xl:gap-6 flex-1 w-full">
              <h2 className="text-xl sm:text-2xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-6 sm:underline-offset-8 shrink-0">자유게시판</h2>
-             <div className="relative group w-full min-w-0">
+             <div className="relative group w-full min-w-0 flex-1">
                 <input
                   type="text"
                   value={searchQuery}
@@ -90,10 +89,9 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
                   <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
              </div>
-          </div>
           <button
             onClick={() => navigate('/board/write')}
-            className="bg-[#1e293b] text-white px-6 py-3 sm:px-10 sm:py-4 rounded-xl sm:rounded-[20px] font-black shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 italic uppercase tracking-tighter shrink-0 text-xs sm:text-sm w-full sm:w-auto"
+            className="bg-[#1e293b] text-white px-5 py-2.5 xl:py-3 xl:px-6 rounded-xl xl:rounded-[18px] font-black shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 italic uppercase tracking-tighter shrink-0 text-xs xl:text-sm w-full xl:w-auto"
           >
             🖋️ 글쓰기
           </button>
@@ -116,68 +114,23 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
         </div>
       </div>
 
-      {/* 모바일·태블릿: 카드 리스트 (xl에서 숨김) */}
-      <div className="xl:hidden bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm border border-gray-100 divide-y divide-gray-50">
-        {currentPosts.length === 0 ? (
-          <div className="py-12 sm:py-16 text-center text-gray-300 font-black italic text-base sm:text-lg">게시글이 존재하지 않습니다.</div>
-        ) : (
-          currentPosts.map((post, idx) => {
-            const absoluteIdx = (currentPage - 1) * POSTS_PER_PAGE + idx;
-            const isNotice = activeCategory === '전체' && absoluteIdx === 0 && post.category === '공지';
-            const isHot = (post as any).isHot;
-            const activeCommentCount = post.comments.filter(c => !c.isDeleted).length;
-            let displayNo: string | number = post.id;
-            if (activeCategory === '전체') {
-              if (isNotice) displayNo = '공지';
-              else if (isHot) displayNo = 'HOT';
-              else displayNo = totalNormalCount - (absoluteIdx - normalPostsStartIdx);
-            } else displayNo = totalNormalCount - absoluteIdx;
-            return (
-              <Link key={post.id} to={`/board/${post.id}`} className={`block p-4 sm:p-5 active:bg-blue-50/30 transition-colors ${isNotice ? 'bg-red-50/20' : isHot ? 'bg-orange-50/20' : ''}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-[10px] font-black text-gray-400 italic shrink-0">{isNotice ? '공지' : isHot ? 'HOT' : String(displayNo)}</span>
-                      {!isNotice && (
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded italic uppercase shrink-0 ${isHot ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>{post.category}</span>
-                      )}
-                    </div>
-                    <p className={`text-sm sm:text-[15px] font-black tracking-tight line-clamp-2 ${isNotice ? 'text-red-600' : 'text-gray-800'}`}>{post.title}</p>
-                    <div className="flex items-center gap-2 mt-1.5 text-[11px] sm:text-xs font-bold text-gray-400">
-                      <span>{post.author}</span>
-                      <span>·</span>
-                      <span>{post.date}</span>
-                      <span>·</span>
-                      <span>조회 {post.views.toLocaleString()}</span>
-                      {post.likes > 0 && <span className="text-green-500">♥ {post.likes}</span>}
-                      {activeCommentCount > 0 && <span className="text-blue-500">[{activeCommentCount}]</span>}
-                    </div>
-                  </div>
-                  {post.images && post.images.length > 0 && <span className="text-lg shrink-0">🖼️</span>}
-                </div>
-              </Link>
-            );
-          })
-        )}
-      </div>
-
-      {/* 데스크톱: 테이블 (xl에서만 표시) */}
-      <div className="hidden xl:block bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100">
-        <table className="w-full text-left border-collapse table-fixed">
+      {/* 게시글 리스트: 모든 해상도에서 번호~좋아요 1줄 테이블, 가로 스크롤 지원 */}
+      <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border border-gray-100 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+        <table className="w-full text-left border-collapse min-w-[600px]">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="px-4 py-4 text-center w-20 font-black text-gray-900 text-[14px]">번호</th>
-              <th className="px-4 py-4 font-black text-gray-900 text-[14px]">제목</th>
-              <th className="px-4 py-4 text-center w-36 font-black text-gray-900 text-[14px]">작성자</th>
-              <th className="px-4 py-4 text-center w-40 font-black text-gray-900 text-[14px]">작성일자</th>
-              <th className="px-4 py-4 text-center w-28 font-black text-gray-900 text-[14px]">조회수</th>
-              <th className="px-4 py-4 text-center w-28 font-black text-gray-900 text-[14px]">좋아요</th>
+              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-14 sm:w-20 font-black text-gray-900 text-[11px] sm:text-[14px]">번호</th>
+              <th className="px-2 py-2 sm:px-4 sm:py-4 font-black text-gray-900 text-[11px] sm:text-[14px]">제목</th>
+              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-24 sm:w-36 font-black text-gray-900 text-[11px] sm:text-[14px]">작성자</th>
+              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-24 sm:w-40 font-black text-gray-900 text-[11px] sm:text-[14px]">작성일자</th>
+              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-16 sm:w-28 font-black text-gray-900 text-[11px] sm:text-[14px]">조회수</th>
+              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-14 sm:w-28 font-black text-gray-900 text-[11px] sm:text-[14px]">좋아요</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {currentPosts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-20 text-center text-gray-300 font-black italic text-lg">게시글이 존재하지 않습니다.</td>
+                <td colSpan={6} className="py-12 sm:py-20 text-center text-gray-300 font-black italic text-sm sm:text-lg">게시글이 존재하지 않습니다.</td>
               </tr>
             ) : (
               currentPosts.map((post, idx) => {
@@ -191,36 +144,36 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
                   else if (isHot) displayNo = "HOT";
                   else displayNo = totalNormalCount - (absoluteIdx - normalPostsStartIdx);
                 } else displayNo = totalNormalCount - absoluteIdx;
-                
+
                 return (
                   <tr key={post.id} className={`hover:bg-blue-50/20 transition-all cursor-pointer group ${isNotice ? 'bg-red-50/10' : isHot ? 'bg-orange-50/10' : ''}`}>
-                    <td className="px-4 py-4 text-[13px] font-black text-gray-400 text-center italic">
-                      {isNotice ? <span className="text-red-500 font-black uppercase tracking-tighter text-[11px]">공지</span> : isHot ? <span className="text-orange-500 font-black italic text-[11px]">HOT</span> : displayNo}
+                    <td className="px-2 py-2 sm:px-4 sm:py-4 text-[11px] sm:text-[13px] font-black text-gray-400 text-center italic">
+                      {isNotice ? <span className="text-red-500 font-black uppercase tracking-tighter text-[10px] sm:text-[11px]">공지</span> : isHot ? <span className="text-orange-500 font-black italic text-[10px] sm:text-[11px]">HOT</span> : displayNo}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-2 py-2 sm:px-4 sm:py-4">
                       <Link to={`/board/${post.id}`} className="block">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                           {!isNotice && (
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded italic shadow-sm uppercase shrink-0 ${isHot ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>
+                            <span className={`text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded italic shadow-sm uppercase shrink-0 ${isHot ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>
                               {post.category}
                             </span>
                           )}
-                          <span className={`text-[15px] font-black transition-colors tracking-tight truncate ${isNotice ? 'text-red-600' : 'text-gray-800 group-hover:text-blue-600'}`}>
+                          <span className={`text-[12px] sm:text-[15px] font-black transition-colors tracking-tight truncate ${isNotice ? 'text-red-600' : 'text-gray-800 group-hover:text-blue-600'}`}>
                             {post.title}
                           </span>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {post.images && post.images.length > 0 && <span className="text-sm">🖼️</span>}
-                            {activeCommentCount > 0 && <span className={`text-[11px] font-black px-2 py-0.5 rounded-lg shadow-inner ${isHot ? 'bg-orange-50 text-orange-400' : 'bg-blue-50 text-blue-400'}`}>[{activeCommentCount}]</span>}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {post.images && post.images.length > 0 && <span className="text-xs sm:text-sm">🖼️</span>}
+                            {activeCommentCount > 0 && <span className={`text-[10px] sm:text-[11px] font-black px-1.5 sm:px-2 py-0.5 rounded-lg shadow-inner ${isHot ? 'bg-orange-50 text-orange-400' : 'bg-blue-50 text-blue-400'}`}>[{activeCommentCount}]</span>}
                           </div>
                         </div>
                       </Link>
                     </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="text-[14px] font-black text-gray-600 italic truncate block max-w-[140px] mx-auto" title={post.author}>{post.author}</span>
+                    <td className="px-2 py-2 sm:px-4 sm:py-4 text-center">
+                      <span className="text-[11px] sm:text-[14px] font-black text-gray-600 italic truncate block max-w-[100px] sm:max-w-[140px] mx-auto" title={post.author}>{post.author}</span>
                     </td>
-                    <td className="px-4 py-4 text-center text-[13px] font-bold text-gray-400 italic whitespace-nowrap uppercase tracking-tighter">{post.date}</td>
-                    <td className="px-4 py-4 text-center text-[14px] font-bold text-gray-400 italic whitespace-nowrap">{post.views.toLocaleString()}</td>
-                    <td className={`px-4 py-4 text-center text-[16px] font-black italic tracking-tighter whitespace-nowrap ${post.likes > 0 ? 'text-green-500' : 'text-gray-300'}`}>
+                    <td className="px-2 py-2 sm:px-4 sm:py-4 text-center text-[10px] sm:text-[13px] font-bold text-gray-400 italic whitespace-nowrap uppercase tracking-tighter">{post.date}</td>
+                    <td className="px-2 py-2 sm:px-4 sm:py-4 text-center text-[11px] sm:text-[14px] font-bold text-gray-400 italic whitespace-nowrap">{post.views.toLocaleString()}</td>
+                    <td className={`px-2 py-2 sm:px-4 sm:py-4 text-center text-[12px] sm:text-[16px] font-black italic tracking-tighter whitespace-nowrap ${post.likes > 0 ? 'text-green-500' : 'text-gray-300'}`}>
                       {post.likes}
                     </td>
                   </tr>
