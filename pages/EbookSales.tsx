@@ -61,10 +61,10 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
+    <div className="max-w-6xl mx-auto pb-20 sm:pb-24 px-3 sm:px-4 md:px-6">
       {/* 초거대 대분류 탭 섹션 - 6개 탭 한 줄 배치 */}
-      <div className="mb-12">
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4">
+      <div className="mb-6 sm:mb-8 md:mb-12">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
           {STORE_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -73,7 +73,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                 setActiveCategory('전체');
                 setActiveSubCategory('전체');
               }}
-              className={`relative flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-[24px] md:rounded-[32px] transition-all duration-300 border-2 overflow-hidden group ${
+              className={`relative flex flex-col items-center justify-center p-3 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl md:rounded-[24px] md:rounded-[32px] transition-all duration-300 border-2 overflow-hidden group ${
                 activeStoreType === tab.id
                 ? tab.id === 'all'
                   ? 'bg-white border-gray-400 shadow-2xl shadow-gray-100 scale-[1.02]'
@@ -81,10 +81,10 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                 : 'bg-white border-transparent grayscale hover:grayscale-0 hover:border-gray-100 hover:bg-gray-50 opacity-60 hover:opacity-100'
               }`}
             >
-              <div className={`text-3xl md:text-4xl mb-3 transition-transform duration-500 ${activeStoreType === tab.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
+              <div className={`text-2xl sm:text-3xl md:text-4xl mb-2 sm:mb-3 transition-transform duration-500 ${activeStoreType === tab.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
                 {tab.icon}
               </div>
-              <span className={`text-base md:text-lg font-black italic tracking-tighter ${activeStoreType === tab.id ? (tab.id === 'all' ? 'text-gray-700' : `text-${tab.color}-600`) : 'text-gray-400'}`}>
+              <span className={`text-sm sm:text-base md:text-lg font-black italic tracking-tighter ${activeStoreType === tab.id ? (tab.id === 'all' ? 'text-gray-700' : `text-${tab.color}-600`) : 'text-gray-400'}`}>
                 {tab.label}
               </span>
               {activeStoreType === tab.id && (
@@ -96,24 +96,24 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
       </div>
 
       {/* 필터 바: 검색창 + 상품등록 버튼 한 줄, 전체~전자책 공통 */}
-      <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm mb-12 relative border border-gray-100 space-y-6">
+      <div className="bg-white p-4 sm:p-6 md:p-10 rounded-2xl sm:rounded-3xl md:rounded-[32px] md:rounded-[48px] shadow-sm mb-6 sm:mb-8 md:mb-12 relative border border-gray-100 space-y-4 sm:space-y-6">
         {/* 검색창 + 상품 등록 버튼 한 줄 */}
-        <div className="flex flex-nowrap items-center gap-3 md:gap-4">
+        <div className="flex flex-col sm:flex-row flex-nowrap sm:items-center gap-3 md:gap-4">
           <div className="relative flex-1 min-w-0">
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={activeStoreType === 'all' ? '상품 제목이나 전문가를 검색해보세요' : `${STORE_TABS.find(t => t.id === activeStoreType)?.label} 제목이나 전문가를 검색해보세요`} 
-              className="w-full pl-12 md:pl-16 pr-6 py-4 md:py-5 bg-gray-50 rounded-[24px] md:rounded-[32px] border-none focus:ring-4 focus:ring-blue-50 text-base md:text-lg font-bold outline-none transition-all shadow-inner" 
+              className="w-full pl-10 sm:pl-12 md:pl-16 pr-4 sm:pr-6 py-3 sm:py-4 md:py-5 bg-gray-50 rounded-xl sm:rounded-[24px] md:rounded-[32px] border-none focus:ring-4 focus:ring-blue-50 text-sm sm:text-base md:text-lg font-bold outline-none transition-all shadow-inner" 
             />
-            <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-300 absolute left-6 md:left-8 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-300 absolute left-4 sm:left-6 md:left-8 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
           </div>
           <button 
             onClick={handleRegisterClick} 
-            className="shrink-0 bg-blue-600 text-white px-6 md:px-8 py-3.5 md:py-4 rounded-2xl font-black text-[13px] flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95 whitespace-nowrap"
+            className="shrink-0 bg-blue-600 text-white px-4 sm:px-6 md:px-8 py-3 sm:py-3.5 md:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-[13px] flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95 whitespace-nowrap w-full sm:w-auto"
           >
             <span className="text-xl">+</span> {activeStoreType === 'all' ? '상품 등록' : STORE_TABS.find(t => t.id === activeStoreType)?.label + ' 등록'}
           </button>
@@ -174,15 +174,15 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
       </div>
 
       {/* 상품 리스트 그리드 복구: lg(4열) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 px-1 sm:px-2">
         {filteredEbooks.length === 0 ? (
-          <div className="col-span-full py-40 text-center bg-white rounded-[60px] border border-dashed border-gray-100">
-            <span className="text-6xl mb-6 block grayscale">📭</span>
-            <p className="text-gray-300 font-black text-xl italic uppercase tracking-widest">No Products Found</p>
+          <div className="col-span-full py-24 sm:py-32 md:py-40 text-center bg-white rounded-2xl sm:rounded-3xl md:rounded-[60px] border border-dashed border-gray-100">
+            <span className="text-4xl sm:text-6xl mb-4 sm:mb-6 block grayscale">📭</span>
+            <p className="text-gray-300 font-black text-base sm:text-xl italic uppercase tracking-widest px-4">No Products Found</p>
           </div>
         ) : (
           filteredEbooks.map((ebook, idx) => (
-            <div key={ebook.id || `ebook-${idx}`} className="bg-white rounded-[24px] overflow-hidden shadow-sm group border border-gray-100 relative transition-all hover:-translate-y-1">
+            <div key={ebook.id || `ebook-${idx}`} className="bg-white rounded-xl sm:rounded-2xl md:rounded-[24px] overflow-hidden shadow-sm group border border-gray-100 relative transition-all hover:-translate-y-1">
               <Link 
                 to={ebook.isPaused ? '#' : `/ebooks/${ebook.id}`} 
                 onClick={(e) => ebook.isPaused && e.preventDefault()}
@@ -215,17 +215,17 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                     </div>
                   )}
                 </div>
-                <div className="p-5">
-                  <div className="flex gap-1 mb-2 min-w-0">
+                <div className="p-3 sm:p-4 md:p-5">
+                  <div className="flex gap-1 mb-1.5 sm:mb-2 min-w-0">
                     <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{STORE_TABS.find(t => t.id === (ebook.storeType || 'ebook'))?.label || '전자책'}</span>
                   </div>
-                  <h3 className={`font-black text-gray-900 mb-3 transition-colors line-clamp-1 text-[14px] italic tracking-tight truncate ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
+                  <h3 className={`font-black text-gray-900 mb-2 sm:mb-3 transition-colors line-clamp-1 text-xs sm:text-sm md:text-[14px] italic tracking-tight truncate ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
                     {ebook.title}
                   </h3>
-                  <div className="flex justify-between items-end gap-3 border-t border-gray-50 pt-3 min-w-0">
+                  <div className="flex justify-between items-end gap-2 sm:gap-3 border-t border-gray-50 pt-2 sm:pt-3 min-w-0">
                     <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
-                      <span className="text-[11px] font-black text-gray-600 italic break-words">{ebook.author}</span>
+                      <span className="text-[10px] sm:text-[11px] font-black text-gray-600 italic break-words">{ebook.author}</span>
                     </div>
                     <div className="flex flex-col items-end shrink-0 gap-1">
                       {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? (
@@ -235,7 +235,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                       ) : null; })()}
                       <div className="flex flex-col items-end">
                         <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest italic">Price</span>
-                        <span className="text-lg font-black text-gray-900 italic tracking-tighter whitespace-nowrap">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
+                        <span className="text-base sm:text-lg font-black text-gray-900 italic tracking-tighter whitespace-nowrap">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
