@@ -121,11 +121,11 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             <p className="text-gray-700 font-black mt-1.5 sm:mt-2 text-sm sm:text-base">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
             <p className="text-gray-700 font-black mt-1 text-sm sm:text-base">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
             <div className="mt-3 sm:mt-4 flex flex-wrap gap-2">
-              {(user?.role === 'admin' || user?.role === 'manager') && (
+              {user?.role === 'admin' && (
                 <button
                   onClick={() => navigate('/part-time/register')}
                   className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-700 transition-all ring-2 ring-gray-400/50"
-                  title="광고주 결제 후 여기서 작업을 등록하세요 (운영자 전용)"
+                  title="광고주 결제 후 여기서 작업을 등록하세요 (관리자 전용)"
                 >
                   작업 등록 (운영자)
                 </button>
@@ -158,8 +158,9 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
 
         <div className="grid gap-4 sm:gap-6">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm" aria-label="이전 주">←</button>
-            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 min-w-0">
+            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm shrink-0" aria-label="이전 주">←</button>
+            <div className="flex-1 min-w-0 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+              <div className="flex gap-2 sm:gap-3 w-max min-w-full px-1">
             {weekDates.map((d) => {
               const c = dateCounts[d] || { total: 0, done: 0 };
               const isSelected = effectiveDate === d;
@@ -169,7 +170,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                   key={d}
                   type="button"
                   onClick={() => setSelectedDate(d)}
-                  className={`p-3 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 ${
+                  className={`shrink-0 w-[72px] sm:w-[88px] md:w-[100px] p-3 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 ${
                     isSelected
                       ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
                       : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
@@ -181,8 +182,9 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                 </button>
               );
             })}
+              </div>
             </div>
-            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm" aria-label="다음 주">→</button>
+            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm shrink-0" aria-label="다음 주">→</button>
           </div>
 
           <h3 className="text-lg sm:text-xl font-black text-gray-800">작업목록</h3>
