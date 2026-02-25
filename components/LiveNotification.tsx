@@ -81,13 +81,14 @@ const LiveNotification: React.FC = () => {
 
   const isOrder = notification.type === 'order';
   return (
-    <div className="fixed top-24 right-8 z-[100] notification-fade">
-      <div className="bg-white/95 backdrop-blur-md border border-gray-100 shadow-xl rounded-2xl p-5 flex items-center gap-4 min-w-[280px] xl:min-w-[340px]">
-        <div className="flex-shrink-0 flex items-center justify-center w-6 h-6">
-          <div className={`w-2.5 h-2.5 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
+    <div className="fixed top-20 right-4 sm:top-24 sm:right-8 z-[100] notification-fade">
+      {/* 휴대폰만 축소, 태블릿(sm)·데스크톱은 기존 사이즈 유지 */}
+      <div className="bg-white/95 backdrop-blur-md border border-gray-100 shadow-lg rounded-xl flex items-center gap-2 min-w-0 max-w-[200px] px-2.5 py-2 sm:min-w-[340px] sm:max-w-none sm:rounded-2xl sm:p-5 sm:gap-4 sm:shadow-xl">
+        <div className="flex-shrink-0 flex items-center justify-center w-3.5 h-3.5 sm:w-6 sm:h-6">
+          <div className={`w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-[14px] font-bold text-gray-700 leading-tight xl:leading-tight ${isOrder ? 'xl:whitespace-normal whitespace-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]' : ''}`}>
+          <p className={`text-[10px] font-bold text-gray-700 leading-tight sm:text-[14px] sm:leading-tight ${isOrder ? 'sm:whitespace-normal whitespace-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]' : ''}`}>
             {notification.content}
           </p>
         </div>
