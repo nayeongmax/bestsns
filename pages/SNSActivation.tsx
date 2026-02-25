@@ -264,7 +264,6 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               </div>
             </div>
           </div>
-          <AdBanner variant="sidebar" />
           <div className="hidden lg:block bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
             <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest px-1">
               <span className="w-1 h-3 sm:h-3.5 bg-blue-600 rounded-full"></span> My Wallet
