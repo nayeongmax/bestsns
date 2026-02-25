@@ -404,33 +404,33 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
   let lastDate = '';
 
   return (
-    <div className="max-w-6xl mx-auto h-[85vh] flex bg-[#F8F9FA] border border-gray-200 shadow-sm overflow-hidden rounded-lg">
+    <div className="max-w-6xl mx-auto h-[85vh] min-h-[400px] flex flex-col xl:flex-row bg-[#F8F9FA] border border-gray-200 shadow-sm overflow-hidden rounded-lg">
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*,.pdf,.doc,.docx" onChange={handleFileChange} />
 
-      <div className="w-[340px] border-r border-gray-200 flex flex-col bg-white">
-        <div className="p-4 border-b border-gray-100">
+      <div className="w-full xl:w-[340px] min-h-0 xl:min-h-[85vh] border-r border-gray-200 flex flex-col bg-white shrink-0">
+        <div className="p-3 sm:p-4 xl:p-4 border-b border-gray-100">
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {['전체', '거래 중', '즐겨찾기'].map(filter => (
-              <button key={filter} onClick={() => setActiveFilter(filter)} className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[12px] font-bold transition-all border ${activeFilter === filter ? 'bg-[#303441] text-white border-[#303441]' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>{filter}</button>
+              <button key={filter} onClick={() => setActiveFilter(filter)} className={`whitespace-nowrap px-4 py-2 sm:py-1.5 xl:py-1.5 rounded-full text-[13px] sm:text-[12px] xl:text-[12px] font-bold transition-all border ${activeFilter === filter ? 'bg-[#303441] text-white border-[#303441]' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>{filter}</button>
             ))}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {loadingRooms ? (
-            <div className="text-center py-20 text-gray-400 font-bold text-sm">대화 목록 불러오는 중...</div>
+            <div className="text-center py-12 xl:py-20 text-gray-400 font-bold text-sm sm:text-sm">대화 목록 불러오는 중...</div>
           ) : filteredRooms.length === 0 ? (
-            <div className="text-center py-20 text-gray-300 font-bold text-sm px-4">대화방이 없습니다.<br /><span className="text-[11px] text-gray-500 block mt-2">채널·전자책·프리랜서 작업 등에서 &quot;문의하기&quot;/&quot;채팅하기&quot;로 판매자·운영자·신청자와 대화를 시작하세요. 채팅 이력은 CS 참고를 위해 삭제되지 않습니다.</span></div>
+            <div className="text-center py-12 xl:py-20 text-gray-300 font-bold text-sm px-4"><span className="text-[13px] sm:text-sm">대화방이 없습니다.</span><br /><span className="text-[11px] text-gray-500 block mt-2">채널·전자책·프리랜서 작업 등에서 &quot;문의하기&quot;/&quot;채팅하기&quot;로 판매자·운영자·신청자와 대화를 시작하세요.</span></div>
           ) : (
             filteredRooms.map(u => {
               const isOnline = onlineUserIds.has(u.otherParticipantId);
               return (
-              <div key={u.id} onClick={() => setActiveChatId(u.id)} className={`p-4 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-50 relative ${activeChatId === u.id ? 'bg-[#F0F2F5]' : u.memo ? 'bg-blue-50/20' : ''}`}>
+              <div key={u.id} onClick={() => setActiveChatId(u.id)} className={`p-3 sm:p-4 xl:p-4 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-50 relative ${activeChatId === u.id ? 'bg-[#F0F2F5]' : u.memo ? 'bg-blue-50/20' : ''}`}>
                 <div className="relative shrink-0">
-                  <img src={u.otherImage} className="w-14 h-14 rounded-full object-cover border border-gray-100 shadow-sm" alt="" />
-                  <div className={`absolute bottom-0.5 right-0.5 w-4 h-4 border-2 border-white rounded-full shadow-sm ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`} title={isOnline ? '접속 중' : '오프라인'} />
+                  <img src={u.otherImage} className="w-12 h-12 sm:w-14 sm:h-14 xl:w-14 xl:h-14 rounded-full object-cover border border-gray-100 shadow-sm" alt="" />
+                  <div className={`absolute bottom-0.5 right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 xl:w-4 xl:h-4 border-2 border-white rounded-full shadow-sm ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`} title={isOnline ? '접속 중' : '오프라인'} />
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <div className="flex justify-between items-center mb-0.5"><span className="font-black text-[14.5px] text-gray-900 truncate leading-none">{u.name}</span><span className="text-[10px] font-bold text-gray-400 shrink-0">{formatRelativeTime(u.lastMsgTime)}</span></div>
+                  <div className="flex justify-between items-center mb-0.5"><span className="font-black text-[13px] sm:text-[14.5px] xl:text-[14.5px] text-gray-900 truncate leading-none">{u.name}</span><span className="text-[10px] font-bold text-gray-400 shrink-0">{formatRelativeTime(u.lastMsgTime)}</span></div>
                   <div className="mb-1">
                     {editingMemoId === u.id ? (
                       <input autoFocus value={tempMemoValue} onChange={e => setTempMemoValue(e.target.value)} onBlur={() => handleSaveMemo(u.id)} onKeyDown={e => e.key === 'Enter' && handleSaveMemo(u.id)} onClick={e => e.stopPropagation()} className="w-full text-[11px] font-black text-blue-600 bg-white border border-blue-200 px-1.5 py-0.5 rounded outline-none shadow-sm" placeholder="메모 입력..." />
@@ -460,22 +460,22 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
           <p className="text-[11px] text-gray-400 font-bold">상대방이 계좌이체 등 외부 결제를 유도하면 즉시 신고해주세요.</p>
         </div>
 
-        <div className="px-6 py-3 border-b border-gray-50 flex justify-between items-center bg-white shadow-sm">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="font-black text-gray-900 text-sm italic">{activeRoom ? `${activeRoom.name}님과 대화 중` : '대화를 선택하세요'}</span>
+        <div className="px-4 sm:px-6 xl:px-6 py-3 border-b border-gray-50 flex justify-between items-center bg-white shadow-sm">
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-black text-gray-900 text-[13px] sm:text-sm xl:text-sm italic truncate">{activeRoom ? `${activeRoom.name}님과 대화 중` : '대화를 선택하세요'}</span>
               {activeRoom && onlineUserIds.has(activeRoom.otherParticipantId) && (
-                <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">접속 중</span>
+                <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">접속 중</span>
               )}
             </div>
-            {activeRoom?.memo && <span className="text-[10px] font-black text-blue-500 italic uppercase">Memo: {activeRoom.memo}</span>}
+            {activeRoom?.memo && <span className="text-[10px] font-black text-blue-500 italic uppercase truncate">Memo: {activeRoom.memo}</span>}
           </div>
           {activeChatId && (
             <button onClick={() => toggleTrading(activeChatId)} className={`px-5 py-2 rounded-full text-[11px] font-black transition-all shadow-sm ${activeRoom?.isTrading ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-400 hover:text-blue-500'}`}>{activeRoom?.isTrading ? '✓ 거래 관리 중' : '거래 상태로 변경'}</button>
           )}
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 xl:p-6 space-y-4 bg-white min-h-0">
           {loadingMessages ? (
             <div className="text-center py-20 text-gray-400 font-bold text-sm">메시지 불러오는 중...</div>
           ) : !activeChatId ? (
@@ -517,12 +517,12 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
           )}
         </div>
 
-        <div className="p-5 border-t border-gray-100 bg-white">
-          <div className="bg-gray-50 border border-gray-100 rounded-[24px] p-3 transition-all focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-50 shadow-inner">
-            <textarea rows={3} placeholder="메시지를 입력하세요 (Ctrl+Enter 전송)" className="w-full p-2 outline-none text-[14px] resize-none font-bold text-gray-700 bg-transparent no-scrollbar" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); handleSendMessage(); } }} disabled={!activeChatId} />
-            <div className="flex items-center justify-between border-t border-gray-100 pt-3 px-1 mt-1">
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-white text-gray-400 rounded-xl text-[11px] font-black hover:text-blue-500 hover:border-blue-100 transition-all border border-gray-100 shadow-sm uppercase italic disabled:opacity-50 disabled:cursor-not-allowed" disabled={!activeChatId} title="이미지·문서 첨부 (이미지/PDF 등)">이미지·문서 첨부</button>
-              <button type="button" onClick={() => handleSendMessage()} className={`px-10 py-2.5 rounded-xl text-[13px] font-black transition-all shadow-xl uppercase italic tracking-widest ${input.trim() && activeChatId ? 'bg-blue-600 text-white hover:bg-black shadow-blue-100' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`} disabled={!activeChatId}>메시지전송</button>
+        <div className="p-4 sm:p-5 xl:p-5 border-t border-gray-100 bg-white">
+          <div className="bg-gray-50 border border-gray-100 rounded-[20px] sm:rounded-[24px] xl:rounded-[24px] p-2.5 sm:p-3 xl:p-3 transition-all focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-50 shadow-inner">
+            <textarea rows={3} placeholder="메시지를 입력하세요 (Ctrl+Enter 전송)" className="w-full p-2 outline-none text-[14px] sm:text-[14px] resize-none font-bold text-gray-700 bg-transparent no-scrollbar" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); handleSendMessage(); } }} disabled={!activeChatId} />
+            <div className="flex items-center justify-between border-t border-gray-100 pt-2.5 sm:pt-3 xl:pt-3 px-1 mt-1">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 sm:px-5 xl:px-5 py-2 sm:py-2.5 xl:py-2.5 bg-white text-gray-400 rounded-xl text-[11px] font-black hover:text-blue-500 hover:border-blue-100 transition-all border border-gray-100 shadow-sm uppercase italic disabled:opacity-50 disabled:cursor-not-allowed" disabled={!activeChatId} title="이미지·문서 첨부 (이미지/PDF 등)">이미지·문서 첨부</button>
+              <button type="button" onClick={() => handleSendMessage()} className={`px-8 sm:px-10 xl:px-10 py-2 sm:py-2.5 xl:py-2.5 rounded-xl text-[12px] sm:text-[13px] xl:text-[13px] font-black transition-all shadow-xl uppercase italic tracking-widest ${input.trim() && activeChatId ? 'bg-blue-600 text-white hover:bg-black shadow-blue-100' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`} disabled={!activeChatId}>메시지전송</button>
             </div>
           </div>
         </div>
