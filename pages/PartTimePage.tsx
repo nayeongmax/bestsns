@@ -159,7 +159,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         <div className="grid gap-4 sm:gap-6">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm" aria-label="이전 주">←</button>
-            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 min-w-0">
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 min-w-0">
             {weekDates.map((d) => {
               const c = dateCounts[d] || { total: 0, done: 0 };
               const isSelected = effectiveDate === d;
@@ -190,7 +190,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           {sortedTasks.length === 0 ? (
             <p className="text-gray-500 text-center py-10 text-base">해당 날짜의 작업이 없습니다.</p>
           ) : (
-            <div className="space-y-3 sm:space-y-4">
+            <div className="max-h-[70vh] overflow-y-auto space-y-3 sm:space-y-4 pr-1 -mr-1" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
               {sortedTasks.map((task) => {
                 const done = isTaskDone(task);
                 return (
@@ -198,7 +198,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                     key={task.id}
                     type="button"
                     onClick={() => navigate(`/part-time/${task.id}`)}
-                    className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${
+                    className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all min-h-[100px] sm:min-h-0 ${
                       done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-sm'
                     }`}
                   >
