@@ -244,21 +244,80 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       <AdBanner variant="leaderboard" />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10">
-        <div className="lg:col-span-8 space-y-6 md:space-y-10">
+        {/* 모바일에서 먼저 보이도록 My Wallet 상단 배치 (order) */}
+        <div className="lg:col-span-4 space-y-5 sm:space-y-8 lg:sticky lg:top-24 lg:h-fit order-1 lg:order-2">
+          {/* 모바일에서만 상단에 My Wallet 노출 (데스크톱은 아래 동일 블록 사용) */}
+          <div className="lg:hidden bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] tracking-widest px-1 mb-3">
+              <span className="w-1 h-3 bg-blue-600 rounded-full"></span> My Wallet
+            </h3>
+            <div className="bg-[#111827] rounded-xl p-4 text-white relative overflow-hidden shadow-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
+              <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-[9px] font-black text-blue-400 uppercase italic tracking-widest">Available Points</p>
+                  <p className="text-xl font-black italic tracking-tighter leading-none">{(userPoints ?? 0).toLocaleString()} <span className="text-xs text-gray-500 not-italic font-bold">P</span></p>
+                </div>
+                <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/payment/point')} className="bg-blue-600 text-white py-2.5 px-4 rounded-xl text-[12px] font-black shrink-0">
+                  충전
+                </button>
+              </div>
+            </div>
+          </div>
+          <AdBanner variant="sidebar" />
+          <div className="hidden lg:block bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
+            <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest px-1">
+              <span className="w-1 h-3 sm:h-3.5 bg-blue-600 rounded-full"></span> My Wallet
+            </h3>
+            <div className="bg-[#111827] rounded-xl sm:rounded-[24px] p-4 sm:p-6 text-white relative overflow-hidden shadow-xl">
+               <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
+               <div className="relative z-10 space-y-3 sm:space-y-4">
+                 <div className="flex justify-between items-center">
+                   <p className="text-[9px] sm:text-[10px] font-black text-blue-400 uppercase italic tracking-widest">Available Points</p>
+                   <span className="text-[8px] sm:text-[9px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded font-bold text-white/40 uppercase">Real-time sync</span>
+                 </div>
+                 <h4 className="text-2xl sm:text-3xl font-black italic tracking-tighter leading-none break-all">{(userPoints ?? 0).toLocaleString()} <span className="text-xs sm:text-sm text-gray-500 not-italic uppercase ml-0.5 font-bold">P</span></h4>
+                 <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/payment/point')} className="w-full bg-blue-600 text-white py-3 sm:py-3.5 rounded-xl text-[12px] sm:text-[13px] font-black shadow-lg hover:bg-white hover:text-blue-600 transition-all uppercase italic tracking-wider">
+                   포인트 충전하기
+                 </button>
+               </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[40px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
+            <div className="flex justify-between items-center px-1">
+              <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest">
+                 <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span> 공지사항
+              </h3>
+              <button type="button" onClick={() => navigate('/notices')} className="text-[9px] sm:text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all uppercase italic">전체보기 +</button>
+            </div>
+            <div className="space-y-2.5 sm:space-y-3.5">
+               {notices.filter(n => !n.isHidden).slice(0, 3).map(n => (
+                 <div key={n.id} onClick={() => navigate('/notices')} className="p-3 sm:p-4 bg-gray-50/50 rounded-xl sm:rounded-2xl hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-gray-100 group">
+                    <p className="text-[12px] sm:text-[13.5px] font-black text-gray-800 break-words mb-0.5 group-hover:text-blue-600">{n.title}</p>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-300 uppercase italic">{n.date}</span>
+                 </div>
+               ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6 md:space-y-10 order-2 lg:order-1">
           <div className="bg-white rounded-2xl sm:rounded-[32px] md:rounded-[56px] shadow-sm border border-gray-100 p-5 sm:p-8 md:p-14 space-y-8 md:space-y-14">
             <div>
-              <h2 className="text-lg sm:text-xl font-black flex items-center gap-3 sm:gap-4 mb-6 sm:mb-10 text-gray-900 italic uppercase">
+              <h2 className="text-lg sm:text-xl font-black flex items-center gap-3 sm:gap-4 mb-4 sm:mb-10 text-gray-900 italic uppercase">
                 <span className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs sm:text-sm shadow-xl font-black italic shrink-0">01</span>
                 플랫폼 선택
               </h2>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-6">
+              {/* 모바일: 가로 스크롤 한 줄로 가독성·길이 개선 / 데스크톱: 그리드 */}
+              <div className="flex overflow-x-auto overflow-y-hidden gap-2 pb-2 -mx-1 px-1 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-3 sm:gap-3 md:grid-cols-6 md:gap-6">
                 {SNS_PLATFORMS.map((p) => (
-                  <button key={p.id} onClick={() => { setSelectedPlatform(p.name); setSelectedProductId(''); setSelectedCategory(''); }} className="flex flex-col items-center gap-2 sm:gap-4 group">
-                    <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[36px] flex items-center justify-center transition-all border-2 sm:border-4 relative ${selectedPlatform === p.name ? 'border-blue-600 bg-blue-50 shadow-xl sm:shadow-2xl scale-105 sm:scale-110' : 'border-transparent bg-gray-50'}`}>
+                  <button key={p.id} onClick={() => { setSelectedPlatform(p.name); setSelectedProductId(''); setSelectedCategory(''); }} className="flex flex-col items-center gap-1.5 sm:gap-4 group shrink-0 w-12 sm:w-auto sm:min-w-0">
+                    <div className={`w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-[36px] flex items-center justify-center transition-all border-2 sm:border-4 relative ${selectedPlatform === p.name ? 'border-blue-600 bg-blue-50 shadow-xl sm:shadow-2xl scale-105 sm:scale-110' : 'border-transparent bg-gray-50'}`}>
                       <img
                         src={p.icon}
                         alt={p.name}
-                        className="w-7 h-7 sm:w-10 sm:h-10 object-contain"
+                        className="w-6 h-6 sm:w-10 sm:h-10 object-contain"
                         onError={(e) => {
                           const el = e.currentTarget;
                           el.style.display = 'none';
@@ -268,7 +327,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                       />
                       <span className="hidden absolute inset-0 flex items-center justify-center text-lg sm:text-2xl font-black text-gray-400 pointer-events-none" aria-hidden>{p.name[0]}</span>
                     </div>
-                    <span className={`text-[11px] sm:text-[13px] font-black italic leading-tight text-center ${selectedPlatform === p.name ? 'text-blue-600' : 'text-gray-400'}`}>{p.name}</span>
+                    <span className={`text-[10px] sm:text-[13px] font-black italic leading-tight text-center break-normal ${selectedPlatform === p.name ? 'text-blue-600' : 'text-gray-400'}`}>{p.name}</span>
                   </button>
                 ))}
               </div>
@@ -309,14 +368,12 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                   </div>
                 </div>
                 <div className="md:col-span-4 space-y-3 sm:space-y-4">
-                  <div className="flex items-center justify-between gap-2 sm:gap-3 px-1 sm:px-4">
-                    <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic truncate">수량</h3>
-                    {selectedProduct && (
-                      <span className="text-[10px] sm:text-[11px] font-bold text-blue-600 italic whitespace-nowrap max-w-[50%] truncate" title={`최소 ${effectiveQuantityRange.min.toLocaleString()} ~ 최대 ${effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max.toLocaleString() : '제한없음'}`}>
-                        최소 {effectiveQuantityRange.min.toLocaleString()} ~ 최대 {effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max.toLocaleString() : '제한없음'}
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic px-1 sm:px-4">수량</h3>
+                  {selectedProduct && (
+                    <p className="text-[10px] sm:text-[11px] font-bold text-blue-600 italic break-words px-1 sm:px-4">
+                      최소 {effectiveQuantityRange.min.toLocaleString()} ~ 최대 {effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max.toLocaleString() : '제한없음'} (공통 교집합)
+                    </p>
+                  )}
                   <input type="number" placeholder="0" min={effectiveQuantityRange.min} max={effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max : undefined} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white text-sm sm:text-base" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} />
                 </div>
               </div>
@@ -335,13 +392,13 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                 <div key={opt.id} className="bg-white rounded-2xl sm:rounded-[36px] p-4 sm:p-6 md:p-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 shadow-sm border border-blue-50 group hover:border-blue-300 transition-all">
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-black text-blue-500 uppercase italic tracking-widest">{idx + 1}. Package</span>
-                    <h4 className="font-black text-gray-900 text-base sm:text-xl truncate mb-0.5">{opt.serviceName}</h4>
-                    <p className="text-[11px] font-bold text-gray-400 truncate italic">{opt.link}</p>
+                    <h4 className="font-black text-gray-900 text-base sm:text-xl break-words mb-0.5">{opt.serviceName}</h4>
+                    <p className="text-[11px] font-bold text-gray-400 break-all italic">{opt.link}</p>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-10 sm:pl-6">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-10 sm:pl-6 flex-shrink-0">
                     <div className="space-y-0.5 sm:space-y-1">
-                      <p className="text-[11px] font-black text-gray-300 uppercase italic">{(opt.unitPrice ?? 0).toLocaleString()}P × {(opt.quantity ?? 0).toLocaleString()}</p>
-                      <p className="text-xl sm:text-2xl font-black text-blue-600 italic tracking-tighter">{(opt.totalPrice ?? 0).toLocaleString()}P</p>
+                      <p className="text-[11px] font-black text-gray-300 uppercase italic break-words">{(opt.unitPrice ?? 0).toLocaleString()}P × {(opt.quantity ?? 0).toLocaleString()}</p>
+                      <p className="text-xl sm:text-2xl font-black text-blue-600 italic tracking-tighter break-all">{(opt.totalPrice ?? 0).toLocaleString()}P</p>
                     </div>
                     <button type="button" onClick={() => setSelectedOptions(selectedOptions.filter(o=>o.id!==opt.id))} className="text-red-200 hover:text-red-500 transition-colors font-black text-xl sm:text-2xl p-1 shrink-0" aria-label="삭제">✕</button>
                   </div>
@@ -351,60 +408,14 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             {selectedOptions.length > 0 && (
               <div className="pt-6 sm:pt-10 space-y-6 sm:space-y-8">
                 <div className="bg-white/50 backdrop-blur-md rounded-2xl sm:rounded-[48px] p-6 sm:p-12 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 border border-white/50 shadow-inner">
-                  <span className="text-blue-900 font-black text-base sm:text-xl italic tracking-widest">결제 예정 총 포인트</span>
-                  <span className="text-3xl sm:text-5xl font-black text-blue-600 italic tracking-tighter">{(totalOrderAmount ?? 0).toLocaleString()}P</span>
+                  <span className="text-blue-900 font-black text-base sm:text-xl italic tracking-widest break-words">결제 예정 총 포인트</span>
+                  <span className="text-3xl sm:text-5xl font-black text-blue-600 italic tracking-tighter break-all">{(totalOrderAmount ?? 0).toLocaleString()}P</span>
                 </div>
                 <button type="button" onClick={handleOrder} disabled={isProcessing} className={`w-full py-6 sm:py-8 md:py-10 rounded-2xl sm:rounded-[48px] font-black text-xl sm:text-2xl md:text-3xl shadow-xl sm:shadow-2xl transition-all uppercase italic tracking-widest flex items-center justify-center gap-2 sm:gap-4 ${isProcessing ? 'bg-gray-400' : 'bg-black text-white hover:bg-blue-600'}`}>
                   {isProcessing ? '🚀 작업 요청 중...' : '🚀 주문하기'}
                 </button>
               </div>
             )}
-          </div>
-        </div>
-        
-        {/* Sidebar */}
-        <div className="lg:col-span-4 space-y-5 sm:space-y-8 lg:sticky lg:top-24 lg:h-fit">
-          <AdBanner variant="sidebar" />
-          <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
-            <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest px-1">
-              <span className="w-1 h-3 sm:h-3.5 bg-blue-600 rounded-full"></span> My Wallet
-            </h3>
-            <div className="bg-[#111827] rounded-xl sm:rounded-[24px] p-4 sm:p-6 text-white relative overflow-hidden shadow-xl">
-               <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
-               <div className="relative z-10 space-y-3 sm:space-y-4">
-                 <div className="flex justify-between items-center">
-                   <p className="text-[9px] sm:text-[10px] font-black text-blue-400 uppercase italic tracking-widest">Available Points</p>
-                   <span className="text-[8px] sm:text-[9px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded font-bold text-white/40 uppercase">Real-time sync</span>
-                 </div>
-                 <h4 className="text-2xl sm:text-3xl font-black italic tracking-tighter leading-none">
-                   {(userPoints ?? 0).toLocaleString()} <span className="text-xs sm:text-sm text-gray-500 not-italic uppercase ml-0.5 font-bold">P</span>
-                 </h4>
-                 <button 
-                   type="button"
-                   onClick={() => isGuest ? navigate('/login') : navigate('/payment/point')} 
-                   className="w-full bg-blue-600 text-white py-3 sm:py-3.5 rounded-xl text-[12px] sm:text-[13px] font-black shadow-lg hover:bg-white hover:text-blue-600 transition-all uppercase italic tracking-wider"
-                 >
-                   포인트 충전하기
-                 </button>
-               </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[40px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
-            <div className="flex justify-between items-center px-1">
-              <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest">
-                 <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span> 공지사항
-              </h3>
-              <button type="button" onClick={() => navigate('/notices')} className="text-[9px] sm:text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all uppercase italic">전체보기 +</button>
-            </div>
-            <div className="space-y-2.5 sm:space-y-3.5">
-               {notices.filter(n => !n.isHidden).slice(0, 3).map(n => (
-                 <div key={n.id} onClick={() => navigate('/notices')} className="p-3 sm:p-4 bg-gray-50/50 rounded-xl sm:rounded-2xl hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-gray-100 group">
-                    <p className="text-[12px] sm:text-[13.5px] font-black text-gray-800 truncate mb-0.5 group-hover:text-blue-600">{n.title}</p>
-                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-300 uppercase italic">{n.date}</span>
-                 </div>
-               ))}
-            </div>
           </div>
         </div>
       </div>
