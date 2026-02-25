@@ -51,18 +51,18 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
   };
 
   return (
-    <div className="max-w-4xl mx-auto pb-20 px-4 md:px-0">
-      <div className="flex justify-between items-end mb-12">
-        <h2 className="text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-          <span className="w-2.5 h-8 bg-blue-600 rounded-full"></span> 활동 알림 센터
+    <div className="max-w-4xl mx-auto pb-20 px-4 md:px-6 xl:px-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8 xl:mb-12">
+        <h2 className="text-2xl sm:text-3xl xl:text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
+          <span className="w-2.5 h-7 sm:h-8 xl:h-8 bg-blue-600 rounded-full"></span> 활동 알림 센터
         </h2>
         <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest italic">Personal notification updates</p>
       </div>
 
       {myNotifications.length === 0 ? (
-        <div className="bg-white p-20 rounded-[48px] border border-dashed border-gray-200 flex flex-col items-center text-center">
-           <span className="text-6xl mb-6 opacity-30 grayscale">🔔</span>
-           <h3 className="text-xl font-black text-gray-300 italic mb-2">기록된 알림이 없습니다.</h3>
+        <div className="bg-white p-12 sm:p-16 xl:p-20 rounded-[32px] sm:rounded-[48px] border border-dashed border-gray-200 flex flex-col items-center text-center">
+           <span className="text-5xl sm:text-6xl xl:text-6xl mb-4 xl:mb-6 opacity-30 grayscale">🔔</span>
+           <h3 className="text-lg sm:text-xl xl:text-xl font-black text-gray-300 italic mb-2">기록된 알림이 없습니다.</h3>
            <p className="text-gray-300 font-bold text-sm">중요한 업데이트가 있을 때 이곳에서 알려드릴게요!</p>
         </div>
       ) : (
@@ -73,22 +73,22 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
                <div 
                  key={n.id} 
                  onClick={() => handleOpenNotif(n)}
-                 className={`bg-white p-6 md:p-8 rounded-[32px] shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-md cursor-pointer transition-all group relative overflow-hidden ${!n.isRead ? 'ring-2 ring-blue-50' : 'opacity-70'}`}
+                 className={`bg-white p-5 sm:p-6 md:p-8 xl:p-8 rounded-[24px] sm:rounded-[32px] xl:rounded-[32px] shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-md cursor-pointer transition-all group relative overflow-hidden ${!n.isRead ? 'ring-2 ring-blue-50' : 'opacity-70'}`}
                >
                   {!n.isRead && (
                     <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
                   )}
-                  <div className="flex justify-between items-start mb-4">
-                     <div className="flex items-center gap-3">
-                        <span className={`${style.color} text-white text-[10px] font-black px-3 py-1 rounded-lg italic shadow-sm uppercase tracking-tighter flex items-center gap-1.5`}>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-2 mb-3 xl:mb-4">
+                     <div className="flex items-center gap-3 flex-wrap min-w-0">
+                        <span className={`${style.color} text-white text-[10px] font-black px-2.5 sm:px-3 py-1 rounded-lg italic shadow-sm uppercase tracking-tighter flex items-center gap-1.5 shrink-0`}>
                           <span>{style.icon}</span>
                           <span>{style.label}</span>
                         </span>
-                        <h3 className="font-black text-[16px] text-gray-900 group-hover:text-blue-600 transition-colors">{n.title}</h3>
+                        <h3 className="font-black text-[15px] sm:text-[16px] xl:text-[16px] text-gray-900 group-hover:text-blue-600 transition-colors break-words">{n.title}</h3>
                      </div>
-                     <span className="text-[10px] text-gray-300 font-black italic uppercase">{new Date(n.createdAt).toLocaleDateString()}</span>
+                     <span className="text-[10px] text-gray-300 font-black italic uppercase shrink-0">{new Date(n.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <p className="text-[14px] font-bold text-gray-600 leading-relaxed pl-1 whitespace-pre-wrap line-clamp-1">{n.message}</p>
+                  <p className="text-[13px] sm:text-[14px] xl:text-[14px] font-bold text-gray-600 leading-relaxed pl-1 whitespace-pre-wrap line-clamp-1">{n.message}</p>
                   <div className="mt-4 flex justify-end">
                     <span className="text-[11px] font-black text-blue-500 italic uppercase opacity-0 group-hover:opacity-100 transition-opacity">클릭하여 자세히 보기 →</span>
                   </div>
@@ -100,8 +100,8 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
 
       {/* 알림 상세 모달 */}
       {selectedNotif && (
-        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-xl rounded-[48px] p-10 md:p-12 shadow-2xl space-y-8 animate-in zoom-in-95 duration-300 relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 xl:p-6 animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-xl rounded-[32px] sm:rounded-[48px] xl:rounded-[48px] p-6 sm:p-10 md:p-12 xl:p-12 shadow-2xl space-y-6 xl:space-y-8 animate-in zoom-in-95 duration-300 relative overflow-hidden">
             {/* 모달 상단 장식 */}
             <div className={`absolute top-0 left-0 right-0 h-2 ${getBadgeStyle(selectedNotif.type).color}`}></div>
             
