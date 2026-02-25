@@ -79,15 +79,15 @@ const LiveNotification: React.FC = () => {
 
   if (!notification || !isVisible) return null;
 
+  const isOrder = notification.type === 'order';
   return (
-    <div className="fixed top-20 right-4 sm:right-6 z-[100] notification-fade">
-      <div className="bg-white/95 backdrop-blur-md border border-gray-100 shadow-lg rounded-xl px-3 py-2.5 flex items-center gap-2.5 min-w-0 max-w-[280px] sm:max-w-[320px]">
-        <div className="flex-shrink-0 flex items-center justify-center w-4 h-4">
-          <div className={`w-1.5 h-1.5 rounded-full shadow-sm animate-pulse ${notification.type === 'order' ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
+    <div className="fixed top-24 right-8 z-[100] notification-fade">
+      <div className="bg-white/95 backdrop-blur-md border border-gray-100 shadow-xl rounded-2xl p-5 flex items-center gap-4 min-w-[280px] xl:min-w-[340px]">
+        <div className="flex-shrink-0 flex items-center justify-center w-6 h-6">
+          <div className={`w-2.5 h-2.5 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
         </div>
-        
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] sm:text-xs font-bold text-gray-700 leading-snug">
+          <p className={`text-[14px] font-bold text-gray-700 leading-tight xl:leading-tight ${isOrder ? 'xl:whitespace-normal whitespace-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]' : ''}`}>
             {notification.content}
           </p>
         </div>
