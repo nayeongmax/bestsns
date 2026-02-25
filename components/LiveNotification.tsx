@@ -87,8 +87,8 @@ const LiveNotification: React.FC = () => {
         <div className="flex-shrink-0 flex items-center justify-center w-3.5 h-3.5 sm:w-6 sm:h-6">
           <div className={`w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className={`text-[10px] font-bold text-gray-700 leading-tight sm:text-[14px] sm:leading-tight ${isOrder ? 'sm:whitespace-normal whitespace-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]' : ''}`}>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <p className="text-[10px] font-bold text-gray-700 leading-tight sm:text-[14px] sm:leading-tight whitespace-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] sm:whitespace-normal sm:overflow-visible">
             {notification.content}
           </p>
         </div>
