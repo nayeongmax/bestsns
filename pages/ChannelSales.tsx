@@ -70,7 +70,7 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist })
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8 px-1 sm:px-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 lg:gap-8 px-1 sm:px-2">
         {filteredChannels.length === 0 ? (
           <div className="col-span-full py-16 sm:py-24 md:py-32 text-center bg-white rounded-2xl sm:rounded-3xl md:rounded-[40px] border-2 border-dashed border-gray-100">
              <p className="text-gray-300 font-black italic text-base sm:text-lg px-4">조건에 맞는 채널이 없습니다.</p>
