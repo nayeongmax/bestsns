@@ -678,8 +678,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
   }
 
   return (
-    <div className={`flex items-center justify-center min-h-screen w-full p-3 sm:p-4 xl:p-5 font-['Noto_Sans_KR',sans-serif] ${onClose ? 'min-h-0' : 'bg-slate-100'}`}>
-      <div className="w-full max-w-[340px] sm:max-w-[380px] md:max-w-[420px] xl:max-w-[920px] max-h-[90vh] sm:max-h-[85vh] xl:max-h-[780px] xl:h-[780px] bg-white rounded-2xl sm:rounded-[28px] xl:rounded-[28px] shadow-xl xl:shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex overflow-hidden auth-card-enter relative flex-shrink-0 mx-auto">
+    <div className={`flex items-center justify-center min-h-screen w-full p-3 sm:p-4 xl:p-5 font-['Noto_Sans_KR',sans-serif] ${onClose ? 'min-h-0' : 'bg-slate-100'} xl:pb-0 pb-20`}>
+      <div className="w-full max-w-[340px] sm:max-w-[380px] md:max-w-[420px] xl:max-w-[920px] max-h-[calc(100vh-6rem)] sm:max-h-[calc(100vh-5rem)] xl:max-h-[780px] xl:h-[780px] bg-white rounded-2xl sm:rounded-[28px] xl:rounded-[28px] shadow-xl xl:shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex overflow-hidden auth-card-enter relative flex-shrink-0 mx-auto">
         {onClose && (
           <button type="button" onClick={onClose} className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-lg font-bold transition-colors xl:w-10 xl:h-10 xl:text-xl" aria-label="닫기">×</button>
         )}
@@ -713,8 +713,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           <div className="relative z-10 text-[11px] text-white/35 shrink-0 pt-4">© 2025 THEBESTSNS. All rights reserved.</div>
         </div>
 
-        {/* ─── RIGHT PANEL (폼) ─── 모바일/태블릿: 정중앙 배치·스크롤 가능, 토글과 입력란 겹침 방지 */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pt-12 px-5 pb-6 sm:pt-8 sm:px-6 sm:pb-6 md:pt-10 md:px-8 md:pb-8 xl:p-12">
+        {/* ─── RIGHT PANEL (폼) ─── 모바일: 푸터 안 겹치게 스크롤, 하단 여유 확보 */}
+        <div
+          className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden pt-12 px-5 pb-24 sm:pt-8 sm:px-6 sm:pb-20 md:pt-10 md:px-8 md:pb-20 xl:p-12 xl:pb-12"
+          style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        >
           {isFormMode && (
             <div className="flex justify-center mb-6 md:mb-8 xl:mb-8">
               <div ref={toggleTrackRef} className="inline-flex bg-[#f1f5f9] rounded-full p-1.5 border border-[#e2e8f0] w-[200px] sm:w-[220px] xl:w-[220px] relative shrink-0">
@@ -764,7 +767,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           {mode === 'JOIN' && (
             <div className="flex flex-col min-h-0 pt-0 xl:py-1">
               <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[18px] sm:text-[20px] xl:text-[25px] font-extrabold text-[#0f172a] tracking-tight text-center mb-4 xl:mb-3 w-full">회원가입</h3>
-              <form onSubmit={handleJoin} className="space-y-2.5 xl:space-y-2.5 w-full max-w-[320px] sm:max-w-none mx-auto pb-8">
+              <form onSubmit={handleJoin} className="space-y-2.5 xl:space-y-2.5 w-full max-w-[320px] sm:max-w-none mx-auto pb-4 xl:pb-0">
                 <div className="relative flex items-center"><span className="absolute left-3 xl:left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="아이디 (5자 이상)" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} className="w-full pl-9 xl:pl-10 pr-3 xl:pr-4 py-2.5 xl:py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-lg xl:rounded-xl text-[#0f172a] text-[14px] xl:text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-2 xl:focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={5} /></div>
                 <div className="relative flex items-center"><span className="absolute left-3 xl:left-3.5 text-[#94a3b8]"><IconLock /></span><input type={showPwJoin ? 'text' : 'password'} placeholder="비밀번호 (8자 이상)" value={formData.pw} onChange={e => setFormData({ ...formData, pw: e.target.value })} className="w-full pl-9 xl:pl-10 pr-9 xl:pr-10 py-2.5 xl:py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-lg xl:rounded-xl text-[#0f172a] text-[14px] xl:text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-2 xl:focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowPwJoin(v => !v)} className="absolute right-2.5 xl:right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwJoin ? <IconEyeOff /> : <IconEye />}</button></div>
                 <div className="relative flex items-center"><span className="absolute left-3 xl:left-3.5 text-[#94a3b8]"><IconCheck /></span><input type={showPwConfirm ? 'text' : 'password'} placeholder="비밀번호 확인" value={formData.pwConfirm} onChange={e => setFormData({ ...formData, pwConfirm: e.target.value })} className="w-full pl-9 xl:pl-10 pr-9 xl:pr-10 py-2.5 xl:py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-lg xl:rounded-xl text-[#0f172a] text-[14px] xl:text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-2 xl:focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required minLength={8} autoComplete="new-password" /><button type="button" onClick={() => setShowPwConfirm(v => !v)} className="absolute right-2.5 xl:right-3 text-[#94a3b8] hover:text-[#0f172a] p-1">{showPwConfirm ? <IconEyeOff /> : <IconEye />}</button></div>
@@ -775,7 +778,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 <button type="submit" disabled={loading} className="w-full py-3 xl:py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-lg xl:rounded-xl font-bold text-[14px] xl:text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1 xl:mt-1.5">가입하기</button>
               </form>
               <div className="flex items-center gap-2 xl:gap-2.5 my-2.5 xl:my-3 w-full max-w-[320px] sm:max-w-none mx-auto"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-[10px] xl:text-xs text-[#94a3b8] shrink-0">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
-              <div className="flex flex-col gap-2 xl:gap-2.5 w-full max-w-[320px] sm:max-w-none mx-auto pb-6">
+              <div className="flex flex-col gap-2 xl:gap-2.5 w-full max-w-[320px] sm:max-w-none mx-auto pb-10 xl:pb-0">
                 <button type="button" onClick={() => { showToast('구글 회원가입 연동 중...', true); handleSocialLogin('google', true); }} disabled={loading} className="w-full flex items-center justify-center gap-2 xl:gap-2.5 py-3 xl:py-3.5 px-3 xl:px-4 rounded-lg xl:rounded-xl border border-[#e2e8f0] bg-white text-[#0f172a] text-[13px] xl:text-[14px] font-semibold hover:border-[#b8c4d4] hover:shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">
                   <svg width="20" height="20" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.909-2.258c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
                   구글로 회원가입
