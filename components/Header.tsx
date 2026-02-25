@@ -71,9 +71,9 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
   return (
     <>
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm overflow-x-hidden">
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px] min-w-0">
-          <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
-            {/* 모바일 햄버거 메뉴 (xl 미만에서만 표시) */}
+        <div className="container mx-auto px-4 h-20 flex items-center max-w-[1550px] min-w-0">
+          {/* 왼쪽: 모바일 햄버거만 / 웹 로고 */}
+          <div className="w-10 flex-shrink-0 xl:w-auto xl:flex-shrink-0 flex items-center gap-3">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
@@ -84,11 +84,20 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <Link to="/" className="text-xl sm:text-2xl font-black flex items-center tracking-tighter shrink-0">
+            <Link to="/" className="hidden xl:flex text-2xl font-black tracking-tighter shrink-0">
               <span className="text-gray-900 uppercase">THEBEST</span>
               <span className="text-blue-600 uppercase">SNS</span>
             </Link>
           </div>
+          {/* 가운데: 모바일에서만 로고 중앙 배치 */}
+          <div className="flex-1 flex justify-center min-w-0 xl:hidden">
+            <Link to="/" className="text-xl font-black tracking-tighter">
+              <span className="text-gray-900 uppercase">THEBEST</span>
+              <span className="text-blue-600 uppercase">SNS</span>
+            </Link>
+          </div>
+          {/* 모바일 오른쪽 균형(로고 중앙 유지용) */}
+          <div className="w-10 flex-shrink-0 xl:hidden" aria-hidden="true" />
 
           <nav className="hidden xl:flex items-center gap-1 flex-1 justify-center h-full">
             {navItems.map((item) => {
