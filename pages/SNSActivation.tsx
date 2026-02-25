@@ -5,6 +5,7 @@ import { SNS_PLATFORMS } from '../constants';
 import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource } from '@/types';
 import { updateProfile } from '../profileDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import AdBanner from '@/components/AdBanner';
 
 interface Props {
   smmProducts: SMMProduct[];
@@ -239,6 +240,9 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         </div>
       </div>
 
+      {/* 광고 배너: 히어로 바로 아래 */}
+      <AdBanner variant="leaderboard" />
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-8 space-y-10">
           <div className="bg-white rounded-[56px] shadow-sm border border-gray-100 p-10 md:p-14 space-y-14">
@@ -325,6 +329,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         
         {/* Sidebar */}
         <div className="lg:col-span-4 space-y-8 sticky top-24 h-fit">
+          <AdBanner variant="sidebar" />
           <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 space-y-6">
             <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[12px] tracking-widest px-1">
               <span className="w-1 h-3.5 bg-blue-600 rounded-full"></span> My Wallet
