@@ -106,13 +106,13 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
   const displayNotices = isAdmin ? notices : notices.filter(n => !n.isHidden);
 
   return (
-    <div className="max-w-4xl mx-auto pb-32 px-4 animate-in fade-in duration-500">
-      <div className="mb-12 flex justify-between items-end">
+    <div className="max-w-4xl mx-auto pb-24 xl:pb-32 px-4 sm:px-6 xl:px-4 animate-in fade-in duration-500">
+      <div className="mb-8 xl:mb-12 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h2 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-orange-500 underline-offset-8">Official Notice</h2>
-          <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.2em]">공식 소식과 중요 안내를 전해드립니다.</p>
+          <h2 className="text-2xl sm:text-3xl xl:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-orange-500 underline-offset-8">Official Notice</h2>
+          <p className="text-[12px] font-bold text-gray-400 mt-3 xl:mt-4 uppercase tracking-[0.2em]">공식 소식과 중요 안내를 전해드립니다.</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-3 xl:gap-4 flex-shrink-0">
           {isAdmin && !isWriting && (
             <button 
               onClick={() => setIsWriting(true)}
@@ -127,13 +127,13 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
 
       {/* 작성 모드 UI */}
       {isWriting && (
-        <div className="mb-12 bg-white rounded-[48px] p-10 shadow-2xl border-4 border-orange-500/10 space-y-8 animate-in slide-in-from-top-4 duration-500">
+        <div className="mb-8 xl:mb-12 bg-white rounded-[32px] sm:rounded-[48px] xl:rounded-[48px] p-6 sm:p-8 xl:p-10 shadow-2xl border-4 border-orange-500/10 space-y-6 xl:space-y-8 animate-in slide-in-from-top-4 duration-500">
           <div className="flex justify-between items-center px-2">
-            <h3 className="text-xl font-black text-gray-900 italic uppercase underline decoration-orange-200 underline-offset-4">New Announcement</h3>
+            <h3 className="text-lg sm:text-xl xl:text-xl font-black text-gray-900 italic uppercase underline decoration-orange-200 underline-offset-4">New Announcement</h3>
             <button onClick={() => setIsWriting(false)} className="text-gray-300 hover:text-gray-900 font-black text-xl">✕</button>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-6 xl:space-y-6">
             <div className="space-y-2">
               <label className="text-[11px] font-black text-gray-400 px-4 uppercase italic">Title</label>
               <input 
@@ -141,7 +141,7 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
                 value={newTitle}
                 onChange={e => setNewTitle(e.target.value)}
                 placeholder="공지사항 제목을 입력하세요" 
-                className="w-full p-6 bg-gray-50 border-none rounded-[28px] font-black text-lg outline-none shadow-inner focus:ring-4 focus:ring-orange-50 transition-all"
+                className="w-full p-4 sm:p-6 xl:p-6 bg-gray-50 border-none rounded-[20px] sm:rounded-[28px] xl:rounded-[28px] font-black text-base sm:text-lg xl:text-lg outline-none shadow-inner focus:ring-4 focus:ring-orange-50 transition-all"
               />
             </div>
             
@@ -150,9 +150,9 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
               <textarea 
                 value={newContent}
                 onChange={e => setNewContent(e.target.value)}
-                rows={10}
-                placeholder="공지 내용을 상세히 입력하세요" 
-                className="w-full p-8 bg-gray-50 border-none rounded-[40px] font-bold text-gray-700 leading-relaxed outline-none shadow-inner focus:ring-4 focus:ring-orange-50 transition-all resize-none"
+                rows={8}
+                placeholder="공지 내용을 상세히 입력하세요"
+                className="w-full p-6 sm:p-8 xl:p-8 bg-gray-50 border-none rounded-[24px] sm:rounded-[40px] xl:rounded-[40px] font-bold text-gray-700 leading-relaxed outline-none shadow-inner focus:ring-4 focus:ring-orange-50 transition-all resize-none text-[14px] sm:text-base"
               />
             </div>
 
@@ -203,7 +203,7 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
             <div key={n.id} className={`bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm transition-all ${n.isHidden ? 'bg-gray-50' : 'bg-white'}`}>
               <div 
                 onClick={() => setExpandedId(expandedId === n.id ? null : n.id)}
-                className="p-8 cursor-pointer hover:bg-gray-50/50 flex justify-between items-center"
+                className="p-5 sm:p-6 xl:p-8 cursor-pointer hover:bg-gray-50/50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
@@ -212,7 +212,7 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
                     </span>
                     <span className="text-[11px] font-bold text-gray-300 italic">{n.date}</span>
                   </div>
-                  <h3 className={`text-lg font-black truncate pr-4 ${expandedId === n.id ? 'text-blue-600' : 'text-gray-900'} ${n.isHidden ? 'text-gray-400' : ''}`}>
+                  <h3 className={`text-base sm:text-lg xl:text-lg font-black truncate pr-4 ${expandedId === n.id ? 'text-blue-600' : 'text-gray-900'} ${n.isHidden ? 'text-gray-400' : ''}`}>
                     {n.title}
                   </h3>
                 </div>
@@ -236,8 +236,8 @@ const NoticePage: React.FC<Props> = ({ notices, setNotices, user }) => {
               </div>
 
               {expandedId === n.id && (
-                <div className="px-8 pb-10 border-t border-gray-50 pt-8 animate-in slide-in-from-top-2">
-                  <div className="text-[15px] text-gray-600 font-bold leading-relaxed whitespace-pre-wrap mb-10 min-h-[100px]">
+                <div className="px-5 sm:px-6 xl:px-8 pb-8 xl:pb-10 border-t border-gray-50 pt-6 xl:pt-8 animate-in slide-in-from-top-2">
+                  <div className="text-[14px] sm:text-[15px] xl:text-[15px] text-gray-600 font-bold leading-relaxed whitespace-pre-wrap mb-8 xl:mb-10 min-h-[80px] xl:min-h-[100px]">
                     {n.content}
                   </div>
 
