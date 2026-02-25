@@ -360,36 +360,36 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   const renderDashboard = () => (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-8 animate-in fade-in duration-500">
       <div className="lg:col-span-4 space-y-4 sm:space-y-6">
-        <div className="bg-gray-900 rounded-2xl sm:rounded-3xl md:rounded-[40px] p-5 sm:p-8 md:p-10 shadow-2xl border border-gray-800 space-y-5 sm:space-y-8 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-10 opacity-10">
-            <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg>
+        <div className="bg-gray-900 rounded-xl sm:rounded-3xl md:rounded-[40px] p-4 sm:p-8 md:p-10 shadow-2xl border border-gray-800 space-y-4 sm:space-y-8 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 sm:p-10 opacity-10">
+            <svg className="w-24 sm:w-32 h-24 sm:h-32" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg>
           </div>
           <div className="flex justify-between items-start">
-            <div>
-              <h5 className="font-black text-2xl italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">통합 비즈니스 실적</h5>
-              <p className="text-[11px] font-bold text-gray-400 mt-3 uppercase tracking-[0.2em]">{currentDate.getFullYear()}. {currentDate.getMonth() + 1} TOTAL PERFORMANCE</p>
+            <div className="min-w-0">
+              <h5 className="font-black text-lg sm:text-2xl italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-6 sm:underline-offset-8 truncate">통합 비즈니스 실적</h5>
+              <p className="text-[10px] sm:text-[11px] font-bold text-gray-400 mt-2 sm:mt-3 uppercase tracking-[0.2em]">{currentDate.getFullYear()}. {currentDate.getMonth() + 1} TOTAL</p>
             </div>
-            <span className="bg-blue-600 text-[10px] font-black px-4 py-1.5 rounded-full italic uppercase shadow-lg tracking-widest">Global Overview</span>
+            <span className="bg-blue-600 text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 rounded-full italic uppercase shadow-lg tracking-widest shrink-0">Overview</span>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 pt-3 sm:pt-4">
-            <div className="bg-white/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/10">
-               <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">총 계약 건수</span>
-               <p className="text-lg sm:text-2xl font-black mt-1">{currentMonthProjects.length}건</p>
+          <div className="grid grid-cols-2 gap-2 sm:gap-6 pt-2 sm:pt-4">
+            <div className="bg-white/5 p-3 sm:p-6 rounded-xl sm:rounded-3xl border border-white/10">
+               <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase">계약 건수</span>
+               <p className="text-base sm:text-2xl font-black mt-0.5 sm:mt-1">{currentMonthProjects.length}건</p>
             </div>
-            <div className="bg-white/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/10">
-               <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">총 매출액</span>
-               <p className="text-lg sm:text-2xl font-black mt-1 italic tracking-tighter">₩{totalIncome.toLocaleString()}</p>
+            <div className="bg-white/5 p-3 sm:p-6 rounded-xl sm:rounded-3xl border border-white/10">
+               <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase">총 매출액</span>
+               <p className="text-base sm:text-2xl font-black mt-0.5 sm:mt-1 italic tracking-tighter truncate" title={`₩${totalIncome.toLocaleString()}`}>₩{totalIncome.toLocaleString()}</p>
             </div>
           </div>
-          <div className="bg-blue-600/20 p-5 sm:p-8 rounded-2xl sm:rounded-[32px] border border-blue-500/30">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                 <span className="text-[11px] sm:text-[12px] font-black text-blue-300 uppercase tracking-widest">당월 통합 순수익</span>
-                 <span className="text-2xl sm:text-4xl font-black text-green-400 italic tracking-tighter">₩{totalProfit.toLocaleString()}</span>
+          <div className="bg-blue-600/20 p-4 sm:p-8 rounded-xl sm:rounded-[32px] border border-blue-500/30">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                 <span className="text-[10px] sm:text-[12px] font-black text-blue-300 uppercase tracking-widest">당월 순수익</span>
+                 <span className="text-xl sm:text-4xl font-black text-green-400 italic tracking-tighter truncate" title={`₩${totalProfit.toLocaleString()}`}>₩{totalProfit.toLocaleString()}</span>
               </div>
           </div>
         </div>
 
-        <h4 className="font-black text-gray-400 text-[10px] sm:text-[11px] uppercase tracking-[0.4em] px-4 sm:px-6 pt-3 sm:pt-4">Operating Companies</h4>
+        <h4 className="font-black text-gray-400 text-[9px] sm:text-[11px] uppercase tracking-[0.4em] px-3 sm:px-6 pt-2 sm:pt-4">Operating Companies</h4>
         {companies.map(com => {
           const comProjects = currentMonthProjects.filter(p => p.operatingCompanyId === com.id);
           const comRevenue = comProjects.reduce((sum, p) => sum + p.paymentAmount, 0);
@@ -397,51 +397,51 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
           const estTax = Math.floor(comRevenue * 0.1);
 
           return (
-            <div key={com.id} className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] p-5 sm:p-8 shadow-sm border border-gray-100 space-y-4 sm:space-y-6 relative overflow-hidden group hover:border-blue-200 transition-all">
-              <div className="flex justify-between items-start">
-                <h5 className="font-black text-gray-900 text-lg italic">{com.name}</h5>
-                <span className="text-[10px] font-bold text-gray-300 uppercase">{com.type}</span>
+            <div key={com.id} className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] p-4 sm:p-8 shadow-sm border border-gray-100 space-y-3 sm:space-y-6 relative overflow-hidden group hover:border-blue-200 transition-all">
+              <div className="flex justify-between items-start gap-2">
+                <h5 className="font-black text-gray-900 text-base sm:text-lg italic truncate min-w-0">{com.name}</h5>
+                <span className="text-[9px] sm:text-[10px] font-bold text-gray-300 uppercase shrink-0">{com.type}</span>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center text-[13px] font-bold">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex justify-between items-center text-[11px] sm:text-[13px] font-bold">
                   <span className="text-gray-400">계약</span>
                   <span className="text-gray-900 font-black">{comProjects.length} 건</span>
                 </div>
-                <div className="flex justify-between items-center text-[13px] font-bold">
+                <div className="flex justify-between items-center text-[11px] sm:text-[13px] font-bold">
                   <span className="text-gray-400">매출</span>
-                  <span className="text-gray-900 font-black">₩{comRevenue.toLocaleString()}</span>
+                  <span className="text-gray-900 font-black truncate ml-2" title={`₩${comRevenue.toLocaleString()}`}>₩{comRevenue.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between items-center text-[13px] font-bold">
+                <div className="flex justify-between items-center text-[11px] sm:text-[13px] font-bold">
                   <span className="text-gray-400">수익</span>
-                  <span className="text-green-600 font-black">₩{comProfit.toLocaleString()}</span>
+                  <span className="text-green-600 font-black truncate ml-2" title={`₩${comProfit.toLocaleString()}`}>₩{comProfit.toLocaleString()}</span>
                 </div>
               </div>
-              <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
-                <span className="text-[11px] font-bold text-gray-300">예상 세액 (10%)</span>
-                <span className="text-sm font-black text-gray-400 italic">₩{estTax.toLocaleString()}</span>
+              <div className="pt-3 sm:pt-4 border-t border-gray-50 flex justify-between items-center">
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-300">예상 세액 (10%)</span>
+                <span className="text-xs sm:text-sm font-black text-gray-400 italic truncate" title={`₩${estTax.toLocaleString()}`}>₩{estTax.toLocaleString()}</span>
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="lg:col-span-8 bg-white rounded-2xl sm:rounded-3xl md:rounded-[48px] p-4 sm:p-6 md:p-10 shadow-sm border border-gray-100 min-h-[400px] sm:min-h-[600px] md:min-h-[900px]">
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-6 sm:mb-10 px-2 sm:px-4">
-          <div className="flex items-center gap-4 sm:gap-8">
-            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-300 hover:text-gray-900 transition-colors p-1">◀</button>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic">{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</h2>
-            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-300 hover:text-gray-900 transition-colors p-1">▶</button>
+      <div className="lg:col-span-8 bg-white rounded-xl sm:rounded-3xl md:rounded-[48px] p-3 sm:p-6 md:p-10 shadow-sm border border-gray-100 min-h-[320px] sm:min-h-[600px] md:min-h-[900px]">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-10 px-1 sm:px-4">
+          <div className="flex items-center gap-2 sm:gap-8">
+            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-300 hover:text-gray-900 transition-colors p-1 text-lg sm:text-base">◀</button>
+            <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic">{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</h2>
+            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-300 hover:text-gray-900 transition-colors p-1 text-lg sm:text-base">▶</button>
           </div>
-          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-            <button onClick={() => setCalendarFilter('all')} className={`px-3 py-2 sm:px-6 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'all' ? 'bg-black text-white border-black' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>전체</button>
-            <button onClick={() => setCalendarFilter('work')} className={`px-3 py-2 sm:px-6 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'work' ? 'bg-blue-600 text-white border-blue-600' : 'bg-red-50 text-red-500 border-red-100'}`}>작업</button>
-            <button onClick={() => setCalendarFilter('todo')} className={`px-3 py-2 sm:px-6 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'todo' ? 'bg-blue-600 text-white border-blue-600' : 'bg-green-50 text-green-600 border-green-100'}`}>TO-DO</button>
+          <div className="flex gap-1 sm:gap-2 flex-wrap">
+            <button onClick={() => setCalendarFilter('all')} className={`px-2.5 py-2 sm:px-6 sm:py-2.5 rounded-lg sm:rounded-2xl text-[9px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'all' ? 'bg-black text-white border-black' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>전체</button>
+            <button onClick={() => setCalendarFilter('work')} className={`px-2.5 py-2 sm:px-6 sm:py-2.5 rounded-lg sm:rounded-2xl text-[9px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'work' ? 'bg-blue-600 text-white border-blue-600' : 'bg-red-50 text-red-500 border-red-100'}`}>작업</button>
+            <button onClick={() => setCalendarFilter('todo')} className={`px-2.5 py-2 sm:px-6 sm:py-2.5 rounded-lg sm:rounded-2xl text-[9px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'todo' ? 'bg-blue-600 text-white border-blue-600' : 'bg-green-50 text-green-600 border-green-100'}`}>TO-DO</button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 border-t border-l border-gray-100 rounded-xl sm:rounded-2xl md:rounded-3xl overflow-hidden text-[8px] sm:text-[10px]">
+        <div className="grid grid-cols-7 border-t border-l border-gray-100 rounded-lg sm:rounded-2xl md:rounded-3xl overflow-hidden text-[7px] sm:text-[10px]">
           {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day, i) => (
-            <div key={day} className={`p-2 sm:p-4 text-center font-black border-r border-b border-gray-100 bg-gray-50/50 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>{day}</div>
+            <div key={day} className={`p-1.5 sm:p-4 text-center font-black border-r border-b border-gray-100 bg-gray-50/50 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>{day}</div>
           ))}
           {Array.from({ length: 42 }).map((_, i) => {
             const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -455,14 +455,14 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             const dayProjectsEnd = dateStr ? projects.filter(p => p.endDate === dateStr) : [];
 
             return (
-              <div key={i} className={`min-h-[70px] sm:min-h-[100px] md:min-h-[160px] p-1.5 sm:p-3 border-r border-b border-gray-100 transition-colors ${!isCurrentMonth ? 'bg-gray-50/20 opacity-30' : 'hover:bg-blue-50/20'}`}>
+              <div key={i} className={`min-h-[52px] sm:min-h-[100px] md:min-h-[160px] p-1 sm:p-3 border-r border-b border-gray-100 transition-colors ${!isCurrentMonth ? 'bg-gray-50/20 opacity-30' : 'hover:bg-blue-50/20'}`}>
                 {isCurrentMonth && (
                   <>
-                    <span className={`text-[10px] sm:text-[12px] font-black ${i % 7 === 0 ? 'text-red-400' : i % 7 === 6 ? 'text-blue-400' : 'text-gray-900'}`}>{date}</span>
-                    <div className="mt-1 sm:mt-3 space-y-1 sm:space-y-1.5">
-                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsStart.map(p => <div key={p.id} className="text-[9px] font-black bg-blue-600 text-white p-1 rounded-md shadow-sm truncate italic">🚀 시작: {p.clientName}</div>)}
-                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsEnd.map(p => <div key={p.id} className="text-[9px] font-black bg-red-600 text-white p-1 rounded-md shadow-sm truncate italic">🏁 마감: {p.clientName}</div>)}
-                       {(calendarFilter === 'all' || calendarFilter === 'todo') && dayTodos.map(t => <div key={t.id} className={`text-[9px] font-black p-1 rounded-md shadow-sm truncate italic border ${t.completed ? 'bg-gray-100 text-gray-300 border-gray-200 line-through' : 'bg-green-50 text-green-600 border-green-100'}`}>✓ {t.text}</div>)}
+                    <span className={`text-[9px] sm:text-[12px] font-black ${i % 7 === 0 ? 'text-red-400' : i % 7 === 6 ? 'text-blue-400' : 'text-gray-900'}`}>{date}</span>
+                    <div className="mt-0.5 sm:mt-3 space-y-0.5 sm:space-y-1.5">
+                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsStart.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-blue-600 text-white p-0.5 sm:p-1 rounded truncate italic">🚀 {p.clientName}</div>)}
+                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsEnd.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-red-600 text-white p-0.5 sm:p-1 rounded truncate italic">🏁 {p.clientName}</div>)}
+                       {(calendarFilter === 'all' || calendarFilter === 'todo') && dayTodos.map(t => <div key={t.id} className={`text-[8px] sm:text-[9px] font-black p-0.5 sm:p-1 rounded truncate italic border ${t.completed ? 'bg-gray-100 text-gray-300 border-gray-200 line-through' : 'bg-green-50 text-green-600 border-green-100'}`}>✓ {t.text}</div>)}
                     </div>
                   </>
                 )}
@@ -475,25 +475,32 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   );
 
   const renderDataList = () => (
-    <div className="space-y-6 sm:space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
-      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[60px] p-4 sm:p-8 md:p-16 shadow-sm border border-gray-100">
-         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8 sm:mb-16 px-2 sm:px-4">
-            <div className="flex items-center gap-4 sm:gap-10">
-              <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8 sm:underline-offset-12">작업 현황 관리</h3>
-              <div className="flex items-center gap-3 sm:gap-6 bg-gray-50 px-4 sm:px-8 py-2 sm:py-3 rounded-2xl sm:rounded-3xl shadow-inner">
-                <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-400 hover:text-black">◀</button>
-                <span className="font-black text-base sm:text-xl text-gray-900 italic">{currentDate.getFullYear()}. {currentDate.getMonth() + 1}</span>
-                <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-400 hover:text-black">▶</button>
+    <div className="space-y-4 sm:space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+      <div className="bg-white rounded-xl sm:rounded-3xl md:rounded-[60px] p-3 sm:p-6 md:p-10 lg:p-16 shadow-sm border border-gray-100">
+         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-16 px-1 sm:px-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-10 min-w-0">
+              <h3 className="text-lg sm:text-2xl md:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-6 sm:underline-offset-12 truncate">작업 현황 관리</h3>
+              <div className="flex items-center gap-2 sm:gap-6 bg-gray-50 px-3 sm:px-8 py-2 sm:py-3 rounded-xl sm:rounded-3xl shadow-inner w-fit">
+                <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-400 hover:text-black p-1">◀</button>
+                <span className="font-black text-sm sm:text-xl text-gray-900 italic">{currentDate.getFullYear()}. {currentDate.getMonth() + 1}</span>
+                <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-400 hover:text-black p-1">▶</button>
               </div>
             </div>
-            <button onClick={copyDataListForSheets} className="bg-blue-500 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic">구글시트 복사</button>
+            <button onClick={copyDataListForSheets} className="bg-blue-500 text-white px-4 py-2 sm:px-8 sm:py-3 rounded-lg sm:rounded-2xl font-black text-[11px] sm:text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic shrink-0">구글시트 복사</button>
          </div>
 
-         <div className="overflow-x-auto rounded-xl sm:rounded-2xl md:rounded-[48px] border border-gray-50 shadow-sm -mx-2 sm:mx-0">
-           <table className="w-full text-left min-w-[700px]">
-              <thead className="bg-gray-50/50 text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
+         <div className="overflow-x-auto rounded-lg sm:rounded-2xl md:rounded-[48px] border border-gray-50 shadow-sm -mx-1 sm:mx-0" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+           <table className="w-full text-left min-w-[640px]">
+              <thead className="bg-gray-50/50 text-[9px] sm:text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
                 <tr>
-                  <th className="px-4 sm:px-10 py-4 sm:py-8">차수</th><th className="px-4 sm:px-10 py-4 sm:py-8">작업 종류</th><th className="px-4 sm:px-10 py-4 sm:py-8">업체명</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-center">운영사</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-center">마감일</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-right">금액</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-center">링크</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-center">관리</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8">차수</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8">작업 종류</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8">업체명</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">운영사</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">마감일</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right">금액</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">링크</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -501,26 +508,26 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                   const com = companies.find(c => c.id === p.operatingCompanyId);
                   return (
                     <tr key={p.id} className="hover:bg-blue-50/30 transition-all group">
-                      <td className="px-10 py-8"><span className="bg-gray-900 text-white px-4 py-1.5 rounded-full font-black text-[11px] italic">{p.round}차</span></td>
-                      <td className="px-10 py-8 text-[11px] font-black text-orange-500 uppercase italic">{p.type}</td>
-                      <td className="px-10 py-8 font-black text-gray-900 text-[16px] italic">{p.clientName}</td>
-                      <td className="px-10 py-8 text-center font-bold text-gray-400 text-xs italic">{com?.name || '-'}</td>
-                      <td className="px-10 py-8 text-center font-black text-red-400 text-[13px] italic">{p.endDate}</td>
-                      <td className="px-10 py-8 text-right font-black text-gray-900 text-lg italic">₩{p.paymentAmount.toLocaleString()}</td>
-                      <td className="px-10 py-8 text-center">
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8"><span className="bg-gray-900 text-white px-2 py-1 sm:px-4 sm:py-1.5 rounded-full font-black text-[10px] sm:text-[11px] italic">{p.round}차</span></td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-[10px] sm:text-[11px] font-black text-orange-500 uppercase italic">{p.type}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 font-black text-gray-900 text-sm sm:text-[16px] italic truncate max-w-[120px] sm:max-w-none">{p.clientName}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-bold text-gray-400 text-[10px] sm:text-xs italic">{com?.name || '-'}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-black text-red-400 text-[11px] sm:text-[13px] italic">{p.endDate}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right font-black text-gray-900 text-sm sm:text-lg italic">₩{p.paymentAmount.toLocaleString()}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">
                         {p.workLink?.trim() ? (
-                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-xs hover:underline break-all">
-                            링크 열기
+                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] sm:text-xs hover:underline break-all">
+                            링크
                           </a>
                         ) : (
-                          <span className="text-gray-300 text-xs">-</span>
+                          <span className="text-gray-300 text-[10px] sm:text-xs">-</span>
                         )}
                       </td>
-                      <td className="px-10 py-8 text-center">
-                         <div className="flex justify-center gap-4">
-                            <button onClick={() => handleExtendProject(p)} className="text-[11px] font-black text-green-500 hover:text-green-700 italic uppercase">재연장</button>
-                            <button onClick={() => startEditProject(p)} className="text-[11px] font-black text-blue-400 hover:text-blue-600 italic uppercase">수정</button>
-                            <button onClick={() => setDeleteConfirmProjectId(p.id)} className="text-[11px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">
+                         <div className="flex justify-center gap-2 sm:gap-4 flex-wrap">
+                            <button onClick={() => handleExtendProject(p)} className="text-[9px] sm:text-[11px] font-black text-green-500 hover:text-green-700 italic uppercase">재연장</button>
+                            <button onClick={() => startEditProject(p)} className="text-[9px] sm:text-[11px] font-black text-blue-400 hover:text-blue-600 italic uppercase">수정</button>
+                            <button onClick={() => setDeleteConfirmProjectId(p.id)} className="text-[9px] sm:text-[11px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>
                          </div>
                       </td>
                     </tr>
@@ -534,85 +541,85 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   );
 
   const renderProfitTab = () => (
-    <div className="space-y-6 sm:space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-20 sm:pb-32">
-      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[60px] p-4 sm:p-8 md:p-16 shadow-sm border border-gray-100">
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8 sm:mb-16 px-2 sm:px-4">
-           <div className="flex flex-wrap items-center gap-4 sm:gap-10">
-              <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-green-500 underline-offset-8 sm:underline-offset-12">정산 및 수익 관리</h3>
-              <div className="flex items-center gap-3 sm:gap-6 bg-gray-50 px-4 sm:px-8 py-2 sm:py-3 rounded-2xl sm:rounded-3xl shadow-inner">
-                <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-400 hover:text-black">◀</button>
-                <span className="font-black text-base sm:text-xl text-gray-900 italic">{currentDate.getFullYear()}. {currentDate.getMonth() + 1}</span>
-                <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-400 hover:text-black">▶</button>
+    <div className="space-y-4 sm:space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-16 sm:pb-32">
+      <div className="bg-white rounded-xl sm:rounded-3xl md:rounded-[60px] p-3 sm:p-6 md:p-10 lg:p-16 shadow-sm border border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-16 px-1 sm:px-4">
+           <div className="flex flex-wrap items-center gap-3 sm:gap-10 min-w-0">
+              <h3 className="text-lg sm:text-2xl md:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-green-500 underline-offset-6 sm:underline-offset-12">정산 및 수익 관리</h3>
+              <div className="flex items-center gap-2 sm:gap-6 bg-gray-50 px-3 sm:px-8 py-2 sm:py-3 rounded-xl sm:rounded-3xl shadow-inner w-fit">
+                <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-400 hover:text-black p-1">◀</button>
+                <span className="font-black text-sm sm:text-xl text-gray-900 italic">{currentDate.getFullYear()}. {currentDate.getMonth() + 1}</span>
+                <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-400 hover:text-black p-1">▶</button>
               </div>
            </div>
-           <button onClick={copyIntegratedDataForSheets} className="bg-blue-500 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic">내역 통합 복사</button>
+           <button onClick={copyIntegratedDataForSheets} className="bg-blue-500 text-white px-4 py-2 sm:px-8 sm:py-3 rounded-lg sm:rounded-2xl font-black text-[11px] sm:text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic shrink-0">내역 통합 복사</button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
-          <div className="space-y-6">
-            <h4 className="text-xl font-black text-blue-600 flex items-center gap-2 italic"><span className="w-1.5 h-6 bg-blue-600 rounded-full"></span> 당월 수입 내역 (현황관리 연동)</h4>
-            <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 text-[11px] font-black text-gray-400 uppercase tracking-widest"><tr><th className="px-6 py-4">업체명</th><th className="px-6 py-4 text-right">금액</th><th className="px-6 py-4 text-center">링크</th></tr></thead>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-12">
+          <div className="space-y-4 sm:space-y-6">
+            <h4 className="text-base sm:text-xl font-black text-blue-600 flex items-center gap-2 italic"><span className="w-1.5 h-5 sm:h-6 bg-blue-600 rounded-full shrink-0"></span> 당월 수입 내역</h4>
+            <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 overflow-hidden shadow-sm overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+              <table className="w-full text-left min-w-[280px]">
+                <thead className="bg-gray-50 text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                  <tr><th className="px-3 sm:px-6 py-3 sm:py-4">업체명</th><th className="px-3 sm:px-6 py-3 sm:py-4 text-right">금액</th><th className="px-3 sm:px-6 py-3 sm:py-4 text-center">링크</th></tr>
+                </thead>
                 <tbody className="divide-y divide-gray-50">
                   {currentMonthProjects.map(p => (
                     <tr key={p.id} className="hover:bg-blue-50/20">
-                      <td className="px-6 py-4 font-black text-sm">{p.clientName}</td>
-                      <td className="px-6 py-4 text-right font-black">₩{p.paymentAmount.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 font-black text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none">{p.clientName}</td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-right font-black text-xs sm:text-sm whitespace-nowrap">₩{p.paymentAmount.toLocaleString()}</td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
                         {p.workLink?.trim() ? (
-                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-xs hover:underline break-all">
-                            링크 열기
-                          </a>
+                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] sm:text-xs hover:underline break-all">링크</a>
                         ) : (
-                          <span className="text-gray-300 text-xs">-</span>
+                          <span className="text-gray-300 text-[10px] sm:text-xs">-</span>
                         )}
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-blue-50/50"><td className="px-6 py-5 font-black text-blue-600">총 수입 합계</td><td className="px-6 py-5 text-right font-black text-blue-600 text-lg" colSpan={2}>₩{totalIncome.toLocaleString()}</td></tr>
+                  <tr className="bg-blue-50/50"><td className="px-3 sm:px-6 py-3 sm:py-5 font-black text-blue-600 text-xs sm:text-sm">총 수입 합계</td><td className="px-3 sm:px-6 py-3 sm:py-5 text-right font-black text-blue-600 text-sm sm:text-lg" colSpan={2}>₩{totalIncome.toLocaleString()}</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <h4 className="text-xl font-black text-red-500 flex items-center gap-2 italic"><span className="w-1.5 h-6 bg-red-500 rounded-full"></span> 당월 지출 내역 (비용 직접 입력)</h4>
-            <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <input type="date" value={tempExpense.date} onChange={e => setTempExpense({...tempExpense, date: e.target.value})} className="p-3 rounded-xl border-none font-black text-xs shadow-inner" />
-                <select value={tempExpense.category} onChange={e => setTempExpense({...tempExpense, category: e.target.value as any})} className="p-3 rounded-xl border-none font-black text-xs shadow-inner">{EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
+          <div className="space-y-4 sm:space-y-6">
+            <h4 className="text-base sm:text-xl font-black text-red-500 flex items-center gap-2 italic"><span className="w-1.5 h-5 sm:h-6 bg-red-500 rounded-full shrink-0"></span> 당월 지출 내역</h4>
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-xl sm:rounded-[32px] border border-gray-100 space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <input type="date" value={tempExpense.date} onChange={e => setTempExpense({...tempExpense, date: e.target.value})} className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl border-none font-black text-[10px] sm:text-xs shadow-inner" />
+                <select value={tempExpense.category} onChange={e => setTempExpense({...tempExpense, category: e.target.value as any})} className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl border-none font-black text-[10px] sm:text-xs shadow-inner">{EXPENSE_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
               </div>
-              <input type="text" value={tempExpense.note} onChange={e => setTempExpense({...tempExpense, note: e.target.value})} placeholder="지출 상세 설명" className="w-full p-4 rounded-xl border-none font-black text-xs shadow-inner" />
-              <div className="flex gap-4">
-                <input type="number" value={tempExpense.amount || ''} onChange={e => setTempExpense({...tempExpense, amount: Number(e.target.value)})} placeholder="금액" className="flex-1 p-4 rounded-xl border-none font-black text-xs shadow-inner text-right" />
-                <button onClick={addGeneralExpense} className="bg-black text-white px-8 rounded-xl font-black text-xs">기록</button>
+              <input type="text" value={tempExpense.note} onChange={e => setTempExpense({...tempExpense, note: e.target.value})} placeholder="지출 상세 설명" className="w-full p-3 sm:p-4 rounded-lg sm:rounded-xl border-none font-black text-[10px] sm:text-xs shadow-inner" />
+              <div className="flex gap-3 sm:gap-4">
+                <input type="number" value={tempExpense.amount || ''} onChange={e => setTempExpense({...tempExpense, amount: Number(e.target.value)})} placeholder="금액" className="flex-1 p-3 sm:p-4 rounded-lg sm:rounded-xl border-none font-black text-[10px] sm:text-xs shadow-inner text-right" />
+                <button onClick={addGeneralExpense} className="bg-black text-white px-5 sm:px-8 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs shrink-0">기록</button>
               </div>
             </div>
-            <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 text-[11px] font-black text-gray-400 uppercase tracking-widest"><tr><th className="px-6 py-4">항목</th><th className="px-6 py-4 text-right">금액</th><th className="px-6 py-4 text-center">X</th></tr></thead>
+            <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 overflow-hidden shadow-sm overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+              <table className="w-full text-left min-w-[260px]">
+                <thead className="bg-gray-50 text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest"><tr><th className="px-3 sm:px-6 py-3 sm:py-4">항목</th><th className="px-3 sm:px-6 py-3 sm:py-4 text-right">금액</th><th className="px-3 sm:px-6 py-3 sm:py-4 text-center w-10">X</th></tr></thead>
                 <tbody className="divide-y divide-gray-50">
                   {currentMonthExpenses.map(e => (
                     <tr key={e.id} className="hover:bg-red-50/20">
-                      <td className="px-6 py-4"><p className="font-black text-sm">{e.note}</p><p className="text-[10px] text-gray-400 uppercase">{e.date} | {e.category}</p></td>
-                      <td className="px-6 py-4 text-right font-black">₩{e.amount.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-center"><button onClick={() => deleteExpense(e.id)} className="text-gray-300 hover:text-red-500">✕</button></td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 min-w-0"><p className="font-black text-xs sm:text-sm truncate max-w-[160px] sm:max-w-none">{e.note}</p><p className="text-[9px] sm:text-[10px] text-gray-400 uppercase">{e.date} | {e.category}</p></td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-right font-black text-xs sm:text-sm whitespace-nowrap">₩{e.amount.toLocaleString()}</td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-center"><button onClick={() => deleteExpense(e.id)} className="text-gray-300 hover:text-red-500 text-sm">✕</button></td>
                     </tr>
                   ))}
-                  <tr className="bg-red-50/50"><td className="px-6 py-5 font-black text-red-600">총 지출 합계</td><td className="px-6 py-5 text-right font-black text-red-600 text-lg" colSpan={2}>₩{totalOutgo.toLocaleString()}</td></tr>
+                  <tr className="bg-red-50/50"><td className="px-3 sm:px-6 py-3 sm:py-5 font-black text-red-600 text-xs sm:text-sm">총 지출 합계</td><td className="px-3 sm:px-6 py-3 sm:py-5 text-right font-black text-red-600 text-sm sm:text-lg" colSpan={2}>₩{totalOutgo.toLocaleString()}</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         </div>
 
-        <div className="mt-16 bg-gray-900 rounded-[48px] p-12 text-white shadow-2xl flex flex-col md:flex-row justify-between items-center gap-10">
-           <div><p className="text-[14px] font-black text-gray-400 uppercase tracking-widest italic mb-2">Settlement Summary</p><h4 className="text-3xl font-black italic tracking-tighter">당월 비즈니스 성과 보고</h4></div>
-           <div className="flex gap-16 items-center">
-              <div className="text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic">Revenue</p><p className="text-2xl font-black">₩{totalIncome.toLocaleString()}</p></div>
-              <div className="text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic">Expense</p><p className="text-2xl font-black text-red-400">- ₩{totalOutgo.toLocaleString()}</p></div>
-              <div className="text-right border-l border-white/10 pl-16"><p className="text-[12px] font-black text-green-400 uppercase italic mb-1">Net Profit</p><p className="text-5xl font-black italic tracking-tighter text-green-400">₩{(totalIncome - totalOutgo).toLocaleString()}</p></div>
+        <div className="mt-8 sm:mt-16 bg-gray-900 rounded-2xl sm:rounded-[48px] p-6 sm:p-12 text-white shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6 sm:gap-10">
+           <div className="text-center md:text-left"><p className="text-[11px] sm:text-[14px] font-black text-gray-400 uppercase tracking-widest italic mb-1 sm:mb-2">Settlement Summary</p><h4 className="text-xl sm:text-3xl font-black italic tracking-tighter">당월 비즈니스 성과</h4></div>
+           <div className="flex flex-wrap justify-center gap-4 sm:gap-16 items-center">
+              <div className="text-center sm:text-right"><p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic">Revenue</p><p className="text-lg sm:text-2xl font-black">₩{totalIncome.toLocaleString()}</p></div>
+              <div className="text-center sm:text-right"><p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic">Expense</p><p className="text-lg sm:text-2xl font-black text-red-400">- ₩{totalOutgo.toLocaleString()}</p></div>
+              <div className="text-center sm:text-right border-t sm:border-t-0 sm:border-l border-white/10 pt-4 sm:pt-0 sm:pl-16"><p className="text-[10px] sm:text-[12px] font-black text-green-400 uppercase italic mb-0.5 sm:mb-1">Net Profit</p><p className="text-3xl sm:text-5xl font-black italic tracking-tighter text-green-400">₩{(totalIncome - totalOutgo).toLocaleString()}</p></div>
            </div>
         </div>
       </div>
@@ -686,22 +693,22 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
 
   const renderTodoTab = () => (
     <div className="max-w-[1600px] mx-auto animate-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white rounded-[56px] p-16 shadow-sm border border-gray-100">
-        <h3 className="text-3xl font-black text-gray-900 italic mb-12 flex items-center gap-4"><span className="w-2 h-8 bg-blue-600 rounded-full"></span> 전체 할 일 관리 (TO-DO)</h3>
-        <div className="bg-gray-50 p-10 rounded-[40px] border border-gray-100 mb-16 space-y-8">
-           <div className="space-y-4"><label className="text-xs font-black text-gray-400 uppercase tracking-widest px-2">할 일 내용</label><input type="text" value={todoForm.text} onChange={e => setTodoForm({...todoForm, text: e.target.value})} placeholder="어떤 일을 하실 건가요?" className="w-full p-6 bg-white border-none rounded-[32px] font-black text-gray-800 text-lg shadow-sm outline-none focus:ring-4 focus:ring-blue-50" /></div>
-           <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-4"><label className="text-xs font-black text-gray-400 uppercase tracking-widest px-2">시작일</label><input type="date" value={todoForm.startDate} onChange={e => setTodoForm({...todoForm, startDate: e.target.value})} className="w-full p-5 bg-white border-none rounded-2xl font-black shadow-sm" /></div>
-              <div className="space-y-4"><label className="text-xs font-black text-gray-400 uppercase tracking-widest px-2">종료일</label><input type="date" value={todoForm.endDate} onChange={e => setTodoForm({...todoForm, endDate: e.target.value})} className="w-full p-5 bg-white border-none rounded-2xl font-black shadow-sm" /></div>
+      <div className="bg-white rounded-2xl sm:rounded-[56px] p-4 sm:p-10 md:p-16 shadow-sm border border-gray-100">
+        <h3 className="text-xl sm:text-3xl font-black text-gray-900 italic mb-6 sm:mb-12 flex items-center gap-3 sm:gap-4"><span className="w-1.5 sm:w-2 h-6 sm:h-8 bg-blue-600 rounded-full shrink-0"></span> 전체 할 일 관리 (TO-DO)</h3>
+        <div className="bg-gray-50 p-4 sm:p-10 rounded-2xl sm:rounded-[40px] border border-gray-100 mb-8 sm:mb-16 space-y-4 sm:space-y-8">
+           <div className="space-y-2 sm:space-y-4"><label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest px-2">할 일 내용</label><input type="text" value={todoForm.text} onChange={e => setTodoForm({...todoForm, text: e.target.value})} placeholder="어떤 일을 하실 건가요?" className="w-full p-4 sm:p-6 bg-white border-none rounded-xl sm:rounded-[32px] font-black text-gray-800 text-sm sm:text-lg shadow-sm outline-none focus:ring-4 focus:ring-blue-50" /></div>
+           <div className="grid grid-cols-2 gap-4 sm:gap-8">
+              <div className="space-y-2 sm:space-y-4"><label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest px-2">시작일</label><input type="date" value={todoForm.startDate} onChange={e => setTodoForm({...todoForm, startDate: e.target.value})} className="w-full p-3 sm:p-5 bg-white border-none rounded-xl sm:rounded-2xl font-black shadow-sm text-sm sm:text-base" /></div>
+              <div className="space-y-2 sm:space-y-4"><label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest px-2">종료일</label><input type="date" value={todoForm.endDate} onChange={e => setTodoForm({...todoForm, endDate: e.target.value})} className="w-full p-3 sm:p-5 bg-white border-none rounded-xl sm:rounded-2xl font-black shadow-sm text-sm sm:text-base" /></div>
            </div>
-           <button onClick={() => { if (!todoForm.text) return; setTodos(prev => [...prev, { id: `td_${Date.now()}`, text: todoForm.text!, startDate: todoForm.startDate!, endDate: todoForm.endDate!, completed: false }]); setTodoForm({ text: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] }); }} className="w-full py-6 bg-blue-600 text-white rounded-[32px] font-black text-xl shadow-xl shadow-blue-100 hover:bg-black transition-all">할 일 추가하기</button>
+           <button onClick={() => { if (!todoForm.text) return; setTodos(prev => [...prev, { id: `td_${Date.now()}`, text: todoForm.text!, startDate: todoForm.startDate!, endDate: todoForm.endDate!, completed: false }]); setTodoForm({ text: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] }); }} className="w-full py-4 sm:py-6 bg-blue-600 text-white rounded-xl sm:rounded-[32px] font-black text-base sm:text-xl shadow-xl shadow-blue-100 hover:bg-black transition-all">할 일 추가하기</button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
            {todos.map(t => (
-             <div key={t.id} className="flex items-center gap-6 p-8 bg-white border border-gray-100 rounded-[40px] hover:shadow-xl transition-all group">
-                <input type="checkbox" checked={t.completed} onChange={() => setTodos(prev => prev.map(item => item.id === t.id ? {...item, completed: !item.completed} : item))} className="w-10 h-10 rounded-full accent-blue-600 cursor-pointer" />
-                <div className="flex-1"><p className={`text-xl font-black ${t.completed ? 'text-gray-200 line-through' : 'text-gray-700'}`}>{t.text}</p><p className="text-[11px] font-black text-gray-300 mt-2 italic tracking-widest uppercase">{t.startDate} ~ {t.endDate}</p></div>
-                <button onClick={() => handleDeleteTodo(t.id)} className="text-gray-100 group-hover:text-red-400 transition-colors font-black text-3xl">✕</button>
+             <div key={t.id} className="flex items-center gap-4 sm:gap-6 p-4 sm:p-8 bg-white border border-gray-100 rounded-2xl sm:rounded-[40px] hover:shadow-xl transition-all group">
+                <input type="checkbox" checked={t.completed} onChange={() => setTodos(prev => prev.map(item => item.id === t.id ? {...item, completed: !item.completed} : item))} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full accent-blue-600 cursor-pointer shrink-0" />
+                <div className="flex-1 min-w-0"><p className={`text-base sm:text-xl font-black truncate ${t.completed ? 'text-gray-200 line-through' : 'text-gray-700'}`}>{t.text}</p><p className="text-[10px] sm:text-[11px] font-black text-gray-300 mt-1 sm:mt-2 italic tracking-widest uppercase">{t.startDate} ~ {t.endDate}</p></div>
+                <button onClick={() => handleDeleteTodo(t.id)} className="text-gray-100 group-hover:text-red-400 transition-colors font-black text-2xl sm:text-3xl shrink-0">✕</button>
              </div>
            ))}
         </div>
@@ -721,19 +728,19 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
           <button type="button" onClick={() => setDbSaveError(null)} className="text-amber-600 hover:text-amber-900 text-xl font-black shrink-0">×</button>
         </div>
       )}
-      <div className="bg-white/80 backdrop-blur-md p-3 sm:p-4 rounded-2xl sm:rounded-3xl md:rounded-[40px] shadow-2xl border border-white/50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sticky top-20 sm:top-24 z-[45] transition-all">
-        <div className="flex overflow-x-auto gap-2 sm:gap-3 pb-1 sm:pb-0 [&::-webkit-scrollbar]:h-0" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+      <div className="bg-white/80 backdrop-blur-md p-2 sm:p-4 rounded-xl sm:rounded-3xl md:rounded-[40px] shadow-2xl border border-white/50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-3 sticky top-16 sm:top-24 z-[45] transition-all">
+        <div className="flex overflow-x-auto gap-1.5 sm:gap-3 pb-1 sm:pb-0 min-w-0 [&::-webkit-scrollbar]:h-0" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           {[
             { id: 'dashboard', label: '대시보드' },
-            { id: 'todo', label: '작업 일정 (TO-DO)' },
+            { id: 'todo', label: 'TO-DO' },
             { id: 'project', label: '프로젝트 등록' },
             { id: 'data', label: '현황 관리' },
             { id: 'profit', label: '수익 관리' }
           ].map(tab => (
-            <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); if(tab.id !== 'project') setEditingProjectId(null); }} className={`shrink-0 px-4 py-3 sm:px-10 sm:py-4 rounded-xl sm:rounded-[28px] text-xs sm:text-[13px] font-black transition-all tracking-widest italic ${activeTab === tab.id ? 'bg-black text-white shadow-2xl' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}>{tab.label}</button>
+            <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); if(tab.id !== 'project') setEditingProjectId(null); }} className={`shrink-0 px-3 py-2.5 sm:px-6 sm:py-3 md:px-10 md:py-4 rounded-lg sm:rounded-xl md:rounded-[28px] text-[11px] sm:text-xs md:text-[13px] font-black transition-all tracking-widest italic whitespace-nowrap ${activeTab === tab.id ? 'bg-black text-white shadow-2xl' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}>{tab.label}</button>
           ))}
         </div>
-        <button onClick={() => { setShowCompanyModal(true); setEditingCompanyId(null); setNewCompany({ name: '', openingDate: '', type: '개인사업자', taxBusinessNames: [] }); }} className="bg-blue-600 text-white px-5 py-3 sm:px-10 sm:py-4 rounded-xl sm:rounded-[28px] font-black text-xs sm:text-[13px] hover:bg-black transition-all shadow-xl shadow-blue-100 italic tracking-widest uppercase shrink-0">내 회사 관리</button>
+        <button onClick={() => { setShowCompanyModal(true); setEditingCompanyId(null); setNewCompany({ name: '', openingDate: '', type: '개인사업자', taxBusinessNames: [] }); }} className="bg-blue-600 text-white px-4 py-2.5 sm:px-8 sm:py-3 md:px-10 md:py-4 rounded-lg sm:rounded-xl md:rounded-[28px] font-black text-[11px] sm:text-xs md:text-[13px] hover:bg-black transition-all shadow-xl shadow-blue-100 italic tracking-widest uppercase shrink-0">내 회사 관리</button>
       </div>
 
       <main className="min-h-screen">
