@@ -97,8 +97,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
             <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-3">₩ {channel.price.toLocaleString()}</p>
           </div>
           <div className="flex gap-3 shrink-0">
-            <button onClick={handleStartConsultation} className="flex-1 sm:flex-none sm:w-36 py-3 sm:py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all">상담하기</button>
-            <button onClick={handleBuyNow} className="flex-1 sm:flex-none sm:w-40 py-3 sm:py-4 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">즉시구매</button>
+            <button onClick={() => setShowActionModal(true)} className="flex-1 sm:flex-none sm:w-44 py-3 sm:py-4 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">문의 · 구매</button>
           </div>
         </div>
 
@@ -197,6 +196,29 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
         <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 cursor-pointer animate-in fade-in" onClick={() => setSelectedImg(null)}>
           <img src={selectedImg} className="max-w-full max-h-full rounded-xl sm:rounded-[32px] shadow-2xl object-contain animate-in zoom-in-95" alt="Full view" />
           <div className="absolute top-6 right-6 sm:top-10 sm:right-10 text-white font-black text-xl sm:text-2xl">✕</div>
+        </div>
+      )}
+
+      {showActionModal && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={() => setShowActionModal(false)}>
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 p-6 sm:p-8 space-y-6" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black text-gray-900">문의 · 구매</h3>
+              <button type="button" onClick={() => setShowActionModal(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700">✕</button>
+            </div>
+            <div className="rounded-2xl overflow-hidden bg-gray-100 aspect-video">
+              <img src={channel.thumbnail} alt="" className="w-full h-full object-cover" />
+            </div>
+            <p className="text-xl font-black text-gray-900">₩ {channel.price.toLocaleString()}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => { setShowActionModal(false); handleStartConsultation(); }} className="py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all">
+                상담하기
+              </button>
+              <button onClick={() => { setShowActionModal(false); handleBuyNow(); }} className="py-4 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">
+                즉시구매
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
