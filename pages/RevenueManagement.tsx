@@ -633,9 +633,9 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
         <form onSubmit={handleProjectSubmit} className="space-y-16">
           <div className="space-y-6">
             <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4 italic">운영사 선택</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="flex flex-wrap gap-2 sm:gap-4">
               {companies.map(com => (
-                <button key={com.id} type="button" onClick={() => setProjectForm({...projectForm, operatingCompanyId: com.id})} className={`py-6 rounded-3xl text-[14px] font-black transition-all border-4 ${projectForm.operatingCompanyId === com.id ? 'bg-blue-50 border-blue-600 text-blue-600 shadow-xl' : 'bg-gray-50 border-transparent text-gray-400 hover:bg-white hover:border-gray-200'}`}>{com.name}</button>
+                <button key={com.id} type="button" onClick={() => setProjectForm({...projectForm, operatingCompanyId: com.id})} className={`shrink-0 min-w-0 py-4 sm:py-6 px-4 sm:px-6 rounded-2xl sm:rounded-3xl text-xs sm:text-[14px] font-black transition-all border-2 sm:border-4 whitespace-nowrap ${projectForm.operatingCompanyId === com.id ? 'bg-blue-50 border-blue-600 text-blue-600 shadow-xl' : 'bg-gray-50 border-transparent text-gray-400 hover:bg-white hover:border-gray-200'}`}>{com.name}</button>
               ))}
             </div>
           </div>
