@@ -21,6 +21,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
   const { showConfirm } = useConfirm();
   const [activeTierIdx, setSelectedTierIdx] = useState(0);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
+  const [showActionModal, setShowActionModal] = useState(false);
   
   const reviewRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +121,10 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
     });
   };
 
+  const openInquiry = () => {
+    navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } });
+  };
+
   const isServiceType = ['marketing', 'lecture', 'consulting'].includes(currentStoreType);
 
   return (
@@ -131,15 +136,15 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
 
       <div className="flex flex-col lg:flex-row gap-16 items-start">
         {/* 메인 콘텐츠 영역 */}
-        <div className="flex-1 space-y-16">
-          {/* 상단 타이틀 */}
+        <div className="flex-1 space-y-16 w-full min-w-0">
+          {/* 상단 타이틀 — 한 줄 */}
           <section>
             <div className="flex gap-2 mb-6">
                <span className={`${typeColor} text-white text-[11px] font-black px-4 py-1.5 rounded-full shadow-sm uppercase italic tracking-widest`}>{typeLabel}</span>
                <span className="bg-[#e8f5e9] text-[#2e7d32] text-[11px] font-black px-4 py-1.5 rounded-full shadow-sm border border-green-100 uppercase italic tracking-widest">오리지널</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-8 leading-[1.1] italic tracking-tighter">{ebook.title}</h1>
-            <div className="flex items-center gap-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-8 leading-[1.15] italic tracking-tighter truncate" title={ebook.title}>{ebook.title}</h1>
+            <div className="flex items-center gap-6 flex-wrap">
                <div className="flex items-center gap-2 bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100">
                   <div className="flex text-yellow-400">
                     {Array.from({length: 5}).map((_, i) => (
@@ -152,36 +157,34 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             </div>
           </section>
 
-          {/* 전문가 요약 정보 (최상단 고정) */}
-          <section className="bg-white border border-gray-100 rounded-[28px] p-5 md:p-6 shadow-sm space-y-4">
-             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                   <div className="relative shrink-0">
-                      <img src={displayProfileImg} className="w-12 h-12 md:w-14 md:h-14 rounded-[16px] object-cover shadow-lg border border-white" alt="expert" />
-                      <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] shadow border border-white">✓</div>
-                   </div>
-                   <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <h4 className="font-black text-lg md:text-xl text-gray-900 italic tracking-tighter">{displayAuthor}</h4>
-                        {(() => { const g = getUserGrade(expertProfile, gradeConfigs); return g ? <span className={`${g.color} text-white text-[9px] font-black px-2 py-0.5 rounded-full italic uppercase`}>{g.name}</span> : null; })()}
-                      </div>
-                   </div>
-                </div>
-                <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="bg-gray-900 text-white px-5 py-2.5 rounded-[20px] font-black text-sm hover:bg-blue-600 transition-all shadow italic uppercase tracking-wider active:scale-95 shrink-0">전문가 문의하기</button>
+          {/* 전문가 요약 + 세금계산서 — 한 줄 표 */}
+          <section className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-sm">
+             <div className="overflow-x-auto">
+               <table className="w-full text-left border-collapse min-w-[400px]">
+                 <tbody className="text-sm">
+                   <tr className="border-b border-gray-100">
+                     <td className="py-3 pr-4 font-bold text-gray-500 w-28">전문가</td>
+                     <td className="py-3 font-black text-gray-900">{displayAuthor}</td>
+                     <td className="py-3 pl-6 pr-4 font-bold text-gray-500">총 거래</td>
+                     <td className="py-3 font-black text-gray-900">{totalTransactions}건</td>
+                   </tr>
+                   <tr className="border-b border-gray-100">
+                     <td className="py-3 pr-4 font-bold text-gray-500">만족도</td>
+                     <td className="py-3 font-black text-gray-900">{expertAvgRating}</td>
+                     <td className="py-3 pl-6 pr-4 font-bold text-gray-500">회원 구분</td>
+                     <td className="py-3 font-black text-gray-900">{expertTypeInfo.label}</td>
+                   </tr>
+                   <tr>
+                     <td className="py-3 pr-4 font-bold text-gray-500">세금계산서</td>
+                     <td className="py-3 font-black text-gray-900" colSpan={3}>{expertTypeInfo.tax}</td>
+                   </tr>
+                 </tbody>
+               </table>
              </div>
-             <div className="bg-gray-50/80 rounded-[16px] p-2 flex flex-wrap lg:flex-nowrap gap-2 shadow-inner border border-gray-100">
-                {[
-                  { label: '총 거래 건수', value: `${totalTransactions}건`, icon: '📊' },
-                  { label: '만족도 점수', value: expertAvgRating, icon: '⭐' },
-                  { label: '회원 구분', value: expertTypeInfo.label, icon: '👤' },
-                  { label: '세금계산서', value: expertTypeInfo.tax, icon: '🧾' }
-                ].map((item, i) => (
-                  <div key={i} className="flex-1 min-w-[72px] bg-white rounded-[12px] py-3.5 px-2.5 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
-                    <span className="text-2xl mb-1.5 group-hover:scale-105 transition-transform">{item.icon}</span>
-                    <p className="text-sm font-black text-gray-400 mb-1 uppercase tracking-wider italic leading-tight">{item.label}</p>
-                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-lg leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
-                  </div>
-                ))}
+             <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+               <button onClick={() => setShowActionModal(true)} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-600 transition-all shadow-lg">
+                 문의하기 · 구매하기
+               </button>
              </div>
           </section>
 
@@ -406,58 +409,38 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             </section>
           </div>
         </div>
+      </div>
 
-        {/* 확장형 우측 주문 패널 (Sticky) */}
-        <div className="w-full lg:w-[450px] shrink-0 sticky top-24">
-          <div className="bg-white border border-gray-100 rounded-[64px] shadow-2xl overflow-hidden animate-in slide-in-from-right-4 duration-700">
-            <div className="aspect-video w-full overflow-hidden border-b border-gray-50 group relative">
-               <img src={ebook.thumbnail} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-[2000ms]" alt="t" />
-               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+      {/* 문의하기 · 구매하기 모달 */}
+      {showActionModal && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={() => setShowActionModal(false)}>
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 p-6 sm:p-8 space-y-6" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-black text-gray-900">문의 · 구매</h3>
+              <button type="button" onClick={() => setShowActionModal(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700">✕</button>
             </div>
-            <div className="flex border-b border-gray-100 bg-gray-50/80 p-2">
+            <div className="rounded-2xl overflow-hidden bg-gray-100 aspect-video">
+              <img src={ebook.thumbnail} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex border border-gray-100 rounded-2xl p-2 gap-2">
               {tiers.map((tier, idx) => (
-                <button key={tier.name} onClick={() => setSelectedTierIdx(idx)} className={`flex-1 py-5 text-[12px] font-black tracking-[0.2em] rounded-[32px] transition-all ${activeTierIdx === idx ? 'bg-white text-gray-900 shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>
+                <button key={tier.name} onClick={() => setSelectedTierIdx(idx)} className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${activeTierIdx === idx ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>
                   {tier.name}
                 </button>
               ))}
             </div>
-            <div className="p-12 space-y-12">
-              <div>
-                 <div className="flex items-baseline gap-3 mb-2">
-                    <span className="text-5xl font-black text-gray-900 tracking-tighter italic leading-none">₩{(tiers[activeTierIdx].price).toLocaleString()}</span>
-                    <span className="text-[12px] font-black text-gray-400 uppercase italic tracking-widest">(VAT 포함)</span>
-                 </div>
-                 <p className="text-blue-500 font-black text-xs italic uppercase tracking-[0.3em] mt-3">★ 한정 특가 최고의 혜택</p>
-              </div>
-              <div className="space-y-8">
-                 <h5 className="font-black text-[14px] text-gray-400 uppercase tracking-[0.3em] flex items-center gap-3 italic">
-                    <span className={`w-1.5 h-4 ${typeColor} rounded-full shadow-lg`}></span> 포함 서비스
-                 </h5>
-                 <ul className="space-y-5">
-                    {tiers[activeTierIdx].description.split('+').map((item, idx) => (
-                       <li key={idx} className="flex items-start gap-4 text-[16px] font-bold text-gray-700 leading-tight group">
-                          <span className="text-blue-500 text-xl group-hover:scale-125 transition-transform shrink-0">✔</span> 
-                          <span className="group-hover:text-blue-600 transition-colors">{item.trim()}</span>
-                       </li>
-                    ))}
-                 </ul>
-              </div>
-              <div className="flex justify-between items-center py-8 border-y border-gray-50">
-                 <span className="text-[14px] font-black text-gray-400 uppercase tracking-[0.3em] italic">
-                    {currentStoreType === 'ebook' || currentStoreType === 'template' ? '총 분량' : '작업 기간'}
-                 </span>
-                 <span className="text-2xl font-black text-gray-900 italic tracking-tighter">
-                   {tiers[activeTierIdx].pageCount}{currentStoreType === 'ebook' || currentStoreType === 'template' ? 'p' : '일'}
-                 </span>
-              </div>
-              <div className="space-y-4 pt-4">
-                <button onClick={() => navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } })} className="w-full py-6 bg-white border-4 border-gray-900 text-gray-900 rounded-[32px] font-black text-lg hover:bg-gray-50 transition-all shadow-xl italic uppercase tracking-widest active:scale-95">문의하기 ✉</button>
-                <button onClick={handleBuyNow} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 hover:shadow-blue-200 transition-all shadow-2xl uppercase italic tracking-[0.2em] active:scale-[0.98] animate-pulse`}>즉시 구매하기 🚀</button>
-              </div>
+            <p className="text-2xl font-black text-gray-900">₩{(tiers[activeTierIdx].price).toLocaleString()}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => { setShowActionModal(false); openInquiry(); }} className="py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-black text-sm hover:bg-gray-50 transition-all">
+                문의하기
+              </button>
+              <button onClick={() => { setShowActionModal(false); handleBuyNow(); }} className={`py-4 ${typeColor} text-white rounded-xl font-black text-sm hover:opacity-95 transition-all`}>
+                구매하기
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
