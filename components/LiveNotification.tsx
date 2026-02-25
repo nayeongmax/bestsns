@@ -81,9 +81,9 @@ const LiveNotification: React.FC = () => {
 
   const isOrder = notification.type === 'order';
   return (
-    <div className="fixed top-20 right-4 sm:top-24 sm:right-8 z-[100] notification-fade">
-      {/* 휴대폰만 축소, 태블릿(sm)·데스크톱은 기존 사이즈 유지 */}
-      <div className="bg-white/95 backdrop-blur-md border border-gray-100 shadow-lg rounded-xl flex items-center gap-2 min-w-0 max-w-[200px] px-2.5 py-2 sm:min-w-[340px] sm:max-w-none sm:rounded-2xl sm:p-5 sm:gap-4 sm:shadow-xl">
+    <div className="fixed top-20 left-2 right-2 sm:left-auto sm:right-8 sm:top-24 z-[100] notification-fade">
+      {/* 모바일: 좌우 여백만 두고 가로 폭 꽉 채워서 문장 전체 노출 / sm 이상은 기존 */}
+      <div className="bg-white/95 backdrop-blur-md border border-gray-100 shadow-lg rounded-xl flex items-center gap-2 min-w-0 w-full px-2.5 py-2 sm:w-auto sm:min-w-[340px] sm:max-w-none sm:rounded-2xl sm:p-5 sm:gap-4 sm:shadow-xl">
         <div className="flex-shrink-0 flex items-center justify-center w-3.5 h-3.5 sm:w-6 sm:h-6">
           <div className={`w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
         </div>
