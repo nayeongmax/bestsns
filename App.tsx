@@ -673,7 +673,7 @@ const App: React.FC = () => {
 
   const content = (
     <>
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 sm:pb-24">
       <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} onOpenLoginModal={() => setShowAuthModal(true)} />
       <LiveNotification />
       <div className="container mx-auto py-10 px-4 flex-1">
