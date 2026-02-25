@@ -173,8 +173,8 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         )}
       </div>
 
-      {/* 상품 리스트 그리드 복구: lg(4열) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 px-1 sm:px-2">
+      {/* 상품 리스트: 모바일 목록형(~3개 노출 후 스크롤) / 태블릿+ 4열 그리드 */}
+      <div className="md:grid md:grid-cols-4 gap-3 md:gap-6 flex flex-col md:flex-none max-h-[85vh] md:max-h-none overflow-y-auto md:overflow-visible px-1 sm:px-2" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {filteredEbooks.length === 0 ? (
           <div className="col-span-full py-24 sm:py-32 md:py-40 text-center bg-white rounded-2xl sm:rounded-3xl md:rounded-[60px] border border-dashed border-gray-100">
             <span className="text-4xl sm:text-6xl mb-4 sm:mb-6 block grayscale">📭</span>
@@ -182,74 +182,67 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
           </div>
         ) : (
           filteredEbooks.map((ebook, idx) => (
-            <div key={ebook.id || `ebook-${idx}`} className="bg-white rounded-xl sm:rounded-2xl md:rounded-[24px] overflow-hidden shadow-sm group border border-gray-100 relative transition-all hover:-translate-y-1">
-              <Link 
-                to={ebook.isPaused ? '#' : `/ebooks/${ebook.id}`} 
+            /* 모바일: 목록형(썸네일+제목·가격·판매자·즐겨찾기) / md+: 카드형 */
+            <div key={ebook.id || `ebook-${idx}`} className="flex flex-row md:flex-col gap-3 md:gap-0 min-h-[140px] md:min-h-0 bg-white rounded-xl sm:rounded-2xl md:rounded-[24px] overflow-hidden shadow-sm border border-gray-100 relative transition-all hover:border-gray-200 md:hover:-translate-y-1">
+              <Link
+                to={ebook.isPaused ? '#' : `/ebooks/${ebook.id}`}
                 onClick={(e) => ebook.isPaused && e.preventDefault()}
-                className={`block ${ebook.isPaused ? 'cursor-default' : ''}`}
+                className={`flex flex-row md:flex-col flex-1 min-w-0 ${ebook.isPaused ? 'cursor-default' : ''}`}
               >
-                <div className="relative aspect-[4/3] overflow-hidden bg-gray-50">
-                  <img src={ebook.thumbnail || ''} alt="" className={`w-full h-full object-cover transition-transform duration-700 ${!ebook.isPaused && 'group-hover:scale-105'}`} />
-                  
-                  <div className="absolute top-4 left-4 flex flex-col gap-2">
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-full flex-shrink-0 md:aspect-[4/3] overflow-hidden bg-gray-50 rounded-lg md:rounded-none">
+                  <img src={ebook.thumbnail || ''} alt="" className={`w-full h-full object-cover transition-transform duration-700 ${!ebook.isPaused && 'md:group-hover:scale-105'}`} />
+                  <div className="absolute top-1 left-1 md:top-4 md:left-4 flex flex-col gap-0.5 md:gap-2">
                     {ebook.isPrime && (
-                      <span className="bg-[#FFD600] text-gray-900 text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
-                        PRIME
-                      </span>
+                      <span className="bg-[#FFD600] text-gray-900 text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase flex items-center justify-center">PRIME</span>
                     )}
                     {ebook.isHot && (
-                      <span className="bg-[#FF4D4D] text-white text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
-                        HOT
-                      </span>
+                      <span className="bg-[#FF4D4D] text-white text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase flex items-center justify-center">HOT</span>
                     )}
                     {ebook.isNew && (
-                      <span className="bg-[#3B82F6] text-white text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
-                        NEW
-                      </span>
+                      <span className="bg-[#3B82F6] text-white text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase flex items-center justify-center">NEW</span>
                     )}
                   </div>
-
                   {ebook.isPaused && (
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex items-center justify-center z-10">
-                      <span className="text-white text-sm font-black italic tracking-widest border-2 border-white px-3 py-0.5 rotate-[-12deg] shadow-2xl uppercase">PAUSED</span>
+                      <span className="text-white text-[10px] md:text-sm font-black italic tracking-widest border-2 border-white px-2 md:px-3 py-0.5 rotate-[-12deg] shadow-2xl uppercase">PAUSED</span>
                     </div>
                   )}
                 </div>
-                <div className="p-3 sm:p-4 md:p-5">
-                  <div className="flex gap-1 mb-1.5 sm:mb-2 min-w-0">
+                <div className="flex-1 min-w-0 flex flex-col justify-center py-2 pr-2 md:py-0 md:pr-0 md:p-4 md:pt-0 md:p-5">
+                  <div className="flex gap-1 mb-1 md:mb-2 min-w-0">
                     <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{STORE_TABS.find(t => t.id === (ebook.storeType || 'ebook'))?.label || '전자책'}</span>
                   </div>
-                  <h3 className={`font-black text-gray-900 mb-2 sm:mb-3 transition-colors line-clamp-1 text-xs sm:text-sm md:text-[14px] italic tracking-tight truncate ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
+                  <h3 className={`font-black text-gray-900 mb-1 md:mb-2 md:mb-3 transition-colors line-clamp-2 text-xs sm:text-sm md:text-[14px] italic tracking-tight ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
                     {ebook.title}
                   </h3>
-                  <div className="flex justify-between items-end gap-2 sm:gap-3 border-t border-gray-50 pt-2 sm:pt-3 min-w-0">
-                    <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
-                      <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
+                  <div className="flex justify-between items-end gap-2 flex-wrap md:flex-nowrap md:border-t md:border-gray-50 md:pt-2 md:pt-3 min-w-0">
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest hidden md:inline">Expert</span>
                       <span className="text-[10px] sm:text-[11px] font-black text-gray-600 italic break-words">{ebook.author}</span>
                     </div>
-                    <div className="flex flex-col items-end shrink-0 gap-1">
+                    <div className="flex flex-col items-end shrink-0 gap-0.5 md:gap-1">
                       {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? (
-                        <span className={`inline-flex items-center shrink-0 whitespace-nowrap ${g.color} text-white text-[10px] font-black px-2.5 py-1 rounded-lg italic uppercase tracking-wider border border-white/40 bg-gradient-to-b from-white/30 to-transparent`} style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.1)' }}>
+                        <span className={`hidden md:inline-flex items-center shrink-0 whitespace-nowrap ${g.color} text-white text-[10px] font-black px-2.5 py-1 rounded-lg italic uppercase tracking-wider border border-white/40 bg-gradient-to-b from-white/30 to-transparent`} style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.1)' }}>
                           {g.name}
                         </span>
                       ) : null; })()}
                       <div className="flex flex-col items-end">
-                        <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest italic">Price</span>
-                        <span className="text-base sm:text-lg font-black text-gray-900 italic tracking-tighter whitespace-nowrap">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
+                        <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest italic hidden md:inline">Price</span>
+                        <span className="text-sm sm:text-base md:text-lg font-black text-gray-900 italic tracking-tighter whitespace-nowrap">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </Link>
-              <button 
-                onClick={(e) => { e.preventDefault(); onToggleWishlist({ type: 'ebook', data: ebook }); }} 
-                className={`absolute top-3 right-3 p-1.5 rounded-full transition-all shadow-md active:scale-90 z-20 ${
-                  isWishlisted(ebook.id) 
-                  ? 'bg-red-500 text-white' 
+              <button
+                onClick={(e) => { e.preventDefault(); onToggleWishlist({ type: 'ebook', data: ebook }); }}
+                className={`absolute top-2 right-2 md:top-3 md:right-3 p-1.5 md:p-1.5 rounded-full transition-all shadow-md active:scale-90 z-20 ${
+                  isWishlisted(ebook.id)
+                  ? 'bg-red-500 text-white'
                   : 'bg-white/80 backdrop-blur-md text-gray-400 hover:text-red-500'
                 }`}
               >
-                <svg className="w-3.5 h-3.5" fill={isWishlisted(ebook.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 md:w-3.5 md:h-3.5" fill={isWishlisted(ebook.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
                 </svg>
               </button>
