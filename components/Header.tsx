@@ -70,7 +70,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
 
   return (
     <>
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm overflow-x-hidden xl:overflow-visible xl:pb-12">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm overflow-x-hidden xl:overflow-visible">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px] min-w-0">
           {/* 왼쪽: 모바일 햄버거만(w-10) / 웹(xl) 로고 그대로 */}
           <div className="w-10 flex-shrink-0 xl:w-auto xl:min-w-0 flex items-center gap-3">
@@ -117,20 +117,16 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                       e.stopPropagation();
                       navigate('/ebooks', { replace: false });
                     }}
-                    className={`relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
+                    className={`relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
                       isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                      <span className="text-base">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </div>
+                    <span className="text-base">{item.icon}</span>
+                    <span>{item.label}</span>
                     {item.badge && (
-                      <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
-                        <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
-                          {item.badge}
-                        </span>
-                      </div>
+                      <span className="ml-0.5 whitespace-nowrap bg-[#FF4D4D] text-white text-[10px] px-2 py-0.5 rounded-full font-black leading-none italic tracking-tighter">
+                        {item.badge}
+                      </span>
                     )}
                   </button>
                 );
@@ -141,21 +137,17 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                   to={item.path}
                   end={item.path === '/channels' ? false : true}
                   className={({ isActive: navActive }) =>
-                    `relative flex flex-col items-center justify-center px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
+                    `relative flex items-center justify-center gap-1.5 px-5 py-2 rounded-full text-[14.5px] font-black transition-all duration-300 h-10 ${
                       (item.path === '/channels' ? pathname.startsWith('/channels') : navActive) ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
                     }`
                   }
                 >
-                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="text-base">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </div>
+                  <span className="text-base">{item.icon}</span>
+                  <span>{item.label}</span>
                   {item.badge && (
-                    <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
-                      <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[14px] px-4 py-1.5 rounded-full font-black shadow-[0_10px_20px_rgba(255,77,77,0.5)] border border-white/30 leading-none text-center italic tracking-tighter">
-                        {item.badge}
-                      </span>
-                    </div>
+                    <span className="ml-0.5 whitespace-nowrap bg-[#FF4D4D] text-white text-[10px] px-2 py-0.5 rounded-full font-black leading-none italic tracking-tighter">
+                      {item.badge}
+                    </span>
                   )}
                 </NavLink>
               );
