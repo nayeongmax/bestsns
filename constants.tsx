@@ -15,7 +15,7 @@ export const SNS_PLATFORMS = [
   { id: 'naver', name: '네이버', icon: 'https://upload.wikimedia.org/wikipedia/commons/2/23/Naver_Logotype.svg' },
   { id: 'threads', name: '쓰레드', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Threads_%28app%29_logo.svg/512px-Threads_%28app%29_logo.svg.png' },
   { id: 'tiktok', name: '틱톡', icon: 'https://img.icons8.com/ios-filled/512/tiktok.png' },
-  { id: 'twitter', name: '트위터(X)', icon: 'https://img.icons8.com/ios-filled/512/twitter-x.png' },
+  { id: 'twitter', name: '트위터(X)', icon: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>') },
   { id: 'pinterest', name: '핀터레스트', icon: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Pinterest-logo.png' },
   { id: 'tumblr', name: '텀블러', icon: 'https://img.icons8.com/ios-filled/512/tumblr.png' },
   { id: 'daangn', name: '당근', icon: 'https://img.icons8.com/color/512/carrot--v1.png' },
