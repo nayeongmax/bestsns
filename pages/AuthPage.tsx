@@ -679,12 +679,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
 
   return (
     <div className={`flex items-center justify-center p-3 sm:p-4 xl:p-5 font-['Noto_Sans_KR',sans-serif] ${onClose ? '' : 'min-h-screen bg-slate-100'}`}>
-      <div className="w-full max-w-[340px] sm:max-w-[380px] md:max-w-[440px] xl:max-w-[920px] max-h-[90vh] sm:max-h-[85vh] xl:max-h-[780px] xl:h-[780px] bg-white rounded-2xl sm:rounded-[28px] xl:rounded-[28px] shadow-xl xl:shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex overflow-hidden auth-card-enter relative flex-shrink-0">
+      <div className="w-full max-w-[340px] sm:max-w-[380px] md:max-w-[420px] xl:max-w-[920px] max-h-[90vh] sm:max-h-[85vh] xl:max-h-[780px] xl:h-[780px] bg-white rounded-2xl sm:rounded-[28px] xl:rounded-[28px] shadow-xl xl:shadow-[0_30px_80px_rgba(0,0,0,0.12),0_8px_32px_rgba(0,0,0,0.07)] flex overflow-hidden auth-card-enter relative flex-shrink-0">
         {onClose && (
-          <button type="button" onClick={onClose} className="absolute top-3 right-3 xl:top-5 xl:right-5 z-20 w-9 h-9 xl:w-10 xl:h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-lg xl:text-xl font-bold transition-colors" aria-label="닫기">×</button>
+          <button type="button" onClick={onClose} className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-lg font-bold transition-colors xl:w-10 xl:h-10 xl:text-xl" aria-label="닫기">×</button>
         )}
-        {/* ─── LEFT PANEL (브랜딩) ─── */}
-        <div className="hidden md:flex w-[420px] flex-shrink-0 flex-col bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#3b82f6] p-11 relative overflow-hidden">
+        {/* ─── LEFT PANEL (브랜딩) ─── 데스크톱(xl)에서만 표시, 태블릿에서는 폼만 */}
+        <div className="hidden xl:flex w-[420px] flex-shrink-0 flex-col bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#3b82f6] p-11 relative overflow-hidden">
           <div className="absolute w-[340px] h-[340px] rounded-full border border-white/10 -top-[120px] -left-[120px]" />
           <div className="absolute w-[210px] h-[210px] rounded-full border border-white/[0.07] -bottom-[70px] -right-[70px]" />
           <div className="absolute w-[120px] h-[120px] rounded-full border border-white/5 bottom-[130px] -left-[30px]" />
@@ -713,14 +713,14 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           <div className="relative z-10 text-[11px] text-white/35 shrink-0 pt-4">© 2025 THEBESTSNS. All rights reserved.</div>
         </div>
 
-        {/* ─── RIGHT PANEL (폼) ─── 고정 높이 안에서 스크롤 */}
-        <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 md:p-8 xl:p-12 overflow-y-auto">
+        {/* ─── RIGHT PANEL (폼) ─── 고정 높이 안에서 스크롤, 모바일에서 닫기 버튼과 겹치지 않도록 여백 */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pt-10 pl-4 pr-12 pb-4 sm:pt-6 sm:pl-6 sm:pr-6 sm:pb-6 md:p-8 xl:p-12">
           {isFormMode && (
             <div className="flex items-center justify-center mb-4 xl:mb-8">
-              <div ref={toggleTrackRef} className="inline-flex bg-[#f1f5f9] rounded-full p-1 border border-[#e2e8f0] w-[180px] sm:w-[200px] xl:w-[220px] relative">
+              <div ref={toggleTrackRef} className="inline-flex bg-[#f1f5f9] rounded-full p-1 border border-[#e2e8f0] w-[160px] sm:w-[200px] xl:w-[220px] relative shrink-0">
                 <div ref={thumbRef} className="absolute top-1 bottom-1 z-0 bg-[#2563EB] rounded-full transition-all duration-300 ease-[cubic-bezier(0.34,1.4,0.64,1)] shadow-[0_2px_12px_rgba(37,99,235,0.28)]" style={{ left: 0, width: 0 }} />
-                <div ref={optJoinRef} onClick={() => setMode('JOIN')} className={`relative z-10 flex-1 text-center py-2.5 text-sm font-semibold rounded-full cursor-pointer select-none transition-colors ${mode === 'JOIN' ? 'text-white' : 'text-slate-500'}`}>회원가입</div>
-                <div ref={optLoginRef} onClick={() => setMode('LOGIN')} className={`relative z-10 flex-1 text-center py-2.5 text-sm font-semibold rounded-full cursor-pointer select-none transition-colors ${mode === 'LOGIN' ? 'text-white' : 'text-slate-500'}`}>로그인</div>
+                <div ref={optJoinRef} onClick={() => setMode('JOIN')} className={`relative z-10 flex-1 text-center py-2 sm:py-2.5 xl:py-2.5 text-[12px] sm:text-sm xl:text-sm font-semibold rounded-full cursor-pointer select-none transition-colors min-w-0 ${mode === 'JOIN' ? 'text-white' : 'text-slate-500'}`}>회원가입</div>
+                <div ref={optLoginRef} onClick={() => setMode('LOGIN')} className={`relative z-10 flex-1 text-center py-2 sm:py-2.5 xl:py-2.5 text-[12px] sm:text-sm xl:text-sm font-semibold rounded-full cursor-pointer select-none transition-colors min-w-0 ${mode === 'LOGIN' ? 'text-white' : 'text-slate-500'}`}>로그인</div>
               </div>
             </div>
           )}
@@ -771,7 +771,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 <div className="relative flex items-center"><span className="absolute left-3 xl:left-3.5 text-[#94a3b8]"><IconUser /></span><input type="text" placeholder="이름" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full pl-9 xl:pl-10 pr-3 xl:pr-4 py-2.5 xl:py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-lg xl:rounded-xl text-[#0f172a] text-[14px] xl:text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-2 xl:focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" /></div>
                 <div className="relative flex items-center"><span className="absolute left-3 xl:left-3.5 text-[#94a3b8]"><IconPhone /></span><input type="tel" placeholder="휴대폰 번호 (010-0000-0000)" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-9 xl:pl-10 pr-3 xl:pr-4 py-2.5 xl:py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-lg xl:rounded-xl text-[#0f172a] text-[14px] xl:text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-2 xl:focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" /></div>
                 <div className="relative flex items-center"><span className="absolute left-3 xl:left-3.5 text-[#94a3b8]"><IconEmail /></span><input type="email" placeholder="이메일" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full pl-9 xl:pl-10 pr-3 xl:pr-4 py-2.5 xl:py-3 bg-[#f8faff] border border-[#e2e8f0] rounded-lg xl:rounded-xl text-[#0f172a] text-[14px] xl:text-sm outline-none focus:border-[#2563EB] focus:bg-white focus:ring-2 xl:focus:ring-[3px] focus:ring-[#2563eb1a] transition-all" required /></div>
-                <label className="flex items-start gap-2 xl:gap-3 cursor-pointer"><input type="checkbox" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} className="w-3.5 h-3.5 xl:w-4 xl:h-4 mt-0.5 xl:mt-0.5 rounded accent-[#2563EB]" /><span className="text-[12px] xl:text-sm text-[#475569]">이용약관 및 개인정보 처리방침 동의 (필수)</span></label>
+                <label className="flex items-start gap-2 xl:gap-3 cursor-pointer"><input type="checkbox" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} className="w-3.5 h-3.5 xl:w-4 xl:h-4 mt-0.5 rounded accent-[#2563EB] shrink-0" /><span className="text-[12px] xl:text-sm text-[#475569] leading-snug">이용약관 및 개인정보 처리방침 동의 (필수)</span></label>
                 <button type="submit" disabled={loading} className="w-full py-3 xl:py-3.5 bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] text-white rounded-lg xl:rounded-xl font-bold text-[14px] xl:text-[15px] border-0 shadow-[0_6px_22px_rgba(37,99,235,0.28)] hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(37,99,235,0.38)] active:translate-y-0 disabled:opacity-60 disabled:transform-none transition-all mt-1 xl:mt-1.5">가입하기</button>
               </form>
               <div className="flex items-center gap-2 xl:gap-2.5 my-2.5 xl:my-3"><div className="flex-1 h-px bg-[#e2e8f0]" /><span className="text-[10px] xl:text-xs text-[#94a3b8]">— OR —</span><div className="flex-1 h-px bg-[#e2e8f0]" /></div>
