@@ -173,7 +173,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         )}
       </div>
 
-      {/* 상품 리스트: 모바일 목록형(~3개 노출 후 스크롤) / 태블릿+ 4열 그리드 */}
+      {/* 상품 리스트: 목록형, 세로 중앙 정렬, 태블릿에서 글자 잘림 방지 */}
       <div className="md:grid md:grid-cols-4 gap-3 md:gap-6 flex flex-col md:flex-none max-h-[85vh] md:max-h-none overflow-y-auto md:overflow-visible px-1 sm:px-2" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {filteredEbooks.length === 0 ? (
           <div className="col-span-full py-24 sm:py-32 md:py-40 text-center bg-white rounded-2xl sm:rounded-3xl md:rounded-[60px] border border-dashed border-gray-100">
@@ -182,25 +182,18 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
           </div>
         ) : (
           filteredEbooks.map((ebook, idx) => (
-            /* 모바일: 목록형(썸네일+제목·가격·판매자·즐겨찾기) / md+: 카드형 */
-            <div key={ebook.id || `ebook-${idx}`} className="flex flex-row md:flex-col gap-3 md:gap-0 min-h-[140px] md:min-h-0 bg-white rounded-xl sm:rounded-2xl md:rounded-[24px] overflow-hidden shadow-sm border border-gray-100 relative transition-all hover:border-gray-200 md:hover:-translate-y-1">
+            <div key={ebook.id || `ebook-${idx}`} className="flex flex-row md:flex-col gap-3 md:gap-0 min-h-[120px] sm:min-h-[140px] md:min-h-0 bg-white rounded-xl sm:rounded-2xl md:rounded-[24px] overflow-hidden shadow-sm border border-gray-100 relative transition-all hover:border-gray-200 md:hover:-translate-y-1 items-center">
               <Link
                 to={ebook.isPaused ? '#' : `/ebooks/${ebook.id}`}
                 onClick={(e) => ebook.isPaused && e.preventDefault()}
-                className={`flex flex-row md:flex-col flex-1 min-w-0 ${ebook.isPaused ? 'cursor-default' : ''}`}
+                className={`flex flex-row md:flex-col flex-1 min-w-0 w-full ${ebook.isPaused ? 'cursor-default' : ''}`}
               >
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-full flex-shrink-0 md:aspect-[4/3] overflow-hidden bg-gray-50 rounded-lg md:rounded-none">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-full flex-shrink-0 md:aspect-[4/3] overflow-hidden bg-gray-50 rounded-lg md:rounded-none flex items-center justify-center">
                   <img src={ebook.thumbnail || ''} alt="" className={`w-full h-full object-cover transition-transform duration-700 ${!ebook.isPaused && 'md:group-hover:scale-105'}`} />
                   <div className="absolute top-1 left-1 md:top-4 md:left-4 flex flex-col gap-0.5 md:gap-2">
-                    {ebook.isPrime && (
-                      <span className="bg-[#FFD600] text-gray-900 text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase flex items-center justify-center">PRIME</span>
-                    )}
-                    {ebook.isHot && (
-                      <span className="bg-[#FF4D4D] text-white text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase flex items-center justify-center">HOT</span>
-                    )}
-                    {ebook.isNew && (
-                      <span className="bg-[#3B82F6] text-white text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase flex items-center justify-center">NEW</span>
-                    )}
+                    {ebook.isPrime && <span className="bg-[#FFD600] text-gray-900 text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase">PRIME</span>}
+                    {ebook.isHot && <span className="bg-[#FF4D4D] text-white text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase">HOT</span>}
+                    {ebook.isNew && <span className="bg-[#3B82F6] text-white text-[9px] md:text-[12px] font-black px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg italic uppercase">NEW</span>}
                   </div>
                   {ebook.isPaused && (
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex items-center justify-center z-10">
@@ -209,20 +202,20 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                   )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center py-2 pr-2 md:py-0 md:pr-0 md:p-4 md:pt-0 md:p-5">
-                  <div className="flex gap-1 mb-1 md:mb-2 min-w-0">
-                    <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{STORE_TABS.find(t => t.id === (ebook.storeType || 'ebook'))?.label || '전자책'}</span>
+                  <div className="flex gap-1 mb-1 md:mb-2 min-w-0 flex-wrap">
+                    <span className="text-[8px] sm:text-[9px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{STORE_TABS.find(t => t.id === (ebook.storeType || 'ebook'))?.label || '전자책'}</span>
                   </div>
-                  <h3 className={`font-black text-gray-900 mb-1 md:mb-2 md:mb-3 transition-colors line-clamp-2 text-xs sm:text-sm md:text-[14px] italic tracking-tight ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
+                  <h3 className={`font-black text-gray-900 mb-1 md:mb-2 md:mb-3 transition-colors text-xs sm:text-sm md:text-[15px] italic tracking-tight leading-snug line-clamp-2 break-words ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
                     {ebook.title}
                   </h3>
                   <div className="flex justify-between items-end gap-2 flex-wrap md:flex-nowrap md:border-t md:border-gray-50 md:pt-2 md:pt-3 min-w-0">
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest hidden md:inline">Expert</span>
-                      <span className="text-[10px] sm:text-[11px] font-black text-gray-600 italic break-words">{ebook.author}</span>
+                      <span className="text-[10px] sm:text-[12px] font-black text-gray-600 italic break-words line-clamp-1">{ebook.author}</span>
                     </div>
                     <div className="flex flex-col items-end shrink-0 gap-0.5 md:gap-1">
                       {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? (
-                        <span className={`hidden md:inline-flex items-center shrink-0 whitespace-nowrap ${g.color} text-white text-[10px] font-black px-2.5 py-1 rounded-lg italic uppercase tracking-wider border border-white/40 bg-gradient-to-b from-white/30 to-transparent`} style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.1)' }}>
+                        <span className={`hidden md:inline-flex items-center shrink-0 whitespace-nowrap ${g.color} text-white text-[10px] font-black px-2.5 py-1 rounded-lg italic uppercase tracking-wider border border-white/40`} style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)' }}>
                           {g.name}
                         </span>
                       ) : null; })()}
