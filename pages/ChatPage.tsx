@@ -407,7 +407,8 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
     <div className="max-w-6xl mx-auto h-[85vh] min-h-[400px] flex flex-col xl:flex-row bg-[#F8F9FA] border border-gray-200 shadow-sm overflow-hidden rounded-lg">
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*,.pdf,.doc,.docx" onChange={handleFileChange} />
 
-      <div className="w-full xl:w-[340px] min-h-0 xl:min-h-[85vh] border-r border-gray-200 flex flex-col bg-white shrink-0">
+      {/* 목록: 데스크톱은 항상 표시, 모바일·태블릿은 채팅 미선택 시에만 표시 */}
+      <div className={`w-full xl:w-[340px] min-h-0 xl:min-h-[85vh] border-r border-gray-200 flex flex-col bg-white shrink-0 ${activeChatId ? 'hidden xl:flex' : 'flex'}`}>
         <div className="p-3 sm:p-4 xl:p-4 border-b border-gray-100">
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {['전체', '거래 중', '즐겨찾기'].map(filter => (
@@ -451,8 +452,8 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-white">
-        <div className="p-4 border-b border-gray-200 flex flex-col items-center bg-[#F9FBFF]">
+      <div className={`flex-1 flex flex-col bg-white min-h-0 ${!activeChatId ? 'hidden xl:flex' : 'flex'}`}>
+        <div className="p-3 sm:p-4 xl:p-4 border-b border-gray-200 flex flex-col items-center bg-[#F9FBFF]">
           <div className="text-[12px] text-gray-500 font-black flex items-center gap-1.5 mb-1.5 uppercase italic">
             <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm9.496 3.036a1 1 0 00-1.414-1.414l-4.828 4.828-1.764-1.764a1 1 0 00-1.414 1.414l2.47 2.47a1 1 0 001.415 0l5.535-5.534z" clipRule="evenodd" /></svg>
             THEBESTSNS 안전결제 시스템 가동 중
@@ -460,18 +461,28 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
           <p className="text-[11px] text-gray-400 font-bold">상대방이 계좌이체 등 외부 결제를 유도하면 즉시 신고해주세요.</p>
         </div>
 
-        <div className="px-4 sm:px-6 xl:px-6 py-3 border-b border-gray-50 flex justify-between items-center bg-white shadow-sm">
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-black text-gray-900 text-[13px] sm:text-sm xl:text-sm italic truncate">{activeRoom ? `${activeRoom.name}님과 대화 중` : '대화를 선택하세요'}</span>
-              {activeRoom && onlineUserIds.has(activeRoom.otherParticipantId) && (
-                <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">접속 중</span>
-              )}
+        <div className="px-3 sm:px-4 xl:px-6 py-3 border-b border-gray-50 flex justify-between items-center bg-white shadow-sm">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => setActiveChatId(null)}
+              className="xl:hidden flex-shrink-0 p-2 -ml-1 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+              aria-label="목록으로"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-gray-900 text-[13px] sm:text-sm xl:text-sm italic truncate">{activeRoom ? `${activeRoom.name}님과 대화 중` : '대화를 선택하세요'}</span>
+                {activeRoom && onlineUserIds.has(activeRoom.otherParticipantId) && (
+                  <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase shrink-0">접속 중</span>
+                )}
+              </div>
+              {activeRoom?.memo && <span className="text-[10px] font-black text-blue-500 italic uppercase truncate">Memo: {activeRoom.memo}</span>}
             </div>
-            {activeRoom?.memo && <span className="text-[10px] font-black text-blue-500 italic uppercase truncate">Memo: {activeRoom.memo}</span>}
           </div>
           {activeChatId && (
-            <button onClick={() => toggleTrading(activeChatId)} className={`px-5 py-2 rounded-full text-[11px] font-black transition-all shadow-sm ${activeRoom?.isTrading ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-400 hover:text-blue-500'}`}>{activeRoom?.isTrading ? '✓ 거래 관리 중' : '거래 상태로 변경'}</button>
+            <button onClick={() => toggleTrading(activeChatId)} className={`flex-shrink-0 px-4 sm:px-5 xl:px-5 py-2 rounded-full text-[11px] font-black transition-all shadow-sm ${activeRoom?.isTrading ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-400 hover:text-blue-500'}`}>{activeRoom?.isTrading ? '✓ 거래 관리 중' : '거래 상태로 변경'}</button>
           )}
         </div>
 
