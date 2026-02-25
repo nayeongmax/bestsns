@@ -114,74 +114,86 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
         </div>
       </div>
 
-      {/* 게시글 리스트: 모든 해상도에서 번호~좋아요 1줄 테이블, 가로 스크롤 지원 */}
-      <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border border-gray-100 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-        <table className="w-full text-left border-collapse min-w-[600px]">
-          <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-14 sm:w-20 font-black text-gray-900 text-[11px] sm:text-[14px]">번호</th>
-              <th className="px-2 py-2 sm:px-4 sm:py-4 font-black text-gray-900 text-[11px] sm:text-[14px]">제목</th>
-              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-24 sm:w-36 font-black text-gray-900 text-[11px] sm:text-[14px]">작성자</th>
-              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-24 sm:w-40 font-black text-gray-900 text-[11px] sm:text-[14px]">작성일자</th>
-              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-16 sm:w-28 font-black text-gray-900 text-[11px] sm:text-[14px]">조회수</th>
-              <th className="px-2 py-2 sm:px-4 sm:py-4 text-center w-14 sm:w-28 font-black text-gray-900 text-[11px] sm:text-[14px]">좋아요</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {currentPosts.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-12 sm:py-20 text-center text-gray-300 font-black italic text-sm sm:text-lg">게시글이 존재하지 않습니다.</td>
+      {/* 게시글 리스트: 디시인사이드 스타일 — 가로 스크롤 없이 화면 너비에 맞춤 */}
+      <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border border-gray-100">
+        <div className="overflow-x-auto md:overflow-x-visible" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+          <table className="w-full text-left border-collapse table-fixed md:table-auto">
+            <colgroup>
+              <col className="w-10 sm:w-14" />
+              <col className="min-w-0" />
+              <col className="w-16 sm:w-24 hidden sm:table-cell" />
+              <col className="w-20 sm:w-28 hidden sm:table-cell" />
+              <col className="w-12 sm:w-20" />
+              <col className="w-10 sm:w-14" />
+            </colgroup>
+            <thead>
+              <tr className="bg-gray-50/50 border-b border-gray-100">
+                <th className="px-1.5 sm:px-4 py-2 sm:py-4 text-center font-black text-gray-900 text-[10px] sm:text-[14px]">번호</th>
+                <th className="px-1.5 sm:px-4 py-2 sm:py-4 font-black text-gray-900 text-[10px] sm:text-[14px]">제목</th>
+                <th className="hidden sm:table-cell px-4 py-4 text-center font-black text-gray-900 text-[14px]">작성자</th>
+                <th className="hidden sm:table-cell px-4 py-4 text-center font-black text-gray-900 text-[14px]">작성일자</th>
+                <th className="px-1.5 sm:px-4 py-2 sm:py-4 text-center font-black text-gray-900 text-[10px] sm:text-[14px]">조회</th>
+                <th className="px-1.5 sm:px-4 py-2 sm:py-4 text-center font-black text-gray-900 text-[10px] sm:text-[14px]">좋아요</th>
               </tr>
-            ) : (
-              currentPosts.map((post, idx) => {
-                const absoluteIdx = (currentPage - 1) * POSTS_PER_PAGE + idx;
-                const isNotice = activeCategory === '전체' && absoluteIdx === 0 && post.category === '공지';
-                const isHot = (post as any).isHot;
-                const activeCommentCount = post.comments.filter(c => !c.isDeleted).length;
-                let displayNo: string | number = post.id;
-                if (activeCategory === '전체') {
-                  if (isNotice) displayNo = "공지";
-                  else if (isHot) displayNo = "HOT";
-                  else displayNo = totalNormalCount - (absoluteIdx - normalPostsStartIdx);
-                } else displayNo = totalNormalCount - absoluteIdx;
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {currentPosts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 sm:py-20 text-center text-gray-300 font-black italic text-sm sm:text-lg">게시글이 없습니다.</td>
+                </tr>
+              ) : (
+                currentPosts.map((post, idx) => {
+                  const absoluteIdx = (currentPage - 1) * POSTS_PER_PAGE + idx;
+                  const isNotice = activeCategory === '전체' && absoluteIdx === 0 && post.category === '공지';
+                  const isHot = (post as any).isHot;
+                  const activeCommentCount = post.comments.filter(c => !c.isDeleted).length;
+                  let displayNo: string | number = post.id;
+                  if (activeCategory === '전체') {
+                    if (isNotice) displayNo = "공지";
+                    else if (isHot) displayNo = "HOT";
+                    else displayNo = totalNormalCount - (absoluteIdx - normalPostsStartIdx);
+                  } else displayNo = totalNormalCount - absoluteIdx;
 
-                return (
-                  <tr key={post.id} className={`hover:bg-blue-50/20 transition-all cursor-pointer group ${isNotice ? 'bg-red-50/10' : isHot ? 'bg-orange-50/10' : ''}`}>
-                    <td className="px-2 py-2 sm:px-4 sm:py-4 text-[11px] sm:text-[13px] font-black text-gray-400 text-center italic">
-                      {isNotice ? <span className="text-red-500 font-black uppercase tracking-tighter text-[10px] sm:text-[11px]">공지</span> : isHot ? <span className="text-orange-500 font-black italic text-[10px] sm:text-[11px]">HOT</span> : displayNo}
-                    </td>
-                    <td className="px-2 py-2 sm:px-4 sm:py-4">
-                      <Link to={`/board/${post.id}`} className="block">
-                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                          {!isNotice && (
-                            <span className={`text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded italic shadow-sm uppercase shrink-0 ${isHot ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>
-                              {post.category}
+                  return (
+                    <tr key={post.id} className={`hover:bg-blue-50/20 transition-all cursor-pointer group ${isNotice ? 'bg-red-50/10' : isHot ? 'bg-orange-50/10' : ''}`}>
+                      <td className="px-1.5 sm:px-4 py-2 sm:py-4 text-[10px] sm:text-[13px] font-black text-gray-400 text-center italic">
+                        {isNotice ? <span className="text-red-500 font-black text-[9px] sm:text-[11px]">공지</span> : isHot ? <span className="text-orange-500 font-black text-[9px] sm:text-[11px]">HOT</span> : displayNo}
+                      </td>
+                      <td className="px-1.5 sm:px-4 py-2 sm:py-4 min-w-0">
+                        <Link to={`/board/${post.id}`} className="block min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+                            {!isNotice && (
+                              <span className={`text-[8px] sm:text-[10px] font-black px-1 sm:px-2 py-0.5 rounded italic shadow-sm uppercase shrink-0 ${isHot ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>
+                                {post.category}
+                              </span>
+                            )}
+                            <span className={`text-[11px] sm:text-[15px] font-black transition-colors tracking-tight truncate min-w-0 ${isNotice ? 'text-red-600' : 'text-gray-800 group-hover:text-blue-600'}`}>
+                              {post.title}
                             </span>
-                          )}
-                          <span className={`text-[12px] sm:text-[15px] font-black transition-colors tracking-tight truncate ${isNotice ? 'text-red-600' : 'text-gray-800 group-hover:text-blue-600'}`}>
-                            {post.title}
-                          </span>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {post.images && post.images.length > 0 && <span className="text-xs sm:text-sm">🖼️</span>}
-                            {activeCommentCount > 0 && <span className={`text-[10px] sm:text-[11px] font-black px-1.5 sm:px-2 py-0.5 rounded-lg shadow-inner ${isHot ? 'bg-orange-50 text-orange-400' : 'bg-blue-50 text-blue-400'}`}>[{activeCommentCount}]</span>}
+                            {(post.images?.length > 0 || activeCommentCount > 0) && (
+                              <span className="shrink-0 text-[10px] sm:text-[11px]">
+                                {post.images?.length > 0 && '🖼️'}
+                                {activeCommentCount > 0 && <span className={`ml-0.5 font-black px-1 py-0.5 rounded ${isHot ? 'bg-orange-50 text-orange-400' : 'bg-blue-50 text-blue-400'}`}>[{activeCommentCount}]</span>}
+                              </span>
+                            )}
                           </div>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-2 py-2 sm:px-4 sm:py-4 text-center">
-                      <span className="text-[11px] sm:text-[14px] font-black text-gray-600 italic truncate block max-w-[100px] sm:max-w-[140px] mx-auto" title={post.author}>{post.author}</span>
-                    </td>
-                    <td className="px-2 py-2 sm:px-4 sm:py-4 text-center text-[10px] sm:text-[13px] font-bold text-gray-400 italic whitespace-nowrap uppercase tracking-tighter">{post.date}</td>
-                    <td className="px-2 py-2 sm:px-4 sm:py-4 text-center text-[11px] sm:text-[14px] font-bold text-gray-400 italic whitespace-nowrap">{post.views.toLocaleString()}</td>
-                    <td className={`px-2 py-2 sm:px-4 sm:py-4 text-center text-[12px] sm:text-[16px] font-black italic tracking-tighter whitespace-nowrap ${post.likes > 0 ? 'text-green-500' : 'text-gray-300'}`}>
-                      {post.likes}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                        </Link>
+                      </td>
+                      <td className="hidden sm:table-cell px-4 py-4 text-center">
+                        <span className="text-[14px] font-black text-gray-600 italic truncate block max-w-[120px] mx-auto" title={post.author}>{post.author}</span>
+                      </td>
+                      <td className="hidden sm:table-cell px-4 py-4 text-center text-[13px] font-bold text-gray-400 italic whitespace-nowrap">{post.date}</td>
+                      <td className="px-1.5 sm:px-4 py-2 sm:py-4 text-center text-[10px] sm:text-[14px] font-bold text-gray-400 italic">{post.views.toLocaleString()}</td>
+                      <td className={`px-1.5 sm:px-4 py-2 sm:py-4 text-center text-[11px] sm:text-[16px] font-black italic ${post.likes > 0 ? 'text-green-500' : 'text-gray-300'}`}>
+                        {post.likes}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {totalPages > 1 && (
