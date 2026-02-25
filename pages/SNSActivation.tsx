@@ -217,8 +217,8 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto space-y-6 md:space-y-10 pb-24 md:pb-32 px-3 sm:px-4 md:px-8">
-      <div className="relative overflow-hidden bg-[#050505] rounded-2xl md:rounded-[32px] shadow-2xl min-h-[160px] sm:min-h-[200px] md:min-h-[220px] flex flex-col justify-center items-center border-2 md:border-4 border-white/10 group">
+    <div className="max-w-[1440px] mx-auto space-y-4 sm:space-y-6 md:space-y-10 pb-24 sm:pb-24 md:pb-32 px-3 sm:px-4 md:px-8">
+      <div className="relative overflow-hidden bg-[#050505] rounded-xl sm:rounded-2xl md:rounded-[32px] shadow-2xl min-h-[140px] sm:min-h-[200px] md:min-h-[220px] flex flex-col justify-center items-center border-2 md:border-4 border-white/10 group">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="saber-streak bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent top-[15%] animate-saber-run shadow-[0_0_30px_#00f2ff,0_0_10px_#fff]"></div>
           <div className="saber-streak bg-gradient-to-r from-transparent via-[#ff0095] to-transparent top-[45%] animate-saber-run-delay-1 shadow-[0_0_30px_#ff0095,0_0_10px_#fff]"></div>
@@ -234,7 +234,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         </div>
 
         <div className="relative z-10 w-full flex flex-col items-center text-center px-3 pt-10 pb-6 sm:pt-12 sm:pb-8 md:pt-14 md:pb-10">
-           <h1 key={`main-${mainIdx}`} className="text-3xl sm:text-5xl md:text-6xl font-black text-white italic tracking-tighter animate-punch-in leading-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
+           <h1 key={`main-${mainIdx}`} className="text-2xl sm:text-5xl md:text-6xl font-black text-white italic tracking-tighter animate-punch-in leading-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
              {mainSequence[mainIdx]}
            </h1>
         </div>
@@ -243,7 +243,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       {/* 광고 배너: 히어로 바로 아래 */}
       <AdBanner variant="leaderboard" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-10">
         {/* 모바일에서 먼저 보이도록 My Wallet 상단 배치 (order) */}
         <div className="lg:col-span-4 space-y-5 sm:space-y-8 lg:sticky lg:top-24 lg:h-fit order-1 lg:order-2">
           {/* 모바일에서만 상단에 My Wallet 노출 (데스크톱은 아래 동일 블록 사용) */}
@@ -302,7 +302,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         </div>
 
         <div className="lg:col-span-8 space-y-6 md:space-y-10 order-2 lg:order-1">
-          <div className="bg-white rounded-2xl sm:rounded-[32px] md:rounded-[56px] shadow-sm border border-gray-100 p-5 sm:p-8 md:p-14 space-y-8 md:space-y-14">
+          <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[56px] shadow-sm border border-gray-100 p-4 sm:p-5 sm:p-8 md:p-14 space-y-6 sm:space-y-8 md:space-y-14">
             <div>
               <h2 className="text-lg sm:text-xl font-black flex items-center gap-3 sm:gap-4 mb-4 sm:mb-10 text-gray-900 italic uppercase">
                 <span className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs sm:text-sm shadow-xl font-black italic shrink-0">01</span>
