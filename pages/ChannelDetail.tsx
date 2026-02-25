@@ -17,6 +17,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
   const navigate = useNavigate();
   const { showConfirm } = useConfirm();
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
+  const [showActionModal, setShowActionModal] = useState(false);
   
   const channel = channels.find(c => c.id === id);
 
@@ -79,68 +80,47 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
         뒤로가기
       </button>
 
-      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[48px] shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8 lg:p-14">
-        <div className="flex flex-col lg:flex-row gap-8 sm:gap-12 lg:gap-16">
-          <div className="lg:w-[450px] shrink-0">
-            <img src={channel.thumbnail} alt={channel.title} className="w-full aspect-square object-cover rounded-xl sm:rounded-2xl md:rounded-[32px] shadow-xl shadow-blue-50 border border-gray-50" />
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
+        {/* 상단: 제목 + 가격 + 문의/구매 버튼 (썸네일 없이 컴팩트) */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-6 border-b border-gray-100">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">{channel.platform}</span>
+              <button onClick={() => onToggleWishlist({ type: 'channel', data: channel })} className={`p-1.5 rounded-lg border transition-all ${isWishlisted ? 'bg-red-50 text-red-500 border-red-100' : 'bg-gray-50 text-gray-400 border-gray-100 hover:text-red-500'}`}><svg className="w-4 h-4" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg></button>
+            </div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 leading-tight tracking-tight">{channel.title}</h1>
+            <div className="flex items-center gap-3 mt-2 text-sm">
+              <div className="flex text-yellow-400">{Array.from({length: 5}).map((_, i) => (<span key={i}>{i < Math.floor(Number(reviewStats.avg)) ? '★' : '☆'}</span>))}</div>
+              <span className="font-black text-gray-900">{reviewStats.avg}</span>
+              <span className="text-gray-400 text-xs">({reviewStats.total}건)</span>
+            </div>
+            <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-3">₩ {channel.price.toLocaleString()}</p>
           </div>
-
-          <div className="flex-1 space-y-6 sm:space-y-8 md:space-y-10 min-w-0">
-            <div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 leading-tight italic tracking-tighter">{channel.title}</h1>
-                <button onClick={() => onToggleWishlist({ type: 'channel', data: channel })} className={`p-2.5 sm:p-4 border-2 rounded-xl sm:rounded-2xl font-black transition-all shadow-sm shrink-0 active:scale-90 self-start sm:self-auto ${isWishlisted ? 'bg-red-50 text-red-500 border-red-100' : 'bg-white border-gray-100 text-gray-400 hover:text-red-500'}`}><svg className="w-5 h-5 sm:w-6 sm:h-6" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg></button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-                 <div className="flex text-yellow-400 text-base sm:text-xl">{Array.from({length: 5}).map((_, i) => (<span key={i}>{i < Math.floor(Number(reviewStats.avg)) ? '★' : '☆'}</span>))}</div>
-                 <span className="text-xl sm:text-2xl font-black text-gray-900">{reviewStats.avg}</span>
-                 <span className="text-xs sm:text-sm font-bold text-gray-400">(누적 거래 만족도: {reviewStats.total}건)</span>
-              </div>
-              {channel.publicLink && (<a href={channel.publicLink} target="_blank" rel="noreferrer" className="text-blue-600 font-black text-sm sm:text-lg flex items-center gap-2 underline decoration-2 underline-offset-4 italic break-all">🔗 채널 정보 직접 확인하기 (클릭)</a>)}
-            </div>
-
-            <div className="bg-gray-50/50 rounded-2xl sm:rounded-3xl md:rounded-[40px] p-4 sm:p-6 md:p-10 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 md:gap-10 shadow-inner border border-gray-100">
-              <div className="flex flex-col items-center gap-1 sm:gap-2 text-center"><span className="text-[10px] sm:text-[12px] font-black text-gray-400 uppercase italic tracking-widest">구독자수</span><span className="text-xl sm:text-2xl md:text-3xl font-black text-gray-800 tracking-tight">{channel.subscribers.toLocaleString()}명</span></div>
-              <div className="flex flex-col items-center gap-1 sm:gap-2 text-center border-0 sm:border-x border-gray-200"><span className="text-[10px] sm:text-[12px] font-black text-gray-400 uppercase italic tracking-widest">월 평균 수입</span><span className="text-xl sm:text-2xl md:text-3xl font-black text-green-600 tracking-tight">${income.toLocaleString()}</span></div>
-              <div className="flex flex-col items-center gap-1 sm:gap-2 text-center"><span className="text-[10px] sm:text-[12px] font-black text-gray-400 uppercase italic tracking-widest">월 평균 지출</span><span className="text-xl sm:text-2xl md:text-3xl font-black text-red-400 tracking-tight">${expense.toLocaleString()}</span></div>
-            </div>
-
-            <div className="space-y-6 sm:space-y-8">
-              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-4 sm:pb-6 border-b border-gray-100">
-                <div className="text-3xl sm:text-4xl md:text-6xl font-black text-gray-900 italic tracking-tighter leading-none">₩ {channel.price.toLocaleString()}</div>
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                   <button onClick={handleStartConsultation} className="flex-1 sm:w-48 py-4 sm:py-6 bg-white border-2 border-gray-900 text-gray-900 rounded-xl sm:rounded-[24px] font-black text-base sm:text-lg hover:bg-gray-50 transition-all shadow-lg active:scale-95 italic uppercase">상담하기</button>
-                   <button onClick={handleBuyNow} className="flex-1 sm:w-64 py-4 sm:py-6 bg-gray-900 text-white rounded-xl sm:rounded-[24px] font-black text-base sm:text-lg hover:bg-blue-600 transition-all shadow-2xl shadow-blue-100 active:scale-95 italic uppercase">즉시구매</button>
-                </div>
-              </div>
-
-              <div className="bg-[#f4f9ff] p-4 sm:p-6 md:p-10 rounded-2xl sm:rounded-[36px] border border-[#dce9ff] relative overflow-hidden group shadow-sm">
-                <div className="absolute right-[-20px] top-[-20px] opacity-5 group-hover:rotate-12 transition-transform duration-1000">
-                  <svg className="w-64 h-64 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-                </div>
-                <div className="relative z-10 space-y-4 sm:space-y-6">
-                  <p className="text-[#2b6cb0] text-base sm:text-xl font-black italic tracking-tight uppercase">THEBESTSNS Escrow Protection 가동 중</p>
-                  <div className="space-y-2 sm:space-y-3">
-                    <div className="flex items-start gap-2 sm:gap-3 text-[#4a5568] text-[13px] sm:text-[15px] font-bold italic">
-                      <span className="text-blue-500 font-black shrink-0">✓</span>
-                      <span>7일 후, 판매자는 에스크로 대리인에게 주요 소유권을 양도합니다.</span>
-                    </div>
-                    <div className="flex items-start gap-2 sm:gap-3 text-[#4a5568] text-[13px] sm:text-[15px] font-bold italic">
-                      <span className="text-blue-500 font-black shrink-0">✓</span>
-                      <span>에스크로 대리인은 모든 사항을 확인하고 다른 관리자들을 해임합니다.</span>
-                    </div>
-                    <div className="flex items-start gap-2 sm:gap-3 text-[#4a5568] text-[13px] sm:text-[15px] font-bold italic">
-                      <span className="text-blue-500 font-black shrink-0">✓</span>
-                      <span>매도인의 확인 후, 에스크로 대리인은 매수인에게 소유권을 양도합니다.</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="flex gap-3 shrink-0">
+            <button onClick={handleStartConsultation} className="flex-1 sm:flex-none sm:w-36 py-3 sm:py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all">상담하기</button>
+            <button onClick={handleBuyNow} className="flex-1 sm:flex-none sm:w-40 py-3 sm:py-4 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">즉시구매</button>
           </div>
         </div>
 
-        <div className="mt-12 sm:mt-16 md:mt-24 space-y-12 sm:space-y-16 md:space-y-24">
+        {/* 스탯 한 줄 */}
+        <div className="grid grid-cols-3 gap-4 py-4 sm:py-6 border-b border-gray-50">
+          <div className="text-center"><span className="block text-[10px] font-bold text-gray-400 uppercase">구독자</span><span className="text-lg sm:text-xl font-black text-gray-800">{channel.subscribers.toLocaleString()}명</span></div>
+          <div className="text-center border-x border-gray-100"><span className="block text-[10px] font-bold text-gray-400 uppercase">월 수입</span><span className="text-lg sm:text-xl font-black text-green-600">${income.toLocaleString()}</span></div>
+          <div className="text-center"><span className="block text-[10px] font-bold text-gray-400 uppercase">월 지출</span><span className="text-lg sm:text-xl font-black text-red-500">${expense.toLocaleString()}</span></div>
+        </div>
+
+        {/* 에스크로 안내 */}
+        <div className="bg-[#f4f9ff] p-4 sm:p-6 rounded-2xl border border-[#dce9ff] mt-6 relative overflow-hidden">
+          <div className="absolute right-0 top-0 opacity-5"><svg className="w-24 h-24 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></div>
+          <p className="text-[#2b6cb0] text-sm font-black uppercase tracking-tight">THEBESTSNS Escrow Protection</p>
+          <ul className="mt-2 space-y-1 text-[#4a5568] text-xs sm:text-sm font-medium">
+            <li className="flex items-start gap-2"><span className="text-blue-500">✓</span> 7일 후 판매자가 에스크로 대리인에게 소유권 양도</li>
+            <li className="flex items-start gap-2"><span className="text-blue-500">✓</span> 에스크로 대리인 확인 후 매수인에게 양도</li>
+          </ul>
+        </div>
+        {channel.publicLink && (<a href={channel.publicLink} target="_blank" rel="noreferrer" className="inline-block mt-4 text-blue-600 font-bold text-sm underline">🔗 채널 정보 직접 확인하기</a>)}
+
+        <div className="mt-8 sm:mt-12 space-y-8 sm:space-y-12">
           <section className="space-y-4 sm:space-y-6 md:space-y-10">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 italic uppercase tracking-tighter underline underline-offset-8 sm:underline-offset-12 decoration-blue-500">채널 상세 정보 :</h2>
             <div className="text-gray-600 font-bold leading-relaxed whitespace-pre-wrap text-sm sm:text-base md:text-lg bg-gray-50/50 p-4 sm:p-6 md:p-12 rounded-2xl sm:rounded-3xl md:rounded-[56px] border border-gray-100 shadow-inner">
