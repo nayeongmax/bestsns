@@ -358,9 +358,9 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   // --- 렌더링 ---
 
   const renderDashboard = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-500">
-      <div className="lg:col-span-4 space-y-6">
-        <div className="bg-gray-900 rounded-[40px] p-10 shadow-2xl border border-gray-800 space-y-8 text-white relative overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-8 animate-in fade-in duration-500">
+      <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+        <div className="bg-gray-900 rounded-2xl sm:rounded-3xl md:rounded-[40px] p-5 sm:p-8 md:p-10 shadow-2xl border border-gray-800 space-y-5 sm:space-y-8 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 p-10 opacity-10">
             <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg>
           </div>
@@ -371,25 +371,25 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             </div>
             <span className="bg-blue-600 text-[10px] font-black px-4 py-1.5 rounded-full italic uppercase shadow-lg tracking-widest">Global Overview</span>
           </div>
-          <div className="grid grid-cols-2 gap-6 pt-4">
-            <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
-               <span className="text-[10px] font-bold text-gray-400 uppercase">총 계약 건수</span>
-               <p className="text-2xl font-black mt-1">{currentMonthProjects.length}건</p>
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 pt-3 sm:pt-4">
+            <div className="bg-white/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/10">
+               <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">총 계약 건수</span>
+               <p className="text-lg sm:text-2xl font-black mt-1">{currentMonthProjects.length}건</p>
             </div>
-            <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
-               <span className="text-[10px] font-bold text-gray-400 uppercase">총 매출액</span>
-               <p className="text-2xl font-black mt-1 italic tracking-tighter">₩{totalIncome.toLocaleString()}</p>
+            <div className="bg-white/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/10">
+               <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">총 매출액</span>
+               <p className="text-lg sm:text-2xl font-black mt-1 italic tracking-tighter">₩{totalIncome.toLocaleString()}</p>
             </div>
           </div>
-          <div className="bg-blue-600/20 p-8 rounded-[32px] border border-blue-500/30">
-              <div className="flex justify-between items-center">
-                 <span className="text-[12px] font-black text-blue-300 uppercase tracking-widest">당월 통합 순수익</span>
-                 <span className="text-4xl font-black text-green-400 italic tracking-tighter">₩{totalProfit.toLocaleString()}</span>
+          <div className="bg-blue-600/20 p-5 sm:p-8 rounded-2xl sm:rounded-[32px] border border-blue-500/30">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                 <span className="text-[11px] sm:text-[12px] font-black text-blue-300 uppercase tracking-widest">당월 통합 순수익</span>
+                 <span className="text-2xl sm:text-4xl font-black text-green-400 italic tracking-tighter">₩{totalProfit.toLocaleString()}</span>
               </div>
           </div>
         </div>
 
-        <h4 className="font-black text-gray-400 text-[11px] uppercase tracking-[0.4em] px-6 pt-4">Operating Companies</h4>
+        <h4 className="font-black text-gray-400 text-[10px] sm:text-[11px] uppercase tracking-[0.4em] px-4 sm:px-6 pt-3 sm:pt-4">Operating Companies</h4>
         {companies.map(com => {
           const comProjects = currentMonthProjects.filter(p => p.operatingCompanyId === com.id);
           const comRevenue = comProjects.reduce((sum, p) => sum + p.paymentAmount, 0);
@@ -397,7 +397,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
           const estTax = Math.floor(comRevenue * 0.1);
 
           return (
-            <div key={com.id} className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 space-y-6 relative overflow-hidden group hover:border-blue-200 transition-all">
+            <div key={com.id} className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] p-5 sm:p-8 shadow-sm border border-gray-100 space-y-4 sm:space-y-6 relative overflow-hidden group hover:border-blue-200 transition-all">
               <div className="flex justify-between items-start">
                 <h5 className="font-black text-gray-900 text-lg italic">{com.name}</h5>
                 <span className="text-[10px] font-bold text-gray-300 uppercase">{com.type}</span>
@@ -425,23 +425,23 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
         })}
       </div>
 
-      <div className="lg:col-span-8 bg-white rounded-[48px] p-10 shadow-sm border border-gray-100 min-h-[900px]">
-        <div className="flex justify-between items-center mb-10 px-4">
-          <div className="flex items-center gap-8">
-            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-300 hover:text-gray-900 transition-colors">◀</button>
-            <h2 className="text-3xl font-black text-gray-900 tracking-tighter italic">{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</h2>
-            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-300 hover:text-gray-900 transition-colors">▶</button>
+      <div className="lg:col-span-8 bg-white rounded-2xl sm:rounded-3xl md:rounded-[48px] p-4 sm:p-6 md:p-10 shadow-sm border border-gray-100 min-h-[400px] sm:min-h-[600px] md:min-h-[900px]">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-6 sm:mb-10 px-2 sm:px-4">
+          <div className="flex items-center gap-4 sm:gap-8">
+            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-300 hover:text-gray-900 transition-colors p-1">◀</button>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic">{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</h2>
+            <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-300 hover:text-gray-900 transition-colors p-1">▶</button>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => setCalendarFilter('all')} className={`px-6 py-2.5 rounded-2xl text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'all' ? 'bg-black text-white border-black' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>전체</button>
-            <button onClick={() => setCalendarFilter('work')} className={`px-6 py-2.5 rounded-2xl text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'work' ? 'bg-blue-600 text-white border-blue-600' : 'bg-red-50 text-red-500 border-red-100'}`}>작업</button>
-            <button onClick={() => setCalendarFilter('todo')} className={`px-6 py-2.5 rounded-2xl text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'todo' ? 'bg-blue-600 text-white border-blue-600' : 'bg-green-50 text-green-600 border-green-100'}`}>TO-DO</button>
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap">
+            <button onClick={() => setCalendarFilter('all')} className={`px-3 py-2 sm:px-6 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'all' ? 'bg-black text-white border-black' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>전체</button>
+            <button onClick={() => setCalendarFilter('work')} className={`px-3 py-2 sm:px-6 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'work' ? 'bg-blue-600 text-white border-blue-600' : 'bg-red-50 text-red-500 border-red-100'}`}>작업</button>
+            <button onClick={() => setCalendarFilter('todo')} className={`px-3 py-2 sm:px-6 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black italic shadow-sm tracking-widest border transition-all ${calendarFilter === 'todo' ? 'bg-blue-600 text-white border-blue-600' : 'bg-green-50 text-green-600 border-green-100'}`}>TO-DO</button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 border-t border-l border-gray-100 rounded-3xl overflow-hidden">
+        <div className="grid grid-cols-7 border-t border-l border-gray-100 rounded-xl sm:rounded-2xl md:rounded-3xl overflow-hidden text-[8px] sm:text-[10px]">
           {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day, i) => (
-            <div key={day} className={`p-4 text-center text-[10px] font-black border-r border-b border-gray-100 bg-gray-50/50 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>{day}</div>
+            <div key={day} className={`p-2 sm:p-4 text-center font-black border-r border-b border-gray-100 bg-gray-50/50 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>{day}</div>
           ))}
           {Array.from({ length: 42 }).map((_, i) => {
             const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -449,17 +449,17 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
             const isCurrentMonth = date > 0 && date <= lastDay;
             const dateStr = isCurrentMonth ? `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}` : null;
-            
+
             const dayTodos = dateStr ? todos.filter(t => dateStr >= t.startDate && dateStr <= t.endDate) : [];
             const dayProjectsStart = dateStr ? projects.filter(p => p.startDate === dateStr) : [];
             const dayProjectsEnd = dateStr ? projects.filter(p => p.endDate === dateStr) : [];
 
             return (
-              <div key={i} className={`min-h-[160px] p-3 border-r border-b border-gray-100 transition-colors ${!isCurrentMonth ? 'bg-gray-50/20 opacity-30' : 'hover:bg-blue-50/20'}`}>
+              <div key={i} className={`min-h-[70px] sm:min-h-[100px] md:min-h-[160px] p-1.5 sm:p-3 border-r border-b border-gray-100 transition-colors ${!isCurrentMonth ? 'bg-gray-50/20 opacity-30' : 'hover:bg-blue-50/20'}`}>
                 {isCurrentMonth && (
                   <>
-                    <span className={`text-[12px] font-black ${i % 7 === 0 ? 'text-red-400' : i % 7 === 6 ? 'text-blue-400' : 'text-gray-900'}`}>{date}</span>
-                    <div className="mt-3 space-y-1.5">
+                    <span className={`text-[10px] sm:text-[12px] font-black ${i % 7 === 0 ? 'text-red-400' : i % 7 === 6 ? 'text-blue-400' : 'text-gray-900'}`}>{date}</span>
+                    <div className="mt-1 sm:mt-3 space-y-1 sm:space-y-1.5">
                        {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsStart.map(p => <div key={p.id} className="text-[9px] font-black bg-blue-600 text-white p-1 rounded-md shadow-sm truncate italic">🚀 시작: {p.clientName}</div>)}
                        {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsEnd.map(p => <div key={p.id} className="text-[9px] font-black bg-red-600 text-white p-1 rounded-md shadow-sm truncate italic">🏁 마감: {p.clientName}</div>)}
                        {(calendarFilter === 'all' || calendarFilter === 'todo') && dayTodos.map(t => <div key={t.id} className={`text-[9px] font-black p-1 rounded-md shadow-sm truncate italic border ${t.completed ? 'bg-gray-100 text-gray-300 border-gray-200 line-through' : 'bg-green-50 text-green-600 border-green-100'}`}>✓ {t.text}</div>)}
@@ -475,25 +475,25 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   );
 
   const renderDataList = () => (
-    <div className="space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
-      <div className="bg-white rounded-[60px] p-16 shadow-sm border border-gray-100">
-         <div className="flex justify-between items-center mb-16 px-4">
-            <div className="flex items-center gap-10">
-              <h3 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-12">작업 현황 관리</h3>
-              <div className="flex items-center gap-6 bg-gray-50 px-8 py-3 rounded-3xl shadow-inner">
+    <div className="space-y-6 sm:space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[60px] p-4 sm:p-8 md:p-16 shadow-sm border border-gray-100">
+         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8 sm:mb-16 px-2 sm:px-4">
+            <div className="flex items-center gap-4 sm:gap-10">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8 sm:underline-offset-12">작업 현황 관리</h3>
+              <div className="flex items-center gap-3 sm:gap-6 bg-gray-50 px-4 sm:px-8 py-2 sm:py-3 rounded-2xl sm:rounded-3xl shadow-inner">
                 <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-400 hover:text-black">◀</button>
-                <span className="font-black text-xl text-gray-900 italic">{currentDate.getFullYear()}. {currentDate.getMonth() + 1}</span>
+                <span className="font-black text-base sm:text-xl text-gray-900 italic">{currentDate.getFullYear()}. {currentDate.getMonth() + 1}</span>
                 <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-400 hover:text-black">▶</button>
               </div>
             </div>
-            <button onClick={copyDataListForSheets} className="bg-blue-500 text-white px-8 py-3 rounded-2xl font-black text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic">구글시트 복사</button>
+            <button onClick={copyDataListForSheets} className="bg-blue-500 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic">구글시트 복사</button>
          </div>
 
-         <div className="overflow-x-auto rounded-[48px] border border-gray-50 shadow-sm">
-           <table className="w-full text-left">
-              <thead className="bg-gray-50/50 text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
+         <div className="overflow-x-auto rounded-xl sm:rounded-2xl md:rounded-[48px] border border-gray-50 shadow-sm -mx-2 sm:mx-0">
+           <table className="w-full text-left min-w-[700px]">
+              <thead className="bg-gray-50/50 text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
                 <tr>
-                  <th className="px-10 py-8">차수</th><th className="px-10 py-8">작업 종류</th><th className="px-10 py-8">업체명</th><th className="px-10 py-8 text-center">운영사</th><th className="px-10 py-8 text-center">마감일</th><th className="px-10 py-8 text-right">금액</th><th className="px-10 py-8 text-center">링크</th><th className="px-10 py-8 text-center">관리</th>
+                  <th className="px-4 sm:px-10 py-4 sm:py-8">차수</th><th className="px-4 sm:px-10 py-4 sm:py-8">작업 종류</th><th className="px-4 sm:px-10 py-4 sm:py-8">업체명</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-center">운영사</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-center">마감일</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-right">금액</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-center">링크</th><th className="px-4 sm:px-10 py-4 sm:py-8 text-center">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -534,21 +534,21 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   );
 
   const renderProfitTab = () => (
-    <div className="space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-32">
-      <div className="bg-white rounded-[60px] p-16 shadow-sm border border-gray-100">
-        <div className="flex justify-between items-center mb-16 px-4">
-           <div className="flex items-center gap-10">
-              <h3 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-green-500 underline-offset-12">정산 및 수익 관리</h3>
-              <div className="flex items-center gap-6 bg-gray-50 px-8 py-3 rounded-3xl shadow-inner">
+    <div className="space-y-6 sm:space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-20 sm:pb-32">
+      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[60px] p-4 sm:p-8 md:p-16 shadow-sm border border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8 sm:mb-16 px-2 sm:px-4">
+           <div className="flex flex-wrap items-center gap-4 sm:gap-10">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-green-500 underline-offset-8 sm:underline-offset-12">정산 및 수익 관리</h3>
+              <div className="flex items-center gap-3 sm:gap-6 bg-gray-50 px-4 sm:px-8 py-2 sm:py-3 rounded-2xl sm:rounded-3xl shadow-inner">
                 <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="text-gray-400 hover:text-black">◀</button>
-                <span className="font-black text-xl text-gray-900 italic">{currentDate.getFullYear()}. {currentDate.getMonth() + 1}</span>
+                <span className="font-black text-base sm:text-xl text-gray-900 italic">{currentDate.getFullYear()}. {currentDate.getMonth() + 1}</span>
                 <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="text-gray-400 hover:text-black">▶</button>
               </div>
            </div>
-           <button onClick={copyIntegratedDataForSheets} className="bg-blue-500 text-white px-8 py-3 rounded-2xl font-black text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic">내역 통합 복사</button>
+           <button onClick={copyIntegratedDataForSheets} className="bg-blue-500 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic">내역 통합 복사</button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12">
           <div className="space-y-6">
             <h4 className="text-xl font-black text-blue-600 flex items-center gap-2 italic"><span className="w-1.5 h-6 bg-blue-600 rounded-full"></span> 당월 수입 내역 (현황관리 연동)</h4>
             <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
@@ -710,7 +710,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto pb-32 space-y-8 px-8">
+    <div className="max-w-[1600px] mx-auto pb-24 sm:pb-32 space-y-4 sm:space-y-8 px-3 sm:px-6 md:px-8">
       {dbSaveError && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
           <span className="text-2xl">⚠️</span>
@@ -721,8 +721,8 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
           <button type="button" onClick={() => setDbSaveError(null)} className="text-amber-600 hover:text-amber-900 text-xl font-black shrink-0">×</button>
         </div>
       )}
-      <div className="bg-white/80 backdrop-blur-md p-4 rounded-[40px] shadow-2xl border border-white/50 flex justify-between items-center sticky top-24 z-[45] transition-all">
-        <div className="flex gap-3">
+      <div className="bg-white/80 backdrop-blur-md p-3 sm:p-4 rounded-2xl sm:rounded-3xl md:rounded-[40px] shadow-2xl border border-white/50 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sticky top-20 sm:top-24 z-[45] transition-all">
+        <div className="flex overflow-x-auto gap-2 sm:gap-3 pb-1 sm:pb-0 [&::-webkit-scrollbar]:h-0" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           {[
             { id: 'dashboard', label: '대시보드' },
             { id: 'todo', label: '작업 일정 (TO-DO)' },
@@ -730,10 +730,10 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             { id: 'data', label: '현황 관리' },
             { id: 'profit', label: '수익 관리' }
           ].map(tab => (
-            <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); if(tab.id !== 'project') setEditingProjectId(null); }} className={`px-10 py-4 rounded-[28px] text-[13px] font-black transition-all tracking-widest italic ${activeTab === tab.id ? 'bg-black text-white shadow-2xl' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}>{tab.label}</button>
+            <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); if(tab.id !== 'project') setEditingProjectId(null); }} className={`shrink-0 px-4 py-3 sm:px-10 sm:py-4 rounded-xl sm:rounded-[28px] text-xs sm:text-[13px] font-black transition-all tracking-widest italic ${activeTab === tab.id ? 'bg-black text-white shadow-2xl' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}>{tab.label}</button>
           ))}
         </div>
-        <button onClick={() => { setShowCompanyModal(true); setEditingCompanyId(null); setNewCompany({ name: '', openingDate: '', type: '개인사업자', taxBusinessNames: [] }); }} className="bg-blue-600 text-white px-10 py-4 rounded-[28px] font-black text-[13px] hover:bg-black transition-all shadow-xl shadow-blue-100 italic tracking-widest uppercase">내 회사 관리</button>
+        <button onClick={() => { setShowCompanyModal(true); setEditingCompanyId(null); setNewCompany({ name: '', openingDate: '', type: '개인사업자', taxBusinessNames: [] }); }} className="bg-blue-600 text-white px-5 py-3 sm:px-10 sm:py-4 rounded-xl sm:rounded-[28px] font-black text-xs sm:text-[13px] hover:bg-black transition-all shadow-xl shadow-blue-100 italic tracking-widest uppercase shrink-0">내 회사 관리</button>
       </div>
 
       <main className="min-h-screen">
@@ -760,10 +760,10 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
       />
 
       {showCompanyModal && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
-          <div className="bg-white w-full max-w-2xl rounded-[64px] p-16 shadow-2xl space-y-12 animate-in zoom-in-95 relative overflow-y-auto max-h-[90vh] no-scrollbar border-4 border-blue-50">
-            <button onClick={() => setShowCompanyModal(false)} className="absolute top-12 right-12 text-gray-300 hover:text-gray-900 text-3xl font-black">✕</button>
-            <div className="flex items-center gap-6"><span className="text-5xl">🏢</span><h3 className="text-4xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-blue-500 underline-offset-8">내 회사 관리</h3></div>
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
+          <div className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl md:rounded-[64px] p-6 sm:p-10 md:p-16 shadow-2xl space-y-8 sm:space-y-12 animate-in zoom-in-95 relative overflow-y-auto max-h-[90vh] no-scrollbar border-4 border-blue-50">
+            <button onClick={() => setShowCompanyModal(false)} className="absolute top-6 right-6 sm:top-12 sm:right-12 text-gray-300 hover:text-gray-900 text-2xl sm:text-3xl font-black">✕</button>
+            <div className="flex items-center gap-4 sm:gap-6"><span className="text-3xl sm:text-5xl">🏢</span><h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-blue-500 underline-offset-8">내 회사 관리</h3></div>
             <div className="space-y-6">
                <label className="text-[11px] font-black text-gray-400 px-4 uppercase tracking-[0.4em] italic block">등록된 운영사 목록</label>
                <div className="grid grid-cols-1 gap-4">
