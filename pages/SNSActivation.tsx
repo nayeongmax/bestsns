@@ -308,19 +308,25 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                 <span className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs sm:text-sm shadow-xl font-black italic shrink-0">01</span>
                 플랫폼 선택
               </h2>
-              <p className="text-xs text-gray-400 mb-2 sm:hidden">← 오른쪽으로 밀어 더 많은 플랫폼 보기</p>
-              {/* 모바일: 가로 스크롤(오른쪽으로 넘기기) / 데스크톱: 그리드 */}
-              <div 
-                className="w-full max-w-full min-w-0 flex overflow-x-auto overflow-y-hidden gap-2 pb-2 -mx-1 px-1 sm:mx-0 sm:px-0 sm:pb-0 sm:grid sm:grid-cols-3 sm:gap-3 md:grid-cols-6 md:gap-6 touch-pan-x"
-                style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-              >
-                {SNS_PLATFORMS.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => { setSelectedPlatform(p.name); setSelectedProductId(''); setSelectedCategory(''); }}
-                    className="flex flex-col items-center gap-1.5 sm:gap-4 group shrink-0 w-12 sm:w-auto sm:min-w-0 touch-manipulation select-none"
-                  >
+              <p className="text-xs text-gray-400 mb-2 md:hidden">← 오른쪽으로 밀어 더 많은 플랫폼 보기</p>
+              {/* 모바일~태블릿: 가로 스크롤 / md 이상: 그리드 (스크롤이 잘 되도록 md 전까지는 flex 스크롤 유지) */}
+              <div className="w-full min-w-0 overflow-hidden sm:overflow-visible">
+                <div 
+                  className="w-full max-w-full min-w-0 flex overflow-x-auto overflow-y-hidden gap-2 pb-2 -mx-1 px-1 sm:mx-0 sm:px-0 sm:pb-0 md:mx-0 md:px-0 md:pb-0 md:grid md:grid-cols-3 md:gap-3 lg:grid-cols-6 lg:gap-6 md:overflow-visible [&::-webkit-scrollbar]:hidden"
+                  style={{ 
+                    WebkitOverflowScrolling: 'touch',
+                    overflowX: 'auto',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                  } as React.CSSProperties}
+                >
+                  {SNS_PLATFORMS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { setSelectedPlatform(p.name); setSelectedProductId(''); setSelectedCategory(''); }}
+                      className="flex flex-col items-center gap-1.5 sm:gap-4 group shrink-0 w-12 sm:w-12 md:w-auto md:min-w-0 touch-manipulation select-none flex-shrink-0"
+                    >
                     <div className={`w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-[36px] flex items-center justify-center transition-all border-2 sm:border-4 relative ${selectedPlatform === p.name ? 'border-blue-600 bg-blue-50 shadow-xl sm:shadow-2xl scale-105 sm:scale-110' : 'border-transparent bg-gray-50'}`}>
                       <img
                         src={p.icon}
@@ -338,6 +344,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                     <span className={`text-[10px] sm:text-[13px] font-black italic leading-tight text-center break-normal ${selectedPlatform === p.name ? 'text-blue-600' : 'text-gray-400'}`}>{p.name}</span>
                   </button>
                 ))}
+                </div>
               </div>
             </div>
 
