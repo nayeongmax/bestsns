@@ -120,14 +120,15 @@ const AIConsulting: React.FC<Props> = ({ user }) => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto h-[80vh] bg-white rounded-[48px] shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-      <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-white z-10">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-blue-100">🤖</div>
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-20 sm:pb-24">
+      <div className="h-[75vh] min-h-[400px] sm:h-[78vh] md:h-[80vh] bg-white rounded-2xl sm:rounded-3xl md:rounded-[48px] shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+      <div className="p-4 sm:p-6 md:p-8 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white z-10">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg shadow-blue-100">🤖</div>
           <div>
-            <h2 className="text-xl font-black text-gray-900 tracking-tight">THEBEST AI 마케팅 컨설턴트</h2>
-            <p className="text-[11px] text-green-500 font-bold flex items-center gap-1.5 uppercase tracking-widest">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online & Ready to Help
+            <h2 className="text-base sm:text-lg md:text-xl font-black text-gray-900 tracking-tight">THEBEST AI 마케팅 컨설턴트</h2>
+            <p className="text-[10px] sm:text-[11px] text-green-500 font-bold flex items-center gap-1.5 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></span> Online & Ready to Help
             </p>
           </div>
         </div>
@@ -139,20 +140,20 @@ const AIConsulting: React.FC<Props> = ({ user }) => {
         </button>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-10 space-y-8 bg-slate-50">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 space-y-4 sm:space-y-6 md:space-y-8 bg-slate-50" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-20">
-            <div className="w-24 h-24 bg-white rounded-[32px] shadow-xl flex items-center justify-center mb-10 transform rotate-3 hover:rotate-0 transition-transform">
+          <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-10 sm:py-16 md:py-20">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white rounded-2xl sm:rounded-[32px] shadow-xl flex items-center justify-center mb-6 sm:mb-10 transform rotate-3 hover:rotate-0 transition-transform">
               <svg className="w-12 h-12 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"></path></svg>
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-4 italic tracking-tight">무엇이든 물어보세요!</h3>
-            <p className="text-sm text-gray-400 font-bold mb-12 leading-relaxed">콘텐츠 기획, 플랫폼 성장 전략, 광고 카피 작성 등<br/>마케팅과 관련한 최고의 솔루션을 제안해 드립니다.</p>
-            <div className="flex flex-wrap justify-center gap-3">
+            <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3 sm:mb-4 italic tracking-tight">무엇이든 물어보세요!</h3>
+            <p className="text-xs sm:text-sm text-gray-400 font-bold mb-8 sm:mb-12 leading-relaxed px-2">콘텐츠 기획, 플랫폼 성장 전략, 광고 카피 작성 등<br/>마케팅과 관련한 최고의 솔루션을 제안해 드립니다.</p>
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
               {suggestions.map(s => (
-                <button 
-                  key={s} 
+                <button
+                  key={s}
                   onClick={() => setInput(s)}
-                  className="px-6 py-3 bg-white border border-gray-200 rounded-2xl text-xs font-black text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm hover:shadow-md"
+                  className="px-4 py-2.5 sm:px-6 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-black text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm hover:shadow-md"
                 >
                   {s}
                 </button>
@@ -163,7 +164,7 @@ const AIConsulting: React.FC<Props> = ({ user }) => {
 
         {messages.map((m, idx) => (
           <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-            <div className={`max-w-[70%] px-8 py-5 rounded-[32px] text-[15px] shadow-sm leading-relaxed overflow-hidden ${
+            <div className={`max-w-[85%] sm:max-w-[80%] md:max-w-[70%] px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-5 rounded-2xl sm:rounded-[32px] text-[13px] sm:text-[15px] shadow-sm leading-relaxed overflow-hidden ${
               m.role === 'user' ? 'bg-blue-600 text-white rounded-br-none font-bold' : 'bg-white text-gray-700 border border-gray-100 rounded-bl-none'
             }`}>
               {m.role === 'user' ? (
@@ -178,7 +179,7 @@ const AIConsulting: React.FC<Props> = ({ user }) => {
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-white border border-gray-100 px-8 py-4 rounded-[24px] flex gap-2">
+            <div className="bg-white border border-gray-100 px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-4 rounded-xl sm:rounded-[24px] flex gap-2">
               <span className="w-2 h-2 bg-blue-300 rounded-full animate-bounce"></span>
               <span className="w-2 h-2 bg-blue-300 rounded-full animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-2 h-2 bg-blue-300 rounded-full animate-bounce [animation-delay:0.4s]"></span>
@@ -187,25 +188,26 @@ const AIConsulting: React.FC<Props> = ({ user }) => {
         )}
       </div>
 
-      <div className="p-8 bg-white border-t border-gray-100">
-        <div className="relative bg-slate-50 rounded-[32px] border-2 border-transparent focus-within:border-blue-500 focus-within:bg-white p-3 flex items-center transition-all shadow-inner">
-          <input 
-            type="text" 
+      <div className="p-4 sm:p-6 md:p-8 bg-white border-t border-gray-100">
+        <div className="relative bg-slate-50 rounded-xl sm:rounded-2xl md:rounded-[32px] border-2 border-transparent focus-within:border-blue-500 focus-within:bg-white p-2 sm:p-3 flex items-center transition-all shadow-inner">
+          <input
+            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="마케팅 전략에 대해 물어보세요..."
-            className="flex-1 px-6 py-3 outline-none text-[15px] font-bold bg-transparent"
+            className="flex-1 px-3 py-2.5 sm:px-6 sm:py-3 outline-none text-[13px] sm:text-[15px] font-bold bg-transparent min-w-0"
           />
-          <button 
+          <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="bg-blue-600 text-white p-4 rounded-2xl hover:bg-blue-700 disabled:bg-gray-200 transition-all shadow-lg shadow-blue-100"
+            className="bg-blue-600 text-white p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl hover:bg-blue-700 disabled:bg-gray-200 transition-all shadow-lg shadow-blue-100 shrink-0"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 };
