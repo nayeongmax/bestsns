@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { WishlistItem, ChannelProduct, EbookProduct, StoreType } from '../types';
+import { WishlistItem, ChannelProduct, EbookProduct, StoreType } from '@/types';
 
 interface Props {
   wishlist: WishlistItem[];
@@ -60,11 +60,11 @@ const WishlistPage: React.FC<Props> = ({ wishlist, onToggleWishlist, channels, e
               </div>
             )}
           </div>
-          <div className="p-6">
+          <div className="p-6 sm:p-6 xl:p-6">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-0.5 rounded uppercase tracking-wider">{item.data.category}</span>
+              <span className="text-[10px] sm:text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-0.5 rounded uppercase tracking-wider">{item.data.category}</span>
             </div>
-            <h3 className={`font-black text-gray-900 mb-6 h-10 line-clamp-2 leading-tight transition-colors ${!isDisabled && 'group-hover:text-blue-600'}`}>{item.data.title}</h3>
+            <h3 className={`font-black text-gray-900 mb-4 xl:mb-6 h-10 line-clamp-2 leading-tight transition-colors ${!isDisabled && 'group-hover:text-blue-600'}`}>{item.data.title}</h3>
             <div className="flex justify-between items-end border-t border-gray-50 pt-4">
               <div className="flex flex-col">
                 <span className="text-[10px] text-gray-300 font-bold uppercase">{item.type === 'channel' ? '구독자' : '전문가'}</span>
@@ -85,28 +85,28 @@ const WishlistPage: React.FC<Props> = ({ wishlist, onToggleWishlist, channels, e
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
-      <div className="flex items-center justify-between mb-12">
-        <h2 className="text-3xl font-black text-gray-900 tracking-tighter flex items-center gap-3 italic">나의 찜 보관함</h2>
-        <span className="bg-white border border-gray-100 px-6 py-2 rounded-full text-sm font-black text-gray-400 shadow-sm">총 {wishlist.length}개 상품</span>
+    <div className="max-w-6xl mx-auto pb-20 px-4 md:px-6 xl:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 xl:mb-12">
+        <h2 className="text-2xl sm:text-3xl xl:text-3xl font-black text-gray-900 tracking-tighter flex items-center gap-3 italic">나의 찜 보관함</h2>
+        <span className="bg-white border border-gray-100 px-4 py-2.5 sm:px-6 sm:py-2 rounded-full text-sm font-black text-gray-400 shadow-sm">총 {wishlist.length}개 상품</span>
       </div>
       
       {wishlist.length === 0 ? (
-        <div className="bg-white rounded-[48px] border border-dashed border-gray-200 py-32 flex flex-col items-center text-center">
-          <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-5xl mb-8 opacity-20 transform rotate-12">❤️</div>
-          <h3 className="text-xl font-black text-gray-300 mb-2">찜한 상품이 없습니다.</h3>
+        <div className="bg-white rounded-[48px] border border-dashed border-gray-200 py-24 sm:py-32 xl:py-32 flex flex-col items-center text-center px-4">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 xl:w-24 xl:h-24 bg-gray-50 rounded-full flex items-center justify-center text-4xl sm:text-5xl xl:text-5xl mb-6 xl:mb-8 opacity-20 transform rotate-12">❤️</div>
+          <h3 className="text-lg sm:text-xl xl:text-xl font-black text-gray-300 mb-2">찜한 상품이 없습니다.</h3>
           <p className="text-sm font-bold text-gray-300">채널판매와 N잡 스토어 페이지에서 하트를 눌러보세요!</p>
         </div>
       ) : (
-        <div className="space-y-24">
+        <div className="space-y-16 xl:space-y-24">
           {/* 찜한 채널 섹션 */}
           {channelWishlist.length > 0 && (
             <section>
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-2 h-8 bg-gray-900 rounded-full"></div>
-                <h3 className="text-2xl font-black text-gray-900 italic">찜한 채널 ({channelWishlist.length})</h3>
+              <div className="flex items-center gap-3 mb-6 xl:mb-8">
+                <div className="w-2 h-6 sm:h-8 xl:h-8 bg-gray-900 rounded-full"></div>
+                <h3 className="text-xl sm:text-2xl xl:text-2xl font-black text-gray-900 italic">찜한 채널 ({channelWishlist.length})</h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 xl:gap-8">
                 {channelWishlist.map(renderItem)}
               </div>
             </section>
@@ -115,11 +115,11 @@ const WishlistPage: React.FC<Props> = ({ wishlist, onToggleWishlist, channels, e
           {/* N잡 스토어 유형별 섹션 */}
           {categories.map((cat) => cat.items.length > 0 && (
             <section key={cat.label}>
-              <div className="flex items-center gap-3 mb-8">
-                <div className={`w-2 h-8 ${cat.color} rounded-full`}></div>
-                <h3 className="text-2xl font-black text-gray-900 italic">{cat.label} ({cat.items.length})</h3>
+              <div className="flex items-center gap-3 mb-6 xl:mb-8">
+                <div className={`w-2 h-6 sm:h-8 xl:h-8 ${cat.color} rounded-full`}></div>
+                <h3 className="text-xl sm:text-2xl xl:text-2xl font-black text-gray-900 italic">{cat.label} ({cat.items.length})</h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 xl:gap-8">
                 {cat.items.map(renderItem)}
               </div>
             </section>
