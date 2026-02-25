@@ -70,7 +70,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
 
   return (
     <>
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm overflow-x-hidden">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm overflow-x-hidden xl:overflow-visible xl:pb-12">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px] min-w-0">
           {/* 왼쪽: 모바일 햄버거만(w-10) / 웹(xl) 로고 그대로 */}
           <div className="w-10 flex-shrink-0 xl:w-auto xl:min-w-0 flex items-center gap-3">
