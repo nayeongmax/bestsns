@@ -218,7 +218,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
 
   return (
     <div className="max-w-[1440px] mx-auto space-y-10 pb-32 px-4 md:px-8">
-      <div className="relative overflow-hidden bg-[#050505] rounded-[56px] shadow-2xl min-h-[400px] flex flex-col justify-center items-center border-4 border-white/10 group">
+      <div className="relative overflow-hidden bg-[#050505] rounded-[32px] shadow-2xl min-h-[200px] md:min-h-[220px] flex flex-col justify-center items-center border-4 border-white/10 group">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="saber-streak bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent top-[15%] animate-saber-run shadow-[0_0_30px_#00f2ff,0_0_10px_#fff]"></div>
           <div className="saber-streak bg-gradient-to-r from-transparent via-[#ff0095] to-transparent top-[45%] animate-saber-run-delay-1 shadow-[0_0_30px_#ff0095,0_0_10px_#fff]"></div>
@@ -226,15 +226,15 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
           <div className="saber-streak bg-gradient-to-r from-transparent via-[#bc00ff] to-transparent top-[30%] animate-saber-run-delay-3 shadow-[0_0_30px_#bc00ff,0_0_10px_#fff]"></div>
         </div>
         
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-20">
-           <div className="px-10 py-3 bg-black/60 backdrop-blur-xl border border-white/20 rounded-full flex items-center gap-3">
-             <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_15px_#ef4444]"></div>
-             <span className="text-[14px] font-black italic tracking-[0.3em] uppercase text-white leading-none">24HR REAL-TIME SYSTEM</span>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+           <div className="px-6 py-2 bg-black/60 backdrop-blur-xl border border-white/20 rounded-full flex items-center gap-2.5">
+             <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse shadow-[0_0_15px_#ef4444]"></div>
+             <span className="text-[11px] font-black italic tracking-[0.2em] uppercase text-white leading-none">24HR REAL-TIME SYSTEM</span>
            </div>
         </div>
 
-        <div className="relative z-10 w-full flex flex-col items-center text-center px-6 h-44 justify-center">
-           <h1 key={`main-${mainIdx}`} className="text-5xl sm:text-7xl md:text-[100px] font-black text-white italic tracking-tighter animate-punch-in leading-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
+        <div className="relative z-10 w-full flex flex-col items-center text-center px-4 pt-12 pb-8 md:pt-14 md:pb-10">
+           <h1 key={`main-${mainIdx}`} className="text-4xl sm:text-5xl md:text-6xl font-black text-white italic tracking-tighter animate-punch-in leading-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
              {mainSequence[mainIdx]}
            </h1>
         </div>
