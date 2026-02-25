@@ -71,32 +71,32 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
   return (
     <>
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm overflow-x-hidden">
-        <div className="container mx-auto px-4 h-20 flex items-center max-w-[1550px] min-w-0">
-          {/* 왼쪽: 모바일 햄버거만 / 웹 로고 */}
-          <div className="w-10 flex-shrink-0 xl:w-auto xl:flex-shrink-0 flex items-center gap-3">
+        <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px] min-w-0">
+          {/* 왼쪽: 모바일 햄버거만(w-10) / 웹(xl) 로고 그대로 */}
+          <div className="w-10 flex-shrink-0 xl:w-auto xl:min-w-0 flex items-center gap-3">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="xl:hidden p-2 -ml-1 rounded-xl text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+              className="xl:hidden p-2 -ml-1 rounded-xl text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors shrink-0"
               aria-label="메뉴 열기"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <Link to="/" className="hidden xl:flex text-2xl font-black tracking-tighter shrink-0">
+            <Link to="/" className="hidden xl:flex text-xl sm:text-2xl font-black tracking-tighter shrink-0">
               <span className="text-gray-900 uppercase">THEBEST</span>
               <span className="text-blue-600 uppercase">SNS</span>
             </Link>
           </div>
-          {/* 가운데: 모바일에서만 로고 중앙 배치 */}
+          {/* 가운데: 모바일에서만 로고 중앙 (xl에서는 이 블록 숨김) */}
           <div className="flex-1 flex justify-center min-w-0 xl:hidden">
             <Link to="/" className="text-xl font-black tracking-tighter">
               <span className="text-gray-900 uppercase">THEBEST</span>
               <span className="text-blue-600 uppercase">SNS</span>
             </Link>
           </div>
-          {/* 모바일 오른쪽 균형(로고 중앙 유지용) */}
+          {/* 모바일만: 오른쪽 균형(로고 중앙 유지) */}
           <div className="w-10 flex-shrink-0 xl:hidden" aria-hidden="true" />
 
           <nav className="hidden xl:flex items-center gap-1 flex-1 justify-center h-full">
