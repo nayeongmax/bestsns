@@ -159,7 +159,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         <div className="grid gap-4 sm:gap-6">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm shrink-0" aria-label="이전 주">←</button>
-            <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+            <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden flex justify-center" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
               <div className="flex gap-2 sm:gap-3 w-max px-1">
             {weekDates.map((d) => {
               const c = dateCounts[d] || { total: 0, done: 0 };
