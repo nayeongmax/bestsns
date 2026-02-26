@@ -252,3 +252,4 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
 };
 
 export default PartTimePage;
+export { default as PartTimeTaskRegister } from './PartTimeTaskResgister';
