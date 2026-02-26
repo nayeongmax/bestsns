@@ -213,6 +213,27 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               </div>
             </section>
 
+            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+                  <span className="w-1.5 h-8 bg-teal-500 rounded-full shrink-0" aria-hidden></span>
+                  제공 서비스 상세내용
+                </h3>
+              </div>
+              {tiers.length > 1 && (
+                <div className="px-8 pt-4 flex border-b border-gray-100 gap-2">
+                  {tiers.map((tier, idx) => (
+                    <button key={tier.name} type="button" onClick={() => setSelectedTierIdx(idx)} className={`py-2.5 px-4 rounded-xl text-sm font-black transition-all ${activeTierIdx === idx ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                      {tier.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left border-l-4 border-teal-100 ml-8 my-6">
+                {tiers[activeTierIdx].description?.trim() || "해당 옵션에 대한 제공 서비스 상세가 등록되지 않았습니다."}
+              </div>
+            </section>
+
             {isServiceType && ebook.serviceMethod && (
               <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
@@ -403,7 +424,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
           </div>
         </div>
 
-        {/* 데스크톱: 우측 고정 패널 */}
+        {/* 데스크톱: 우측 고정 패널 - 제공 서비스 상세 항상 표시 */}
         <div className="hidden lg:block w-full lg:w-[450px] shrink-0 sticky top-24">
           <div className="bg-white border border-gray-100 rounded-3xl p-6 xl:p-8 shadow-lg space-y-6">
             <div className="rounded-2xl overflow-hidden bg-gray-100 aspect-video">
@@ -428,6 +449,10 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               <p className="text-2xl font-black text-gray-900 italic tracking-tighter">
                 {tiers[activeTierIdx].pageCount}{currentStoreType === 'ebook' || currentStoreType === 'template' ? 'p' : '일'}
               </p>
+              <div className="pt-4 border-t border-gray-100">
+                <p className="text-[11px] font-black text-gray-400 uppercase italic tracking-wider mb-2">제공 서비스 상세</p>
+                <p className="text-sm text-gray-600 font-medium leading-relaxed whitespace-pre-wrap">{tiers[activeTierIdx].description?.trim() || "등록된 내용이 없습니다."}</p>
+              </div>
             </div>
             <div className="space-y-8 pt-4">
               <button onClick={openInquiry} className="w-full py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-[32px] font-black text-lg hover:bg-gray-50 transition-all shadow-xl italic uppercase tracking-widest active:scale-95">
