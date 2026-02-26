@@ -62,8 +62,8 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
 
   return (
     <div className="max-w-6xl mx-auto pb-20 sm:pb-24 px-3 sm:px-4 md:px-6">
-      {/* 데스크톱(lg+): 6탭 한 줄 + 4열 그리드 */}
-      <div className="hidden lg:block mb-8 xl:mb-12">
+      {/* 데스크톱(md+): 6탭 한 줄 + 4열 그리드 */}
+      <div className="hidden md:block mb-8 xl:mb-12">
         <div className="flex flex-wrap gap-3 xl:gap-4 mb-8">
           {STORE_TABS.map((tab) => (
             <button
@@ -147,8 +147,8 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         </div>
       </div>
 
-      {/* 모바일/태블릿(lg 미만): 6개 필터 축소 + 자료·템플릿 한 줄 + 목록형 */}
-      <div className="lg:hidden">
+      {/* 모바일(md 미만): 6개 필터 축소 + 자료·템플릿 한 줄 + 목록형 */}
+      <div className="md:hidden">
       {/* 6개 필터: 크기 축소, 라벨 한 줄(자료·템플릿 포함) */}
       <div className="mb-4 sm:mb-6">
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
@@ -231,8 +231,8 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         )}
       </div>
 
-      {/* 상품 리스트: 모바일/태블릿 전용 목록형 */}
-      <div className="lg:hidden flex flex-col gap-3 overflow-y-auto px-1 sm:px-2" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+      {/* 상품 리스트: 모바일 전용 목록형 */}
+      <div className="md:hidden flex flex-col gap-3 overflow-y-auto px-1 sm:px-2" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {filteredEbooks.length === 0 ? (
           <div className="col-span-full py-24 sm:py-32 text-center bg-white rounded-2xl sm:rounded-3xl border border-dashed border-gray-100">
             <span className="text-4xl sm:text-6xl mb-4 sm:mb-6 block grayscale">📭</span>
