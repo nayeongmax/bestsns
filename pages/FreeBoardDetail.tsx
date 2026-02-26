@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Post, UserProfile, BoardComment, GradeConfig } from '@/types';
 
+/** 데스크톱 레이아웃 고정. 폰/태블릿 대응 시 데스크톱용 스타일은 수정하지 말 것. */
 interface Props {
   user: UserProfile;
   posts: Post[];
