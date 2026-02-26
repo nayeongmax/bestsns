@@ -54,7 +54,51 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // 2. 단일 가격 조회 로직 (Single Get Price)
+    // 2. 공급처에 주문 전송 (Order Submit)
+    if (event.httpMethod === 'POST' && body.action === 'submit') {
+      const { providerId, apiUrl, serviceId, link, quantity } = body;
+      const envKeyName = `SMM_KEY_${String(providerId).toUpperCase()}`;
+      const apiKey = process.env[envKeyName];
+
+      if (!apiKey) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ status: 'error', message: 'API 키가 설정되지 않았습니다.' })
+        };
+      }
+
+      const formData = new URLSearchParams({
+        key: apiKey,
+        action: 'add',
+        service: String(serviceId),
+        link: String(link),
+        quantity: String(quantity)
+      });
+
+      const fetchResponse = await fetch(String(apiUrl), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+      const data = await fetchResponse.json();
+
+      if (data.order) {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ status: 'success', orderId: String(data.order) })
+        };
+      } else {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ status: 'error', message: data.error || '공급처 주문 실패' })
+        };
+      }
+    }
+
+    // 3. 단일 가격 조회 로직 (Single Get Price)
     if (event.httpMethod === 'GET' && params.providerId && params.serviceId) {
       const { providerId, serviceId, apiUrl } = params;
       const envKeyName = `SMM_KEY_${providerId.toUpperCase()}`;
