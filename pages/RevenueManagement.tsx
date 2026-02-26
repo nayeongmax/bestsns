@@ -628,63 +628,63 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
 
   const renderProjectForm = () => (
     <div className="max-w-[1600px] mx-auto animate-in zoom-in-95 duration-500">
-      <div className="bg-white rounded-[60px] p-16 lg:p-24 shadow-2xl border border-gray-100 space-y-16">
-        <h3 className="text-3xl font-black text-gray-900 flex items-center gap-4 mb-16 italic tracking-tighter"><span className="w-12 h-12 bg-blue-600 text-white rounded-3xl flex items-center justify-center text-xl shadow-lg">✍</span> {editingProjectId ? '프로젝트 정보 수정' : '신규 프로젝트 등록'}</h3>
-        <form onSubmit={handleProjectSubmit} className="space-y-16">
-          <div className="space-y-6">
-            <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4 italic">운영사 선택</label>
+      <div className="bg-white rounded-2xl sm:rounded-[60px] p-4 sm:p-8 lg:p-24 shadow-2xl border border-gray-100 space-y-8 sm:space-y-16">
+        <h3 className="text-xl sm:text-3xl font-black text-gray-900 flex items-center gap-3 sm:gap-4 mb-8 sm:mb-16 italic tracking-tighter"><span className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-2xl sm:rounded-3xl flex items-center justify-center text-lg sm:text-xl shadow-lg">✍</span> {editingProjectId ? '프로젝트 정보 수정' : '신규 프로젝트 등록'}</h3>
+        <form onSubmit={handleProjectSubmit} className="space-y-8 sm:space-y-16">
+          <div className="space-y-4 sm:space-y-6">
+            <label className="text-[11px] sm:text-[12px] font-black text-gray-400 uppercase tracking-widest px-2 italic block">운영사 선택</label>
             <div className="flex flex-wrap gap-2 sm:gap-4">
               {companies.map(com => (
-                <button key={com.id} type="button" onClick={() => setProjectForm({...projectForm, operatingCompanyId: com.id})} className={`shrink-0 min-w-0 py-4 sm:py-6 px-4 sm:px-6 rounded-2xl sm:rounded-3xl text-xs sm:text-[14px] font-black transition-all border-2 sm:border-4 whitespace-nowrap ${projectForm.operatingCompanyId === com.id ? 'bg-blue-50 border-blue-600 text-blue-600 shadow-xl' : 'bg-gray-50 border-transparent text-gray-400 hover:bg-white hover:border-gray-200'}`}>{com.name}</button>
+                <button key={com.id} type="button" onClick={() => setProjectForm({...projectForm, operatingCompanyId: com.id})} className={`shrink-0 py-3 sm:py-6 px-3 sm:px-6 rounded-xl sm:rounded-3xl text-xs sm:text-[14px] font-black transition-all border-2 sm:border-4 whitespace-nowrap ${projectForm.operatingCompanyId === com.id ? 'bg-blue-50 border-blue-600 text-blue-600 shadow-xl' : 'bg-gray-50 border-transparent text-gray-400 hover:bg-white hover:border-gray-200'}`}>{com.name}</button>
               ))}
             </div>
           </div>
-          <div className="bg-gray-50 p-10 rounded-[48px] border border-gray-100 space-y-8">
-            <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest italic">작업 종류</label>
-            <div className="flex flex-wrap gap-x-12 gap-y-6">
+          <div className="bg-gray-50 p-4 sm:p-10 rounded-2xl sm:rounded-[48px] border border-gray-100 space-y-4 sm:space-y-8">
+            <label className="text-[11px] sm:text-[12px] font-black text-gray-400 uppercase tracking-widest italic block">작업 종류</label>
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 gap-y-3 sm:gap-x-12 sm:gap-y-6">
               {PROJECT_TYPES.map(type => (
-                <label key={type} className="flex items-center gap-3 cursor-pointer group"><input type="radio" checked={projectForm.type === type} onChange={() => setProjectForm({...projectForm, type: type as any})} className="w-5 h-5 accent-blue-600" /><span className={`text-[15px] font-black ${projectForm.type === type ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`}>{type}</span></label>
+                <label key={type} className="flex items-center gap-2 sm:gap-3 cursor-pointer group whitespace-nowrap"><input type="radio" checked={projectForm.type === type} onChange={() => setProjectForm({...projectForm, type: type as any})} className="w-4 h-4 sm:w-5 sm:h-5 accent-blue-600 shrink-0" /><span className={`text-sm sm:text-[15px] font-black ${projectForm.type === type ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`}>{type}</span></label>
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-             <div className="space-y-3"><label className="text-[12px] font-black text-gray-400 px-4 italic">업체명</label><input type="text" value={projectForm.clientName || ''} onChange={e => setProjectForm({...projectForm, clientName: e.target.value})} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black outline-none focus:ring-4 focus:ring-blue-100 shadow-inner" required /></div>
-             <div className="space-y-3"><label className="text-[12px] font-black text-gray-400 px-4 italic">브랜드/카페명</label><input type="text" value={projectForm.cafeName || ''} onChange={e => setProjectForm({...projectForm, cafeName: e.target.value})} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black outline-none focus:ring-4 focus:ring-blue-100 shadow-inner" /></div>
-             <div className="space-y-3"><label className="text-[12px] font-black text-blue-500 px-4 italic underline decoration-blue-200">작업 페이지 링크</label><input type="text" value={projectForm.workLink || ''} onChange={e => setProjectForm({...projectForm, workLink: e.target.value})} placeholder="https://..." className="w-full p-6 bg-blue-50/50 border-none rounded-[32px] font-black text-blue-600 outline-none focus:ring-4 focus:ring-blue-100 shadow-inner" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-10">
+             <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 italic block">업체명</label><input type="text" value={projectForm.clientName || ''} onChange={e => setProjectForm({...projectForm, clientName: e.target.value})} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-xl sm:rounded-[32px] font-black outline-none focus:ring-4 focus:ring-blue-100 shadow-inner text-sm sm:text-base" required /></div>
+             <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 italic block">브랜드/카페명</label><input type="text" value={projectForm.cafeName || ''} onChange={e => setProjectForm({...projectForm, cafeName: e.target.value})} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-xl sm:rounded-[32px] font-black outline-none focus:ring-4 focus:ring-blue-100 shadow-inner text-sm sm:text-base" /></div>
+             <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-blue-500 px-2 italic underline decoration-blue-200 block">작업 페이지 링크</label><input type="text" value={projectForm.workLink || ''} onChange={e => setProjectForm({...projectForm, workLink: e.target.value})} placeholder="https://..." className="w-full p-4 sm:p-6 bg-blue-50/50 border-none rounded-xl sm:rounded-[32px] font-black text-blue-600 outline-none focus:ring-4 focus:ring-blue-100 shadow-inner text-sm sm:text-base" /></div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-             <div className="space-y-3"><label className="text-[12px] font-black text-gray-400 px-4">결제금액 (원)</label><input type="number" value={projectForm.paymentAmount || ''} onChange={e => setProjectForm({...projectForm, paymentAmount: Number(e.target.value)})} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black shadow-inner" required /></div>
-             <div className="space-y-3"><label className="text-[12px] font-black text-gray-400 px-4">실제 정산금 (원)</label><input type="number" value={projectForm.settlementAmount || ''} onChange={e => setProjectForm({...projectForm, settlementAmount: Number(e.target.value)})} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black shadow-inner" required /></div>
-             <div className="space-y-6">
-                <label className="text-[12px] font-black text-gray-400 px-4 italic">세금계산서 발행 여부</label>
-                <div className="flex gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-10">
+             <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 block">결제금액 (원)</label><input type="number" value={projectForm.paymentAmount || ''} onChange={e => setProjectForm({...projectForm, paymentAmount: Number(e.target.value)})} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-xl sm:rounded-[32px] font-black shadow-inner text-sm sm:text-base" required /></div>
+             <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 block">실제 정산금 (원)</label><input type="number" value={projectForm.settlementAmount || ''} onChange={e => setProjectForm({...projectForm, settlementAmount: Number(e.target.value)})} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-xl sm:rounded-[32px] font-black shadow-inner text-sm sm:text-base" required /></div>
+             <div className="space-y-2 sm:space-y-6">
+                <label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 italic block">세금계산서 발행 여부</label>
+                <div className="flex gap-3 sm:gap-4">
                   {['발행', '미발행'].map(status => (
-                    <button key={status} type="button" onClick={() => setProjectForm({...projectForm, taxInvoice: status as any})} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all border-2 ${projectForm.taxInvoice === status ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-gray-100 text-gray-400'}`}>{status}</button>
+                    <button key={status} type="button" onClick={() => setProjectForm({...projectForm, taxInvoice: status as any})} className={`flex-1 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all border-2 ${projectForm.taxInvoice === status ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-gray-100 text-gray-400'}`}>{status}</button>
                   ))}
                 </div>
              </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="space-y-3"><label className="text-[12px] font-black text-gray-400 px-4 italic">계약 진행 방식</label><select value={projectForm.channel} onChange={e => setProjectForm({...projectForm, channel: e.target.value})} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-900 shadow-inner outline-none appearance-none cursor-pointer focus:ring-4 focus:ring-blue-50">{CHANNEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select></div>
-            <div className="space-y-3"><label className="text-[12px] font-black text-gray-400 px-4 italic">진행 차수 (ROUND)</label><input type="number" value={projectForm.round} onChange={e => setProjectForm({...projectForm, round: Number(e.target.value)})} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-900 text-center shadow-inner" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
+            <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 italic block">계약 진행 방식</label><select value={projectForm.channel} onChange={e => setProjectForm({...projectForm, channel: e.target.value})} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-xl sm:rounded-[32px] font-black text-gray-900 shadow-inner outline-none appearance-none cursor-pointer focus:ring-4 focus:ring-blue-50 text-sm sm:text-base">{CHANNEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select></div>
+            <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 italic block">진행 차수 (ROUND)</label><input type="number" value={projectForm.round} onChange={e => setProjectForm({...projectForm, round: Number(e.target.value)})} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-xl sm:rounded-[32px] font-black text-gray-900 text-center shadow-inner text-sm sm:text-base" /></div>
           </div>
-          <div className="bg-blue-600 p-12 lg:p-16 rounded-[60px] text-white shadow-2xl space-y-12 relative overflow-hidden">
-             <h4 className="text-2xl font-black italic tracking-tighter flex items-center gap-3">🗓 기간 및 마감 설정</h4>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                <div className="space-y-8">
-                   <div className="space-y-3"><label className="text-[11px] font-black text-blue-200 uppercase tracking-widest px-2">시작일</label><input type="date" value={projectForm.startDate} onChange={e => setProjectForm({...projectForm, startDate: e.target.value})} className="w-full p-6 bg-white/10 border-2 border-white/20 rounded-[32px] font-black outline-none" /></div>
-                   <div className="space-y-6">
-                      <label className="flex items-center gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'weekday'} onChange={() => setProjectForm({...projectForm, deadlineType: 'weekday'})} className="w-6 h-6 accent-white" /><span className="font-black text-xl italic">평일 기준 소요</span><input type="number" value={projectForm.duration} onChange={e => setProjectForm({...projectForm, duration: Number(e.target.value)})} className="w-24 p-2 bg-white/20 rounded-xl text-center font-black" /><span className="text-blue-100 text-sm">일</span></label>
-                      <label className="flex items-center gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'fixed'} onChange={() => setProjectForm({...projectForm, deadlineType: 'fixed'})} className="w-6 h-6 accent-white" /><span className="font-black text-xl italic">고정일 마감 (당/익월)</span><input type="number" value={projectForm.fixedDay || 25} onChange={e => setProjectForm({...projectForm, fixedDay: Number(e.target.value)})} className="w-20 p-2 bg-white/20 rounded-xl text-center font-black" /><span className="text-blue-100 text-sm">일</span></label>
-                      <label className="flex items-center gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'specific'} onChange={() => setProjectForm({...projectForm, deadlineType: 'specific'})} className="w-6 h-6 accent-white" /><span className="font-black text-xl italic">특정일 직접 지정</span><input type="date" value={projectForm.endDate} onChange={e => setProjectForm({...projectForm, endDate: e.target.value})} className="p-3 bg-white/20 rounded-xl font-black text-xs" /></label>
+          <div className="bg-blue-600 p-6 sm:p-12 lg:p-16 rounded-2xl sm:rounded-[60px] text-white shadow-2xl space-y-8 sm:space-y-12 relative overflow-hidden">
+             <h4 className="text-xl sm:text-2xl font-black italic tracking-tighter flex items-center gap-3">🗓 기간 및 마감 설정</h4>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-16">
+                <div className="space-y-6 sm:space-y-8">
+                   <div className="space-y-2 sm:space-y-3"><label className="text-[10px] sm:text-[11px] font-black text-blue-200 uppercase tracking-widest px-2 block">시작일</label><input type="date" value={projectForm.startDate} onChange={e => setProjectForm({...projectForm, startDate: e.target.value})} className="w-full p-4 sm:p-6 bg-white/10 border-2 border-white/20 rounded-xl sm:rounded-[32px] font-black outline-none text-sm sm:text-base min-w-0" /><p className="lg:hidden text-[11px] font-bold text-blue-200">{projectForm.startDate}</p></div>
+                   <div className="space-y-4 sm:space-y-6">
+                      <label className="flex flex-wrap items-center gap-2 sm:gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'weekday'} onChange={() => setProjectForm({...projectForm, deadlineType: 'weekday'})} className="w-5 h-5 sm:w-6 sm:h-6 accent-white shrink-0" /><span className="font-black text-base sm:text-xl italic">평일 기준 소요</span><input type="number" value={projectForm.duration} onChange={e => setProjectForm({...projectForm, duration: Number(e.target.value)})} className="w-16 sm:w-24 p-2 bg-white/20 rounded-xl text-center font-black text-sm sm:text-base" /><span className="text-blue-100 text-xs sm:text-sm">일</span></label>
+                      <label className="flex flex-wrap items-center gap-2 sm:gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'fixed'} onChange={() => setProjectForm({...projectForm, deadlineType: 'fixed'})} className="w-5 h-5 sm:w-6 sm:h-6 accent-white shrink-0" /><span className="font-black text-base sm:text-xl italic">고정일 마감 (당/익월)</span><input type="number" value={projectForm.fixedDay || 25} onChange={e => setProjectForm({...projectForm, fixedDay: Number(e.target.value)})} className="w-14 sm:w-20 p-2 bg-white/20 rounded-xl text-center font-black text-sm sm:text-base" /><span className="text-blue-100 text-xs sm:text-sm">일</span></label>
+                      <label className="flex flex-wrap items-center gap-2 sm:gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'specific'} onChange={() => setProjectForm({...projectForm, deadlineType: 'specific'})} className="w-5 h-5 sm:w-6 sm:h-6 accent-white shrink-0" /><span className="font-black text-base sm:text-xl italic">특정일 직접 지정</span><input type="date" value={projectForm.endDate} onChange={e => setProjectForm({...projectForm, endDate: e.target.value})} className="p-2 sm:p-3 bg-white/20 rounded-xl font-black text-xs min-w-0" /><p className="lg:hidden text-[11px] text-blue-200">{projectForm.endDate}</p></label>
                    </div>
                 </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 border-2 border-white/10 rounded-[48px] p-10"><span className="text-blue-200 font-black text-sm uppercase tracking-[0.3em] mb-4 italic">최종 마감 예정일</span><p className="text-7xl font-black tracking-tighter italic">{finalDeadline}</p><p className="mt-8 text-blue-100 font-bold text-sm text-center leading-relaxed">계산된 마감일은 주말을 고려한<br/>가장 정확한 비즈니스 스케줄입니다.</p></div>
+                <div className="flex flex-col items-center justify-center bg-white/5 border-2 border-white/10 rounded-2xl sm:rounded-[48px] p-6 sm:p-10"><span className="text-blue-200 font-black text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4 italic">최종 마감 예정일</span><p className="text-4xl sm:text-7xl font-black tracking-tighter italic">{finalDeadline}</p><p className="mt-4 sm:mt-8 text-blue-100 font-bold text-xs sm:text-sm text-center leading-relaxed">계산된 마감일은 주말을 고려한<br className="hidden sm:block"/>가장 정확한 비즈니스 스케줄입니다.</p></div>
              </div>
           </div>
-          <div className="flex gap-6">
-             <button type="button" onClick={() => { setActiveTab('dashboard'); setEditingProjectId(null); }} className="flex-1 py-8 bg-gray-100 text-gray-400 rounded-[40px] font-black text-xl hover:bg-gray-200 transition-all italic uppercase">취소 / 돌아가기</button>
-             <button type="submit" className="flex-[2] py-8 bg-black text-white rounded-[40px] font-black text-2xl shadow-2xl hover:bg-blue-600 transition-all italic uppercase tracking-widest">{editingProjectId ? '정보 수정 완료' : '신규 등록 완료'}</button>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+             <button type="button" onClick={() => { setActiveTab('dashboard'); setEditingProjectId(null); }} className="flex-1 py-6 sm:py-8 bg-gray-100 text-gray-400 rounded-xl sm:rounded-[40px] font-black text-base sm:text-xl hover:bg-gray-200 transition-all italic uppercase">취소 / 돌아가기</button>
+             <button type="submit" className="flex-[2] py-6 sm:py-8 bg-black text-white rounded-xl sm:rounded-[40px] font-black text-xl sm:text-2xl shadow-2xl hover:bg-blue-600 transition-all italic uppercase tracking-widest">{(editingProjectId ? '정보 수정 완료' : '신규 등록 완료')}</button>
           </div>
         </form>
       </div>
@@ -698,8 +698,16 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
         <div className="bg-gray-50 p-4 sm:p-10 rounded-2xl sm:rounded-[40px] border border-gray-100 mb-8 sm:mb-16 space-y-4 sm:space-y-8">
            <div className="space-y-2 sm:space-y-4"><label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest px-2">할 일 내용</label><input type="text" value={todoForm.text} onChange={e => setTodoForm({...todoForm, text: e.target.value})} placeholder="어떤 일을 하실 건가요?" className="w-full p-4 sm:p-6 bg-white border-none rounded-xl sm:rounded-[32px] font-black text-gray-800 text-sm sm:text-lg shadow-sm outline-none focus:ring-4 focus:ring-blue-50" /></div>
            <div className="grid grid-cols-2 gap-4 sm:gap-8">
-              <div className="space-y-2 sm:space-y-4"><label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest px-2">시작일</label><input type="date" value={todoForm.startDate} onChange={e => setTodoForm({...todoForm, startDate: e.target.value})} className="w-full p-3 sm:p-5 bg-white border-none rounded-xl sm:rounded-2xl font-black shadow-sm text-sm sm:text-base" /></div>
-              <div className="space-y-2 sm:space-y-4"><label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest px-2">종료일</label><input type="date" value={todoForm.endDate} onChange={e => setTodoForm({...todoForm, endDate: e.target.value})} className="w-full p-3 sm:p-5 bg-white border-none rounded-xl sm:rounded-2xl font-black shadow-sm text-sm sm:text-base" /></div>
+              <div className="space-y-2 sm:space-y-4">
+                <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest px-2">시작일</label>
+                <input type="date" value={todoForm.startDate} onChange={e => setTodoForm({...todoForm, startDate: e.target.value})} className="w-full p-3 sm:p-5 bg-white border-none rounded-xl sm:rounded-2xl font-black shadow-sm text-sm sm:text-base min-w-0" />
+                <p className="lg:hidden text-[11px] font-bold text-gray-500 italic">{todoForm.startDate}</p>
+              </div>
+              <div className="space-y-2 sm:space-y-4">
+                <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest px-2">종료일</label>
+                <input type="date" value={todoForm.endDate} onChange={e => setTodoForm({...todoForm, endDate: e.target.value})} className="w-full p-3 sm:p-5 bg-white border-none rounded-xl sm:rounded-2xl font-black shadow-sm text-sm sm:text-base min-w-0" />
+                <p className="lg:hidden text-[11px] font-bold text-gray-500 italic">{todoForm.endDate}</p>
+              </div>
            </div>
            <button onClick={() => { if (!todoForm.text) return; setTodos(prev => [...prev, { id: `td_${Date.now()}`, text: todoForm.text!, startDate: todoForm.startDate!, endDate: todoForm.endDate!, completed: false }]); setTodoForm({ text: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] }); }} className="w-full py-4 sm:py-6 bg-blue-600 text-white rounded-xl sm:rounded-[32px] font-black text-base sm:text-xl shadow-xl shadow-blue-100 hover:bg-black transition-all">할 일 추가하기</button>
         </div>
