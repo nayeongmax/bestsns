@@ -118,8 +118,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
               누구나<span className="text-emerald-600">알바</span>
             </h2>
-            <p className="text-gray-700 font-black mt-1.5 sm:mt-2 text-sm sm:text-base">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
-            <p className="text-gray-700 font-black mt-1 text-sm sm:text-base">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
+            <p className="text-gray-700 font-black mt-1.5 sm:mt-2 text-xs sm:text-base whitespace-nowrap lg:whitespace-normal">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
+            <p className="text-gray-700 font-black mt-1 text-xs sm:text-base whitespace-nowrap lg:whitespace-normal">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
             <div className="mt-3 sm:mt-4 flex flex-wrap gap-2">
               {user?.role === 'admin' && (
                 <button
@@ -159,8 +159,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         <div className="grid gap-4 sm:gap-6">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm shrink-0" aria-label="이전 주">←</button>
-            <div className="flex-1 min-w-0 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-              <div className="flex gap-2 sm:gap-3 w-max min-w-full px-1">
+            <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+              <div className="flex gap-2 sm:gap-3 w-max px-1">
             {weekDates.map((d) => {
               const c = dateCounts[d] || { total: 0, done: 0 };
               const isSelected = effectiveDate === d;
@@ -226,12 +226,9 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           )}
         </div>
 
-        <div className="bg-blue-50/80 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-blue-100">
-          <p className="text-blue-800 font-bold text-sm sm:text-base">
-            💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.
-            <br />
-            수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()}원</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
-          </p>
+        <div className="bg-blue-50/80 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-blue-100 space-y-2">
+          <p className="text-blue-800 font-bold text-sm sm:text-base leading-snug line-clamp-2">💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.</p>
+          <p className="text-blue-800 font-bold text-sm sm:text-base leading-snug line-clamp-2">수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()}원</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.</p>
         </div>
 
         <button onClick={() => navigate('/sns')} className="bg-gray-100 text-gray-600 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-sm hover:bg-gray-200 transition-all w-full md:w-auto">
