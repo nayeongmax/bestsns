@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Post, UserProfile } from '../types';
+import { Post, UserProfile } from '@/types';
 
+/** 데스크톱 레이아웃 고정. 폰/태블릿 대응 시 데스크톱용 스타일은 수정하지 말 것. */
 interface Props {
   user: UserProfile;
   posts: Post[];
@@ -11,7 +11,7 @@ interface Props {
 
 const CATEGORIES = ['유튜브', '수익화', '마케팅', '자유'];
 // 로컬 스토리지 용량 한계를 고려하여 파일당 최대 용량을 1MB로 하향 조정 (GIF 먹통 방지 핵심)
-const MAX_FILE_SIZE = 1 * 1024 * 1024; 
+const MAX_FILE_SIZE = 1 * 1024 * 1024;
 
 const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
   const [category, setCategory] = useState(editPost?.category || '자유');
   const [images, setImages] = useState<string[]>(editPost?.images || []);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -33,7 +33,6 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
     }
   }, [editPost, user, navigate]);
 
-  // 이미지 압축 엔진 (이미지만 처리, GIF는 압축 시 애니메이션이 깨지므로 별도 처리)
   const boardImageCompressor = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -41,7 +40,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800; 
+          const MAX_WIDTH = 800;
           let width = img.width;
           let height = img.height;
           if (width > MAX_WIDTH) {
@@ -52,7 +51,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.5)); 
+          resolve(canvas.toDataURL('image/jpeg', 0.5));
         };
         img.onerror = () => reject('이미지 로드 실패');
         img.src = e.target?.result as string;
@@ -67,8 +66,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
     if (!files || isUploading) return;
 
     const selectedFiles = Array.from(files);
-    
-    // 전체 개수 제한 (로컬 스토리지 과부하 방지)
+
     if (images.length + selectedFiles.length > 5) {
       alert('이미지 및 GIF는 최대 5장까지만 등록 가능합니다.');
       return;
@@ -78,7 +76,6 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
     const processed: string[] = [];
 
     for (const file of selectedFiles) {
-      // 용량 체크: 1MB 초과 시 즉시 차단 (먹통 방지)
       if (file.size > MAX_FILE_SIZE) {
         alert(`파일 [${file.name}]의 용량이 너무 큽니다. 1MB 이하의 파일만 업로드 가능합니다.`);
         continue;
@@ -86,7 +83,6 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
 
       try {
         if (file.type === 'image/gif') {
-          // GIF는 원본 데이터 유지하되 용량만 체크함
           const base64 = await new Promise<string>((res, rej) => {
             const r = new FileReader();
             r.onload = () => res(r.result as string);
@@ -95,7 +91,6 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
           });
           processed.push(base64);
         } else if (file.type.startsWith('image/')) {
-          // 일반 이미지는 압축 진행
           const compressed = await boardImageCompressor(file);
           processed.push(compressed);
         } else {
@@ -124,7 +119,6 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
     if (!title.trim() || !content.trim()) return alert('제목과 내용을 입력해 주세요.');
     if (isUploading) return alert('파일 처리가 완료될 때까지 기다려 주세요.');
 
-    // 최종 데이터 용량 체크 (로컬 스토리지 5MB 한계 대비)
     const totalDataSize = JSON.stringify(images).length;
     if (totalDataSize > 4 * 1024 * 1024) {
       return alert('첨부된 미디어 전체 용량이 너무 큽니다. GIF 개수를 줄이거나 이미지를 교체해 주세요.');
@@ -132,8 +126,8 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
 
     try {
       if (editPost) {
-        setPosts(prev => prev.map(p => String(p.id) === String(editPost.id) ? { 
-          ...p, title, content, category, images 
+        setPosts(prev => prev.map(p => String(p.id) === String(editPost.id) ? {
+          ...p, title, content, category, images
         } : p));
         alert('수정되었습니다.');
         navigate(`/board/${editPost.id}`);
@@ -175,7 +169,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
              <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4">카테고리 선택</label>
-             <select 
+             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
               className="w-full p-5 bg-gray-50 border-none rounded-[24px] font-black text-gray-700 outline-none shadow-inner cursor-pointer"
@@ -188,7 +182,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
 
         <div className="space-y-4">
            <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4">글 제목</label>
-           <input 
+           <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
@@ -199,7 +193,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
 
         <div className="space-y-4">
            <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4">본문 내용</label>
-           <textarea 
+           <textarea
             rows={12}
             value={content}
             onChange={e => setContent(e.target.value)}
@@ -214,8 +208,8 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
                 미디어 첨부 <span className="text-blue-500 font-black ml-1">(이미지, gif 가능)</span>
                 {isUploading && <span className="text-blue-500 animate-pulse ml-2">처리 중...</span>}
               </label>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 disabled={isUploading}
                 onClick={() => fileInputRef.current?.click()}
                 className={`bg-white border border-gray-200 text-gray-400 px-6 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${isUploading ? 'opacity-50' : 'hover:bg-blue-50 hover:text-blue-500'}`}
@@ -223,21 +217,20 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
                 + 미디어 추가
               </button>
            </div>
-           {/* accept에서 video/* 완전 제거 */}
            <input type="file" ref={fileInputRef} className="hidden" accept="image/png, image/jpeg, image/gif" multiple onChange={handleMediaChange} />
-           
+
            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
              {images.map((img, i) => (
                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden shadow-sm group border border-gray-100 bg-black/5 flex items-center justify-center">
                   <img src={img} className="w-full h-full object-cover" alt="upload preview" />
-                  
+
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                      <div className="flex gap-1">
                         <button type="button" onClick={() => moveImage(i, 'left')} className="p-1.5 bg-white rounded-lg text-gray-900 hover:bg-blue-50 disabled:opacity-30" disabled={i === 0}>◀</button>
                         <button type="button" onClick={() => moveImage(i, 'right')} className="p-1.5 bg-white rounded-lg text-gray-900 hover:bg-blue-50 disabled:opacity-30" disabled={i === images.length - 1}>▶</button>
                      </div>
-                     <button 
-                        type="button" 
+                     <button
+                        type="button"
                         onClick={() => setImages(images.filter((_, idx) => idx !== i))}
                         className="bg-white text-red-500 font-black text-[10px] px-3 py-1 rounded-full"
                       >
@@ -254,7 +247,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
            </p>
         </div>
 
-        <button 
+        <button
           type="submit"
           disabled={isUploading}
           className={`w-full py-8 text-white rounded-[40px] font-black text-2xl italic uppercase tracking-widest shadow-2xl transition-all active:scale-95 ${isUploading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-black shadow-blue-200'}`}
