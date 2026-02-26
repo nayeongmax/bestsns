@@ -106,7 +106,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
             </div>
             <div className="space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-6 border-b border-gray-100">
-                <div className="text-4xl md:text-6xl font-black text-gray-900 italic tracking-tighter leading-none">₩ {channel.price.toLocaleString()}</div>
+                <div className="text-4xl md:text-6xl font-black text-gray-900 italic tracking-tighter leading-none whitespace-nowrap">₩ {channel.price.toLocaleString()}</div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                   <button onClick={handleStartConsultation} className="flex-1 sm:w-48 py-6 bg-white border-2 border-gray-900 text-gray-900 rounded-[24px] font-black text-lg hover:bg-gray-50 transition-all shadow-lg active:scale-95 italic uppercase">상담하기</button>
                   <button onClick={handleBuyNow} className="flex-1 sm:w-64 py-6 bg-gray-900 text-white rounded-[24px] font-black text-lg hover:bg-blue-600 transition-all shadow-2xl shadow-blue-100 active:scale-95 italic uppercase">즉시구매</button>
@@ -138,7 +138,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
                 <span className="font-black text-gray-900">{reviewStats.avg}</span>
                 <span className="text-gray-400 text-xs">({reviewStats.total}건)</span>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-3">₩ {channel.price.toLocaleString()}</p>
+              <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-3 whitespace-nowrap">₩ {channel.price.toLocaleString()}</p>
             </div>
           </div>
 
@@ -262,7 +262,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
             <div className="rounded-2xl overflow-hidden bg-gray-100 aspect-video">
               <img src={channel.thumbnail} alt="" className="w-full h-full object-cover" />
             </div>
-            <p className="text-xl font-black text-gray-900">₩ {channel.price.toLocaleString()}</p>
+            <p className="text-xl font-black text-gray-900 whitespace-nowrap">₩ {channel.price.toLocaleString()}</p>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => { setShowActionModal(false); handleStartConsultation(); }} className="py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all">
                 상담하기
