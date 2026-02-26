@@ -128,7 +128,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
   const isServiceType = ['marketing', 'lecture', 'consulting'].includes(currentStoreType);
 
   return (
-    <div className="max-w-[1400px] mx-auto pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
+    <div className="max-w-[1400px] mx-auto pb-36 sm:pb-40 lg:pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
       <button onClick={() => navigate(-1)} className="mb-8 flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 transition-colors group">
         <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         뒤로가기
@@ -157,10 +157,10 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             </div>
           </section>
 
-          {/* 전문가 요약 + 세금계산서 — 한 줄 표 */}
+          {/* 전문가 요약 + 세금계산서 — 데스크톱은 테이블, 모바일/태블릿은 한 화면에 들어가도록 컴팩트 그리드 */}
           <section className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-sm">
-             <div className="overflow-x-auto">
-               <table className="w-full text-left border-collapse min-w-[400px]">
+             <div className="hidden lg:block overflow-x-auto">
+               <table className="w-full text-left border-collapse">
                  <tbody className="text-sm">
                    <tr className="border-b border-gray-100">
                      <td className="py-3 pr-4 font-bold text-gray-500 w-28">전문가</td>
@@ -181,7 +181,14 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                  </tbody>
                </table>
              </div>
-             <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+             <div className="lg:hidden grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+               <div><span className="text-gray-500 font-bold block">전문가</span><span className="font-black text-gray-900">{displayAuthor}</span></div>
+               <div><span className="text-gray-500 font-bold block">총 거래</span><span className="font-black text-gray-900">{totalTransactions}건</span></div>
+               <div><span className="text-gray-500 font-bold block">만족도</span><span className="font-black text-gray-900">{expertAvgRating}</span></div>
+               <div><span className="text-gray-500 font-bold block">회원 구분</span><span className="font-black text-gray-900">{expertTypeInfo.label}</span></div>
+               <div className="col-span-2"><span className="text-gray-500 font-bold block">세금계산서</span><span className="font-black text-gray-900">{expertTypeInfo.tax}</span></div>
+             </div>
+             <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end lg:hidden">
                <button onClick={() => setShowActionModal(true)} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black text-sm hover:bg-blue-600 transition-all shadow-lg">
                  문의하기 · 구매하기
                </button>
@@ -199,7 +206,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                     목차
                   </h3>
                 </div>
-                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap">
+                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left">
                   {ebook.index}
                 </div>
               </section>
@@ -212,7 +219,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   서비스 상세설명
                 </h3>
               </div>
-              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap border-l-4 border-blue-100 ml-8 my-6">
+                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left border-l-4 border-blue-100 ml-8 my-6">
                 {ebook.description || "상세 설명이 등록되지 않았습니다."}
               </div>
             </section>
@@ -225,7 +232,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                     서비스 제공방법 및 절차
                   </h3>
                 </div>
-                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap">
+                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left">
                   {ebook.serviceMethod}
                 </div>
               </section>
@@ -259,14 +266,14 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   <div key={idx} className="border border-gray-100 rounded-2xl overflow-hidden bg-gray-50/30 transition-all hover:border-gray-200">
                     <button 
                       onClick={() => setOpenFaqIdx(openFaqIdx === idx ? null : idx)}
-                      className="w-full px-6 py-5 flex justify-between items-center text-left"
+                      className="w-full px-6 py-5 flex justify-between items-center text-left gap-4"
                     >
-                      <span className="font-bold text-gray-800 text-base pr-8">Q. {faq.question}</span>
+                      <span className="font-bold text-gray-800 text-base pr-2 truncate">Q. {faq.question}</span>
                       <svg className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${openFaqIdx === idx ? 'rotate-180 text-blue-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     {openFaqIdx === idx && (
                       <div className="px-6 pb-6 pt-0 animate-in slide-in-from-top-2">
-                        <p className="text-[15px] text-gray-600 font-medium leading-relaxed pl-1">A. {faq.answer}</p>
+                        <p className="text-[15px] text-gray-600 font-medium leading-relaxed pl-1 text-left">A. {faq.answer}</p>
                       </div>
                     )}
                   </div>
@@ -336,7 +343,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                 </h3>
               </div>
               {isServiceType ? (
-                <div className="p-8 text-[15px] text-gray-600 font-medium space-y-6 leading-relaxed">
+                <div className="p-8 text-[15px] text-gray-600 font-medium space-y-6 leading-relaxed text-left">
                   <div className="space-y-2">
                     <p className="font-bold text-gray-900 text-base mb-2">기본 정책</p>
                     <p>1. 용역 제공이 개시되기 전: 취소 및 환불 가능</p>
@@ -352,7 +359,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   </div>
                 </div>
               ) : (
-                <div className="p-8 text-[15px] text-gray-600 font-medium space-y-6 leading-relaxed">
+                <div className="p-8 text-[15px] text-gray-600 font-medium space-y-6 leading-relaxed text-left">
                   <div className="space-y-2">
                     <p className="font-bold text-gray-900 text-base mb-2">기본 정책</p>
                     <p>1. 디지털 콘텐츠 제공이 개시되기 전: 취소 및 환불 가능</p>
@@ -408,6 +415,43 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               </div>
             </section>
           </div>
+        </div>
+
+        {/* 데스크톱(lg+): 우측 고정 패널 — 썸네일, 티어, 가격, 문의/구매 */}
+        <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0">
+          <div className="sticky top-24 space-y-6 bg-white border border-gray-100 rounded-3xl p-6 xl:p-8 shadow-lg">
+            <div className="rounded-2xl overflow-hidden bg-gray-100 aspect-video">
+              <img src={ebook.thumbnail} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex border border-gray-100 rounded-2xl p-2 gap-2">
+              {tiers.map((tier, idx) => (
+                <button key={tier.name} onClick={() => setSelectedTierIdx(idx)} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${activeTierIdx === idx ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>
+                  {tier.name}
+                </button>
+              ))}
+            </div>
+            <p className="text-3xl xl:text-4xl font-black text-gray-900">₩{(tiers[activeTierIdx].price).toLocaleString()}</p>
+            <div className="grid grid-cols-1 gap-3">
+              <button onClick={openInquiry} className="w-full py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-2xl font-black text-base hover:bg-gray-50 transition-all">
+                문의하기
+              </button>
+              <button onClick={handleBuyNow} className={`w-full py-4 ${typeColor} text-white rounded-2xl font-black text-base hover:opacity-95 transition-all`}>
+                구매하기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 모바일/태블릿 전용: 푸터·네비 위 고정 문의/구매 바 */}
+      <div className="lg:hidden fixed bottom-24 left-0 right-0 z-[90] px-4 py-3 bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+        <div className="max-w-[1400px] mx-auto grid grid-cols-2 gap-3">
+          <button onClick={openInquiry} className="py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-50 active:scale-[0.98] transition-all">
+            문의하기
+          </button>
+          <button onClick={handleBuyNow} className={`py-4 ${typeColor} text-white rounded-xl font-bold text-sm hover:opacity-95 active:scale-[0.98] transition-all`}>
+            구매하기
+          </button>
         </div>
       </div>
 
