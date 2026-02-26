@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserProfile } from '../types';
-import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock } from '../types';
-import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '../constants';
+import { UserProfile } from '@/types';
+import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock } from '@/types';
+import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '@/constants';
 import {
   fetchPartTimeTasks,
   fetchPartTimeJobRequests,
@@ -109,23 +109,23 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-6 sm:py-8 md:py-12 px-3 sm:px-4 md:px-6 pb-24 sm:pb-24 animate-in fade-in duration-700">
-      <div className="bg-white rounded-2xl sm:rounded-3xl md:rounded-[48px] p-5 sm:p-8 md:p-12 shadow-xl border border-gray-100 space-y-6 sm:space-y-8 md:space-y-10 relative overflow-hidden">
+    <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700">
+      <div className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-10 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
               누구나<span className="text-emerald-600">알바</span>
             </h2>
-            <p className="text-gray-700 font-black mt-1.5 sm:mt-2 text-xs sm:text-base whitespace-nowrap lg:whitespace-normal">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
-            <p className="text-gray-700 font-black mt-1 text-xs sm:text-base whitespace-nowrap lg:whitespace-normal">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
-            <div className="mt-3 sm:mt-4 flex flex-wrap gap-2">
-              {user?.role === 'admin' && (
+            <p className="text-gray-700 font-black mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
+            <p className="text-gray-700 font-black mt-1">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(user?.role === 'admin' || user?.role === 'manager') && (
                 <button
                   onClick={() => navigate('/part-time/register')}
                   className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-700 transition-all ring-2 ring-gray-400/50"
-                  title="광고주 결제 후 여기서 작업을 등록하세요 (관리자 전용)"
+                  title="광고주 결제 후 여기서 작업을 등록하세요 (운영자 전용)"
                 >
                   작업 등록 (운영자)
                 </button>
@@ -139,28 +139,27 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             </div>
           </div>
           {user ? (
-            <div className="bg-emerald-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-emerald-100 min-w-0 w-full md:min-w-[200px] md:w-auto">
-              <p className="text-[10px] sm:text-[11px] font-black text-gray-500 uppercase italic">수익통장</p>
-              <p className="text-xl sm:text-2xl font-black text-emerald-700 italic">{balance.toLocaleString()}원</p>
-              <p className="text-[10px] sm:text-[11px] text-gray-500 mt-1">
+            <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 min-w-[200px]">
+              <p className="text-[11px] font-black text-gray-500 uppercase italic">수익통장</p>
+              <p className="text-2xl font-black text-emerald-700 italic">{balance.toLocaleString()}원</p>
+              <p className="text-[11px] text-gray-500 mt-1">
                 {balance >= MIN_WITHDRAW_FREELANCER ? '출금 가능' : `${(MIN_WITHDRAW_FREELANCER - balance).toLocaleString()}원 더 모으면 출금 가능`}
               </p>
-              <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-2 sm:mt-3 text-emerald-600 font-black text-xs sm:text-sm hover:underline">
+              <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-3 text-emerald-600 font-black text-sm hover:underline">
                 마이페이지에서 출금하기 →
               </Link>
             </div>
           ) : (
-            <button onClick={() => navigate('/login')} className="bg-gray-900 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-sm hover:bg-emerald-600 transition-all w-full md:w-auto">
+            <button onClick={() => navigate('/login')} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black hover:bg-emerald-600 transition-all">
               로그인 후 이용
             </button>
           )}
         </div>
 
-        <div className="grid gap-4 sm:gap-6">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm shrink-0" aria-label="이전 주">←</button>
-            <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden flex justify-center" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-              <div className="flex gap-2 sm:gap-3 w-max px-1">
+        <div className="grid gap-6">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors" aria-label="이전 주">←</button>
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {weekDates.map((d) => {
               const c = dateCounts[d] || { total: 0, done: 0 };
               const isSelected = effectiveDate === d;
@@ -170,29 +169,28 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                   key={d}
                   type="button"
                   onClick={() => setSelectedDate(d)}
-                  className={`shrink-0 w-[72px] sm:w-[88px] md:w-[100px] p-3 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 ${
+                  className={`p-5 rounded-xl border text-left transition-all duration-200 ${
                     isSelected
                       ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
                       : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
                   }`}
                 >
-                  <p className="text-xs sm:text-sm font-black text-gray-600">{dayLabel}</p>
-                  <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-semibold">작업 {c.total}건</p>
-                  <p className="text-[10px] sm:text-xs text-emerald-600 font-semibold">완료 {c.done}건</p>
+                  <p className="text-sm font-black text-gray-600">{dayLabel}</p>
+                  <p className="text-xs text-gray-500 mt-2 font-semibold">작업 {c.total}건</p>
+                  <p className="text-xs text-emerald-600 font-semibold">완료 {c.done}건</p>
                 </button>
               );
             })}
-              </div>
             </div>
-            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm shrink-0" aria-label="다음 주">→</button>
+            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors" aria-label="다음 주">→</button>
           </div>
 
-          <h3 className="text-lg sm:text-xl font-black text-gray-800">작업목록</h3>
+          <h3 className="text-xl font-black text-gray-800">작업목록</h3>
 
           {sortedTasks.length === 0 ? (
             <p className="text-gray-500 text-center py-10 text-base">해당 날짜의 작업이 없습니다.</p>
           ) : (
-            <div className="max-h-[70vh] overflow-y-auto space-y-3 sm:space-y-4 pr-1 -mr-1" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+            <div className="space-y-4">
               {sortedTasks.map((task) => {
                 const done = isTaskDone(task);
                 return (
@@ -200,23 +198,23 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                     key={task.id}
                     type="button"
                     onClick={() => navigate(`/part-time/${task.id}`)}
-                    className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all min-h-[100px] sm:min-h-0 ${
+                    className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
                       done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-sm'
                     }`}
                   >
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
-                      <h4 className="font-black text-gray-900 text-sm sm:text-base mt-0.5">{task.title}</h4>
-                      <p className="text-sm sm:text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
+                    <div className="flex-1">
+                      <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
+                      <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
+                      <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-4 shrink-0 flex-wrap">
-                      <span className="font-black text-emerald-600 text-sm sm:text-base">+{task.reward.toLocaleString()}원</span>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="font-black text-emerald-600 text-base">+{task.reward.toLocaleString()}원</span>
                       {done ? (
-                        <span className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-gray-200 text-gray-500 text-xs sm:text-sm font-black">완료됨</span>
+                        <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
                       ) : task.applicants?.some((a) => a.selected) ? (
-                        <span className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-amber-100 text-amber-700 text-xs sm:text-sm font-black">선정완료 →</span>
+                        <span className="px-4 py-2 rounded-xl bg-amber-100 text-amber-700 text-sm font-black">선정완료 →</span>
                       ) : (
-                        <span className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-emerald-100 text-emerald-700 text-xs sm:text-sm font-black">상세보기 →</span>
+                        <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-sm font-black">상세보기 →</span>
                       )}
                     </div>
                   </button>
@@ -226,12 +224,15 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           )}
         </div>
 
-        <div className="bg-blue-50/80 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-blue-100 space-y-2">
-          <p className="text-blue-800 font-bold text-sm sm:text-base leading-snug line-clamp-2">💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.</p>
-          <p className="text-blue-800 font-bold text-sm sm:text-base leading-snug line-clamp-2">수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()}원</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.</p>
+        <div className="bg-blue-50/80 p-6 rounded-2xl border border-blue-100">
+          <p className="text-blue-800 font-bold text-base">
+            💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.
+            <br />
+            수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()}원</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
+          </p>
         </div>
 
-        <button onClick={() => navigate('/sns')} className="bg-gray-100 text-gray-600 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-sm hover:bg-gray-200 transition-all w-full md:w-auto">
+        <button onClick={() => navigate('/sns')} className="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-black hover:bg-gray-200 transition-all">
           돌아가기
         </button>
       </div>
