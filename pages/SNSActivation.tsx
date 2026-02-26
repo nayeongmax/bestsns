@@ -197,6 +197,30 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
           status: '준비중',
           externalOrderId: 'PENDING'
         };
+
+        // 공급처 API에 주문 전송
+        try {
+          const resp = await fetch('/.netlify/functions/smm-api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'submit',
+              providerId: bestSource.providerId,
+              apiUrl: provider.apiUrl,
+              serviceId: bestSource.serviceId,
+              link: opt.link,
+              quantity: opt.quantity
+            })
+          });
+          const result = await resp.json();
+          if (result.status === 'success' && result.orderId) {
+            order.externalOrderId = result.orderId;
+            order.status = '진행중';
+          }
+        } catch (e) {
+          console.warn('공급처 주문 전송 실패 (주문은 준비중 상태로 유지):', e);
+        }
+
         onOrderComplete(order);
       }
       
