@@ -117,9 +117,9 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
       {/* 게시글 리스트: 디시인사이드 스타일 — 가로 스크롤 없이 화면 너비에 맞춤 */}
       <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border border-gray-100">
         <div className="overflow-x-auto md:overflow-x-visible" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-          <table className="w-full text-left border-collapse table-fixed md:table-auto">
+          <table className="w-full text-left border-collapse md:table-auto">
             <colgroup>
-              <col className="w-10 sm:w-14" />
+              <col className="w-14 sm:w-16 md:w-20" />
               <col className="min-w-0" />
               <col className="w-16 sm:w-24 hidden sm:table-cell" />
               <col className="w-20 sm:w-28 hidden sm:table-cell" />
@@ -128,7 +128,7 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
             </colgroup>
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="px-1.5 sm:px-4 py-2 sm:py-4 text-center font-black text-gray-900 text-[10px] sm:text-[14px]">번호</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-4 text-center font-black text-gray-900 text-[10px] sm:text-[14px] whitespace-nowrap">번호</th>
                 <th className="px-1.5 sm:px-4 py-2 sm:py-4 font-black text-gray-900 text-[10px] sm:text-[14px]">제목</th>
                 <th className="hidden sm:table-cell px-4 py-4 text-center font-black text-gray-900 text-[14px]">작성자</th>
                 <th className="hidden sm:table-cell px-4 py-4 text-center font-black text-gray-900 text-[14px]">작성일자</th>
@@ -146,7 +146,7 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
                   const absoluteIdx = (currentPage - 1) * POSTS_PER_PAGE + idx;
                   const isNotice = activeCategory === '전체' && absoluteIdx === 0 && post.category === '공지';
                   const isHot = (post as any).isHot;
-                  const activeCommentCount = post.comments.filter(c => !c.isDeleted).length;
+                  const activeCommentCount = (post.comments || []).filter(c => !c.isDeleted).length;
                   let displayNo: string | number = post.id;
                   if (activeCategory === '전체') {
                     if (isNotice) displayNo = "공지";
