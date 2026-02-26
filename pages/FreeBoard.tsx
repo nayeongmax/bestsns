@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Post, Notice, UserProfile, GradeConfig } from '@/types';
@@ -6,6 +5,8 @@ import { Post, Notice, UserProfile, GradeConfig } from '@/types';
 interface Props {
   posts: Post[];
   notices: Notice[];
+  members?: UserProfile[];
+  gradeConfigs?: GradeConfig[];
 }
 
 const CATEGORIES = ['전체', '공지', '유튜브', '수익화', '마케팅', '자유'];
@@ -21,8 +22,8 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
 
   const { displayPosts, normalPostsStartIdx, totalNormalCount } = useMemo(() => {
     const activePosts = posts.filter(p => !p.isDeleted);
-    const filtered = activePosts.filter(p => 
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const filtered = activePosts.filter(p =>
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.author.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -53,56 +54,58 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
   const currentPosts = displayPosts.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-24 animate-in fade-in duration-700 px-3 sm:px-4 md:px-8">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20 animate-in fade-in duration-700 px-4 md:px-8">
       {/* 최상단 공지 연동 섹션 */}
       {latestNotice && (
-        <div className="bg-[#1e293b] rounded-2xl sm:rounded-3xl md:rounded-[32px] p-4 sm:p-6 text-white flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 shadow-xl relative overflow-hidden group">
+        <div className="bg-[#1e293b] rounded-[32px] p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden group">
           <div className="absolute right-0 top-0 opacity-10 translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-700">
-            <svg className="w-48 sm:w-64 h-48 sm:h-64" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            <svg className="w-64 h-64" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
           </div>
-          <div className="flex items-center gap-3 sm:gap-6 relative z-10 min-w-0 flex-1">
-            <div className="bg-orange-500 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full font-black text-[10px] sm:text-xs italic tracking-widest uppercase shrink-0">Official Notice</div>
-            <p className="text-sm sm:text-base md:text-lg font-black tracking-tight truncate min-w-0">{latestNotice.title}</p>
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="bg-orange-500 px-4 py-1.5 rounded-full font-black text-xs italic tracking-widest uppercase">Official Notice</div>
+            <p className="text-lg font-black tracking-tight truncate max-w-2xl">{latestNotice.title}</p>
           </div>
           <button
             onClick={() => navigate('/notices')}
-            className="bg-white/10 hover:bg-white text-white hover:text-gray-900 px-5 sm:px-8 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl font-black text-xs sm:text-[13px] transition-all whitespace-nowrap relative z-10 shrink-0"
+            className="bg-white/10 hover:bg-white text-white hover:text-gray-900 px-8 py-2.5 rounded-2xl font-black text-[13px] transition-all whitespace-nowrap relative z-10"
           >
             전체보기
           </button>
         </div>
       )}
 
-      {/* 상단 헤더 섹션: 데스크톱은 검색+글쓰기 1줄, 모바일/태블릿은 세로 배치 */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl md:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
-        <div className="flex flex-col xl:flex-row xl:items-center gap-3 xl:gap-6 flex-1 w-full">
-             <h2 className="text-xl sm:text-2xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-6 sm:underline-offset-8 shrink-0">자유게시판</h2>
-             <div className="relative group w-full min-w-0 flex-1">
+      {/* 상단 헤더 섹션 */}
+      <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 space-y-6">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-6 flex-1 w-full">
+             <h2 className="text-2xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8 shrink-0">자유게시판</h2>
+             <div className="relative group w-full max-w-xl">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                   placeholder="제목이나 작성자로 검색..."
-                  className="w-full p-3 sm:p-3.5 bg-gray-50 border-none rounded-xl sm:rounded-[18px] focus:ring-4 focus:ring-blue-100 outline-none font-bold text-gray-700 transition-all shadow-inner text-xs sm:text-sm"
+                  className="w-full p-3.5 bg-gray-50 border-none rounded-[18px] focus:ring-4 focus:ring-blue-100 outline-none font-bold text-gray-700 transition-all shadow-inner text-sm"
                 />
-                <div className="absolute right-2.5 sm:right-3.5 top-1/2 -translate-y-1/2 bg-blue-600 text-white p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-lg">
-                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 bg-blue-600 text-white p-2 rounded-xl shadow-lg">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
              </div>
+          </div>
           <button
             onClick={() => navigate('/board/write')}
-            className="bg-[#1e293b] text-white px-5 py-2.5 xl:py-3 xl:px-6 rounded-xl xl:rounded-[18px] font-black shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center gap-2 active:scale-95 italic uppercase tracking-tighter shrink-0 text-xs xl:text-sm w-full xl:w-auto"
+            className="bg-[#1e293b] text-white px-10 py-4 rounded-[20px] font-black shadow-xl hover:bg-blue-600 transition-all flex items-center gap-2 active:scale-95 italic uppercase tracking-tighter shrink-0 text-sm"
           >
             🖋️ 글쓰기
           </button>
         </div>
 
-        <div className="w-full bg-gray-50 p-1 sm:p-1.5 rounded-xl sm:rounded-[24px] flex shadow-inner overflow-x-auto [&::-webkit-scrollbar]:h-0" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+        <div className="w-full bg-gray-50 p-1.5 rounded-[24px] flex shadow-inner">
           {CATEGORIES.map(cat => (
             <button
               key={cat}
               onClick={() => { setActiveCategory(cat); setCurrentPage(1); }}
-              className={`shrink-0 flex-1 min-w-[60px] sm:min-w-0 py-2.5 sm:py-3 rounded-lg sm:rounded-[18px] font-black text-[11px] sm:text-[13px] transition-all italic tracking-tight ${
+              className={`flex-1 py-3 rounded-[18px] font-black text-[13px] transition-all italic tracking-tight ${
                 activeCategory === cat
                 ? 'bg-white text-blue-600 shadow-lg shadow-blue-100/50 scale-100'
                 : 'text-gray-400 hover:text-gray-600 hover:bg-white/50'
@@ -114,95 +117,83 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
         </div>
       </div>
 
-      {/* 게시글 리스트: 디시인사이드 스타일 — 가로 스크롤 없이 화면 너비에 맞춤 */}
-      <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] overflow-hidden shadow-sm border border-gray-100">
-        <div className="overflow-x-auto md:overflow-x-visible" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-          <table className="w-full text-left border-collapse md:table-auto">
-            <colgroup>
-              <col className="w-14 sm:w-16 md:w-20" />
-              <col className="min-w-0" />
-              <col className="w-16 sm:w-24 hidden sm:table-cell" />
-              <col className="w-20 sm:w-28 hidden sm:table-cell" />
-              <col className="w-12 sm:w-20" />
-              <col className="w-10 sm:w-14" />
-            </colgroup>
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="px-2 sm:px-4 py-2 sm:py-4 text-center font-black text-gray-900 text-[10px] sm:text-[14px] whitespace-nowrap">번호</th>
-                <th className="px-1.5 sm:px-4 py-2 sm:py-4 font-black text-gray-900 text-[10px] sm:text-[14px]">제목</th>
-                <th className="hidden sm:table-cell px-4 py-4 text-center font-black text-gray-900 text-[14px]">작성자</th>
-                <th className="hidden sm:table-cell px-4 py-4 text-center font-black text-gray-900 text-[14px]">작성일자</th>
-                <th className="px-1.5 sm:px-4 py-2 sm:py-4 text-center font-black text-gray-900 text-[10px] sm:text-[14px]">조회</th>
-                <th className="px-1.5 sm:px-4 py-2 sm:py-4 text-center font-black text-gray-900 text-[10px] sm:text-[14px]">좋아요</th>
+      {/* 게시글 리스트 테이블 */}
+      <div className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100">
+        <table className="w-full text-left border-collapse table-fixed">
+          <thead>
+            <tr className="bg-gray-50/50 border-b border-gray-100">
+              <th className="px-4 py-4 text-center w-20 font-black text-gray-900 text-[14px]">번호</th>
+              <th className="px-4 py-4 font-black text-gray-900 text-[14px]">제목</th>
+              <th className="px-4 py-4 text-center w-36 font-black text-gray-900 text-[14px]">작성자</th>
+              <th className="px-4 py-4 text-center w-40 font-black text-gray-900 text-[14px]">작성일자</th>
+              <th className="px-4 py-4 text-center w-28 font-black text-gray-900 text-[14px]">조회수</th>
+              <th className="px-4 py-4 text-center w-28 font-black text-gray-900 text-[14px]">좋아요</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {currentPosts.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-20 text-center text-gray-300 font-black italic text-lg">게시글이 존재하지 않습니다.</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {currentPosts.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 sm:py-20 text-center text-gray-300 font-black italic text-sm sm:text-lg">게시글이 없습니다.</td>
-                </tr>
-              ) : (
-                currentPosts.map((post, idx) => {
-                  const absoluteIdx = (currentPage - 1) * POSTS_PER_PAGE + idx;
-                  const isNotice = activeCategory === '전체' && absoluteIdx === 0 && post.category === '공지';
-                  const isHot = (post as any).isHot;
-                  const activeCommentCount = (post.comments || []).filter(c => !c.isDeleted).length;
-                  let displayNo: string | number = post.id;
-                  if (activeCategory === '전체') {
-                    if (isNotice) displayNo = "공지";
-                    else if (isHot) displayNo = "HOT";
-                    else displayNo = totalNormalCount - (absoluteIdx - normalPostsStartIdx);
-                  } else displayNo = totalNormalCount - absoluteIdx;
+            ) : (
+              currentPosts.map((post, idx) => {
+                const absoluteIdx = (currentPage - 1) * POSTS_PER_PAGE + idx;
+                const isNotice = activeCategory === '전체' && absoluteIdx === 0 && post.category === '공지';
+                const isHot = (post as any).isHot;
+                const activeCommentCount = (post.comments || []).filter(c => !c.isDeleted).length;
+                let displayNo: string | number = post.id;
+                if (activeCategory === '전체') {
+                  if (isNotice) displayNo = "공지";
+                  else if (isHot) displayNo = "HOT";
+                  else displayNo = totalNormalCount - (absoluteIdx - normalPostsStartIdx);
+                } else displayNo = totalNormalCount - absoluteIdx;
 
-                  return (
-                    <tr key={post.id} className={`hover:bg-blue-50/20 transition-all cursor-pointer group ${isNotice ? 'bg-red-50/10' : isHot ? 'bg-orange-50/10' : ''}`}>
-                      <td className="px-1.5 sm:px-4 py-2 sm:py-4 text-[10px] sm:text-[13px] font-black text-gray-400 text-center italic">
-                        {isNotice ? <span className="text-red-500 font-black text-[9px] sm:text-[11px]">공지</span> : isHot ? <span className="text-orange-500 font-black text-[9px] sm:text-[11px]">HOT</span> : displayNo}
-                      </td>
-                      <td className="px-1.5 sm:px-4 py-2 sm:py-4 min-w-0">
-                        <Link to={`/board/${post.id}`} className="block min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-                            {!isNotice && (
-                              <span className={`text-[8px] sm:text-[10px] font-black px-1 sm:px-2 py-0.5 rounded italic shadow-sm uppercase shrink-0 ${isHot ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>
-                                {post.category}
-                              </span>
-                            )}
-                            <span className={`text-[11px] sm:text-[15px] font-black transition-colors tracking-tight truncate min-w-0 ${isNotice ? 'text-red-600' : 'text-gray-800 group-hover:text-blue-600'}`}>
-                              {post.title}
+                return (
+                  <tr key={post.id} className={`hover:bg-blue-50/20 transition-all cursor-pointer group ${isNotice ? 'bg-red-50/10' : isHot ? 'bg-orange-50/10' : ''}`}>
+                    <td className="px-4 py-4 text-[13px] font-black text-gray-400 text-center italic">
+                      {isNotice ? <span className="text-red-500 font-black uppercase tracking-tighter text-[11px]">공지</span> : isHot ? <span className="text-orange-500 font-black italic text-[11px]">HOT</span> : displayNo}
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link to={`/board/${post.id}`} className="block">
+                        <div className="flex items-center gap-3">
+                          {!isNotice && (
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded italic shadow-sm uppercase shrink-0 ${isHot ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>
+                              {post.category}
                             </span>
-                            {(post.images?.length > 0 || activeCommentCount > 0) && (
-                              <span className="shrink-0 text-[10px] sm:text-[11px]">
-                                {post.images?.length > 0 && '🖼️'}
-                                {activeCommentCount > 0 && <span className={`ml-0.5 font-black px-1 py-0.5 rounded ${isHot ? 'bg-orange-50 text-orange-400' : 'bg-blue-50 text-blue-400'}`}>[{activeCommentCount}]</span>}
-                              </span>
-                            )}
+                          )}
+                          <span className={`text-[15px] font-black transition-colors tracking-tight truncate ${isNotice ? 'text-red-600' : 'text-gray-800 group-hover:text-blue-600'}`}>
+                            {post.title}
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {post.images && post.images.length > 0 && <span className="text-sm">🖼️</span>}
+                            {activeCommentCount > 0 && <span className={`text-[11px] font-black px-2 py-0.5 rounded-lg shadow-inner ${isHot ? 'bg-orange-50 text-orange-400' : 'bg-blue-50 text-blue-400'}`}>[{activeCommentCount}]</span>}
                           </div>
-                        </Link>
-                      </td>
-                      <td className="hidden sm:table-cell px-4 py-4 text-center">
-                        <span className="text-[14px] font-black text-gray-600 italic truncate block max-w-[120px] mx-auto" title={post.author}>{post.author}</span>
-                      </td>
-                      <td className="hidden sm:table-cell px-4 py-4 text-center text-[13px] font-bold text-gray-400 italic whitespace-nowrap">{post.date}</td>
-                      <td className="px-1.5 sm:px-4 py-2 sm:py-4 text-center text-[10px] sm:text-[14px] font-bold text-gray-400 italic">{post.views.toLocaleString()}</td>
-                      <td className={`px-1.5 sm:px-4 py-2 sm:py-4 text-center text-[11px] sm:text-[16px] font-black italic ${post.likes > 0 ? 'text-green-500' : 'text-gray-300'}`}>
-                        {post.likes}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className="text-[14px] font-black text-gray-600 italic truncate block max-w-[140px] mx-auto" title={post.author}>{post.author}</span>
+                    </td>
+                    <td className="px-4 py-4 text-center text-[13px] font-bold text-gray-400 italic whitespace-nowrap uppercase tracking-tighter">{post.date}</td>
+                    <td className="px-4 py-4 text-center text-[14px] font-bold text-gray-400 italic whitespace-nowrap">{post.views.toLocaleString()}</td>
+                    <td className={`px-4 py-4 text-center text-[16px] font-black italic tracking-tighter whitespace-nowrap ${post.likes > 0 ? 'text-green-500' : 'text-gray-300'}`}>
+                      {post.likes}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 sm:gap-3 pt-4 sm:pt-6 flex-wrap">
-          <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 shadow-sm disabled:opacity-50">◀</button>
+        <div className="flex justify-center items-center gap-3 pt-6">
+          <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 shadow-sm">◀</button>
           {Array.from({ length: totalPages }).map((_, i) => (
-            <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl font-black text-xs sm:text-[14px] transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-105' : 'bg-white text-gray-400 hover:bg-gray-50 border border-gray-100'}`}>{i + 1}</button>
+            <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-xl font-black text-[14px] transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 scale-105' : 'bg-white text-gray-400 hover:bg-gray-50 border border-gray-100'}`}>{i + 1}</button>
           ))}
-          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 shadow-sm disabled:opacity-50">▶</button>
+          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 shadow-sm">▶</button>
         </div>
       )}
     </div>
