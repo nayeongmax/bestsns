@@ -166,7 +166,13 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         const product = smmProducts.find(p => p.id === opt.serviceId);
         if (!product || !product.sources?.length) continue;
         
-        const validActiveSources = product.sources.filter(s => activeProviderIds.has(s.providerId));
+        // 활성화된 공급처 AND 주문 수량이 해당 소스 min~max 범위 내인 것만 선택
+        const validActiveSources = product.sources.filter(s => {
+          if (!activeProviderIds.has(s.providerId)) return false;
+          const srcMin = s.minQuantity ?? product.minQuantity ?? 0;
+          const srcMax = s.maxQuantity ?? product.maxQuantity ?? 999999999;
+          return opt.quantity >= srcMin && opt.quantity <= srcMax;
+        });
         if (validActiveSources.length === 0) continue;
         const bestSource = [...validActiveSources].sort((a, b) => {
           const costA = a.costPrice ?? 0;

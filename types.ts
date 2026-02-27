@@ -458,6 +458,22 @@ export interface SMMProduct {
   isHidden?: boolean;
 }
 
+/** 원가 변동 / 판매중지 알림 */
+export interface SMMPriceAlert {
+  id: string;
+  providerId: string;
+  providerName: string;
+  serviceId: string;
+  /** price_changed: 원가 변동, unavailable: 서비스 중단 */
+  type: 'price_changed' | 'unavailable';
+  oldPrice: number;
+  newPrice?: number;
+  /** 이 서비스 ID를 사용하는 상품명 목록 */
+  productNames: string[];
+  detectedAt: string;
+  isRead: boolean;
+}
+
 export interface SelectedOption {
   id: string;
   serviceId: string;

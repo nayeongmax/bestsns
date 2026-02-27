@@ -141,6 +141,83 @@ exports.handler = async (event, context) => {
       }
     }
 
+    // 4. 원가 변동 감지 (Price Change Check)
+    if (event.httpMethod === 'POST' && body.action === 'checkPrices') {
+      const { providers, sources } = body;
+
+      // 각 공급처의 전체 서비스 목록 조회
+      const fetchedServices = {};
+
+      for (const p of (providers || [])) {
+        const envKeyName = `SMM_KEY_${String(p.id).toUpperCase()}`;
+        const apiKey = process.env[envKeyName];
+        if (!apiKey) continue;
+
+        try {
+          const fetchResponse = await fetch(`${p.apiUrl}?key=${apiKey}&action=services`);
+          const data = await fetchResponse.json();
+          if (Array.isArray(data)) {
+            fetchedServices[p.id] = {};
+            data.forEach(service => {
+              fetchedServices[p.id][String(service.service)] = {
+                rate: parseFloat(service.rate),
+                min: service.min,
+                max: service.max,
+                name: service.name,
+              };
+            });
+          }
+        } catch (err) {
+          console.error(`Provider ${p.id} price check error:`, err);
+        }
+      }
+
+      // 등록된 소스와 현재 JAP 가격 비교
+      const changes = [];
+      for (const src of (sources || [])) {
+        const providerServices = fetchedServices[src.providerId];
+        if (!providerServices) continue;
+
+        const serviceData = providerServices[String(src.serviceId)];
+        if (!serviceData) {
+          // 서비스가 더 이상 목록에 없음 (판매 중지 가능성)
+          changes.push({
+            providerId: src.providerId,
+            serviceId: src.serviceId,
+            type: 'unavailable',
+            oldPrice: src.currentCostPrice,
+            newPrice: null,
+            productNames: src.productNames || [],
+          });
+        } else if (Math.abs(serviceData.rate - src.currentCostPrice) > 0.0001) {
+          // 원가 변동 감지
+          changes.push({
+            providerId: src.providerId,
+            serviceId: src.serviceId,
+            type: 'price_changed',
+            oldPrice: src.currentCostPrice,
+            newPrice: serviceData.rate,
+            productNames: src.productNames || [],
+          });
+        }
+      }
+
+      // latestRates: { providerId: { serviceId: rate } } 형식으로 반환 (자동 원가 업데이트용)
+      const latestRates = {};
+      for (const [pid, services] of Object.entries(fetchedServices)) {
+        latestRates[pid] = {};
+        for (const [sid, data] of Object.entries(services)) {
+          latestRates[pid][sid] = data.rate;
+        }
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ status: 'success', changes, latestRates }),
+      };
+    }
+
     return {
       statusCode: 405,
       headers,
