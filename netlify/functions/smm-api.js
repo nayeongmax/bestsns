@@ -83,6 +83,9 @@ exports.handler = async (event, context) => {
       });
       const data = await fetchResponse.json();
 
+      console.log('[smm-api] JAP 응답 전체:', JSON.stringify(data));
+      console.log('[smm-api] 요청 정보 - providerId:', providerId, '| apiUrl:', apiUrl, '| serviceId:', serviceId, '| quantity:', quantity);
+
       if (data.order) {
         return {
           statusCode: 200,
@@ -90,10 +93,12 @@ exports.handler = async (event, context) => {
           body: JSON.stringify({ status: 'success', orderId: String(data.order) })
         };
       } else {
+        const errMsg = data.error || JSON.stringify(data) || '공급처 주문 실패';
+        console.error('[smm-api] JAP 주문 실패:', errMsg);
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify({ status: 'error', message: data.error || '공급처 주문 실패' })
+          body: JSON.stringify({ status: 'error', message: errMsg })
         };
       }
     }

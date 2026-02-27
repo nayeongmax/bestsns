@@ -216,9 +216,12 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
           if (result.status === 'success' && result.orderId) {
             order.externalOrderId = result.orderId;
             order.status = '진행중';
+          } else {
+            console.error('[주문실패] JAP 에러 메시지:', result.message);
+            console.error('[주문실패] 전송 데이터 - providerId:', bestSource.providerId, '| serviceId:', bestSource.serviceId, '| apiUrl:', provider.apiUrl);
           }
         } catch (e) {
-          console.warn('공급처 주문 전송 실패 (주문은 준비중 상태로 유지):', e);
+          console.error('공급처 주문 전송 실패 (네트워크/파싱 오류):', e);
         }
 
         onOrderComplete(order);
