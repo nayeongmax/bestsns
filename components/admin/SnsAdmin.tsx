@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { SMMProvider, SMMProduct, SMMSource, SMMOrder } from '@/types';
+import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert } from '@/types';
 import { SNS_PLATFORMS } from '../../constants.tsx';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   smmOrders: SMMOrder[];
 }
 
-type SnsTab = 'provider' | 'manage' | 'list' | 'order';
+type SnsTab = 'provider' | 'manage' | 'list' | 'order' | 'monitor';
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders }) => {
@@ -44,9 +44,21 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [orderStatusFilter, setOrderStatusFilter] = useState('전체 상태');
   const [orderMonthFilter, setOrderMonthFilter] = useState('전체 기간');
 
-  const activeProviderIds = useMemo(() => 
-    new Set(smmProviders.filter(p => !p.isHidden).map(p => p.id)), 
+  // 원가 모니터링 알림
+  const [priceAlerts, setPriceAlerts] = useState<SMMPriceAlert[]>(() => {
+    try { return JSON.parse(localStorage.getItem('smm_price_alerts') || '[]'); } catch { return []; }
+  });
+  const [isCheckingPrices, setIsCheckingPrices] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('smm_price_alerts', JSON.stringify(priceAlerts));
+  }, [priceAlerts]);
+
+  const activeProviderIds = useMemo(() =>
+    new Set(smmProviders.filter(p => !p.isHidden).map(p => p.id)),
   [smmProviders]);
+
+  const unreadAlertsCount = useMemo(() => priceAlerts.filter(a => !a.isRead).length, [priceAlerts]);
 
   // --- Netlify Functions 원가 동기화 (JS 버전) ---
   const handleBatchSync = useCallback(async (isAuto = false) => {
@@ -87,16 +99,107 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     }
   }, [smmProviders, syncStatus, setSmmProducts]);
 
+  // 원가 변동 감지 및 자동 업데이트
+  const handlePriceCheck = useCallback(async (isAuto = false) => {
+    if (isCheckingPrices || smmProviders.length === 0 || smmProducts.length === 0) return;
+
+    setIsCheckingPrices(true);
+    try {
+      // 등록된 모든 (providerId, serviceId) 수집
+      const sourceMap = new Map<string, { providerId: string; serviceId: string; currentCostPrice: number; productNames: string[] }>();
+      smmProducts.forEach(prod => {
+        (prod.sources || []).forEach(src => {
+          if (!src.providerId || !src.serviceId) return;
+          const key = `${src.providerId}_${src.serviceId}`;
+          if (!sourceMap.has(key)) {
+            sourceMap.set(key, { providerId: src.providerId, serviceId: src.serviceId, currentCostPrice: src.costPrice, productNames: [prod.name] });
+          } else {
+            const ex = sourceMap.get(key)!;
+            if (!ex.productNames.includes(prod.name)) ex.productNames.push(prod.name);
+          }
+        });
+      });
+
+      const activeSources = Array.from(sourceMap.values()).filter(s =>
+        smmProviders.some(p => p.id === s.providerId && !p.isHidden)
+      );
+      if (activeSources.length === 0) {
+        if (!isAuto) alert('확인할 활성 소스가 없습니다.');
+        return;
+      }
+
+      const response = await fetch('/.netlify/functions/smm-api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'checkPrices',
+          providers: smmProviders.filter(p => !p.isHidden),
+          sources: activeSources,
+        }),
+      });
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        // 원가 자동 업데이트
+        if (result.latestRates && Object.keys(result.latestRates).length > 0) {
+          setSmmProducts(prev => prev.map(prod => ({
+            ...prod,
+            sources: (prod.sources || []).map(src => {
+              const newPrice = result.latestRates[src.providerId]?.[src.serviceId];
+              return newPrice !== undefined ? { ...src, costPrice: newPrice } : src;
+            }),
+          })));
+        }
+
+        // 변동 알림 생성
+        if (result.changes && result.changes.length > 0) {
+          const newAlerts: SMMPriceAlert[] = result.changes.map((c: { providerId: string; serviceId: string; type: 'price_changed' | 'unavailable'; oldPrice: number; newPrice?: number; productNames: string[] }) => ({
+            id: `alert_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+            providerId: c.providerId,
+            providerName: smmProviders.find(p => p.id === c.providerId)?.name || c.providerId,
+            serviceId: c.serviceId,
+            type: c.type,
+            oldPrice: c.oldPrice,
+            newPrice: c.newPrice,
+            productNames: c.productNames || [],
+            detectedAt: new Date().toLocaleString(),
+            isRead: false,
+          }));
+          setPriceAlerts(prev => [...newAlerts, ...prev].slice(0, 100));
+        }
+
+        const timeStr = new Date().toLocaleString();
+        setLastSyncTime(timeStr);
+        localStorage.setItem('smm_last_sync_full', timeStr);
+
+        if (!isAuto) {
+          if (result.changes?.length > 0) {
+            alert(`원가 변동 ${result.changes.length}건 감지! 원가가 자동 업데이트되었습니다. 원가 모니터링 탭에서 확인하세요.`);
+          } else {
+            alert('원가 변동 없음: 모든 소스의 원가가 정상입니다.');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('원가 체크 실패:', err);
+      if (!isAuto) alert('원가 조회 중 오류가 발생했습니다.');
+    } finally {
+      setIsCheckingPrices(false);
+    }
+  }, [smmProviders, smmProducts, isCheckingPrices, setSmmProducts]);
+
+  // 자동 스케줄: 매일 자정(0시), 정오(12시) 원가 체크
   useEffect(() => {
     const checkSchedule = () => {
       const now = new Date();
-      if (now.getMinutes() === 0 && [8, 13, 18].includes(now.getHours())) {
+      if (now.getMinutes() === 0 && [0, 12].includes(now.getHours())) {
+        handlePriceCheck(true);
         handleBatchSync(true);
       }
     };
     const interval = setInterval(checkSchedule, 60000);
     return () => clearInterval(interval);
-  }, [handleBatchSync]);
+  }, [handleBatchSync, handlePriceCheck]);
 
   const fetchSinglePrice = async () => {
     if (!tempSource.providerId || !tempSource.serviceId) return alert('공급처와 서비스 ID를 입력하세요.');
@@ -313,19 +416,23 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
          </div>
       </div>
 
-      <div className="bg-gray-900 p-2.5 rounded-[40px] flex gap-2 shadow-2xl">
+      <div className="bg-gray-900 p-2.5 rounded-[40px] flex gap-2 shadow-2xl flex-wrap">
         {[
-          { id: 'provider', label: '📡 공급처 시스템 설정' },
-          { id: 'manage', label: '🛠️ 마스터 상품 등록' },
-          { id: 'list', label: '📋 통합 상품 인벤토리' },
-          { id: 'order', label: '📈 주문 성과 분석' }
+          { id: 'provider', label: '📡 공급처 설정' },
+          { id: 'manage', label: '🛠️ 상품 등록' },
+          { id: 'list', label: '📋 상품 인벤토리' },
+          { id: 'order', label: '📈 주문 분석' },
+          { id: 'monitor', label: `🔔 원가 모니터링${unreadAlertsCount > 0 ? ` (${unreadAlertsCount})` : ''}` },
         ].map(tab => (
-          <button 
-            key={tab.id} 
-            onClick={() => { setActiveTab(tab.id as any); if(tab.id !== 'manage') setEditingProductId(null); }}
-            className={`flex-1 py-5 rounded-[28px] font-black text-[15px] transition-all ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id as SnsTab); if (tab.id !== 'manage') setEditingProductId(null); if (tab.id === 'monitor') setPriceAlerts(prev => prev.map(a => ({ ...a, isRead: true }))); }}
+            className={`flex-1 py-5 rounded-[28px] font-black text-[14px] transition-all relative ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
           >
             {tab.label}
+            {tab.id === 'monitor' && unreadAlertsCount > 0 && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
+            )}
           </button>
         ))}
       </div>
@@ -587,6 +694,90 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                  </table>
               </div>
            </div>
+        </div>
+      )}
+
+      {activeTab === 'monitor' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          {/* 상단 컨트롤 */}
+          <div className="bg-white p-10 rounded-[56px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+              <h3 className="text-3xl font-black text-gray-900 italic uppercase underline decoration-orange-500 underline-offset-8">원가 모니터링 센터</h3>
+              <p className="text-[13px] font-bold text-gray-400 mt-2">매일 자정(00:00) · 정오(12:00) 자동 체크 · 변동 시 원가 자동 반영</p>
+              <p className="text-[12px] font-bold text-gray-300 mt-1">마지막 체크: {lastSyncTime}</p>
+            </div>
+            <div className="flex gap-3 flex-wrap items-center">
+              <button
+                onClick={() => handlePriceCheck(false)}
+                disabled={isCheckingPrices}
+                className="px-8 py-4 bg-orange-500 text-white rounded-[28px] font-black text-[15px] hover:bg-orange-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isCheckingPrices ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>조회 중...</>
+                ) : '🔍 수동 원가 실시간 조회'}
+              </button>
+              {priceAlerts.length > 0 && (
+                <button
+                  onClick={() => { if (window.confirm('모든 알림을 삭제하시겠습니까?')) setPriceAlerts([]); }}
+                  className="px-6 py-4 bg-gray-100 text-gray-500 rounded-[28px] font-black text-[13px] hover:bg-red-50 hover:text-red-500 transition-all"
+                >
+                  전체 삭제
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 알림 목록 */}
+          {priceAlerts.length === 0 ? (
+            <div className="bg-white rounded-[48px] border border-gray-100 py-40 flex flex-col items-center gap-4 text-center shadow-sm">
+              <span className="text-6xl">✅</span>
+              <p className="text-2xl font-black text-gray-300 italic">변동 없음</p>
+              <p className="text-[14px] font-bold text-gray-300">수동 조회 버튼을 누르거나 자동 스케줄(00:00 / 12:00) 결과를 기다리세요.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {priceAlerts.map(alert => (
+                <div
+                  key={alert.id}
+                  className={`bg-white rounded-[40px] border-2 p-8 shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center justify-between transition-all ${
+                    !alert.isRead ? (alert.type === 'unavailable' ? 'border-red-300 bg-red-50/30' : 'border-orange-300 bg-orange-50/30') : 'border-gray-100 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start gap-6 flex-1 min-w-0">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-md ${alert.type === 'unavailable' ? 'bg-red-500 text-white' : 'bg-orange-400 text-white'}`}>
+                      {alert.type === 'unavailable' ? '🚫' : '💰'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap mb-2">
+                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase italic ${alert.type === 'unavailable' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
+                          {alert.type === 'unavailable' ? '서비스 중단' : '원가 변동'}
+                        </span>
+                        <span className="px-3 py-1 bg-gray-900 text-white rounded-lg text-[10px] font-black italic">{alert.providerName}</span>
+                        <span className="text-[13px] font-black text-blue-600 italic">#{alert.serviceId}</span>
+                        {!alert.isRead && <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+                      </div>
+                      <p className="text-[14px] font-black text-gray-900 truncate">
+                        {alert.type === 'price_changed'
+                          ? `원가 변동: ${alert.oldPrice.toLocaleString()}P → ${(alert.newPrice ?? 0).toLocaleString()}P`
+                          : `서비스 중단 감지 (기존 원가: ${alert.oldPrice.toLocaleString()}P)`
+                        }
+                      </p>
+                      {alert.productNames.length > 0 && (
+                        <p className="text-[11px] font-bold text-gray-400 mt-1 truncate">
+                          연결 상품: {alert.productNames.join(', ')}
+                        </p>
+                      )}
+                      <p className="text-[10px] font-bold text-gray-300 mt-1 italic">{alert.detectedAt}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPriceAlerts(prev => prev.filter(a => a.id !== alert.id))}
+                    className="text-gray-300 hover:text-red-500 font-black text-xl px-3 py-1 shrink-0 transition-all"
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

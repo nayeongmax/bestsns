@@ -166,7 +166,13 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         const product = smmProducts.find(p => p.id === opt.serviceId);
         if (!product || !product.sources?.length) continue;
         
-        const validActiveSources = product.sources.filter(s => activeProviderIds.has(s.providerId));
+        // 활성화된 공급처 AND 주문 수량이 해당 소스 min~max 범위 내인 것만 선택
+        const validActiveSources = product.sources.filter(s => {
+          if (!activeProviderIds.has(s.providerId)) return false;
+          const srcMin = s.minQuantity ?? product.minQuantity ?? 0;
+          const srcMax = s.maxQuantity ?? product.maxQuantity ?? 999999999;
+          return opt.quantity >= srcMin && opt.quantity <= srcMax;
+        });
         if (validActiveSources.length === 0) continue;
         const bestSource = [...validActiveSources].sort((a, b) => {
           const costA = a.costPrice ?? 0;
@@ -216,9 +222,12 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
           if (result.status === 'success' && result.orderId) {
             order.externalOrderId = result.orderId;
             order.status = '진행중';
+          } else {
+            console.error('[주문실패] JAP 에러 메시지:', result.message);
+            console.error('[주문실패] 전송 데이터 - providerId:', bestSource.providerId, '| serviceId:', bestSource.serviceId, '| apiUrl:', provider.apiUrl);
           }
         } catch (e) {
-          console.warn('공급처 주문 전송 실패 (주문은 준비중 상태로 유지):', e);
+          console.error('공급처 주문 전송 실패 (네트워크/파싱 오류):', e);
         }
 
         onOrderComplete(order);
