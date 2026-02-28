@@ -218,8 +218,37 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // 5. 공급처 주문 상태 조회 (Order Status Check)
+    if (event.httpMethod === 'POST' && body.action === 'orderStatus') {
+      const { providerId, apiUrl, orderIds } = body;
+      const envKeyName = `SMM_KEY_${String(providerId).toUpperCase()}`;
+      const apiKey = process.env[envKeyName];
+
+      if (!apiKey) {
+        return { statusCode: 400, headers, body: JSON.stringify({ status: 'error', message: 'API 키가 설정되지 않았습니다.' }) };
+      }
+
+      const formData = new URLSearchParams({
+        key: apiKey,
+        action: 'status',
+        orders: orderIds.join(','),
+      });
+
+      const fetchResponse = await fetch(String(apiUrl), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
+      });
+      const data = await fetchResponse.json();
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ status: 'success', orders: data.orders || data }),
+      };
+    }
+
     return {
-      statusCode: 405,
       headers,
       body: JSON.stringify({ status: 'error', message: '잘못된 요청 방식입니다.' })
     };

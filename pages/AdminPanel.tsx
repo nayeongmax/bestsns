@@ -26,6 +26,7 @@ interface Props {
   setSmmProducts: React.Dispatch<React.SetStateAction<SMMProduct[]>>;
   onDeleteSmmProducts?: (ids: string[]) => void;
   smmOrders: SMMOrder[];
+  setSmmOrders: React.Dispatch<React.SetStateAction<SMMOrder[]>>;
   members: UserProfile[];
   setMembers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
   channelOrders: ChannelOrder[];
@@ -46,7 +47,7 @@ interface Props {
  */
 const AdminPanel: React.FC<Props> = ({ 
   user, ebooks, setEbooks, channels, setChannels, setNotifications,
-  smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders,
+  smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders, setSmmOrders,
   members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
   gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
@@ -107,11 +108,13 @@ const AdminPanel: React.FC<Props> = ({
 
       <main className="min-h-screen">
         {activeTab === 'sns' && (
-          <SnsAdmin 
-            smmProviders={smmProviders} setSmmProviders={setSmmProviders} 
-            smmProducts={smmProducts} setSmmProducts={setSmmProducts} 
+          <SnsAdmin
+            smmProviders={smmProviders} setSmmProviders={setSmmProviders}
+            smmProducts={smmProducts} setSmmProducts={setSmmProducts}
             onDeleteSmmProducts={onDeleteSmmProducts}
             smmOrders={smmOrders}
+            setSmmOrders={setSmmOrders}
+            addNotif={addNotif}
           />
         )}
         {activeTab === 'channel' && <ChannelAdmin channels={channels} setChannels={setChannels} channelOrders={channelOrders} />}
