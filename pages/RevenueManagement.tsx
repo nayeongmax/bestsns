@@ -380,20 +380,20 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             </div>
             <span className="bg-blue-600 text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 rounded-full italic uppercase shadow-lg tracking-widest shrink-0">Overview</span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:gap-6 pt-2 sm:pt-4">
-            <div className="bg-white/5 p-3 sm:p-6 rounded-xl sm:rounded-3xl border border-white/10">
-               <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase">계약 건수</span>
-               <p className="text-base sm:text-2xl font-black mt-0.5 sm:mt-1">{currentMonthProjects.length}건</p>
+          <div className="flex gap-2 sm:gap-4 pt-2 sm:pt-4">
+            <div className="bg-white/5 p-3 sm:p-5 rounded-xl sm:rounded-3xl border border-white/10 shrink-0">
+               <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase">건수</span>
+               <p className="text-base sm:text-2xl font-black mt-0.5 sm:mt-1 whitespace-nowrap">{currentMonthProjects.length}건</p>
             </div>
-            <div className="bg-white/5 p-3 sm:p-6 rounded-xl sm:rounded-3xl border border-white/10">
+            <div className="bg-white/5 p-3 sm:p-5 rounded-xl sm:rounded-3xl border border-white/10 flex-1 min-w-0">
                <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase">총 매출액</span>
-               <p className="text-base sm:text-2xl font-black mt-0.5 sm:mt-1 italic tracking-tighter break-all">₩{totalIncome.toLocaleString()}</p>
+               <p className="text-sm sm:text-2xl font-black mt-0.5 sm:mt-1 italic tracking-tighter whitespace-nowrap">₩{totalIncome.toLocaleString()}</p>
             </div>
           </div>
           <div className="bg-blue-600/20 p-4 sm:p-8 rounded-xl sm:rounded-[32px] border border-blue-500/30">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
-                 <span className="text-[10px] sm:text-[12px] font-black text-blue-300 uppercase tracking-widest">당월 순수익</span>
-                 <span className="text-xl sm:text-4xl font-black text-green-400 italic tracking-tighter break-all">₩{totalProfit.toLocaleString()}</span>
+              <div className="flex flex-row justify-between items-center gap-2 min-w-0 overflow-hidden">
+                 <span className="text-[10px] sm:text-[12px] font-black text-blue-300 uppercase tracking-widest shrink-0">당월 순수익</span>
+                 <span className="text-lg sm:text-3xl font-black text-green-400 italic tracking-tighter whitespace-nowrap">₩{totalProfit.toLocaleString()}</span>
               </div>
           </div>
         </div>
@@ -506,7 +506,8 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
            </div>
            <div className="bg-gray-900 rounded-2xl sm:rounded-[32px] p-4 sm:p-8 flex flex-col gap-1 sm:gap-2">
              <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">총합 결제금</span>
-             <span className="text-xl sm:text-3xl font-black text-white italic break-all">₩{totalIncome.toLocaleString()}</span>
+             <span className="text-lg sm:text-2xl font-black text-white italic">₩{totalIncome.toLocaleString()}</span>
+             <span className="text-[9px] sm:text-[11px] font-bold text-green-400">실제정산금 ₩{totalProfit.toLocaleString()}</span>
            </div>
            <div className={`rounded-2xl sm:rounded-[32px] p-4 sm:p-8 border flex flex-col gap-1 sm:gap-2 ${totalIncome >= prevMonthIncome ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
              <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">저번달 대비</span>
