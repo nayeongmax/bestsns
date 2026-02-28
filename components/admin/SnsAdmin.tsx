@@ -245,6 +245,61 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     setJapStatuses(prev => { const n = { ...prev }; delete n[order.id]; return n; });
   }, [setSmmOrders, addNotif]);
 
+  // 한국어 로케일 날짜 문자열 파싱 ("2024. 11. 1. 오전 9:30:00")
+  const parseOrderTime = (timeStr: string): number | null => {
+    const d = new Date(timeStr);
+    if (!isNaN(d.getTime())) return d.getTime();
+    const m = timeStr.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    let h = parseInt(m[5]);
+    if (m[4] === '오후' && h < 12) h += 12;
+    if (m[4] === '오전' && h === 12) h = 0;
+    return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]), h, parseInt(m[6])).getTime();
+  };
+
+  // 상품 소스에서 예상 소요시간(분) 조회
+  const getEstimatedMinsForOrder = useCallback((order: SMMOrder): number | undefined => {
+    const product = smmProducts.find(p => p.name === order.productName);
+    const provider = smmProviders.find(p => p.name === order.providerName);
+    if (!product || !provider) return undefined;
+    return product.sources.find(s => s.providerId === provider.id)?.estimatedMinutes;
+  }, [smmProducts, smmProviders]);
+
+  // 지연 알림 전송 이력 (localStorage - 중복 알림 방지)
+  const [delayNotifiedIds, setDelayNotifiedIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('smm_delay_notified') || '[]')); } catch { return new Set(); }
+  });
+
+  // 5분마다 지연 감지 → 구매자에게 자동 알림
+  useEffect(() => {
+    const checkDelays = () => {
+      const active = smmOrders.filter(o => o.status === '진행중' && o.externalOrderId && o.externalOrderId !== 'PENDING');
+      const toNotify: string[] = [];
+      for (const order of active) {
+        if (delayNotifiedIds.has(order.id)) continue;
+        const estimatedMins = getEstimatedMinsForOrder(order);
+        if (!estimatedMins) continue;
+        const startMs = parseOrderTime(order.orderTime);
+        if (!startMs) continue;
+        if ((Date.now() - startMs) / 60000 > estimatedMins) {
+          addNotif(order.userId, 'sns_activation', '⏳ 작업 지연 안내', '주문이 폭주하여 작업이 지연되고 있습니다. 조금만 기다려주세요.');
+          toNotify.push(order.id);
+        }
+      }
+      if (toNotify.length > 0) {
+        setDelayNotifiedIds(prev => {
+          const next = new Set(prev);
+          toNotify.forEach(id => next.add(id));
+          localStorage.setItem('smm_delay_notified', JSON.stringify(Array.from(next)));
+          return next;
+        });
+      }
+    };
+    checkDelays();
+    const interval = setInterval(checkDelays, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [smmOrders, delayNotifiedIds, getEstimatedMinsForOrder, addNotif]);
+
   // 자동 스케줄: 매일 자정(0시), 정오(12시) 원가 체크
   useEffect(() => {
     const checkSchedule = () => {
@@ -940,6 +995,17 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                {(() => {
                                  const jap = japStatuses[o.id];
                                  const japDone = jap?.status === 'Completed' && o.status !== '작업완료';
+
+                                 // 지연 감지
+                                 const estimatedMins = getEstimatedMinsForOrder(o);
+                                 const startMs = parseOrderTime(o.orderTime);
+                                 const elapsedMins = startMs ? (Date.now() - startMs) / 60000 : null;
+                                 const isDelayed = estimatedMins != null && elapsedMins != null && elapsedMins > estimatedMins && o.status !== '작업완료';
+
+                                 // 공급처 사이트 URL (API URL에서 origin 추출)
+                                 const provObj = smmProviders.find(p => p.name === o.providerName);
+                                 const provSite = provObj?.apiUrl ? (() => { try { return new URL(provObj.apiUrl).origin; } catch { return '#'; } })() : '#';
+
                                  return (
                                    <div className="flex flex-col items-center gap-2">
                                      {/* 현재 주문 상태 뱃지 */}
@@ -960,6 +1026,13 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                        }`}>JAP: {jap.status}</span>
                                      )}
 
+                                     {/* 지연 뱃지 */}
+                                     {isDelayed && (
+                                       <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-600 animate-pulse">
+                                         ⚠️ 예상 시간 초과
+                                       </span>
+                                     )}
+
                                      {/* 공급처 완료 안내 + 작업완료 버튼 */}
                                      {japDone && (
                                        <div className="flex flex-col items-center gap-1.5 mt-1">
@@ -969,6 +1042,18 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                            className="px-4 py-1.5 bg-green-500 text-white rounded-xl text-[11px] font-black hover:bg-green-600 transition-all shadow-md"
                                          >✅ 작업완료</button>
                                        </div>
+                                     )}
+
+                                     {/* 지연 시 공급처 문의 버튼 */}
+                                     {isDelayed && (
+                                       <a
+                                         href={provSite}
+                                         target="_blank"
+                                         rel="noreferrer"
+                                         className="px-3 py-1.5 bg-orange-500 text-white rounded-xl text-[10px] font-black hover:bg-orange-600 transition-all shadow-sm text-center whitespace-nowrap"
+                                       >
+                                         🎫 공급처 사이트에 문의
+                                       </a>
                                      )}
                                    </div>
                                  );
