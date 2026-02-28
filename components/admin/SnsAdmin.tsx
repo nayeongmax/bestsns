@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert } from '@/types';
+import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert, NotificationType } from '@/types';
 import { SNS_PLATFORMS } from '../../constants.tsx';
 
 interface Props {
@@ -9,12 +9,14 @@ interface Props {
   setSmmProducts: React.Dispatch<React.SetStateAction<SMMProduct[]>>;
   onDeleteSmmProducts?: (ids: string[]) => void;
   smmOrders: SMMOrder[];
+  setSmmOrders: React.Dispatch<React.SetStateAction<SMMOrder[]>>;
+  addNotif: (userId: string, type: NotificationType, title: string, message: string) => void;
 }
 
 type SnsTab = 'provider' | 'manage' | 'list' | 'order' | 'monitor';
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
-const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders }) => {
+const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders, setSmmOrders, addNotif }) => {
   const [activeTab, setActiveTab] = useState<SnsTab>('list');
   const [isFetchingSingle, setIsFetchingSingle] = useState(false);
   
@@ -43,6 +45,10 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('전체 상태');
   const [orderMonthFilter, setOrderMonthFilter] = useState('전체 기간');
+
+  // JAP 주문 상태 (orderId → { status, remains })
+  const [japStatuses, setJapStatuses] = useState<Record<string, { status: string; remains: number }>>({});
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
   // 원가 모니터링 알림
   const [priceAlerts, setPriceAlerts] = useState<SMMPriceAlert[]>(() => {
@@ -187,6 +193,57 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       setIsCheckingPrices(false);
     }
   }, [smmProviders, smmProducts, isCheckingPrices, setSmmProducts]);
+
+  // JAP 공급처에서 주문 상태 일괄 조회
+  const handleCheckOrderStatuses = useCallback(async () => {
+    if (isCheckingStatus) return;
+    const pending = smmOrders.filter(o =>
+      o.status !== '작업완료' && o.externalOrderId && o.externalOrderId !== 'PENDING'
+    );
+    if (pending.length === 0) { alert('조회할 진행 중인 주문이 없습니다.'); return; }
+
+    setIsCheckingStatus(true);
+    try {
+      // 공급처별로 묶기 (providerName → provider 매칭)
+      const groups = new Map<string, { provider: SMMProvider; extIds: string[]; extToOurId: Map<string, string> }>();
+      for (const order of pending) {
+        const provider = smmProviders.find(p => p.name === order.providerName);
+        if (!provider) continue;
+        if (!groups.has(provider.id)) groups.set(provider.id, { provider, extIds: [], extToOurId: new Map() });
+        const g = groups.get(provider.id)!;
+        g.extIds.push(order.externalOrderId);
+        g.extToOurId.set(order.externalOrderId, order.id);
+      }
+
+      const next: Record<string, { status: string; remains: number }> = { ...japStatuses };
+      for (const [, g] of groups) {
+        try {
+          const resp = await fetch('/.netlify/functions/smm-api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'orderStatus', providerId: g.provider.id, apiUrl: g.provider.apiUrl, orderIds: g.extIds }),
+          });
+          const result = await resp.json();
+          if (result.status === 'success' && result.orders) {
+            for (const [extId, data] of Object.entries(result.orders as Record<string, { status?: string; remains?: number }>)) {
+              const ourId = g.extToOurId.get(extId);
+              if (ourId) next[ourId] = { status: data.status || '', remains: Number(data.remains ?? 0) };
+            }
+          }
+        } catch (e) { console.error('orderStatus fetch error:', e); }
+      }
+      setJapStatuses(next);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  }, [smmOrders, smmProviders, isCheckingStatus, japStatuses]);
+
+  // 작업완료 처리: 상태 업데이트 + 주문자에게 알림
+  const handleMarkComplete = useCallback((order: SMMOrder) => {
+    setSmmOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: '작업완료' } : o));
+    addNotif(order.userId, 'sns_activation', '✅ 작업 완료', `[${order.productName}] 주문하신 작업이 완료되었습니다. 링크를 확인해주세요.`);
+    setJapStatuses(prev => { const n = { ...prev }; delete n[order.id]; return n; });
+  }, [setSmmOrders, addNotif]);
 
   // 자동 스케줄: 매일 자정(0시), 정오(12시) 원가 체크
   useEffect(() => {
@@ -809,7 +866,16 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                     <option>전체 상태</option><option>준비중</option><option>진행중</option><option>작업완료</option>
                  </select>
               </div>
-              <button onClick={() => { setOrderSearch(''); setFilterPlatform('전체 플랫폼'); setOrderStatusFilter('전체 상태'); setOrderMonthFilter('전체 기간'); }} className="px-6 py-4 bg-gray-100 text-gray-400 rounded-full font-black text-[11px] hover:bg-gray-200 transition-all uppercase italic shrink-0">Reset</button>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={handleCheckOrderStatuses}
+                  disabled={isCheckingStatus}
+                  className="px-5 py-4 bg-blue-600 text-white rounded-full font-black text-[12px] hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isCheckingStatus ? <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>조회중</> : '🔄 공급처 상태 조회'}
+                </button>
+                <button onClick={() => { setOrderSearch(''); setFilterPlatform('전체 플랫폼'); setOrderStatusFilter('전체 상태'); setOrderMonthFilter('전체 기간'); }} className="px-5 py-4 bg-gray-100 text-gray-400 rounded-full font-black text-[11px] hover:bg-gray-200 transition-all uppercase italic">Reset</button>
+              </div>
            </div>
 
            <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
@@ -871,13 +937,42 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                <p className="text-[11px] font-black text-blue-500 mt-1">+{o.profit.toLocaleString()} Profit</p>
                             </td>
                             <td className="px-8 py-6 text-center">
-                               <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm transition-all ${
-                                 o.status === '작업완료' ? 'bg-green-500 text-white' : 
-                                 o.status === '진행중' ? 'bg-blue-600 text-white animate-pulse' : 
-                                 'bg-gray-100 text-gray-400'
-                               }`}>
-                                 {o.status}
-                               </span>
+                               {(() => {
+                                 const jap = japStatuses[o.id];
+                                 const japDone = jap?.status === 'Completed' && o.status !== '작업완료';
+                                 return (
+                                   <div className="flex flex-col items-center gap-2">
+                                     {/* 현재 주문 상태 뱃지 */}
+                                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm ${
+                                       o.status === '작업완료' ? 'bg-green-500 text-white' :
+                                       o.status === '진행중' ? 'bg-blue-600 text-white animate-pulse' :
+                                       'bg-gray-100 text-gray-400'
+                                     }`}>{o.status}</span>
+
+                                     {/* JAP 상태 표시 */}
+                                     {jap && o.status !== '작업완료' && (
+                                       <span className={`px-3 py-0.5 rounded-full text-[9px] font-black ${
+                                         jap.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                         jap.status === 'In progress' ? 'bg-blue-50 text-blue-500' :
+                                         jap.status === 'Partial' ? 'bg-yellow-100 text-yellow-700' :
+                                         jap.status === 'Canceled' ? 'bg-red-100 text-red-600' :
+                                         'bg-gray-100 text-gray-500'
+                                       }`}>JAP: {jap.status}</span>
+                                     )}
+
+                                     {/* 공급처 완료 안내 + 작업완료 버튼 */}
+                                     {japDone && (
+                                       <div className="flex flex-col items-center gap-1.5 mt-1">
+                                         <p className="text-[10px] font-black text-green-600 text-center leading-tight">공급처에서<br/>완료되었습니다</p>
+                                         <button
+                                           onClick={() => handleMarkComplete(o)}
+                                           className="px-4 py-1.5 bg-green-500 text-white rounded-xl text-[11px] font-black hover:bg-green-600 transition-all shadow-md"
+                                         >✅ 작업완료</button>
+                                       </div>
+                                     )}
+                                   </div>
+                                 );
+                               })()}
                             </td>
                          </tr>
                        ))}
