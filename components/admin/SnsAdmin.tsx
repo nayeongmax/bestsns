@@ -959,13 +959,13 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                  <table className="w-full text-left">
                     <thead className="bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest italic">
                        <tr>
-                          <th className="px-8 py-5">일시 / 주문ID</th>
-                          <th className="px-8 py-5">플랫폼 / 구매자</th>
-                          <th className="px-8 py-5">구매 상품 / 공급처</th>
-                          <th className="px-8 py-5">작업 링크</th>
-                          <th className="px-8 py-5 text-center">작업량 상세</th>
-                          <th className="px-8 py-5 text-right">포인트 / 수익</th>
-                          <th className="px-8 py-5 text-center">상태</th>
+                          <th className="px-6 py-5 whitespace-nowrap">일시 / 주문ID</th>
+                          <th className="px-6 py-5 whitespace-nowrap">구매자</th>
+                          <th className="px-6 py-5 whitespace-nowrap">구매 상품</th>
+                          <th className="px-6 py-5 whitespace-nowrap">작업 링크</th>
+                          <th className="px-6 py-5 text-center whitespace-nowrap">주문량</th>
+                          <th className="px-6 py-5 text-right whitespace-nowrap">포인트 / 수익</th>
+                          <th className="px-6 py-5 text-center whitespace-nowrap">상태</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -973,44 +973,38 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                          <tr><td colSpan={7} className="py-40 text-center text-gray-300 font-black italic text-lg">기록된 주문 데이터가 없습니다.</td></tr>
                        ) : filteredOrders.map(o => (
                          <tr key={o.id} className="hover:bg-blue-50/20 transition-all group">
-                            <td className="px-8 py-6">
-                               <p className="text-[12px] font-black text-gray-800">{o.orderTime}</p>
-                               <p className="text-[10px] text-blue-500 font-bold mt-1">#{o.id}</p>
+                            <td className="px-6 py-6 whitespace-nowrap">
+                               <span className="text-[12px] font-black text-gray-800">{o.orderTime}</span>
+                               <span className="text-[10px] text-blue-500 font-bold ml-2">#{o.id}</span>
                             </td>
-                            <td className="px-8 py-6">
-                               <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-                                     <img src={SNS_PLATFORMS.find(p => p.name === o.platform)?.icon} className="w-5 h-5 object-contain" alt="p" />
+                            <td className="px-6 py-6 whitespace-nowrap">
+                               <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-md bg-gray-50 flex items-center justify-center shrink-0">
+                                     <img src={SNS_PLATFORMS.find(p => p.name === o.platform)?.icon} className="w-4 h-4 object-contain" alt="p" />
                                   </div>
-                                  <div>
-                                     <p className="text-[13px] font-black text-gray-900">{o.userNickname}</p>
-                                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">@{o.userId}</p>
-                                  </div>
+                                  <span className="text-[13px] font-black text-gray-900">{o.userNickname}</span>
+                                  <span className="text-[10px] text-gray-400 font-bold uppercase">@{o.userId}</span>
                                </div>
                             </td>
-                            <td className="px-8 py-6">
-                               <p className="text-[13px] font-black text-gray-900 truncate max-w-[180px]">{o.productName}</p>
-                               <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase italic tracking-widest">{o.providerName} Server</p>
+                            <td className="px-6 py-6 whitespace-nowrap">
+                               <span className="text-[13px] font-black text-gray-900">{o.productName}</span>
+                               <span className="text-[10px] text-gray-400 font-bold ml-2 uppercase italic">{o.providerName}</span>
                             </td>
-                            <td className="px-8 py-6">
+                            <td className="px-6 py-6 max-w-[160px]">
                                <div className="flex items-center gap-2">
-                                  <a href={o.link.startsWith('http') ? o.link : `https://${o.link}`} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-blue-400 hover:text-blue-600 underline truncate max-w-[200px] italic">
+                                  <a href={o.link.startsWith('http') ? o.link : `https://${o.link}`} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-blue-400 hover:text-blue-600 underline truncate italic block max-w-[120px]">
                                      {o.link}
                                   </a>
-                                  <button onClick={() => { navigator.clipboard.writeText(o.link); alert('링크가 복사되었습니다.'); }} className="p-1.5 bg-gray-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">📋</button>
+                                  <button onClick={() => { navigator.clipboard.writeText(o.link); alert('링크가 복사되었습니다.'); }} className="p-1.5 bg-gray-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0">📋</button>
                                </div>
                             </td>
-                            <td className="px-8 py-6 text-center">
-                               <p className="text-[13px] font-black text-gray-900 italic">총 주문: {o.quantity.toLocaleString()}</p>
-                               <p className="text-[9.5px] font-bold text-gray-400 mt-1.5 uppercase flex justify-center gap-2">
-                                  <span>최초 {o.initialCount?.toLocaleString() || 0}</span>
-                                  <span className="opacity-20">|</span>
-                                  <span className="text-red-400">잔량 {o.remains?.toLocaleString() || 0}</span>
-                               </p>
+                            <td className="px-6 py-6 text-center whitespace-nowrap">
+                               <span className="text-[13px] font-black text-gray-900 italic">{o.quantity.toLocaleString()}</span>
+                               <span className="text-[9.5px] font-bold text-gray-400 ml-2 uppercase">최초 {o.initialCount?.toLocaleString() || 0} | <span className="text-red-400">잔량 {o.remains?.toLocaleString() || 0}</span></span>
                             </td>
-                            <td className="px-8 py-6 text-right">
-                               <p className="text-[15px] font-black text-gray-900 italic">{(o.sellingPrice * o.quantity).toLocaleString()}P</p>
-                               <p className="text-[11px] font-black text-blue-500 mt-1">+{o.profit.toLocaleString()} Profit</p>
+                            <td className="px-6 py-6 text-right whitespace-nowrap">
+                               <span className="text-[15px] font-black text-gray-900 italic">{(o.sellingPrice * o.quantity).toLocaleString()}P</span>
+                               <span className="text-[11px] font-black text-blue-500 ml-2">+{o.profit.toLocaleString()}</span>
                             </td>
                             <td className="px-8 py-6 text-center">
                                {(() => {

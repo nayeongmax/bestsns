@@ -199,9 +199,11 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                       <td className="py-5 px-6 whitespace-nowrap font-black text-[13px]">
                         <span className="opacity-40 mr-1.5">≡</span>{order.id}
                       </td>
-                      <td className="py-5 px-4 max-w-[260px]">
-                        <div className="text-[12px] font-bold text-blue-400 truncate">{order.link}</div>
-                        <button onClick={(e) => copyToClipboard(order.link || '', e)} className="mt-1 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black whitespace-nowrap">복사하기</button>
+                      <td className="py-5 px-4 max-w-[220px]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] font-bold text-blue-400 truncate min-w-0">{order.link}</span>
+                          <button onClick={(e) => copyToClipboard(order.link || '', e)} className="shrink-0 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black whitespace-nowrap">복사</button>
+                        </div>
                       </td>
                       <td className="py-5 px-4 font-black text-[14px] italic">{order.productName} - {order.price.toLocaleString()}원</td>
                       <td className="py-5 px-4 text-center whitespace-nowrap">
