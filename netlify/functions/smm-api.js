@@ -1,6 +1,23 @@
 // Netlify Serverless Function: smm-api.js
 // 이 코드는 서버에서만 실행되므로 보안이 매우 강력합니다.
 
+// JAP average_time 문자열 → 분(number) 변환
+// 예: "1 hour" → 60, "30 minutes" → 30, "2 hours" → 120, "1 day" → 1440, "Not enough data" → null
+function parseAvgTimeToMinutes(avgTime) {
+  if (!avgTime || typeof avgTime !== 'string') return null;
+  const s = avgTime.toLowerCase().trim();
+  if (!s || s === 'not enough data' || s === 'n/a' || s === '-') return null;
+  if (/^\d+$/.test(s)) return parseInt(s);
+  let total = 0;
+  const days  = s.match(/(\d+)\s*day/);
+  const hours = s.match(/(\d+)\s*hour/);
+  const mins  = s.match(/(\d+)\s*min/);
+  if (days)  total += parseInt(days[1])  * 1440;
+  if (hours) total += parseInt(hours[1]) * 60;
+  if (mins)  total += parseInt(mins[1]);
+  return total > 0 ? total : null;
+}
+
 exports.handler = async (event, context) => {
   // CORS 헤더 설정
   const headers = {
@@ -19,14 +36,14 @@ exports.handler = async (event, context) => {
     const params = event.queryStringParameters || {};
     const body = event.body ? JSON.parse(event.body) : {};
     
-    // 1. 전체 동기화 로직 (Batch Sync)
+    // 1. 전체 동기화 로직 (Batch Sync) — 원가 + 평균 소요시간 동시 반환
     if (event.httpMethod === 'POST' && body.providers) {
-      const results = {};
-      
+      const results  = {};  // { providerId: { serviceId: rate } }
+      const avgTimes = {};  // { providerId: { serviceId: minutes|null } }
+
       for (const p of body.providers) {
         const id = p.id;
         const url = p.apiUrl;
-        // 환경 변수에서 키를 가져옴 (예: SMM_KEY_P1, SMM_KEY_P2 ...)
         const envKeyName = `SMM_KEY_${id.toUpperCase()}`;
         const apiKey = process.env[envKeyName];
 
@@ -35,11 +52,13 @@ exports.handler = async (event, context) => {
         try {
           const fetchResponse = await fetch(`${url}?key=${apiKey}&action=services`);
           const data = await fetchResponse.json();
-          
+
           if (Array.isArray(data)) {
-            results[id] = {};
+            results[id]  = {};
+            avgTimes[id] = {};
             data.forEach(service => {
-              results[id][service.service] = parseFloat(service.rate);
+              results[id][service.service]  = parseFloat(service.rate);
+              avgTimes[id][service.service] = parseAvgTimeToMinutes(service.average_time);
             });
           }
         } catch (err) {
@@ -50,7 +69,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ status: 'success', data: results })
+        body: JSON.stringify({ status: 'success', data: results, avgTimes })
       };
     }
 
@@ -119,18 +138,22 @@ exports.handler = async (event, context) => {
 
       const fetchResponse = await fetch(`${apiUrl}?key=${apiKey}&action=services`);
       const services = await fetchResponse.json();
-      
+
       let foundPrice = null;
+      let foundAvgTime = null;
       if (Array.isArray(services)) {
         const target = services.find(s => String(s.service) === String(serviceId));
-        if (target) foundPrice = parseFloat(target.rate);
+        if (target) {
+          foundPrice   = parseFloat(target.rate);
+          foundAvgTime = parseAvgTimeToMinutes(target.average_time);
+        }
       }
 
       if (foundPrice !== null) {
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify({ status: 'success', price: foundPrice })
+          body: JSON.stringify({ status: 'success', price: foundPrice, avgTime: foundAvgTime })
         };
       } else {
         return {
@@ -164,6 +187,7 @@ exports.handler = async (event, context) => {
                 min: service.min,
                 max: service.max,
                 name: service.name,
+                avgTime: parseAvgTimeToMinutes(service.average_time),
               };
             });
           }
@@ -202,19 +226,22 @@ exports.handler = async (event, context) => {
         }
       }
 
-      // latestRates: { providerId: { serviceId: rate } } 형식으로 반환 (자동 원가 업데이트용)
+      // latestRates: { providerId: { serviceId: rate } }, avgTimes: { providerId: { serviceId: minutes } }
       const latestRates = {};
+      const avgTimes    = {};
       for (const [pid, services] of Object.entries(fetchedServices)) {
         latestRates[pid] = {};
+        avgTimes[pid]    = {};
         for (const [sid, data] of Object.entries(services)) {
           latestRates[pid][sid] = data.rate;
+          avgTimes[pid][sid]    = data.avgTime;
         }
       }
 
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ status: 'success', changes, latestRates }),
+        body: JSON.stringify({ status: 'success', changes, latestRates, avgTimes }),
       };
     }
 

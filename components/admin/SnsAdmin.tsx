@@ -82,11 +82,17 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
       if (result.status === 'success') {
         const latestRates = result.data;
+        const avgTimes    = result.avgTimes || {};
         setSmmProducts(prevProducts => prevProducts.map(prod => ({
           ...prod,
           sources: (prod.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null).map(src => {
-            const newPrice = latestRates[src.providerId]?.[src.serviceId];
-            return newPrice ? { ...src, costPrice: newPrice } : src;
+            const newPrice   = latestRates[src.providerId]?.[src.serviceId];
+            const newAvgTime = avgTimes[src.providerId]?.[src.serviceId];
+            return {
+              ...src,
+              ...(newPrice   != null ? { costPrice: newPrice }            : {}),
+              ...(newAvgTime != null ? { estimatedMinutes: newAvgTime }   : {}),
+            };
           })
         })));
         const now = new Date();
@@ -148,11 +154,17 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       if (result.status === 'success') {
         // 원가 자동 업데이트
         if (result.latestRates && Object.keys(result.latestRates).length > 0) {
+          const avgTimes = result.avgTimes || {};
           setSmmProducts(prev => prev.map(prod => ({
             ...prod,
             sources: (prod.sources || []).map(src => {
-              const newPrice = result.latestRates[src.providerId]?.[src.serviceId];
-              return newPrice !== undefined ? { ...src, costPrice: newPrice } : src;
+              const newPrice   = result.latestRates[src.providerId]?.[src.serviceId];
+              const newAvgTime = avgTimes[src.providerId]?.[src.serviceId];
+              return {
+                ...src,
+                ...(newPrice   != null ? { costPrice: newPrice }          : {}),
+                ...(newAvgTime != null ? { estimatedMinutes: newAvgTime } : {}),
+              };
             }),
           })));
         }
@@ -324,7 +336,11 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       const response = await fetch(`/.netlify/functions/smm-api?providerId=${provider.id}&serviceId=${tempSource.serviceId}&apiUrl=${encodeURIComponent(provider.apiUrl)}`);
       const result = await response.json();
       if (result.status === 'success') {
-        setTempSource(prev => ({ ...prev, costPrice: result.price }));
+        setTempSource(prev => ({
+          ...prev,
+          costPrice: result.price,
+          ...(result.avgTime != null ? { estimatedMinutes: result.avgTime } : {}),
+        }));
       } else {
         throw new Error(result.message || "API Error");
       }
@@ -673,8 +689,13 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                </div>
                             </div>
                             <div className="space-y-1">
-                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">예상 소요(분, 선택)</span>
-                               <input type="number" min={0} placeholder="분" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-20 border-b border-white/10" />
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">
+                                 예상 소요(분)
+                                 {tempSource.estimatedMinutes != null && (
+                                   <span className="ml-1 text-green-400 normal-case not-italic">(JAP 자동)</span>
+                                 )}
+                               </span>
+                               <input type="number" min={0} placeholder="조회 시 자동입력" value={tempSource.estimatedMinutes ?? ''} onChange={e => setTempSource({...tempSource, estimatedMinutes: e.target.value === '' ? undefined : Number(e.target.value)})} className="bg-transparent text-xl font-black text-white italic outline-none w-24 border-b border-white/10" />
                             </div>
                             <div className="space-y-1">
                                <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">소스별 수량(선택)</span>
