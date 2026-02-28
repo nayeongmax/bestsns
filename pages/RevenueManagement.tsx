@@ -351,9 +351,18 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     });
   }, [generalExpenses, currentDate]);
 
+  const prevMonthProjects = useMemo(() => {
+    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    return projects.filter(p => {
+      const pDate = new Date(p.startDate);
+      return pDate.getFullYear() === d.getFullYear() && pDate.getMonth() === d.getMonth();
+    });
+  }, [projects, currentDate]);
+
   const totalIncome = currentMonthProjects.reduce((sum, p) => sum + p.paymentAmount, 0);
   const totalOutgo = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalProfit = currentMonthProjects.reduce((sum, p) => sum + p.settlementAmount, 0);
+  const prevMonthIncome = prevMonthProjects.reduce((sum, p) => sum + p.paymentAmount, 0);
 
   // --- 렌더링 ---
 
@@ -378,13 +387,13 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             </div>
             <div className="bg-white/5 p-3 sm:p-6 rounded-xl sm:rounded-3xl border border-white/10">
                <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase">총 매출액</span>
-               <p className="text-base sm:text-2xl font-black mt-0.5 sm:mt-1 italic tracking-tighter truncate" title={`₩${totalIncome.toLocaleString()}`}>₩{totalIncome.toLocaleString()}</p>
+               <p className="text-base sm:text-2xl font-black mt-0.5 sm:mt-1 italic tracking-tighter break-all">₩{totalIncome.toLocaleString()}</p>
             </div>
           </div>
           <div className="bg-blue-600/20 p-4 sm:p-8 rounded-xl sm:rounded-[32px] border border-blue-500/30">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                  <span className="text-[10px] sm:text-[12px] font-black text-blue-300 uppercase tracking-widest">당월 순수익</span>
-                 <span className="text-xl sm:text-4xl font-black text-green-400 italic tracking-tighter truncate" title={`₩${totalProfit.toLocaleString()}`}>₩{totalProfit.toLocaleString()}</span>
+                 <span className="text-xl sm:text-4xl font-black text-green-400 italic tracking-tighter break-all">₩{totalProfit.toLocaleString()}</span>
               </div>
           </div>
         </div>
@@ -489,6 +498,25 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             <button onClick={copyDataListForSheets} className="bg-blue-500 text-white px-4 py-2 sm:px-8 sm:py-3 rounded-lg sm:rounded-2xl font-black text-[11px] sm:text-[13px] shadow-lg hover:bg-blue-600 transition-all uppercase italic shrink-0">구글시트 복사</button>
          </div>
 
+         {/* 이달 요약 카드 3개 */}
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-12">
+           <div className="bg-blue-50 rounded-2xl sm:rounded-[32px] p-4 sm:p-8 border border-blue-100 flex flex-col gap-1 sm:gap-2">
+             <span className="text-[9px] sm:text-[10px] font-black text-blue-400 uppercase tracking-widest">이달 건수</span>
+             <span className="text-2xl sm:text-4xl font-black text-blue-700 italic">{currentMonthProjects.length}<span className="text-base sm:text-xl ml-1">건</span></span>
+           </div>
+           <div className="bg-gray-900 rounded-2xl sm:rounded-[32px] p-4 sm:p-8 flex flex-col gap-1 sm:gap-2">
+             <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">총합 결제금</span>
+             <span className="text-xl sm:text-3xl font-black text-white italic break-all">₩{totalIncome.toLocaleString()}</span>
+           </div>
+           <div className={`rounded-2xl sm:rounded-[32px] p-4 sm:p-8 border flex flex-col gap-1 sm:gap-2 ${totalIncome >= prevMonthIncome ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
+             <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">저번달 대비</span>
+             <span className={`text-xl sm:text-3xl font-black italic break-all ${totalIncome >= prevMonthIncome ? 'text-green-600' : 'text-red-500'}`}>
+               {totalIncome >= prevMonthIncome ? '+' : ''}₩{(totalIncome - prevMonthIncome).toLocaleString()}
+             </span>
+             <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold">전월 ₩{prevMonthIncome.toLocaleString()}</span>
+           </div>
+         </div>
+
          <div className="overflow-x-auto rounded-lg sm:rounded-2xl md:rounded-[48px] border border-gray-50 shadow-sm -mx-1 sm:mx-0" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
            <table className="w-full text-left min-w-[640px]">
               <thead className="bg-gray-50/50 text-[9px] sm:text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
@@ -498,7 +526,7 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                   <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8">업체명</th>
                   <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">운영사</th>
                   <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">마감일</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right">금액</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right">결제금 / 정산금</th>
                   <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">링크</th>
                   <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">관리</th>
                 </tr>
@@ -513,7 +541,10 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                       <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 font-black text-gray-900 text-sm sm:text-[16px] italic truncate max-w-[120px] sm:max-w-none">{p.clientName}</td>
                       <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-bold text-gray-400 text-[10px] sm:text-xs italic">{com?.name || '-'}</td>
                       <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-black text-red-400 text-[11px] sm:text-[13px] italic">{p.endDate}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right font-black text-gray-900 text-sm sm:text-lg italic">₩{p.paymentAmount.toLocaleString()}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right">
+                        <p className="font-black text-gray-900 text-sm sm:text-lg italic">₩{p.paymentAmount.toLocaleString()}</p>
+                        <p className="font-bold text-green-600 text-[10px] sm:text-xs italic mt-0.5">정산 ₩{p.settlementAmount.toLocaleString()}</p>
+                      </td>
                       <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">
                         {p.workLink?.trim() ? (
                           <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] sm:text-xs hover:underline break-all">
@@ -559,15 +590,21 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
           <div className="space-y-4 sm:space-y-6">
             <h4 className="text-base sm:text-xl font-black text-blue-600 flex items-center gap-2 italic"><span className="w-1.5 h-5 sm:h-6 bg-blue-600 rounded-full shrink-0"></span> 당월 수입 내역</h4>
             <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 overflow-hidden shadow-sm overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-              <table className="w-full text-left min-w-[280px]">
+              <table className="w-full text-left min-w-[320px]">
                 <thead className="bg-gray-50 text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                  <tr><th className="px-3 sm:px-6 py-3 sm:py-4">업체명</th><th className="px-3 sm:px-6 py-3 sm:py-4 text-right">금액</th><th className="px-3 sm:px-6 py-3 sm:py-4 text-center">링크</th></tr>
+                  <tr>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4">업체명</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-right">결제금액</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-right">실제정산금</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center">링크</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {currentMonthProjects.map(p => (
                     <tr key={p.id} className="hover:bg-blue-50/20">
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 font-black text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none">{p.clientName}</td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 font-black text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{p.clientName}</td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4 text-right font-black text-xs sm:text-sm whitespace-nowrap">₩{p.paymentAmount.toLocaleString()}</td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-right font-black text-xs sm:text-sm whitespace-nowrap text-green-600">₩{p.settlementAmount.toLocaleString()}</td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
                         {p.workLink?.trim() ? (
                           <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] sm:text-xs hover:underline break-all">링크</a>
@@ -577,7 +614,12 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                       </td>
                     </tr>
                   ))}
-                  <tr className="bg-blue-50/50"><td className="px-3 sm:px-6 py-3 sm:py-5 font-black text-blue-600 text-xs sm:text-sm">총 수입 합계</td><td className="px-3 sm:px-6 py-3 sm:py-5 text-right font-black text-blue-600 text-sm sm:text-lg" colSpan={2}>₩{totalIncome.toLocaleString()}</td></tr>
+                  <tr className="bg-blue-50/50">
+                    <td className="px-3 sm:px-6 py-3 sm:py-5 font-black text-blue-600 text-xs sm:text-sm">총합계</td>
+                    <td className="px-3 sm:px-6 py-3 sm:py-5 text-right font-black text-blue-600 text-sm sm:text-lg whitespace-nowrap">₩{totalIncome.toLocaleString()}</td>
+                    <td className="px-3 sm:px-6 py-3 sm:py-5 text-right font-black text-green-600 text-sm sm:text-lg whitespace-nowrap">₩{totalProfit.toLocaleString()}</td>
+                    <td></td>
+                  </tr>
                 </tbody>
               </table>
             </div>

@@ -191,23 +191,23 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       {activeTab === 'sns' ? (
         <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[1100px]">
+            <table className="w-full text-left border-collapse min-w-[900px]">
               <tbody className="divide-y divide-gray-50">
                 {buyerOrders.map(order => (
                   <React.Fragment key={order.id}>
                     <tr onClick={() => setExpandedId(expandedId === order.id ? null : order.id)} className={`transition-all group cursor-pointer ${expandedId === order.id ? 'bg-[#2D3E5E] text-white' : 'hover:bg-gray-50/50 text-gray-700'}`}>
-                      <td className="py-5 px-6 w-32 font-black text-[14px] flex items-center gap-2">
-                        <span className="opacity-50">≡</span> {order.id}
+                      <td className="py-5 px-6 whitespace-nowrap font-black text-[13px]">
+                        <span className="opacity-40 mr-1.5">≡</span>{order.id}
                       </td>
-                      <td className="py-5 px-4 w-[280px] truncate text-[13px] font-bold text-blue-400">
-                        {order.link}
-                        <button onClick={(e) => copyToClipboard(order.link || '', e)} className="ml-2 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black">복사하기</button>
+                      <td className="py-5 px-4 max-w-[260px]">
+                        <div className="text-[12px] font-bold text-blue-400 truncate">{order.link}</div>
+                        <button onClick={(e) => copyToClipboard(order.link || '', e)} className="mt-1 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black whitespace-nowrap">복사하기</button>
                       </td>
                       <td className="py-5 px-4 font-black text-[14px] italic">{order.productName} - {order.price.toLocaleString()}원</td>
-                      <td className="py-5 px-4 text-center">
+                      <td className="py-5 px-4 text-center whitespace-nowrap">
                         <span className={`px-3 py-1 rounded text-[11px] font-black ${expandedId === order.id ? 'bg-white text-[#2D3E5E]' : 'bg-gray-100 text-gray-400'}`}>{order.status}</span>
                       </td>
-                      <td className="py-5 px-6 text-right text-[13px] font-bold italic opacity-80">{order.orderTime} <span className="ml-2">{expandedId === order.id ? '▲' : '▼'}</span></td>
+                      <td className="py-5 px-6 text-right text-[13px] font-bold italic opacity-80 whitespace-nowrap">{order.orderTime} <span className="ml-2">{expandedId === order.id ? '▲' : '▼'}</span></td>
                     </tr>
                     {expandedId === order.id && (
                       <tr className="bg-[#F8FAFC] animate-in slide-in-from-top-1">

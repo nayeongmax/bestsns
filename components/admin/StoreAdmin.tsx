@@ -332,13 +332,13 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                            <p className="text-gray-800">{o.orderTime}</p>
                            <p className="text-[11px] text-purple-500 mt-1">#{o.id}</p>
                         </td>
-                        <td className="px-10 py-6">
-                           <p className="text-gray-900">@{o.userId}</p>
-                           <p className="text-[11px] text-gray-400 font-bold uppercase">{o.userNickname}</p>
+                        <td className="px-10 py-6 whitespace-nowrap">
+                           <span className="text-gray-900">@{o.userId}</span>
+                           {o.userNickname && <span className="text-[11px] text-gray-400 font-bold uppercase ml-2">({o.userNickname})</span>}
                         </td>
-                        <td className="px-10 py-6 text-purple-600 font-black italic">{o.sellerNickname}</td>
-                        <td className="px-10 py-6 min-w-[200px]">
-                           <p className="text-gray-900 truncate max-w-[220px]">{o.productName}</p>
+                        <td className="px-10 py-6 text-purple-600 font-black italic whitespace-nowrap">{o.sellerNickname}</td>
+                        <td className="px-10 py-6">
+                           <p className="text-gray-900 whitespace-normal">{o.productName}</p>
                            <p className="text-[10px] text-gray-400 uppercase italic tracking-tighter mt-1">{o.tierName}</p>
                         </td>
                         <td className="px-10 py-6 text-right font-black text-gray-900 italic text-lg">₩{o.price.toLocaleString()}</td>
