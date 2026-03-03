@@ -208,7 +208,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   서비스 상세설명
                 </h3>
               </div>
-              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left border-l-4 border-blue-100 ml-8 my-6">
+              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left">
                 {ebook.description || "상세 설명이 등록되지 않았습니다."}
               </div>
             </section>
@@ -229,7 +229,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   ))}
                 </div>
               )}
-              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left border-l-4 border-teal-100 ml-8 my-6">
+              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left">
                 {tiers[activeTierIdx].description?.trim() || "해당 옵션에 대한 제공 서비스 상세가 등록되지 않았습니다."}
               </div>
             </section>

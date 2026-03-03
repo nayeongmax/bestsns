@@ -6,13 +6,6 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Functions 경로는 SPA catch-all에서 제외 — 반드시 catch-all보다 위에 둠
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-  force = true
-
 [[redirects]]
   from = "/api/ping"
   to = "/.netlify/functions/ping"
