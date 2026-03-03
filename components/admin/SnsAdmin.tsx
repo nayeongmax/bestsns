@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert, NotificationType } from '@/types';
 import { SNS_PLATFORMS } from '../../constants.tsx';
+import { upsertSmmOrder } from '../../smmDb';
+import { fetchProfileRow, updateProfile } from '../../profileDb';
 
 interface Props {
   smmProviders: SMMProvider[];
@@ -244,6 +246,86 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
           }
         } catch (e) { console.error('orderStatus fetch error:', e); }
       }
+
+      // 공급처에서 Canceled된 주문: 다른 serviceId로 재시도, 전부 실패 시 포인트 환불 + 주문취소
+      const canceledOurIds = Object.entries(next)
+        .filter(([, v]) => v.status === 'Canceled')
+        .map(([id]) => id);
+
+      for (const ourId of canceledOurIds) {
+        const order = pending.find(o => o.id === ourId);
+        if (!order) continue;
+
+        const product = smmProducts.find(p => p.name === order.productName);
+        if (!product?.sources?.length) {
+          // 상품 정보 없음 → 즉시 취소 + 환불
+          const canceledOrder = { ...order, status: '주문취소', externalOrderId: 'FAILED' };
+          setSmmOrders(prev => prev.map(o => o.id === ourId ? canceledOrder : o));
+          upsertSmmOrder(canceledOrder).catch(e => console.warn('주문취소 DB 실패:', e));
+          const refundAmount = order.sellingPrice * order.quantity;
+          fetchProfileRow(order.userId).then(row => {
+            const cur = Number(row?.points ?? 0);
+            return updateProfile(order.userId, { points: cur + refundAmount });
+          }).catch(e => console.warn('환불 포인트 DB 실패:', e));
+          addNotif(order.userId, 'sns_activation', '❌ 주문 취소 및 환불', `[${order.productName}] 공급처 주문 취소로 ${(order.sellingPrice * order.quantity).toLocaleString()}P가 환불되었습니다.`);
+          delete next[ourId];
+          continue;
+        }
+
+        // 현재 실패한 소스를 제외한 대안 소스 수집 (수량 범위 체크)
+        const currentProvider = smmProviders.find(p => p.name === order.providerName);
+        const altSources = product.sources.filter(s => {
+          if (currentProvider && s.providerId === currentProvider.id) return false;
+          const srcMin = s.minQuantity ?? product.minQuantity ?? 0;
+          const srcMax = s.maxQuantity ?? product.maxQuantity ?? 999999999;
+          return order.quantity >= srcMin && order.quantity <= srcMax;
+        }).sort((a, b) => {
+          const costA = a.costPrice ?? 0;
+          const costB = b.costPrice ?? 0;
+          if (costA !== costB) return costA - costB;
+          return (a.estimatedMinutes ?? 999999) - (b.estimatedMinutes ?? 999999);
+        });
+
+        let retried = false;
+        for (const source of altSources) {
+          const provider = smmProviders.find(p => p.id === source.providerId);
+          if (!provider) continue;
+          try {
+            const retryResp = await fetch('/.netlify/functions/smm-api', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'submit', providerId: source.providerId, apiUrl: provider.apiUrl, serviceId: source.serviceId, link: order.link, quantity: order.quantity }),
+            });
+            const retryResult = await retryResp.json();
+            if (retryResult.status === 'success' && retryResult.orderId) {
+              const updatedOrder = { ...order, externalOrderId: retryResult.orderId, status: '진행중', providerName: provider.name, costPrice: source.costPrice || 0 };
+              setSmmOrders(prev => prev.map(o => o.id === ourId ? updatedOrder : o));
+              upsertSmmOrder(updatedOrder).catch(e => console.warn('재시도 주문 DB 실패:', e));
+              next[ourId] = { status: 'In progress', remains: order.quantity };
+              addNotif(order.userId, 'sns_activation', '🔄 주문 재시도 성공', `[${order.productName}] 다른 공급처(${provider.name})로 주문이 재접수되었습니다.`);
+              retried = true;
+              break;
+            } else {
+              console.error('[재시도 실패] serviceId:', source.serviceId, '|', retryResult.message);
+            }
+          } catch (e) { console.error('[재시도 네트워크 오류] serviceId:', source.serviceId, e); }
+        }
+
+        if (!retried) {
+          // 모든 소스 실패 → 주문취소 + 포인트 환불
+          const canceledOrder = { ...order, status: '주문취소', externalOrderId: 'FAILED' };
+          setSmmOrders(prev => prev.map(o => o.id === ourId ? canceledOrder : o));
+          upsertSmmOrder(canceledOrder).catch(e => console.warn('주문취소 DB 실패:', e));
+          const refundAmount = order.sellingPrice * order.quantity;
+          fetchProfileRow(order.userId).then(row => {
+            const cur = Number(row?.points ?? 0);
+            return updateProfile(order.userId, { points: cur + refundAmount });
+          }).catch(e => console.warn('환불 포인트 DB 실패:', e));
+          addNotif(order.userId, 'sns_activation', '❌ 주문 취소 및 환불', `[${order.productName}] 모든 공급처 주문 실패로 ${refundAmount.toLocaleString()}P가 환불되었습니다.`);
+          delete next[ourId];
+        }
+      }
+
       setJapStatuses(next);
     } finally {
       setIsCheckingStatus(false);

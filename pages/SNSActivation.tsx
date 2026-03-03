@@ -162,10 +162,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       }));
       updateProfile(user.id, { points: nextPoints }).catch((e) => console.warn('SNS 주문 포인트 차감 DB 반영 실패:', e));
 
+      let totalRefund = 0;
       for (const opt of selectedOptions) {
         const product = smmProducts.find(p => p.id === opt.serviceId);
         if (!product || !product.sources?.length) continue;
-        
+
         // 활성화된 공급처 AND 주문 수량이 해당 소스 min~max 범위 내인 것만 선택
         const validActiveSources = product.sources.filter(s => {
           if (!activeProviderIds.has(s.providerId)) return false;
@@ -174,67 +175,104 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
           return opt.quantity >= srcMin && opt.quantity <= srcMax;
         });
         if (validActiveSources.length === 0) continue;
-        const bestSource = [...validActiveSources].sort((a, b) => {
+
+        // 우선순위 순으로 정렬 (가격 낮은 순 → 시간 빠른 순), 순서대로 모두 시도
+        const sortedSources = [...validActiveSources].sort((a, b) => {
           const costA = a.costPrice ?? 0;
           const costB = b.costPrice ?? 0;
           if (costA !== costB) return costA - costB;
-          const timeA = a.estimatedMinutes ?? 999999;
-          const timeB = b.estimatedMinutes ?? 999999;
-          return timeA - timeB;
-        })[0];
-        const provider = providers.find(p => p.id === bestSource.providerId);
-        if (!provider) continue;
+          return (a.estimatedMinutes ?? 999999) - (b.estimatedMinutes ?? 999999);
+        });
 
-        const order: SMMOrder = {
-          id: `ORD${Date.now()}${Math.floor(Math.random()*100)}`,
-          userId: user.id,
-          userNickname: user.nickname,
-          orderTime: new Date().toLocaleString(),
-          platform: product.platform,
-          productName: product.name,
-          link: opt.link,
-          quantity: opt.quantity,
-          initialCount: 0,
-          remains: opt.quantity,
-          providerName: provider.name,
-          costPrice: bestSource.costPrice || 0,
-          sellingPrice: product.sellingPrice || 0,
-          profit: Math.floor(opt.totalPrice - ((bestSource.costPrice || 0) * opt.quantity)),
-          status: '준비중',
-          externalOrderId: 'PENDING'
-        };
+        let orderPlaced = false;
+        for (const source of sortedSources) {
+          const provider = providers.find(p => p.id === source.providerId);
+          if (!provider) continue;
 
-        // 공급처 API에 주문 전송
-        try {
-          const resp = await fetch('/.netlify/functions/smm-api', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'submit',
-              providerId: bestSource.providerId,
-              apiUrl: provider.apiUrl,
-              serviceId: bestSource.serviceId,
-              link: opt.link,
-              quantity: opt.quantity
-            })
-          });
-          const result = await resp.json();
-          if (result.status === 'success' && result.orderId) {
-            order.externalOrderId = result.orderId;
-            order.status = '진행중';
-          } else {
-            console.error('[주문실패] JAP 에러 메시지:', result.message);
-            console.error('[주문실패] 전송 데이터 - providerId:', bestSource.providerId, '| serviceId:', bestSource.serviceId, '| apiUrl:', provider.apiUrl);
+          try {
+            const resp = await fetch('/.netlify/functions/smm-api', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'submit',
+                providerId: source.providerId,
+                apiUrl: provider.apiUrl,
+                serviceId: source.serviceId,
+                link: opt.link,
+                quantity: opt.quantity
+              })
+            });
+            const result = await resp.json();
+            if (result.status === 'success' && result.orderId) {
+              const order: SMMOrder = {
+                id: `ORD${Date.now()}${Math.floor(Math.random()*100)}`,
+                userId: user.id,
+                userNickname: user.nickname,
+                orderTime: new Date().toLocaleString(),
+                platform: product.platform,
+                productName: product.name,
+                link: opt.link,
+                quantity: opt.quantity,
+                initialCount: 0,
+                remains: opt.quantity,
+                providerName: provider.name,
+                costPrice: source.costPrice || 0,
+                sellingPrice: product.sellingPrice || 0,
+                profit: Math.floor(opt.totalPrice - ((source.costPrice || 0) * opt.quantity)),
+                status: '진행중',
+                externalOrderId: result.orderId
+              };
+              onOrderComplete(order);
+              orderPlaced = true;
+              break;
+            } else {
+              console.error('[주문실패] serviceId:', source.serviceId, '|', result.message);
+            }
+          } catch (e) {
+            console.error('[주문실패] 네트워크/파싱 오류 - serviceId:', source.serviceId, e);
           }
-        } catch (e) {
-          console.error('공급처 주문 전송 실패 (네트워크/파싱 오류):', e);
         }
 
-        onOrderComplete(order);
+        // 모든 소스 실패 → 주문취소 내역 저장 + 포인트 환불 예약
+        if (!orderPlaced) {
+          const fallbackProvider = providers.find(p => p.id === sortedSources[0]?.providerId);
+          const canceledOrder: SMMOrder = {
+            id: `ORD${Date.now()}${Math.floor(Math.random()*100)}`,
+            userId: user.id,
+            userNickname: user.nickname,
+            orderTime: new Date().toLocaleString(),
+            platform: product.platform,
+            productName: product.name,
+            link: opt.link,
+            quantity: opt.quantity,
+            initialCount: 0,
+            remains: 0,
+            providerName: fallbackProvider?.name || '',
+            costPrice: sortedSources[0]?.costPrice || 0,
+            sellingPrice: product.sellingPrice || 0,
+            profit: 0,
+            status: '주문취소',
+            externalOrderId: 'FAILED'
+          };
+          onOrderComplete(canceledOrder);
+          totalRefund += opt.totalPrice;
+        }
       }
-      
-      window.dispatchEvent(new CustomEvent('user-new-order', { detail: { amount: totalOrderAmount } }));
-      showAlert({ description: '성공적으로 주문되었습니다! 마이페이지에서 현황을 확인하세요.' });
+
+      // 실패 항목 포인트 환불
+      if (totalRefund > 0) {
+        const refundedPoints = nextPoints + totalRefund;
+        window.dispatchEvent(new CustomEvent('site-user-update', {
+          detail: { ...user, points: refundedPoints },
+        }));
+        updateProfile(user.id, { points: refundedPoints }).catch(e => console.warn('환불 포인트 DB 반영 실패:', e));
+      }
+
+      window.dispatchEvent(new CustomEvent('user-new-order', { detail: { amount: totalOrderAmount - totalRefund } }));
+      showAlert({ description: totalRefund > 0
+        ? `일부 주문이 모든 공급처에서 실패하여 ${totalRefund.toLocaleString()}P가 환불되었습니다. 마이페이지에서 현황을 확인하세요.`
+        : '성공적으로 주문되었습니다! 마이페이지에서 현황을 확인하세요.'
+      });
       setSelectedOptions([]);
       navigate('/mypage');
     } catch (err) {

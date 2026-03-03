@@ -105,11 +105,11 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
               <div className="flex flex-col items-center gap-2 text-center"><span className="text-[12px] font-black text-gray-400 uppercase italic tracking-widest">월 평균 지출</span><span className="text-2xl md:text-3xl font-black text-red-400 tracking-tight">${expense.toLocaleString()}</span></div>
             </div>
             <div className="space-y-8">
-              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-6 border-b border-gray-100">
+              <div className="flex flex-col gap-3 pb-6 border-b border-gray-100">
                 <div className="text-4xl md:text-6xl font-black text-gray-900 italic tracking-tighter leading-none whitespace-nowrap">₩ {channel.price.toLocaleString()}</div>
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                  <button onClick={handleStartConsultation} className="flex-1 sm:w-48 py-6 bg-white border-2 border-gray-900 text-gray-900 rounded-[24px] font-black text-lg hover:bg-gray-50 transition-all shadow-lg active:scale-95 italic uppercase">상담하기</button>
-                  <button onClick={handleBuyNow} className="flex-1 sm:w-64 py-6 bg-gray-900 text-white rounded-[24px] font-black text-lg hover:bg-blue-600 transition-all shadow-2xl shadow-blue-100 active:scale-95 italic uppercase">즉시구매</button>
+                <div className="flex flex-row gap-3 w-full">
+                  <button onClick={handleStartConsultation} className="flex-1 py-3.5 bg-white border-2 border-gray-900 text-gray-900 rounded-[24px] font-black text-base hover:bg-gray-50 transition-all shadow-lg active:scale-95 italic uppercase">상담하기</button>
+                  <button onClick={handleBuyNow} className="flex-[2] py-3.5 bg-gray-900 text-white rounded-[24px] font-black text-base hover:bg-blue-600 transition-all shadow-2xl shadow-blue-100 active:scale-95 italic uppercase">즉시구매</button>
                 </div>
               </div>
               <div className="bg-[#f4f9ff] p-6 md:p-10 rounded-[36px] border border-[#dce9ff] relative overflow-hidden">
