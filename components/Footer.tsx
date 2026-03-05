@@ -16,6 +16,7 @@ const Footer: React.FC = () => {
               <div className="text-sm text-gray-700 space-y-1">
                 <p><strong>상호</strong> 더베스트[THEBEST]</p>
                 <p><strong>대표자</strong> 김나영</p>
+                <p><strong>연락처</strong> 010-5315-6542</p>
                 <p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p>
               </div>
             </div>
@@ -58,6 +59,7 @@ const Footer: React.FC = () => {
               <div className="text-[11px] sm:text-xs text-gray-600 space-x-3 sm:space-x-4 inline-flex flex-wrap justify-center">
                 <span><strong className="text-gray-500">상호</strong> 더베스트[THEBEST]</span>
                 <span><strong className="text-gray-500">대표</strong> 김나영</span>
+                <span><strong className="text-gray-500">연락처</strong> 010-5315-6542</span>
                 <span className="hidden sm:inline"><strong className="text-gray-500">사업자번호</strong> 409-30-51469</span>
               </div>
               <div className="flex items-center gap-3 text-[11px] sm:text-xs">
