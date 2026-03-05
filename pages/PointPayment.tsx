@@ -266,9 +266,16 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
                 <p className="text-5xl font-black text-gray-900 text-center italic tracking-tighter">{finalPayAmount.toLocaleString()}원</p>
               </div>
             </div>
-            <button 
-              onClick={handleCharge} 
-              disabled={amount <= 0 || isProcessing} 
+            {!isProductPayment && (
+              <div className="pt-2 space-y-1">
+                <p className="text-[11px] font-black text-gray-500 uppercase italic">포인트 충전 유의사항</p>
+                <p className="text-[11px] text-red-500 font-bold leading-relaxed">충전한 포인트는 충전일로부터 1년 이내에 사용하지 않을 경우, 사용하지 못할 수 있습니다.</p>
+                <p className="text-[11px] text-gray-400 leading-relaxed">포인트는 현금으로 환급되지 않으며, 타인에게 양도할 수 없습니다.</p>
+              </div>
+            )}
+            <button
+              onClick={handleCharge}
+              disabled={amount <= 0 || isProcessing}
               className={`w-full py-8 rounded-[32px] font-black text-2xl transition-all shadow-2xl italic uppercase ${amount > 0 && !isProcessing ? 'bg-blue-600 text-white hover:bg-black scale-[1.02]' : 'bg-gray-100 text-gray-300 cursor-not-allowed'}`}
             >
               {isProcessing ? '처리 중...' : '안전 결제하기 🚀'}
