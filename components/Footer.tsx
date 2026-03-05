@@ -43,9 +43,6 @@ const Footer: React.FC = () => {
           <div className="mt-6 border border-gray-300 rounded-lg px-6 py-4 bg-white">
             <p className="text-sm font-black text-gray-800 mb-1">더베스트[THEBEST]</p>
             <p className="text-sm text-gray-700 font-bold">해당 사이트 내 거래에 대한 책임, 환불 민원 등의 처리는 더베스트에서 진행합니다.</p>
-            <p className="text-xs text-gray-500 mt-2">
-              대표자: 김나영&nbsp;&nbsp;|&nbsp;&nbsp;사업자등록번호: 409-30-51469&nbsp;&nbsp;|&nbsp;&nbsp;주소: 대구광역시 달성군 현풍로6길 5&nbsp;&nbsp;|&nbsp;&nbsp;통신판매업신고번호: 2022-대구달성-0164
-            </p>
           </div>
 
           <p className="text-xs text-gray-400 text-center mt-6">© 더베스트[THEBEST]. All rights reserved.</p>
