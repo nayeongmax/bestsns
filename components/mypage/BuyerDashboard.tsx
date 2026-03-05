@@ -13,7 +13,22 @@ interface Props {
   initialSubTab?: 'sns' | 'channel' | 'store';
 }
 
-type BuyerSubTab = 'sns' | 'channel' | 'store';
+type BuyerSubTab = 'sns' | 'channel' | 'store' | 'points';
+type PointSubTab = 'charge' | 'usage';
+
+interface PointChargeItem {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+}
+
+interface PointUsageItem {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+}
 
 interface OrderItem {
   id: string;
@@ -36,9 +51,9 @@ interface OrderItem {
 
 const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, ebooks, onAddReview, initialSubTab }) => {
   const navigate = useNavigate();
-  // 기본값: 구매내역(SNS) 탭. 알바의뢰는 PartTimeJobRequest 등에서 명시적으로 올 때만
   const [activeTab, setActiveTab] = useState<BuyerSubTab>(() => initialSubTab ?? 'sns');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [pointSubTab, setPointSubTab] = useState<PointSubTab>('charge');
 
   // 리뷰 모달 상태
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -63,6 +78,27 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       }, {}),
     [flags]
   );
+
+  // 포인트 충전 내역 (localStorage)
+  const chargeItems: PointChargeItem[] = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem(`point_charge_log_${user.id}`) || '[]');
+    } catch { return []; }
+  }, [user.id]);
+
+  // 포인트 사용 내역 (주문에서 파생)
+  const usageItems: PointUsageItem[] = useMemo(() => {
+    const sns = smmOrders
+      .filter(o => o.userId === user.id && o.status !== '주문취소')
+      .map(o => ({ id: o.id, description: `SNS 활성화 사용 (${o.productName})`, amount: o.sellingPrice * o.quantity, date: o.orderTime }));
+    const ch = channelOrders
+      .filter(o => o.userId === user.id)
+      .map(o => ({ id: o.id, description: `채널 구매 (${o.productName})`, amount: o.price, date: typeof o.orderTime === 'string' ? o.orderTime : new Date(o.orderTime).toISOString() }));
+    const st = storeOrders
+      .filter(o => o.userId === user.id)
+      .map(o => ({ id: o.id, description: `N잡스토어 구매 (${o.productName})`, amount: o.price, date: typeof o.orderTime === 'string' ? o.orderTime : new Date(o.orderTime).toISOString() }));
+    return [...sns, ...ch, ...st].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [smmOrders, channelOrders, storeOrders, user.id]);
 
   // 데이터 통합 (실제 주문만 표시)
   const buyerOrders: OrderItem[] = useMemo(() => {
@@ -172,16 +208,17 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative">
-      <div className="flex gap-2 p-2 bg-gray-100/50 rounded-[32px] w-full shadow-inner">
-        {[ 
-          { id: 'sns', label: 'SNS 활성화 내역' }, 
-          { id: 'channel', label: '채널 구매 내역' }, 
-          { id: 'store', label: 'N잡 스토어 내역' }
+      <div className="flex gap-2 p-2 bg-gray-100/50 rounded-[32px] w-full shadow-inner flex-wrap">
+        {[
+          { id: 'sns', label: 'SNS 활성화' },
+          { id: 'channel', label: '채널 구매' },
+          { id: 'store', label: 'N잡 스토어' },
+          { id: 'points', label: '포인트 내역' }
         ].map(tab => (
-          <button 
-            key={tab.id} 
-            onClick={() => { setActiveTab(tab.id as any); setExpandedId(null); }} 
-            className={`flex-1 py-4 rounded-[24px] text-[15px] font-black transition-all duration-300 ${activeTab === tab.id ? 'bg-white text-blue-600 shadow-md scale-100' : 'text-gray-400 hover:text-gray-600 hover:bg-white/30'}`}
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id as any); setExpandedId(null); }}
+            className={`flex-1 py-4 rounded-[24px] text-[14px] font-black transition-all duration-300 ${activeTab === tab.id ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-white/30'}`}
           >
             {tab.label}
           </button>
@@ -414,6 +451,81 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                 </div>
               );
             })
+          )}
+        </div>
+      )}
+
+      {activeTab === 'points' && (
+        <div className="space-y-6">
+          {/* 서브탭 */}
+          <div className="flex gap-2 border-b border-gray-100">
+            {([['charge', '충전 리스트'], ['usage', '사용 리스트']] as [PointSubTab, string][]).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setPointSubTab(id)}
+                className={`px-6 py-3 font-black text-sm border-b-2 transition-all ${pointSubTab === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {pointSubTab === 'charge' && (
+            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
+              {chargeItems.length === 0 ? (
+                <div className="py-16 text-center text-gray-300 font-black italic">충전 내역이 없습니다.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">충전유형</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전금액</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전일</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {chargeItems.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-5 text-gray-400 font-bold">{chargeItems.length - idx}</td>
+                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
+                        <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
+                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {pointSubTab === 'usage' && (
+            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
+              {usageItems.length === 0 ? (
+                <div className="py-16 text-center text-gray-300 font-black italic">사용 내역이 없습니다.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">사용유형</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">사용금액</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">사용일</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {usageItems.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-5 text-gray-400 font-bold">{usageItems.length - idx}</td>
+                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
+                        <td className="py-3 px-5 text-right text-red-500 font-black">-{item.amount.toLocaleString()}P</td>
+                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           )}
         </div>
       )}
