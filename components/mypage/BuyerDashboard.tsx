@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '@/types';
 import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, type OrderBuyerFlag } from '../../storeDb';
+import { fetchPointTransactions, type PointTransaction } from '../../pointDb';
 
 interface Props {
   user: UserProfile;
@@ -16,12 +17,7 @@ interface Props {
 type BuyerSubTab = 'sns' | 'channel' | 'store';
 type SnsSubTab = 'orders' | 'charge' | 'usage';
 
-interface PointChargeItem {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-}
+type PointChargeItem = PointTransaction;
 
 interface PointUsageItem {
   id: string;
@@ -79,12 +75,12 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     [flags]
   );
 
-  // 포인트 충전 내역 (localStorage)
-  const chargeItems: PointChargeItem[] = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem(`point_charge_log_${user.id}`) || '[]');
-    } catch { return []; }
-  }, [user.id]);
+  // 포인트 충전 내역 (Supabase DB)
+  const [chargeItems, setChargeItems] = useState<PointChargeItem[]>([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchPointTransactions(user.id, 'charge').then(setChargeItems).catch((e) => console.warn('충전 내역 로드 실패:', e));
+  }, [user?.id]);
 
   // 포인트 사용 내역 (주문에서 파생)
   const usageItems: PointUsageItem[] = useMemo(() => {
@@ -313,7 +309,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                         <td className="py-3 px-5 text-gray-400 font-bold">{chargeItems.length - idx}</td>
                         <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
                         <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
-                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
+                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.created_at).toLocaleDateString('ko-KR')}</td>
                       </tr>
                     ))}
                   </tbody>
