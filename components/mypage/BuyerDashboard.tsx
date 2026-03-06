@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '@/types';
 import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, type OrderBuyerFlag } from '../../storeDb';
+import { fetchPointTransactions, type PointTransaction } from '../../pointDb';
 
 interface Props {
   user: UserProfile;
@@ -13,15 +14,10 @@ interface Props {
   initialSubTab?: 'sns' | 'channel' | 'store';
 }
 
-type BuyerSubTab = 'sns' | 'channel' | 'store' | 'points';
-type PointSubTab = 'charge' | 'usage';
+type BuyerSubTab = 'sns' | 'channel' | 'store';
+type SnsSubTab = 'orders' | 'charge' | 'usage';
 
-interface PointChargeItem {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-}
+type PointChargeItem = PointTransaction;
 
 interface PointUsageItem {
   id: string;
@@ -53,7 +49,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BuyerSubTab>(() => initialSubTab ?? 'sns');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [pointSubTab, setPointSubTab] = useState<PointSubTab>('charge');
+  const [snsSubTab, setSnsSubTab] = useState<SnsSubTab>('orders');
 
   // 리뷰 모달 상태
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -79,12 +75,12 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     [flags]
   );
 
-  // 포인트 충전 내역 (localStorage)
-  const chargeItems: PointChargeItem[] = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem(`point_charge_log_${user.id}`) || '[]');
-    } catch { return []; }
-  }, [user.id]);
+  // 포인트 충전 내역 (Supabase DB)
+  const [chargeItems, setChargeItems] = useState<PointChargeItem[]>([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchPointTransactions(user.id, 'charge').then(setChargeItems).catch((e) => console.warn('충전 내역 로드 실패:', e));
+  }, [user?.id]);
 
   // 포인트 사용 내역 (주문에서 파생)
   const usageItems: PointUsageItem[] = useMemo(() => {
@@ -208,17 +204,16 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative">
-      <div className="flex gap-2 p-2 bg-gray-100/50 rounded-[32px] w-full shadow-inner flex-wrap">
+      <div className="flex gap-2 p-2 bg-gray-100/50 rounded-[32px] w-full shadow-inner">
         {[
           { id: 'sns', label: 'SNS 활성화' },
           { id: 'channel', label: '채널 구매' },
-          { id: 'store', label: 'N잡 스토어' },
-          { id: 'points', label: '포인트 내역' }
+          { id: 'store', label: 'N잡 스토어' }
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id as any); setExpandedId(null); }}
-            className={`flex-1 py-4 rounded-[24px] text-[14px] font-black transition-all duration-300 ${activeTab === tab.id ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-white/30'}`}
+            onClick={() => { setActiveTab(tab.id as BuyerSubTab); setExpandedId(null); }}
+            className={`flex-1 py-4 rounded-[24px] text-[15px] font-black transition-all duration-300 ${activeTab === tab.id ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-white/30'}`}
           >
             {tab.label}
           </button>
@@ -226,52 +221,131 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       </div>
 
       {activeTab === 'sns' ? (
-        <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
-              <tbody className="divide-y divide-gray-50">
-                {buyerOrders.map(order => (
-                  <React.Fragment key={order.id}>
-                    <tr onClick={() => setExpandedId(expandedId === order.id ? null : order.id)} className={`transition-all group cursor-pointer ${expandedId === order.id ? 'bg-[#2D3E5E] text-white' : 'hover:bg-gray-50/50 text-gray-700'}`}>
-                      <td className="py-5 px-6 whitespace-nowrap font-black text-[13px]">
-                        <span className="opacity-40 mr-1.5">≡</span>{order.id}
-                      </td>
-                      <td className="py-5 px-4 w-[200px]" style={{maxWidth:'200px', overflow:'hidden'}}>
-                        <div className="flex items-center gap-1.5 w-full">
-                          <span className="text-[12px] font-bold text-blue-400 overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0 block">{order.link}</span>
-                          <button onClick={(e) => copyToClipboard(order.link || '', e)} className="shrink-0 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black">복사</button>
-                        </div>
-                      </td>
-                      <td className="py-5 px-4 font-black text-[14px] italic">{order.productName} - {order.price.toLocaleString()}원</td>
-                      <td className="py-5 px-4 text-center whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded text-[11px] font-black ${expandedId === order.id ? 'bg-white text-[#2D3E5E]' : 'bg-gray-100 text-gray-400'}`}>{order.status}</span>
-                      </td>
-                      <td className="py-5 px-6 text-right text-[13px] font-bold italic opacity-80 whitespace-nowrap">{order.orderTime} <span className="ml-2">{expandedId === order.id ? '▲' : '▼'}</span></td>
-                    </tr>
-                    {expandedId === order.id && (
-                      <tr className="bg-[#F8FAFC] animate-in slide-in-from-top-1">
-                        <td colSpan={5} className="p-8 border-b border-gray-100">
-                          <div className="max-w-4xl space-y-3 text-[14px] font-bold text-gray-600">
-                             <div className="flex items-center gap-2"><span>주문 번호</span> <span className="text-gray-900 font-black">{order.id}</span> <button onClick={(e) => copyToClipboard(order.id, e)} className="text-blue-500">📋</button></div>
-                             <div className="flex gap-2"><span>서비스</span> <span className="text-gray-900">{order.productName}</span></div>
-                             <div className="flex gap-2"><span>링크</span> <a href={order.link} target="_blank" rel="noreferrer" className="text-blue-500 underline break-all">{order.link}</a></div>
-                             <div className="flex gap-2"><span>주문시간</span> <span className="text-gray-900">{order.orderTime}</span></div>
-                             <div className="flex gap-2"><span>비용</span> <span className="text-gray-900">{order.totalPrice.toLocaleString()}P</span></div>
-                             <div className="flex gap-2"><span>수량</span> <span className="text-gray-900">{order.quantity}</span></div>
-                             <div className="flex gap-2"><span>최초수량</span> <span className="text-orange-600">{order.initialCount || 0}</span></div>
-                             <div className="flex gap-2"><span>남은 수량</span> <span className="text-gray-900">{order.remains || 0}</span></div>
-                             <div className="pt-6 flex justify-end">
-                                <button onClick={(e) => handleConfirmOrder(order, e)} className={`px-8 py-3 rounded-xl font-black text-sm transition-all ${confirmedList.includes(order.id) ? 'bg-gray-200 text-gray-400' : 'bg-blue-600 text-white hover:bg-black shadow-lg'}`}>{confirmedList.includes(order.id) ? '확정 완료 ✓' : '구매 확정'}</button>
-                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+        <div className="space-y-4">
+          {/* SNS 서브탭: 구매내역 / 충전리스트 / 사용리스트 */}
+          <div className="flex gap-2 border-b border-gray-100">
+            {([['orders', '구매내역'], ['charge', '충전 리스트'], ['usage', '사용 리스트']] as [SnsSubTab, string][]).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setSnsSubTab(id)}
+                className={`px-5 py-3 font-black text-sm border-b-2 transition-all ${snsSubTab === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
+
+          {snsSubTab === 'orders' && (
+            <div className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-sm">
+              {buyerOrders.length === 0 ? (
+                <div className="py-16 text-center text-gray-300 font-black italic">내역이 존재하지 않습니다.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[900px]">
+                    <tbody className="divide-y divide-gray-50">
+                      {buyerOrders.map(order => (
+                        <React.Fragment key={order.id}>
+                          <tr onClick={() => setExpandedId(expandedId === order.id ? null : order.id)} className={`transition-all group cursor-pointer ${expandedId === order.id ? 'bg-[#2D3E5E] text-white' : 'hover:bg-gray-50/50 text-gray-700'}`}>
+                            <td className="py-5 px-6 whitespace-nowrap font-black text-[13px]">
+                              <span className="opacity-40 mr-1.5">≡</span>{order.id}
+                            </td>
+                            <td className="py-5 px-4 w-[200px]" style={{maxWidth:'200px', overflow:'hidden'}}>
+                              <div className="flex items-center gap-1.5 w-full">
+                                <span className="text-[12px] font-bold text-blue-400 overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0 block">{order.link}</span>
+                                <button onClick={(e) => copyToClipboard(order.link || '', e)} className="shrink-0 bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-black">복사</button>
+                              </div>
+                            </td>
+                            <td className="py-5 px-4 font-black text-[14px] italic">{order.productName} - {order.price.toLocaleString()}원</td>
+                            <td className="py-5 px-4 text-center whitespace-nowrap">
+                              <span className={`px-3 py-1 rounded text-[11px] font-black ${expandedId === order.id ? 'bg-white text-[#2D3E5E]' : 'bg-gray-100 text-gray-400'}`}>{order.status}</span>
+                            </td>
+                            <td className="py-5 px-6 text-right text-[13px] font-bold italic opacity-80 whitespace-nowrap">{order.orderTime} <span className="ml-2">{expandedId === order.id ? '▲' : '▼'}</span></td>
+                          </tr>
+                          {expandedId === order.id && (
+                            <tr className="bg-[#F8FAFC] animate-in slide-in-from-top-1">
+                              <td colSpan={5} className="p-8 border-b border-gray-100">
+                                <div className="max-w-4xl space-y-3 text-[14px] font-bold text-gray-600">
+                                  <div className="flex items-center gap-2"><span>주문 번호</span> <span className="text-gray-900 font-black">{order.id}</span> <button onClick={(e) => copyToClipboard(order.id, e)} className="text-blue-500">📋</button></div>
+                                  <div className="flex gap-2"><span>서비스</span> <span className="text-gray-900">{order.productName}</span></div>
+                                  <div className="flex gap-2"><span>링크</span> <a href={order.link} target="_blank" rel="noreferrer" className="text-blue-500 underline break-all">{order.link}</a></div>
+                                  <div className="flex gap-2"><span>주문시간</span> <span className="text-gray-900">{order.orderTime}</span></div>
+                                  <div className="flex gap-2"><span>비용</span> <span className="text-gray-900">{order.totalPrice.toLocaleString()}P</span></div>
+                                  <div className="flex gap-2"><span>수량</span> <span className="text-gray-900">{order.quantity}</span></div>
+                                  <div className="flex gap-2"><span>최초수량</span> <span className="text-orange-600">{order.initialCount || 0}</span></div>
+                                  <div className="flex gap-2"><span>남은 수량</span> <span className="text-gray-900">{order.remains || 0}</span></div>
+                                  <div className="pt-6 flex justify-end">
+                                    <button onClick={(e) => handleConfirmOrder(order, e)} className={`px-8 py-3 rounded-xl font-black text-sm transition-all ${confirmedList.includes(order.id) ? 'bg-gray-200 text-gray-400' : 'bg-blue-600 text-white hover:bg-black shadow-lg'}`}>{confirmedList.includes(order.id) ? '확정 완료 ✓' : '구매 확정'}</button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {snsSubTab === 'charge' && (
+            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
+              {chargeItems.length === 0 ? (
+                <div className="py-16 text-center text-gray-300 font-black italic">충전 내역이 없습니다.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">충전유형</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전금액</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전일</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {chargeItems.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-5 text-gray-400 font-bold">{chargeItems.length - idx}</td>
+                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
+                        <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
+                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.created_at).toLocaleDateString('ko-KR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {snsSubTab === 'usage' && (
+            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
+              {usageItems.length === 0 ? (
+                <div className="py-16 text-center text-gray-300 font-black italic">사용 내역이 없습니다.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">사용유형</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">사용금액</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">사용일</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {usageItems.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-5 text-gray-400 font-bold">{usageItems.length - idx}</td>
+                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
+                        <td className="py-3 px-5 text-right text-red-500 font-black">-{item.amount.toLocaleString()}P</td>
+                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
       ) : activeTab === 'channel' || activeTab === 'store' ? (
         <div className="space-y-4">
@@ -451,81 +525,6 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                 </div>
               );
             })
-          )}
-        </div>
-      )}
-
-      {activeTab === 'points' && (
-        <div className="space-y-6">
-          {/* 서브탭 */}
-          <div className="flex gap-2 border-b border-gray-100">
-            {([['charge', '충전 리스트'], ['usage', '사용 리스트']] as [PointSubTab, string][]).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setPointSubTab(id)}
-                className={`px-6 py-3 font-black text-sm border-b-2 transition-all ${pointSubTab === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {pointSubTab === 'charge' && (
-            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
-              {chargeItems.length === 0 ? (
-                <div className="py-16 text-center text-gray-300 font-black italic">충전 내역이 없습니다.</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
-                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">충전유형</th>
-                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전금액</th>
-                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전일</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {chargeItems.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-3 px-5 text-gray-400 font-bold">{chargeItems.length - idx}</td>
-                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
-                        <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
-                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-
-          {pointSubTab === 'usage' && (
-            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
-              {usageItems.length === 0 ? (
-                <div className="py-16 text-center text-gray-300 font-black italic">사용 내역이 없습니다.</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
-                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">사용유형</th>
-                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">사용금액</th>
-                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">사용일</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {usageItems.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-3 px-5 text-gray-400 font-bold">{usageItems.length - idx}</td>
-                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
-                        <td className="py-3 px-5 text-right text-red-500 font-black">-{item.amount.toLocaleString()}P</td>
-                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
           )}
         </div>
       )}

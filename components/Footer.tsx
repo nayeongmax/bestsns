@@ -17,7 +17,6 @@ const Footer: React.FC = () => {
                 <p><strong>상호</strong> 더베스트[THEBEST]</p>
                 <p><strong>대표자</strong> 김나영</p>
                 <p><strong>연락처</strong> 010-5315-6542</p>
-                <p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -25,6 +24,7 @@ const Footer: React.FC = () => {
               <div className="text-sm text-gray-700 space-y-1">
                 <p><strong>사업자번호</strong> 409-30-51469</p>
                 <p className="whitespace-nowrap"><strong>통신판매업신고번호</strong> 2022-대구달성-0164</p>
+                <p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p>
               </div>
             </div>
             <div className="space-y-2 flex flex-col items-center md:items-start">
