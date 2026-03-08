@@ -129,25 +129,36 @@ const TermsPage: React.FC = () => {
           </div>
 
           <div>
-            <p className="font-black text-gray-900 text-lg">제10조 포인트 사용 및 환불 규정</p>
+            <p className="font-black text-gray-900 text-lg">제10조 포인트 사용 및 환불·취소</p>
             <ul className="mt-2 space-y-2 pl-2">
-              <li>1. 충전 포인트는 플랫폼 내에서만 사용할 수 있으며 외부 서비스에서는 사용할 수 없다.</li>
-              <li>2. 포인트를 전혀 사용하지 않은 경우에 한하여 환불이 가능하다.</li>
-              <li>3. 포인트 구매 후 14일이 경과한 경우 환불이 불가능하다.</li>
-              <li>4. 환불은 결제 시 사용한 동일한 결제 수단으로만 처리된다.</li>
-              <li>5. 포인트의 유효기간은 충전일로부터 1년이며 기간이 경과하면 자동 소멸된다.</li>
-              <li>6. 다음에 해당하는 포인트는 환불이 불가능하다.
+              <li>1. 충전 포인트는 더베스트[THEBEST] 사이트 내에서만 사용 가능하며, 타 사이트 또는 외부 서비스에서의 사용은 불가합니다.</li>
+              <li>2. 포인트를 전혀 사용하지 않은 경우에만 전액 환불이 가능합니다.</li>
+              <li>3. 포인트 구매 후 14일이 경과한 경우에는 환불이 불가합니다.</li>
+              <li>4. 환불의 경우 결제 수단이 아닌 다른 방식의 환불은 불가하고 결제 수단으로의 취소만 가능합니다.</li>
+              <li>5. 충전한 포인트의 유효기간은 1년이며, 1년 후에는 포인트가 소멸됩니다.</li>
+              <li>6. 아래에 해당하는 경우 포인트는 환불이 불가합니다.
                 <ul className="mt-1 pl-4 space-y-1 text-sm text-gray-600">
-                  <li>· 이벤트 지급 포인트</li>
-                  <li>· 무상 지급 포인트</li>
-                  <li>· 회원이 직접 결제하지 않은 포인트</li>
+                  <li>1) 이벤트 등으로 무상 지급된 포인트</li>
+                  <li>2) 이용자가 직접 충전하지 않은 포인트</li>
                 </ul>
               </li>
+              <li>7. 환불 및 취소 신청은 고객센터(010-5315-6542)를 통해 접수하며, 신청 접수 후 10일 이내에 처리됩니다.</li>
             </ul>
           </div>
 
           <div>
-            <p className="font-black text-gray-900 text-lg">제11조 회원의 의무</p>
+            <p className="font-black text-gray-900 text-lg">제11조 개인정보 수집 및 보호</p>
+            <ul className="mt-2 space-y-3 pl-2 text-sm text-gray-700">
+              <li>1. 더베스트[THEBEST]는 서비스 제공을 위한 목적으로 이용자의 동의를 얻어 수집한 개인정보를 본인의 승낙 없이 타인에게 누설할 수 없으며, 서비스 제공 목적 이외의 용도로 사용하지 않습니다. 다만, 관련 법령에 의한 수사상의 목적 등으로 관계 기관으로부터 요구 받은 경우나 방송통신심의위원회의 요청이 있는 경우 등 법령에 따른 적법한 절차에 의한 경우에는 그러하지 아니합니다.</li>
+              <li>2. 더베스트[THEBEST]는 필요한 경우 이용자의 동의를 얻어 이용자의 개인정보를 이용하거나 제3자에게 제공할 수 있습니다. 이 경우 그 개인정보의 이용 목적, 제공받는 자, 제공하는 개인정보 항목, 제공 목적, 제공 시기 등에 대해 개별적으로 이용자의 동의를 받습니다.</li>
+              <li>3. 더베스트[THEBEST]는 이용자의 개인정보 보호와 관련하여 정보통신망 이용촉진 및 정보보호 등에 관한 법률, 통신비밀보호법, 전기통신사업법 등 관련 법령을 준수합니다.</li>
+              <li>4. 이용자의 개인정보 열람 요청은 관련 법령에 따라 수사기관의 수사 자료제공 절차에 의해서 가능하며 이용자는 자신의 개인정보 도용 등을 이유로 타인의 개인정보를 열람할 수 없습니다.</li>
+              <li>5. 본 조에서 정한 사항 이외의 이용자의 개인정보 보호에 관한 사항은 더베스트[THEBEST]가 제정한 '개인정보 처리방침'에서 정한 바에 의합니다.</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="font-black text-gray-900 text-lg">제13조 회원의 의무</p>
             <ul className="mt-2 space-y-2 pl-2">
               <li>1. 회원은 서비스 이용 시 관련 법령과 본 약관을 준수해야 한다.</li>
               <li>2. 회원은 타인의 계정을 도용하거나 플랫폼의 정상적인 운영을 방해하는 행위를 해서는 안 된다.</li>
@@ -157,7 +168,7 @@ const TermsPage: React.FC = () => {
           </div>
 
           <div>
-            <p className="font-black text-gray-900 text-lg">제12조 회원 탈퇴 및 이용 제한</p>
+            <p className="font-black text-gray-900 text-lg">제14조 회원 탈퇴 및 이용 제한</p>
             <ul className="mt-2 space-y-2 pl-2">
               <li>1. 회원은 언제든지 탈퇴를 요청할 수 있다.</li>
               <li>2. 다음 각 호에 해당하는 경우 회사는 회원의 이용을 제한하거나 계정을 삭제할 수 있다.
@@ -172,12 +183,12 @@ const TermsPage: React.FC = () => {
           </div>
 
           <div>
-            <p className="font-black text-gray-900 text-lg">제13조 손해배상</p>
+            <p className="font-black text-gray-900 text-lg">제15조 손해배상</p>
             <p className="mt-2">회원의 귀책 사유로 회사 또는 제3자에게 손해가 발생한 경우 회원은 해당 손해를 배상할 책임이 있다.</p>
           </div>
 
           <div>
-            <p className="font-black text-gray-900 text-lg">제14조 면책조항</p>
+            <p className="font-black text-gray-900 text-lg">제16조 면책조항</p>
             <p className="mt-2">회사는 다음 각 호의 사유로 발생한 손해에 대해 책임을 지지 않는다.</p>
             <ul className="mt-2 pl-4 space-y-1 text-sm text-gray-600">
               <li>· 천재지변 등 불가항력</li>
@@ -188,12 +199,12 @@ const TermsPage: React.FC = () => {
           </div>
 
           <div>
-            <p className="font-black text-gray-900 text-lg">제15조 준거법 및 관할</p>
+            <p className="font-black text-gray-900 text-lg">제17조 준거법 및 관할</p>
             <p className="mt-2">본 약관은 대한민국 법령에 따라 해석되며 서비스 이용과 관련하여 발생하는 분쟁은 회사 본사 소재지를 관할하는 법원을 전속 관할 법원으로 한다.</p>
           </div>
 
           <div>
-            <p className="font-black text-gray-900 text-lg">제16조 약관 외 준칙</p>
+            <p className="font-black text-gray-900 text-lg">제18조 약관 외 준칙</p>
             <p className="mt-2">본 약관에 명시되지 않은 사항은 관련 법령 및 일반 상관례에 따른다.</p>
           </div>
 
