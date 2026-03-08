@@ -459,7 +459,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   };
 
   const handleSaveProduct = () => {
-    if (!productForm.name || (productForm.sources || []).length === 0) return alert('상품명과 최소 하나 이상의 소스 연결이 필요합니다.');
+    if (!productForm.name) return alert('상품명을 입력하세요.');
     setSmmProducts(prev => {
       const sameKey = (i: SMMProduct) =>
         i.platform === productForm.platform &&
@@ -798,7 +798,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                 </div>
 
                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-4 no-scrollbar border-t border-gray-50 pt-4">
-                   <p className="text-[11px] font-black text-gray-400 uppercase italic px-4 mb-2">현재 연결된 다중 소스 목록 ({productForm.sources.length})</p>
+                   <p className="text-[11px] font-black text-gray-400 uppercase italic px-4 mb-2">현재 연결된 다중 소스 목록 ({productForm.sources.length}) — 직접 작업 시 공급처 없이 등록 가능</p>
                    {(productForm.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null).map((s, idx) => (
                      <div key={`${s.providerId}_${s.serviceId}_${idx}`} className="flex items-center justify-between p-6 bg-gray-50 rounded-[32px] border border-gray-100 group transition-all hover:border-blue-200">
                         <div className="flex items-center gap-6">
