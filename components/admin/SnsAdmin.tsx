@@ -515,7 +515,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
           if (!sameProductKey(prod, p)) return prod;
           return { ...prod, sources: (prod.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null && !(s.providerId === src.providerId && s.serviceId === src.serviceId)) };
         })
-        .filter(prod => (prod.sources?.length ?? 0) > 0)
+        // 소스가 0개여도 직접 작업 상품일 수 있으므로 삭제하지 않음
     );
     setEditingSourceInList(null);
   };
@@ -853,7 +853,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                          <tr><td colSpan={6} className="py-40 text-center text-gray-300 font-black italic">등록된 상품이 없습니다.</td></tr>
                        ) : groupedInventory.map(p => {
                          const safeSources = (p.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null);
-                         const allSourcesDisabled = safeSources.length === 0 || safeSources.every(s => !activeProviderIds.has(s.providerId));
+                         const allSourcesDisabled = safeSources.length > 0 && safeSources.every(s => !activeProviderIds.has(s.providerId));
                          return (
                            <React.Fragment key={p.id}>
                              <tr className={`transition-all hover:bg-blue-50/30 ${expandedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} ${allSourcesDisabled ? 'grayscale opacity-40 bg-gray-50' : ''}`}>
