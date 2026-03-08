@@ -46,7 +46,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     const set = new Set<string>();
     (smmProducts || []).forEach(p => {
       if (p.platform !== selectedPlatform || p.isHidden) return;
-      const hasActiveSource = (p.sources || []).some(s => activeProviderIds.has(s.providerId));
+      const hasActiveSource = (p.sources || []).length === 0 || (p.sources || []).some(s => activeProviderIds.has(s.providerId));
       if (!hasActiveSource) return;
       const cat = (p.category || '').trim();
       set.add(cat || '기타');
@@ -68,7 +68,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const filteredProducts = useMemo(() => 
     (smmProducts || []).filter(p => {
       const isVisible = !p.isHidden;
-      const hasActiveSource = (p.sources || []).some(s => activeProviderIds.has(s.providerId));
+      const hasActiveSource = (p.sources || []).length === 0 || (p.sources || []).some(s => activeProviderIds.has(s.providerId));
       const platformMatch = p.platform === selectedPlatform && isVisible && hasActiveSource;
       if (!platformMatch) return false;
       if (categoriesForPlatform.length === 0) return true;
