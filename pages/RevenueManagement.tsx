@@ -253,7 +253,9 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
       nextDay.setDate(nextDay.getDate() + 1);
     }
     const newStartDateStr = nextDay.toISOString().split('T')[0];
-    const newEndDate = getCalculatedDeadline(newStartDateStr, p.deadlineType, p.duration, p.fixedDay, p.endDate);
+    const newEndDate = p.deadlineType === 'fixed'
+      ? calculateFixedEndDate(newStartDateStr, p.fixedDay || 25)
+      : calculateEndDate(newStartDateStr, p.duration || 20);
     const extendedProj: RevenueProject = {
       ...p,
       id: `pj_${Date.now()}`,
