@@ -78,18 +78,11 @@ export async function deleteSmmProductsByIds(ids: string[]): Promise<void> {
   if (error) throw error;
 }
 
-/** 현재 목록 기준으로 DB 동기화: 목록에 없는 상품은 DB에서 삭제 후 upsert (삭제가 새로고침 후에도 유지되도록) */
+/** 상품 목록을 DB에 upsert (삭제는 handleDeleteSmmProducts → deleteSmmProductsByIds로 처리) */
 export async function upsertSmmProducts(list: SMMProduct[]): Promise<void> {
-  const currentIds = new Set(list.map(p => p.id));
-  const existing = await fetchSmmProducts();
-  const idsToDelete = existing.map(p => p.id).filter(id => !currentIds.has(id));
-  if (idsToDelete.length > 0) {
-    await deleteSmmProductsByIds(idsToDelete);
-  }
-  if (list.length > 0) {
-    const { error } = await supabase.from('smm_products').upsert(list.map(productToRow), { onConflict: 'id' });
-    if (error) throw error;
-  }
+  if (list.length === 0) return;
+  const { error } = await supabase.from('smm_products').upsert(list.map(productToRow), { onConflict: 'id' });
+  if (error) throw error;
 }
 
 // ─── smm_orders ─────────────────────────────────────────────────────────
