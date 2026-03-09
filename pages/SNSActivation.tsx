@@ -51,11 +51,6 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const isCommentProduct = useMemo(() =>
-    !!(selectedProduct && (selectedProduct.name.includes('댓글') || (selectedProduct.category || '').includes('댓글'))),
-    [selectedProduct]
-  );
-
   const isGuest = !user.id;
   const activeProviderIds = useMemo(() => new Set(providers.filter(p => !p.isHidden).map(p => p.id)), [providers]);
 
@@ -97,6 +92,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   [selectedPlatform, selectedCategory, smmProducts, activeProviderIds, categoriesForPlatform]);
 
   const selectedProduct = useMemo(() => (smmProducts || []).find(p => p.id === selectedProductId), [selectedProductId, smmProducts]);
+
+  const isCommentProduct = useMemo(() =>
+    !!(selectedProduct && (selectedProduct.name.includes('댓글') || (selectedProduct.category || '').includes('댓글'))),
+    [selectedProduct]
+  );
 
   // 공통 교집합 수량: 모든 활성 소스의 min 중 최대값 ~ max 중 최소값 (예: A 10~1000, B 20~10000, C 50~100000 → 50~1000)
   const effectiveQuantityRange = useMemo(() => {
