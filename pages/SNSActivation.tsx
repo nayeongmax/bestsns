@@ -441,14 +441,14 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
 
             {categoriesForPlatform.length > 0 && (
               <div>
-                <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic px-1 sm:px-4 mb-3 sm:mb-4">카테고리</h3>
-                <div className="flex flex-wrap gap-2">
+                <h3 className="text-[10px] sm:text-[11px] font-black text-gray-300 uppercase italic tracking-[0.2em] px-1 sm:px-2 mb-4 sm:mb-6">카테고리</h3>
+                <div className="flex flex-wrap gap-3 sm:gap-4">
                   {categoriesForPlatform.map((cat) => (
                     <button
                       key={cat}
                       type="button"
                       onClick={() => { setSelectedCategory(cat); setSelectedProductId(''); }}
-                      className={`px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl sm:rounded-[20px] font-black text-[12px] sm:text-[13px] italic transition-all ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-lg scale-105' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                      className={`px-5 py-2.5 sm:px-8 sm:py-3.5 rounded-2xl font-black text-[13px] sm:text-[14px] italic uppercase tracking-wide transition-all duration-200 ${selectedCategory === cat ? 'bg-gray-900 text-white shadow-[0_8px_24px_rgba(0,0,0,0.15)] scale-[1.03]' : 'bg-white text-gray-400 border border-gray-200 hover:border-gray-400 hover:text-gray-700 hover:shadow-sm'}`}
                     >
                       {cat}
                     </button>
