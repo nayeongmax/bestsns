@@ -259,14 +259,15 @@ const App: React.FC = () => {
               upsertSmmProviders(localProviders).catch(e => console.warn('smm_providers 마이그레이션 실패:', e));
             }
           }
+          const localProducts = safeStorage<SMMProduct[]>('site_smm_products_v2', []);
           if (products.length > 0) {
-            setSmmProducts(products);
-          } else {
+            // DB + localStorage 머지: DB에 없는 상품(upsert 실패로 누락)도 보존
+            const dbIds = new Set(products.map(p => p.id));
+            const extraLocal = localProducts.filter(p => !dbIds.has(p.id));
+            setSmmProducts(extraLocal.length > 0 ? [...products, ...extraLocal] : products);
+          } else if (localProducts.length > 0) {
             // Supabase 상품이 비어있으면 localStorage 데이터를 Supabase로 마이그레이션
-            const localProducts = safeStorage<SMMProduct[]>('site_smm_products_v2', []);
-            if (localProducts.length > 0) {
-              upsertSmmProducts(localProducts).catch(e => console.warn('smm_products 마이그레이션 실패:', e));
-            }
+            upsertSmmProducts(localProducts).catch(e => console.warn('smm_products 마이그레이션 실패:', e));
           }
           smmDbLoaded.current = true;
         }
