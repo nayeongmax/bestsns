@@ -248,8 +248,26 @@ const App: React.FC = () => {
         ]);
         if (!cancelled) {
           setSmmOrders(orders);
-          setSmmProviders(providers);
-          setSmmProducts(products);
+          // Supabase가 빈 배열을 반환하면 localStorage 데이터를 유지 (덮어쓰기 방지)
+          // → 새로고침 시 Supabase write 실패로 DB가 비어 있어도 상품이 사라지지 않음
+          if (providers.length > 0) {
+            setSmmProviders(providers);
+          } else {
+            // Supabase 공급처가 비어있으면 localStorage 데이터를 Supabase로 마이그레이션
+            const localProviders = safeStorage<SMMProvider[]>('site_smm_providers_v2', []);
+            if (localProviders.length > 0) {
+              upsertSmmProviders(localProviders).catch(e => console.warn('smm_providers 마이그레이션 실패:', e));
+            }
+          }
+          if (products.length > 0) {
+            setSmmProducts(products);
+          } else {
+            // Supabase 상품이 비어있으면 localStorage 데이터를 Supabase로 마이그레이션
+            const localProducts = safeStorage<SMMProduct[]>('site_smm_products_v2', []);
+            if (localProducts.length > 0) {
+              upsertSmmProducts(localProducts).catch(e => console.warn('smm_products 마이그레이션 실패:', e));
+            }
+          }
           smmDbLoaded.current = true;
         }
       } catch (e) {
