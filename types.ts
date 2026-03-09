@@ -482,6 +482,7 @@ export interface SelectedOption {
   unitPrice: number;
   quantity: number;
   totalPrice: number;
+  comments?: string;
 }
 
 export type WorkType = '카페관리' | '블로그대행' | '블로그체험단' | '유튜브' | '인스타그램' | '기타작업';
