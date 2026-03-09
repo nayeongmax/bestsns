@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { SNS_PLATFORMS } from '../constants';
 import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource } from '@/types';
@@ -26,6 +26,9 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const [quantity, setQuantity] = useState(0);
   const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [comments, setComments] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // App.tsx에서 전달받은 user.points를 사용 (전역 동기화)
   const userPoints = user.points || 0;
@@ -37,6 +40,21 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     const mainInterval = setInterval(() => setMainIdx(prev => (prev + 1) % mainSequence.length), 1200);
     return () => clearInterval(mainInterval);
   }, [mainSequence.length]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const isCommentProduct = useMemo(() =>
+    !!(selectedProduct && (selectedProduct.name.includes('댓글') || (selectedProduct.category || '').includes('댓글'))),
+    [selectedProduct]
+  );
 
   const isGuest = !user.id;
   const activeProviderIds = useMemo(() => new Set(providers.filter(p => !p.isHidden).map(p => p.id)), [providers]);
@@ -63,6 +81,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       setSelectedCategory('');
     }
     setSelectedProductId('');
+    setComments('');
   }, [selectedPlatform, categoriesForPlatform]);
 
   const filteredProducts = useMemo(() => 
@@ -115,10 +134,12 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       unitPrice: selectedProduct.sellingPrice || 0,
       quantity: quantity,
       totalPrice: Math.floor(quantity * (selectedProduct.sellingPrice || 0)),
+      ...(isCommentProduct && comments.trim() ? { comments: comments.trim() } : {}),
     };
     setSelectedOptions([...selectedOptions, newOption]);
     setLink('');
     setQuantity(0);
+    setComments('');
   };
 
   const totalOrderAmount = selectedOptions.reduce((acc, curr) => acc + (curr.totalPrice || 0), 0);
@@ -437,12 +458,42 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             )}
 
             <div className="space-y-8 sm:space-y-12 pt-8 sm:pt-12 border-t border-gray-50">
+              {/* 커스텀 드롭다운 */}
               <div className="space-y-3 sm:space-y-4">
                 <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic px-1 sm:px-4">상품 선택</h3>
-                <select className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] outline-none font-black text-gray-700 shadow-inner focus:bg-white focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer text-sm sm:text-base" value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
-                  <option value="">서비스를 선택하세요</option>
-                  {filteredProducts.map(p => (<option key={p.id} value={p.id}>{p.name} ({(p.sellingPrice ?? 0).toLocaleString()}P)</option>))}
-                </select>
+                <div ref={dropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsDropdownOpen(prev => !prev)}
+                    className={`w-full p-4 sm:p-6 bg-gray-50 rounded-2xl sm:rounded-[32px] font-black text-left flex items-center justify-between gap-3 transition-all shadow-inner ${isDropdownOpen ? 'bg-white ring-2 ring-blue-100' : 'hover:bg-gray-100'}`}
+                  >
+                    <span className={`text-sm sm:text-base truncate ${selectedProductId ? 'text-gray-800' : 'text-gray-400'}`}>
+                      {selectedProduct ? `${selectedProduct.name} (${(selectedProduct.sellingPrice ?? 0).toLocaleString()}P)` : '서비스를 선택하세요'}
+                    </span>
+                    <span className={`text-gray-400 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </span>
+                  </button>
+                  {isDropdownOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl sm:rounded-[24px] shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                      <div className="max-h-72 overflow-y-auto">
+                        {filteredProducts.length === 0 ? (
+                          <div className="px-6 py-5 text-sm text-gray-400 font-bold text-center">등록된 상품이 없습니다.</div>
+                        ) : filteredProducts.map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => { setSelectedProductId(p.id); setIsDropdownOpen(false); setComments(''); }}
+                            className={`w-full text-left px-5 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-[15px] font-black transition-all flex items-center justify-between gap-4 ${selectedProductId === p.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'}`}
+                          >
+                            <span>{p.name}</span>
+                            <span className={`text-[12px] font-black shrink-0 ${selectedProductId === p.id ? 'text-blue-200' : 'text-blue-500'}`}>{(p.sellingPrice ?? 0).toLocaleString()}P</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-8">
                 <div className="md:col-span-8 space-y-3 sm:space-y-4">
@@ -453,15 +504,36 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                   </div>
                 </div>
                 <div className="md:col-span-4 space-y-3 sm:space-y-4">
-                  <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic px-1 sm:px-4">수량</h3>
-                  {selectedProduct && (
-                    <p className="text-[10px] sm:text-[11px] font-bold text-blue-600 italic break-words px-1 sm:px-4">
-                      최소 {effectiveQuantityRange.min.toLocaleString()} ~ 최대 {effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max.toLocaleString() : '제한없음'} (공통 교집합)
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2 px-1 sm:px-4">
+                    <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic">수량</h3>
+                    {selectedProduct && (
+                      <span className="text-[10px] sm:text-[11px] font-bold text-blue-500 italic whitespace-nowrap">
+                        최소 {effectiveQuantityRange.min.toLocaleString()} ~ 최대 {effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max.toLocaleString() : '제한없음'}
+                      </span>
+                    )}
+                  </div>
                   <input type="number" placeholder="0" min={effectiveQuantityRange.min} max={effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max : undefined} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white text-sm sm:text-base" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} />
                 </div>
               </div>
+              {/* 댓글 섹션: 댓글 상품 선택 시에만 노출 */}
+              {isCommentProduct && (
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-center gap-3 px-1 sm:px-4">
+                    <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic">댓글 내용</h3>
+                    <span className="text-[10px] font-bold text-orange-400 bg-orange-50 px-2.5 py-1 rounded-full italic">1줄에 댓글 1개</span>
+                  </div>
+                  <textarea
+                    placeholder={"댓글 내용을 입력하세요.\n1줄에 댓글 1개씩 작성해 주세요.\n예시)\n안녕하세요 좋은 내용이네요!\n정말 유익한 글 감사합니다."}
+                    className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white text-sm resize-none leading-relaxed"
+                    rows={6}
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                  />
+                  <p className="text-[10px] sm:text-[11px] text-gray-400 font-bold px-1 sm:px-4 italic">
+                    ※ 1줄에 댓글 1개 기준으로 작성해주세요. 수량({quantity || 0}개)만큼 댓글이 필요합니다.
+                  </p>
+                </div>
+              )}
               <button type="button" onClick={handleAddOption} className="w-full py-5 sm:py-6 md:py-8 bg-blue-600 text-white rounded-2xl sm:rounded-[32px] font-black text-lg sm:text-xl md:text-2xl hover:bg-black shadow-xl sm:shadow-2xl transition-all italic uppercase tracking-widest active:scale-[0.98]">+ 장바구니 담기</button>
             </div>
           </div>
@@ -479,6 +551,9 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                     <span className="text-[10px] font-black text-blue-500 uppercase italic tracking-widest">{idx + 1}. Package</span>
                     <h4 className="font-black text-gray-900 text-base sm:text-xl break-words mb-0.5">{opt.serviceName}</h4>
                     <p className="text-[11px] font-bold text-gray-400 break-all italic">{opt.link}</p>
+                    {opt.comments && (
+                      <p className="text-[10px] font-bold text-orange-400 mt-1 whitespace-pre-line line-clamp-2 italic">💬 {opt.comments}</p>
+                    )}
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-10 sm:pl-6 flex-shrink-0">
                     <div className="space-y-0.5 sm:space-y-1">
