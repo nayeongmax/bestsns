@@ -43,7 +43,7 @@ function productToRow(p: SMMProduct): Record<string, unknown> {
     name: p.name,
     platform: p.platform ?? '',
     category: p.category ?? '',
-    selling_price: p.sellingPrice ?? 0,
+    selling_price: Number(p.sellingPrice ?? 0),
     min_quantity: p.minQuantity ?? 0,
     max_quantity: p.maxQuantity ?? 100000,
     sources: (p.sources ?? []) as unknown[],
