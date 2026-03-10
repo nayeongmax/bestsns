@@ -456,6 +456,8 @@ export interface SMMProduct {
   maxQuantity: number;
   sources: SMMSource[];
   isHidden?: boolean;
+  /** 드롭다운 표시 순서 (낮을수록 먼저 표시) */
+  sortOrder?: number;
 }
 
 /** 원가 변동 / 판매중지 알림 */

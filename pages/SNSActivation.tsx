@@ -79,7 +79,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     setComments('');
   }, [selectedPlatform, categoriesForPlatform]);
 
-  const filteredProducts = useMemo(() => 
+  const filteredProducts = useMemo(() =>
     (smmProducts || []).filter(p => {
       const isVisible = !p.isHidden;
       const hasActiveSource = (p.sources || []).length === 0 || (p.sources || []).some(s => activeProviderIds.has(s.providerId));
@@ -88,7 +88,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       if (categoriesForPlatform.length === 0) return true;
       const cat = (p.category || '').trim() || '기타';
       return selectedCategory === '' || cat === selectedCategory;
-    }),
+    }).sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999)),
   [selectedPlatform, selectedCategory, smmProducts, activeProviderIds, categoriesForPlatform]);
 
   const selectedProduct = useMemo(() => (smmProducts || []).find(p => p.id === selectedProductId), [selectedProductId, smmProducts]);

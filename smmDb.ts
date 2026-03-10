@@ -48,6 +48,7 @@ function productToRow(p: SMMProduct): Record<string, unknown> {
     max_quantity: p.maxQuantity ?? 100000,
     sources: (p.sources ?? []) as unknown[],
     is_hidden: p.isHidden ?? false,
+    sort_order: p.sortOrder ?? 9999,
   };
 }
 
@@ -62,11 +63,12 @@ function rowToProduct(row: Record<string, unknown>): SMMProduct {
     maxQuantity: Number(row.max_quantity ?? 100000),
     sources: Array.isArray(row.sources) ? (row.sources as SMMSource[]) : [],
     isHidden: Boolean(row.is_hidden),
+    sortOrder: row.sort_order != null ? Number(row.sort_order) : 9999,
   };
 }
 
 export async function fetchSmmProducts(): Promise<SMMProduct[]> {
-  const { data, error } = await supabase.from('smm_products').select('*').order('id');
+  const { data, error } = await supabase.from('smm_products').select('*').order('sort_order', { ascending: true, nullsFirst: false });
   if (error) throw error;
   return (data ?? []).map((row) => rowToProduct(row as Record<string, unknown>));
 }

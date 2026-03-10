@@ -48,6 +48,12 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [orderStatusFilter, setOrderStatusFilter] = useState('전체 상태');
   const [orderMonthFilter, setOrderMonthFilter] = useState('전체 기간');
 
+  // 상품 순서 드래그 상태
+  const [isSortMode, setIsSortMode] = useState(false);
+  const [draggedSortKey, setDraggedSortKey] = useState<string | null>(null);
+  const [dragOverSortKey, setDragOverSortKey] = useState<string | null>(null);
+  const [sortedGroupKeys, setSortedGroupKeys] = useState<string[]>([]);
+
   // JAP 주문 상태 (orderId → { status, remains })
   const [japStatuses, setJapStatuses] = useState<Record<string, { status: string; remains: number }>>({});
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
@@ -599,6 +605,66 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     return Array.from(map.values());
   }, [smmProducts, searchQuery, filterPlatform]);
 
+  // 순서 변경 모드 진입: 현재 groupedInventory 키 순서를 로컬 상태로 복사
+  const enterSortMode = useCallback(() => {
+    setSortedGroupKeys(groupedInventory.map(p => `${p.platform}_${p.name}_${p.category || ''}`));
+    setIsSortMode(true);
+  }, [groupedInventory]);
+
+  // 드래그 중인 순서 표시용 — sortedGroupKeys 기반 목록
+  const sortedInventory = useMemo(() => {
+    if (!isSortMode || sortedGroupKeys.length === 0) return groupedInventory;
+    const map = new Map(groupedInventory.map(p => [`${p.platform}_${p.name}_${p.category || ''}`, p]));
+    return sortedGroupKeys.map(k => map.get(k)).filter(Boolean) as SMMProduct[];
+  }, [isSortMode, sortedGroupKeys, groupedInventory]);
+
+  const handleDragStart = useCallback((key: string) => {
+    setDraggedSortKey(key);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, key: string) => {
+    e.preventDefault();
+    setDragOverSortKey(key);
+  }, []);
+
+  const handleDrop = useCallback((targetKey: string) => {
+    if (!draggedSortKey || draggedSortKey === targetKey) {
+      setDraggedSortKey(null);
+      setDragOverSortKey(null);
+      return;
+    }
+    setSortedGroupKeys(prev => {
+      const arr = [...prev];
+      const fromIdx = arr.indexOf(draggedSortKey);
+      const toIdx = arr.indexOf(targetKey);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, draggedSortKey);
+      return arr;
+    });
+    setDraggedSortKey(null);
+    setDragOverSortKey(null);
+  }, [draggedSortKey]);
+
+  const saveSortOrder = useCallback(async () => {
+    // sortedGroupKeys 순서 기준으로 smmProducts 각각의 sortOrder 업데이트
+    const updated = smmProducts.map(p => {
+      const key = `${p.platform}_${p.name}_${p.category || ''}`;
+      const order = sortedGroupKeys.indexOf(key);
+      return { ...p, sortOrder: order === -1 ? 9999 : order };
+    });
+    setSmmProducts(updated);
+    setIsSortMode(false);
+    try {
+      const { upsertSmmProducts } = await import('../../smmDb');
+      await upsertSmmProducts(updated);
+      alert('순서가 저장되었습니다.');
+    } catch (e) {
+      console.error(e);
+      alert('저장 실패: ' + String(e));
+    }
+  }, [sortedGroupKeys, smmProducts, setSmmProducts]);
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-32">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -825,14 +891,27 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         <div className="space-y-10 animate-in fade-in max-w-[1600px] mx-auto">
            <div className="bg-white p-10 rounded-[56px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-10">
               <h3 className="text-3xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8 px-6">통합 상품 인벤토리 리얼타임 대시보드</h3>
-              <div className="flex gap-4 bg-gray-50 p-2 rounded-[32px] shadow-inner">
-                 <select value={filterPlatform} onChange={e => setFilterPlatform(e.target.value)} className="p-4 bg-white border-none rounded-[24px] font-black text-sm shadow-sm outline-none cursor-pointer">
-                    <option>전체 플랫폼</option>{SNS_PLATFORMS.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                 </select>
-                 <div className="relative">
-                    <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="상품명 검색..." className="pl-8 pr-16 py-4 bg-white border-none rounded-[24px] font-bold text-[15px] shadow-sm outline-none w-80" />
-                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300">🔍</span>
-                 </div>
+              <div className="flex gap-4 items-center flex-wrap">
+                 {!isSortMode ? (
+                   <>
+                     <div className="flex gap-4 bg-gray-50 p-2 rounded-[32px] shadow-inner">
+                        <select value={filterPlatform} onChange={e => setFilterPlatform(e.target.value)} className="p-4 bg-white border-none rounded-[24px] font-black text-sm shadow-sm outline-none cursor-pointer">
+                           <option>전체 플랫폼</option>{SNS_PLATFORMS.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                        </select>
+                        <div className="relative">
+                           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="상품명 검색..." className="pl-8 pr-16 py-4 bg-white border-none rounded-[24px] font-bold text-[15px] shadow-sm outline-none w-80" />
+                           <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300">🔍</span>
+                        </div>
+                     </div>
+                     <button onClick={enterSortMode} className="px-8 py-4 bg-purple-600 text-white rounded-[28px] font-black text-[14px] hover:bg-purple-700 transition-all shadow-lg whitespace-nowrap">⇅ 순서 변경</button>
+                   </>
+                 ) : (
+                   <div className="flex gap-3 items-center">
+                     <span className="text-[14px] font-black text-purple-600 italic">드래그로 순서를 바꾸세요</span>
+                     <button onClick={saveSortOrder} className="px-8 py-4 bg-purple-600 text-white rounded-[28px] font-black text-[14px] hover:bg-purple-700 transition-all shadow-lg">💾 순서 저장</button>
+                     <button onClick={() => setIsSortMode(false)} className="px-6 py-4 bg-gray-200 text-gray-700 rounded-[28px] font-black text-[14px] hover:bg-gray-300 transition-all">취소</button>
+                   </div>
+                 )}
               </div>
            </div>
            <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
@@ -840,29 +919,40 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                  <table className="w-full text-left">
                     <thead className="bg-gray-900 text-white text-[11px] font-black uppercase tracking-widest italic">
                        <tr>
+                          {isSortMode && <th className="px-6 py-6 text-center">순서</th>}
                           <th className="px-10 py-6">플랫폼</th>
                           <th className="px-10 py-6">노출 상품명 / 연결 ID</th>
                           <th className="px-10 py-6">카테고리</th>
                           <th className="px-10 py-6">주문수량(Min/Max)</th>
                           <th className="px-10 py-6 text-right">최종 판매가</th>
-                          <th className="px-10 py-6 text-center">관리 / 소스</th>
+                          {!isSortMode && <th className="px-10 py-6 text-center">관리 / 소스</th>}
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                       {groupedInventory.length === 0 ? (
-                         <tr><td colSpan={6} className="py-40 text-center text-gray-300 font-black italic">등록된 상품이 없습니다.</td></tr>
-                       ) : groupedInventory.map(p => {
+                       {sortedInventory.length === 0 ? (
+                         <tr><td colSpan={isSortMode ? 6 : 6} className="py-40 text-center text-gray-300 font-black italic">등록된 상품이 없습니다.</td></tr>
+                       ) : sortedInventory.map(p => {
+                         const sortKey = `${p.platform}_${p.name}_${p.category || ''}`;
                          const safeSources = (p.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null);
                          const allSourcesDisabled = safeSources.length > 0 && safeSources.every(s => !activeProviderIds.has(s.providerId));
+                         const isDragging = draggedSortKey === sortKey;
+                         const isDragOver = dragOverSortKey === sortKey;
                          return (
                            <React.Fragment key={p.id}>
-                             <tr className={`transition-all hover:bg-blue-50/30 ${expandedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} ${allSourcesDisabled ? 'grayscale opacity-40 bg-gray-50' : ''}`}>
+                             <tr
+                               draggable={isSortMode}
+                               onDragStart={isSortMode ? () => handleDragStart(sortKey) : undefined}
+                               onDragOver={isSortMode ? (e) => handleDragOver(e, sortKey) : undefined}
+                               onDrop={isSortMode ? () => handleDrop(sortKey) : undefined}
+                               onDragEnd={() => { setDraggedSortKey(null); setDragOverSortKey(null); }}
+                               className={`transition-all ${isSortMode ? 'cursor-grab active:cursor-grabbing' : 'hover:bg-blue-50/30'} ${expandedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} ${allSourcesDisabled && !isSortMode ? 'grayscale opacity-40 bg-gray-50' : ''} ${isDragging ? 'opacity-40' : ''} ${isDragOver && isSortMode ? 'border-t-4 border-purple-500 bg-purple-50/30' : ''}`}>
+                                {isSortMode && <td className="px-6 py-8 text-center"><span className="text-2xl text-purple-400 select-none">⠿</span></td>}
                                 <td className="px-10 py-8 whitespace-nowrap"><span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic tracking-tighter shadow-md whitespace-nowrap ${allSourcesDisabled ? 'bg-gray-400 text-white' : 'bg-blue-600 text-white'}`}>{p.platform}</span></td>
                                 <td className="px-10 py-8"><div className="flex items-center gap-3"><p className="font-black text-gray-900 text-xl italic tracking-tight">{p.name}</p>{allSourcesDisabled && <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded font-black italic shadow-sm uppercase animate-pulse">공급중단</span>}</div><div className="flex flex-wrap gap-1 mt-2">{safeSources.map((s, si) => (<span key={si} className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${activeProviderIds.has(s.providerId) ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-red-50 text-red-500 border-red-100'}`}>#{s.serviceId}</span>))}</div></td>
                                 <td className="px-10 py-8"><span className="text-sm font-black text-gray-500 uppercase italic tracking-widest">{p.category}</span></td>
                                 <td className="px-10 py-8"><p className="text-[13px] font-black text-gray-600 italic">{p.minQuantity.toLocaleString()} ~ {p.maxQuantity.toLocaleString()}</p></td>
                                 <td className="px-10 py-8 text-right"><p className="text-2xl font-black text-blue-600 italic tracking-tighter">{p.sellingPrice.toLocaleString()}<span className="text-sm not-italic opacity-40 ml-1">P</span></p></td>
-                                <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${safeSources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(!window.confirm('정말 삭제하시겠습니까?')) return; const idsToDelete = smmProducts.filter(i => sameProductKey(i, p)).map(i => i.id); if (onDeleteSmmProducts) onDeleteSmmProducts(idsToDelete); else setSmmProducts(prev => prev.filter(i => !sameProductKey(i, p))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>
+                                {!isSortMode && <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${safeSources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(!window.confirm('정말 삭제하시겠습니까?')) return; const idsToDelete = smmProducts.filter(i => sameProductKey(i, p)).map(i => i.id); if (onDeleteSmmProducts) onDeleteSmmProducts(idsToDelete); else setSmmProducts(prev => prev.filter(i => !sameProductKey(i, p))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>}
                              </tr>
                              {expandedProductIds.includes(p.id) && (
                                <tr className="bg-gray-50/50 animate-in slide-in-from-top-2 duration-300">
