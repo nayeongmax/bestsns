@@ -42,7 +42,6 @@ const Footer: React.FC = () => {
 
           {/* 책임 문구 박스 */}
           <div className="mt-6 border border-gray-300 rounded-lg px-6 py-4 bg-white">
-            <p className="text-sm font-black text-gray-800 mb-1">더베스트[THEBEST]</p>
             <p className="text-sm text-gray-700 font-bold">해당 사이트 내 거래에 대한 책임, 환불 민원 등의 처리는 더베스트에서 진행합니다.</p>
           </div>
 

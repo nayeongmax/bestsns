@@ -154,6 +154,14 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
           onUpdateUser({ ...nextUser, points: nextPoints });
           updateProfile(user.id, { points: nextPoints }).catch((e) => console.warn('포인트 충전 DB 반영 실패:', e));
           addNotif(user.id, 'payment', '💰 포인트 충전 완료', `${amount.toLocaleString()}P 충전이 완료되었습니다. 현재 잔액: ${nextPoints.toLocaleString()}P`);
+          // localStorage 충전 내역 기록
+          try {
+            const lsKey = `point_charge_log_${user.id}`;
+            const prev = JSON.parse(localStorage.getItem(lsKey) || '[]');
+            const chargeType = paymentMethod === 'card' ? '카드 충전' : paymentMethod === 'toss' ? '토스페이 충전' : '계좌이체 충전';
+            prev.unshift({ id: paymentId, type: chargeType, amount, date: new Date().toISOString() });
+            localStorage.setItem(lsKey, JSON.stringify(prev));
+          } catch (e) { console.warn('localStorage 충전 내역 저장 실패:', e); }
           // 충전 내역 DB 저장
           insertPointTransaction({
             id: paymentId,

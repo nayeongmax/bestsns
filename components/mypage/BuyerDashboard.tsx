@@ -14,8 +14,15 @@ interface Props {
   initialSubTab?: 'sns' | 'channel' | 'store';
 }
 
-type BuyerSubTab = 'sns' | 'channel' | 'store';
+type BuyerSubTab = 'sns' | 'channel' | 'store' | 'points';
 type SnsSubTab = 'orders' | 'charge' | 'usage';
+
+interface LocalChargeRecord {
+  id: string;
+  type: string;
+  amount: number;
+  date: string;
+}
 
 type PointChargeItem = PointTransaction;
 
@@ -81,6 +88,16 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     if (!user?.id) return;
     fetchPointTransactions(user.id, 'charge').then(setChargeItems).catch((e) => console.warn('충전 내역 로드 실패:', e));
   }, [user?.id]);
+
+  // 포인트 내역 탭 — localStorage 충전 기록
+  const [localChargeItems, setLocalChargeItems] = useState<LocalChargeRecord[]>([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const raw = localStorage.getItem(`point_charge_log_${user.id}`);
+      setLocalChargeItems(raw ? JSON.parse(raw) : []);
+    } catch { setLocalChargeItems([]); }
+  }, [user?.id, activeTab]);
 
   // 포인트 사용 내역 (주문에서 파생)
   const usageItems: PointUsageItem[] = useMemo(() => {
@@ -208,7 +225,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
         {[
           { id: 'sns', label: 'SNS 활성화' },
           { id: 'channel', label: '채널 구매' },
-          { id: 'store', label: 'N잡 스토어' }
+          { id: 'store', label: 'N잡 스토어' },
+          { id: 'points', label: '포인트 내역' },
         ].map(tab => (
           <button
             key={tab.id}
@@ -526,6 +544,72 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
               );
             })
           )}
+        </div>
+      )}
+
+      {activeTab === 'points' && (
+        <div className="space-y-8">
+          {/* 충전 리스트 */}
+          <div className="space-y-3">
+            <h3 className="text-[13px] font-black text-gray-400 uppercase italic px-1">충전 리스트</h3>
+            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
+              {localChargeItems.length === 0 ? (
+                <div className="py-16 text-center text-gray-300 font-black italic">충전 내역이 없습니다.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">충전유형</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전금액</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전일</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {localChargeItems.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-5 text-gray-400 font-bold">{localChargeItems.length - idx}</td>
+                        <td className="py-3 px-5 text-gray-700 font-bold">{item.type}</td>
+                        <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
+                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          {/* 사용 리스트 */}
+          <div className="space-y-3">
+            <h3 className="text-[13px] font-black text-gray-400 uppercase italic px-1">사용 리스트</h3>
+            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
+              {usageItems.length === 0 ? (
+                <div className="py-16 text-center text-gray-300 font-black italic">사용 내역이 없습니다.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
+                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">사용유형</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">사용금액</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">사용일</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {usageItems.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-5 text-gray-400 font-bold">{usageItems.length - idx}</td>
+                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
+                        <td className="py-3 px-5 text-right text-red-500 font-black">-{item.amount.toLocaleString()}P</td>
+                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
