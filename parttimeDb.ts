@@ -182,7 +182,7 @@ function rowToJobRequest(row: Record<string, unknown>): PartTimeJobRequest {
 }
 
 export async function fetchPartTimeJobRequests(): Promise<PartTimeJobRequest[]> {
-  const { data, error } = await supabase.from('parttime_job_requests').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('parttime_job_requests').select('*').neq('is_deleted', true).order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map((row) => rowToJobRequest(row as Record<string, unknown>));
 }
@@ -201,7 +201,7 @@ export async function upsertPartTimeJobRequests(requests: PartTimeJobRequest[]):
 }
 
 export async function deletePartTimeJobRequest(id: string): Promise<void> {
-  const { error } = await supabase.from('parttime_job_requests').delete().eq('id', id);
+  const { error } = await supabase.from('parttime_job_requests').update({ is_deleted: true }).eq('id', id);
   if (error) throw error;
 }
 
