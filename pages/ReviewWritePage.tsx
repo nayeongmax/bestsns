@@ -40,11 +40,6 @@ const ReviewWritePage: React.FC<Props> = ({ user, onAddReview }) => {
     };
 
     onAddReview(newReview);
-    
-    // 리뷰 작성 완료 상태를 로컬스토리지에 저장 (대시보드 UI 반영용)
-    const reviewed = JSON.parse(localStorage.getItem('reviewed_orders') || '[]');
-    localStorage.setItem('reviewed_orders', JSON.stringify([...reviewed, order.id]));
-    
     alert('소중한 리뷰가 등록되었습니다!');
     navigate('/mypage');
   };

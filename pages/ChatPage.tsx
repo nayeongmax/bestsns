@@ -32,7 +32,6 @@ interface ChatRoom {
   memo?: string;
 }
 
-const CHAT_META_KEY = 'chat_room_meta_v2';
 const CHAT_ROOMS_FALLBACK_KEY = (userId: string) => `chat_rooms_fallback_${userId}`;
 const PROHIBITED_KEYWORDS = ['휴대폰', '폰번호', '직거래', '계좌', '이체', '010', '전화번호', '카톡', '연락처', '입금', '현금', '계좌번호', '따로'];
 const DIRECT_TRADE_WARNING = '직접 거래 시도는 약관에 따라 거래액 10배의 위약벌 대상이 될 수 있습니다. 모든 거래는 플랫폼을 통해야 안전하게 보호받습니다.';
@@ -85,20 +84,18 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const getMeta = useCallback(() => {
-    try {
-      return JSON.parse(localStorage.getItem(CHAT_META_KEY) || '{}') as Record<string, { memo?: string; isTrading?: boolean; isFavorite?: boolean }>;
-    } catch {
-      return {};
-    }
-  }, []);
+  // 채팅방 메타(메모/거래중/즐겨찾기) — DB에서 로드, 메모리 ref에 캐시
+  const chatMetaRef = useRef<Record<string, { memo?: string; isTrading?: boolean; isFavorite?: boolean }>>({});
+  useEffect(() => {
+    fetchChatRoomMeta(user.id).then(data => { chatMetaRef.current = data; }).catch(() => {});
+  }, [user.id]);
+
+  const getMeta = useCallback(() => chatMetaRef.current, []);
 
   const setMeta = useCallback((roomId: string, patch: { memo?: string; isTrading?: boolean; isFavorite?: boolean }) => {
     upsertChatRoomMeta(user.id, roomId, patch).catch((err) => console.warn('채팅방 메타 저장 실패:', err));
-    const meta = getMeta();
-    meta[roomId] = { ...meta[roomId], ...patch };
-    localStorage.setItem(CHAT_META_KEY, JSON.stringify(meta));
-  }, [getMeta, user.id]);
+    chatMetaRef.current = { ...chatMetaRef.current, [roomId]: { ...chatMetaRef.current[roomId], ...patch } };
+  }, [user.id]);
 
   /** 문의하기/채팅하기로 진입 시: 대상 대화방을 만들고 선택해 오른쪽에서 바로 채팅 가능하게 함 */
   const ensureTargetRoom = useCallback((pendingTargetUser: PendingTargetUser, existingRooms: ChatRoom[]) => {

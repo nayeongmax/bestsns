@@ -41,12 +41,7 @@ export const CHANNEL_CATEGORIES = [
 ];
 
 // ----- 프리랜서 수익통장 (누구나알바) -----
-import type { FreelancerEarningEntry, PartTimeTask, PartTimeJobRequest } from '@/types';
-
-const PARTTIME_TASKS_KEY = 'parttime_tasks_v1';
-
-const FREELANCER_BALANCE_KEY = (userId: string) => `freelancer_earnings_v1_${userId}`;
-const FREELANCER_HISTORY_KEY = (userId: string) => `freelancer_earnings_history_v1_${userId}`;
+import type { PartTimeTask } from '@/types';
 
 export const MIN_WITHDRAW_FREELANCER = 5000;
 
@@ -60,49 +55,6 @@ export const VAT_RATE = 0.1;                        // 부가세 10% (광고주 
 /** 프리랜서 실지급액 = 계약금액 × (1 - 5% - 3.3% - 3.3%) = 88.4% */
 export const FREELANCER_FEE_RATE = FREELANCER_SETTLEMENT_FEE_RATE + FREELANCER_WITHHOLDING_RATE + PAYMENT_GATEWAY_FEE_RATE;
 
-export function getFreelancerBalance(userId: string): number {
-  try {
-    const raw = localStorage.getItem(FREELANCER_BALANCE_KEY(userId));
-    return raw ? Math.max(0, Number(raw)) : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function setFreelancerBalance(userId: string, amount: number): void {
-  const value = Math.max(0, Math.round(amount));
-  localStorage.setItem(FREELANCER_BALANCE_KEY(userId), String(value));
-}
-
-/** grossAmount: 받는 대금, netAmount: 3.3% 제외 실지급 (수익통장 적립) */
-export function addFreelancerEarning(userId: string, grossAmount: number, label: string): number {
-  const netAmount = Math.round(grossAmount * (1 - FREELANCER_FEE_RATE));
-  const cur = getFreelancerBalance(userId);
-  const next = cur + Math.max(0, netAmount);
-  setFreelancerBalance(userId, next);
-  const entry: FreelancerEarningEntry = {
-    id: `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    type: 'task',
-    amount: grossAmount,
-    label,
-    at: new Date().toISOString(),
-  };
-  const history = getFreelancerHistory(userId);
-  localStorage.setItem(FREELANCER_HISTORY_KEY(userId), JSON.stringify([entry, ...history].slice(0, 100)));
-  return next;
-}
-
-export function getFreelancerHistory(userId: string): FreelancerEarningEntry[] {
-  try {
-    const raw = localStorage.getItem(FREELANCER_HISTORY_KEY(userId));
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
 /** 프리랜서 출금 신청 한 건 (PortOne 계좌 입금 대상) */
 export interface FreelancerWithdrawRequest {
   id: string;
@@ -114,74 +66,6 @@ export interface FreelancerWithdrawRequest {
   ownerName: string;
   requestedAt: string;
   status: 'pending' | 'completed' | 'failed';
-}
-
-const FREELANCER_WITHDRAW_REQUESTS_KEY = 'freelancer_withdraw_requests_v1';
-
-export function getFreelancerWithdrawRequests(): FreelancerWithdrawRequest[] {
-  try {
-    const raw = localStorage.getItem(FREELANCER_WITHDRAW_REQUESTS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function addFreelancerWithdrawRequest(req: Omit<FreelancerWithdrawRequest, 'id' | 'requestedAt' | 'status'>): void {
-  const list = getFreelancerWithdrawRequests();
-  const entry: FreelancerWithdrawRequest = {
-    ...req,
-    id: `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    requestedAt: new Date().toISOString(),
-    status: 'pending',
-  };
-  localStorage.setItem(FREELANCER_WITHDRAW_REQUESTS_KEY, JSON.stringify([entry, ...list]));
-}
-
-export function updateFreelancerWithdrawRequestStatus(
-  id: string,
-  status: 'pending' | 'completed' | 'failed'
-): void {
-  const list = getFreelancerWithdrawRequests().map((r) =>
-    r.id === id ? { ...r, status } : r
-  );
-  localStorage.setItem(FREELANCER_WITHDRAW_REQUESTS_KEY, JSON.stringify(list));
-}
-
-/** 출금 실패 시 수익통장에 금액 환급 (이미 net 금액이므로 수수료 없이 그대로 충전) */
-export function refundFreelancerWithdrawal(userId: string, netAmount: number, label: string): number {
-  const cur = getFreelancerBalance(userId);
-  const next = cur + Math.max(0, netAmount);
-  setFreelancerBalance(userId, next);
-  const entry: FreelancerEarningEntry = {
-    id: `refund_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    type: 'task',
-    amount: netAmount,
-    label,
-    at: new Date().toISOString(),
-  };
-  const history = getFreelancerHistory(userId);
-  localStorage.setItem(FREELANCER_HISTORY_KEY(userId), JSON.stringify([entry, ...history].slice(0, 100)));
-  return next;
-}
-
-export function withdrawFreelancerEarnings(userId: string, amount: number): { success: boolean; newBalance: number } {
-  const cur = getFreelancerBalance(userId);
-  if (amount < MIN_WITHDRAW_FREELANCER || amount > cur) {
-    return { success: false, newBalance: cur };
-  }
-  const next = cur - amount;
-  setFreelancerBalance(userId, next);
-  const entry: FreelancerEarningEntry = {
-    id: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    type: 'withdraw',
-    amount: -amount,
-    label: '출금 신청',
-    at: new Date().toISOString(),
-  };
-  const history = getFreelancerHistory(userId);
-  localStorage.setItem(FREELANCER_HISTORY_KEY(userId), JSON.stringify([entry, ...history].slice(0, 100)));
-  return { success: true, newBalance: next };
 }
 
 // ----- 누구나알바 작업 목록 -----
@@ -287,113 +171,7 @@ export const DEFAULT_PARTTIME_TASKS: PartTimeTask[] = [
   },
 ];
 
-export function getPartTimeTasks(): PartTimeTask[] {
-  try {
-    const raw = localStorage.getItem(PARTTIME_TASKS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {}
-  return DEFAULT_PARTTIME_TASKS.map((t) => ({ ...t, applicants: [...(t.applicants || [])], pointPaid: t.pointPaid ?? false, paidUserIds: t.paidUserIds || [] }));
-}
-
-export function setPartTimeTasks(tasks: PartTimeTask[]): void {
-  localStorage.setItem(PARTTIME_TASKS_KEY, JSON.stringify(tasks));
-}
-
-/** 새 작업번호 생성 (ALBA-00123 형식) */
-export function generateProjectNo(): string {
-  const tasks = getPartTimeTasks();
-  let maxN = 0;
-  for (const t of tasks) {
-    const pn = t.projectNo;
-    if (pn && /^ALBA-\d+$/.test(pn)) {
-      const n = parseInt(pn.replace('ALBA-', ''), 10);
-      if (n > maxN) maxN = n;
-    }
-  }
-  return `ALBA-${String(maxN + 1).padStart(5, '0')}`;
-}
-
-/** 6일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. 광고주 작업의 경우 workLinkSubmittedAt + 6일 후 미확인 시 자동 지급 */
-export function processAutoApprovals(): boolean {
-  const tasks = getPartTimeTasks();
-  const now = Date.now();
-  const sixDaysMs = 6 * 24 * 60 * 60 * 1000;
-  let changed = false;
-  const next = tasks.map((t) => {
-    const selectedWithLink = t.applicants.filter((a) => a.selected && ((a.workLinks?.length ?? 0) > 0 || !!(a.workLink || '').trim()));
-    if (selectedWithLink.length === 0) return t;
-    const updated = { ...t };
-    for (const a of selectedWithLink) {
-      if (t.paidUserIds?.includes(a.userId)) continue;
-      let shouldPay = false;
-      if (a.autoApproveAt) {
-        const at = new Date(a.autoApproveAt).getTime();
-        if (at <= now) shouldPay = true;
-      } else if (t.applicantUserId && a.workLinkSubmittedAt) {
-        const submittedAt = new Date(a.workLinkSubmittedAt).getTime();
-        if (now >= submittedAt + sixDaysMs) shouldPay = true;
-      }
-      if (shouldPay) {
-        addFreelancerEarning(a.userId, t.reward, t.title);
-        updated.paidUserIds = [...(updated.paidUserIds || []), a.userId];
-        const allSelected = updated.applicants.filter((ap) => ap.selected && ((ap.workLinks?.length ?? 0) > 0 || !!(ap.workLink || '').trim()));
-        updated.pointPaid = allSelected.every((ap) => updated.paidUserIds?.includes(ap.userId));
-        changed = true;
-      }
-    }
-    return updated;
-  });
-  if (changed) setPartTimeTasks(next);
-  return changed;
-}
-
 // ----- 누구나알바 작업의뢰 (광고주→운영진) -----
-const PARTTIME_JOB_REQUESTS_KEY = 'parttime_job_requests_v1';
-const PARTTIME_JOB_IMAGES_KEY = (id: string) => `parttime_job_images_v1_${id}`;
-
-export function getPartTimeJobRequestImages(id: string): string[] {
-  try {
-    const raw = localStorage.getItem(PARTTIME_JOB_IMAGES_KEY(id));
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch {}
-  return [];
-}
-
-export function setPartTimeJobRequestImages(id: string, images: string[]): void {
-  if (images.length === 0) localStorage.removeItem(PARTTIME_JOB_IMAGES_KEY(id));
-  else localStorage.setItem(PARTTIME_JOB_IMAGES_KEY(id), JSON.stringify(images));
-}
-
-export function getPartTimeJobRequests(): PartTimeJobRequest[] {
-  try {
-    const raw = localStorage.getItem(PARTTIME_JOB_REQUESTS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.map((r: PartTimeJobRequest) => {
-          const imgs = getPartTimeJobRequestImages(r.id);
-          return imgs.length > 0 ? { ...r, exampleImages: imgs } : r;
-        });
-      }
-    }
-  } catch {}
-  return [];
-}
-
-export function setPartTimeJobRequests(requests: PartTimeJobRequest[]): void {
-  const toStore = requests.map((r) => {
-    const { exampleImages, ...rest } = r;
-    setPartTimeJobRequestImages(r.id, exampleImages ?? []);
-    return rest;
-  });
-  localStorage.setItem(PARTTIME_JOB_REQUESTS_KEY, JSON.stringify(toStore));
-}
 
 /** 광고금액 기준 플랫폼 수수료: 광고주 수수료 25% + 부가세 10% */
 export function calcJobRequestFee(adAmount: number): number {

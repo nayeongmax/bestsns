@@ -20,15 +20,6 @@ const PROJECT_TYPES: WorkType[] = ['카페관리', '블로그대행', '블로그
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ['운영비', '인건비', '식비', '집기구입비', '구독비', '기타비용'];
 const CHANNEL_OPTIONS = ['크몽', '직거래', '숨고', '쇼핑몰', '키플랫', '기타'];
 
-function loadFromStorage<T>(key: string, fallback: T): T {
-  try {
-    const saved = localStorage.getItem(key);
-    return saved ? (JSON.parse(saved) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 interface Props {
   user: UserProfile;
 }
@@ -38,10 +29,10 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   const revenueDbLoadedForUser = useRef<string | null>(null);
   const initialDbLoadDone = useRef(false);
 
-  const [companies, setCompanies] = useState<OperatingCompany[]>(() => loadFromStorage('rev_companies', []));
-  const [projects, setProjects] = useState<RevenueProject[]>(() => loadFromStorage('rev_projects', []));
-  const [todos, setTodos] = useState<RevenueTodo[]>(() => loadFromStorage('rev_todos', []));
-  const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>(() => loadFromStorage('rev_general_expenses', []));
+  const [companies, setCompanies] = useState<OperatingCompany[]>([]);
+  const [projects, setProjects] = useState<RevenueProject[]>([]);
+  const [todos, setTodos] = useState<RevenueTodo[]>([]);
+  const [generalExpenses, setGeneralExpenses] = useState<GeneralExpense[]>([]);
 
   const [dbSaveError, setDbSaveError] = useState<string | null>(null);
   const saveErrShown = useRef<Record<string, boolean>>({});
@@ -119,12 +110,6 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
     if (!user?.id || !initialDbLoadDone.current) return;
     upsertRevenueGeneralExpenses(user.id, generalExpenses).catch((err) => showSaveError('지출', err));
   }, [user?.id, generalExpenses]);
-
-  // localStorage 백업 (다른 페이지 갔다 와도 복원용)
-  useEffect(() => localStorage.setItem('rev_companies', JSON.stringify(companies)), [companies]);
-  useEffect(() => localStorage.setItem('rev_projects', JSON.stringify(projects)), [projects]);
-  useEffect(() => localStorage.setItem('rev_todos', JSON.stringify(todos)), [todos]);
-  useEffect(() => localStorage.setItem('rev_general_expenses', JSON.stringify(generalExpenses)), [generalExpenses]);
 
   // UI 상태
   const [showCompanyModal, setShowCompanyModal] = useState(false);
