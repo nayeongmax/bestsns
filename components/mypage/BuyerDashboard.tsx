@@ -17,13 +17,6 @@ interface Props {
 type BuyerSubTab = 'sns' | 'channel' | 'store' | 'points';
 type SnsSubTab = 'orders' | 'charge' | 'usage';
 
-interface LocalChargeRecord {
-  id: string;
-  type: string;
-  amount: number;
-  date: string;
-}
-
 type PointChargeItem = PointTransaction;
 
 interface PointUsageItem {
@@ -88,16 +81,6 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     if (!user?.id) return;
     fetchPointTransactions(user.id, 'charge').then(setChargeItems).catch((e) => console.warn('충전 내역 로드 실패:', e));
   }, [user?.id]);
-
-  // 포인트 내역 탭 — localStorage 충전 기록
-  const [localChargeItems, setLocalChargeItems] = useState<LocalChargeRecord[]>([]);
-  useEffect(() => {
-    if (!user?.id) return;
-    try {
-      const raw = localStorage.getItem(`point_charge_log_${user.id}`);
-      setLocalChargeItems(raw ? JSON.parse(raw) : []);
-    } catch { setLocalChargeItems([]); }
-  }, [user?.id, activeTab]);
 
   // 포인트 사용 내역 (주문에서 파생)
   const usageItems: PointUsageItem[] = useMemo(() => {
@@ -553,7 +536,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
           <div className="space-y-3">
             <h3 className="text-[13px] font-black text-gray-400 uppercase italic px-1">충전 리스트</h3>
             <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
-              {localChargeItems.length === 0 ? (
+              {chargeItems.length === 0 ? (
                 <div className="py-16 text-center text-gray-300 font-black italic">충전 내역이 없습니다.</div>
               ) : (
                 <table className="w-full text-sm">
@@ -566,12 +549,12 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {localChargeItems.map((item, idx) => (
+                    {chargeItems.map((item, idx) => (
                       <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-3 px-5 text-gray-400 font-bold">{localChargeItems.length - idx}</td>
-                        <td className="py-3 px-5 text-gray-700 font-bold">{item.type}</td>
+                        <td className="py-3 px-5 text-gray-400 font-bold">{chargeItems.length - idx}</td>
+                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
                         <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
-                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.date).toLocaleDateString('ko-KR')}</td>
+                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{new Date(item.created_at).toLocaleDateString('ko-KR')}</td>
                       </tr>
                     ))}
                   </tbody>
