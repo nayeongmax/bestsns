@@ -581,7 +581,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   const groupedInventory = useMemo(() => {
     const map = new Map<string, SMMProduct>();
-    smmProducts.filter(p => {
+    [...smmProducts].sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999)).filter(p => {
       const matchSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchPlatform = filterPlatform === '전체 플랫폼' || p.platform === filterPlatform;
       return matchSearch && matchPlatform;
