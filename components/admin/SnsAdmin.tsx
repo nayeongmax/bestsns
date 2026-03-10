@@ -48,6 +48,8 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [orderStatusFilter, setOrderStatusFilter] = useState('전체 상태');
   const [orderMonthFilter, setOrderMonthFilter] = useState('전체 기간');
 
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+
   // JAP 주문 상태 (orderId → { status, remains })
   const [japStatuses, setJapStatuses] = useState<Record<string, { status: string; remains: number }>>({});
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
@@ -599,6 +601,31 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     return Array.from(map.values());
   }, [smmProducts, searchQuery, filterPlatform]);
 
+  // ▲▼ 버튼으로 상품 순서 변경 후 즉시 저장
+  const moveProduct = useCallback(async (currentIdx: number, direction: 'up' | 'down') => {
+    const arr = [...groupedInventory];
+    const targetIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+    if (targetIdx < 0 || targetIdx >= arr.length) return;
+    // swap
+    [arr[currentIdx], arr[targetIdx]] = [arr[targetIdx], arr[currentIdx]];
+    // 새 sortOrder 배정
+    const keyToOrder = new Map(arr.map((p, i) => [`${p.platform}_${p.name}_${p.category || ''}`, i]));
+    const updated = smmProducts.map(p => ({
+      ...p,
+      sortOrder: keyToOrder.get(`${p.platform}_${p.name}_${p.category || ''}`) ?? p.sortOrder ?? 9999,
+    }));
+    setSmmProducts(updated);
+    setIsSavingOrder(true);
+    try {
+      const { upsertSmmProducts } = await import('../../smmDb');
+      await upsertSmmProducts(updated);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSavingOrder(false);
+    }
+  }, [groupedInventory, smmProducts, setSmmProducts]);
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-32">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -825,14 +852,17 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         <div className="space-y-10 animate-in fade-in max-w-[1600px] mx-auto">
            <div className="bg-white p-10 rounded-[56px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-10">
               <h3 className="text-3xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8 px-6">통합 상품 인벤토리 리얼타임 대시보드</h3>
-              <div className="flex gap-4 bg-gray-50 p-2 rounded-[32px] shadow-inner">
-                 <select value={filterPlatform} onChange={e => setFilterPlatform(e.target.value)} className="p-4 bg-white border-none rounded-[24px] font-black text-sm shadow-sm outline-none cursor-pointer">
-                    <option>전체 플랫폼</option>{SNS_PLATFORMS.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                 </select>
-                 <div className="relative">
-                    <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="상품명 검색..." className="pl-8 pr-16 py-4 bg-white border-none rounded-[24px] font-bold text-[15px] shadow-sm outline-none w-80" />
-                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300">🔍</span>
+              <div className="flex gap-4 items-center flex-wrap">
+                 <div className="flex gap-4 bg-gray-50 p-2 rounded-[32px] shadow-inner">
+                    <select value={filterPlatform} onChange={e => setFilterPlatform(e.target.value)} className="p-4 bg-white border-none rounded-[24px] font-black text-sm shadow-sm outline-none cursor-pointer">
+                       <option>전체 플랫폼</option>{SNS_PLATFORMS.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    </select>
+                    <div className="relative">
+                       <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="상품명 검색..." className="pl-8 pr-16 py-4 bg-white border-none rounded-[24px] font-bold text-[15px] shadow-sm outline-none w-80" />
+                       <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300">🔍</span>
+                    </div>
                  </div>
+                 {isSavingOrder && <span className="text-[12px] font-black text-purple-500 italic animate-pulse">저장 중...</span>}
               </div>
            </div>
            <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
@@ -840,6 +870,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                  <table className="w-full text-left">
                     <thead className="bg-gray-900 text-white text-[11px] font-black uppercase tracking-widest italic">
                        <tr>
+                          <th className="px-6 py-6 text-center">순서</th>
                           <th className="px-10 py-6">플랫폼</th>
                           <th className="px-10 py-6">노출 상품명 / 연결 ID</th>
                           <th className="px-10 py-6">카테고리</th>
@@ -850,13 +881,28 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                        {groupedInventory.length === 0 ? (
-                         <tr><td colSpan={6} className="py-40 text-center text-gray-300 font-black italic">등록된 상품이 없습니다.</td></tr>
-                       ) : groupedInventory.map(p => {
+                         <tr><td colSpan={7} className="py-40 text-center text-gray-300 font-black italic">등록된 상품이 없습니다.</td></tr>
+                       ) : groupedInventory.map((p, idx) => {
                          const safeSources = (p.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null);
                          const allSourcesDisabled = safeSources.length > 0 && safeSources.every(s => !activeProviderIds.has(s.providerId));
                          return (
                            <React.Fragment key={p.id}>
                              <tr className={`transition-all hover:bg-blue-50/30 ${expandedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} ${allSourcesDisabled ? 'grayscale opacity-40 bg-gray-50' : ''}`}>
+                                <td className="px-6 py-8 text-center">
+                                  <div className="flex flex-col items-center gap-1">
+                                    <button
+                                      onClick={() => moveProduct(idx, 'up')}
+                                      disabled={idx === 0 || isSavingOrder}
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-purple-100 hover:text-purple-600 text-gray-400 font-black text-xs disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                    >▲</button>
+                                    <span className="text-[11px] font-black text-gray-300">{idx + 1}</span>
+                                    <button
+                                      onClick={() => moveProduct(idx, 'down')}
+                                      disabled={idx === groupedInventory.length - 1 || isSavingOrder}
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-purple-100 hover:text-purple-600 text-gray-400 font-black text-xs disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                    >▼</button>
+                                  </div>
+                                </td>
                                 <td className="px-10 py-8 whitespace-nowrap"><span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic tracking-tighter shadow-md whitespace-nowrap ${allSourcesDisabled ? 'bg-gray-400 text-white' : 'bg-blue-600 text-white'}`}>{p.platform}</span></td>
                                 <td className="px-10 py-8"><div className="flex items-center gap-3"><p className="font-black text-gray-900 text-xl italic tracking-tight">{p.name}</p>{allSourcesDisabled && <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded font-black italic shadow-sm uppercase animate-pulse">공급중단</span>}</div><div className="flex flex-wrap gap-1 mt-2">{safeSources.map((s, si) => (<span key={si} className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${activeProviderIds.has(s.providerId) ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-red-50 text-red-500 border-red-100'}`}>#{s.serviceId}</span>))}</div></td>
                                 <td className="px-10 py-8"><span className="text-sm font-black text-gray-500 uppercase italic tracking-widest">{p.category}</span></td>
