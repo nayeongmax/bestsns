@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeTaskSections } from '@/types';
-import { getPartTimeTasks, setPartTimeTasks, generateProjectNo } from '@/constants';
+import { fetchPartTimeTasks, upsertPartTimeTask } from '../parttimeDb';
 
 interface Props {
   user: UserProfile | null;
@@ -59,13 +59,26 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
     e.target.value = '';
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       alert('게시글 제목을 입력해 주세요.');
       return;
     }
-    const tasks = getPartTimeTasks();
+    // DB에서 최대 프로젝트 번호 계산
+    let projectNo = `ALBA-${String(Date.now()).slice(-5)}`;
+    try {
+      const tasks = await fetchPartTimeTasks();
+      let maxN = 0;
+      for (const t of tasks) {
+        const pn = t.projectNo;
+        if (pn && /^ALBA-\d+$/.test(pn)) {
+          const n = parseInt(pn.replace('ALBA-', ''), 10);
+          if (n > maxN) maxN = n;
+        }
+      }
+      projectNo = `ALBA-${String(maxN + 1).padStart(5, '0')}`;
+    } catch {}
     const newTask: PartTimeTask = {
       id: `t_${Date.now()}`,
       title: title.trim(),
@@ -89,11 +102,16 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
       applicants: [],
       pointPaid: false,
       paidUserIds: [],
-      projectNo: generateProjectNo(),
+      projectNo,
     };
-    setPartTimeTasks([newTask, ...tasks]);
-    alert('작업이 등록되었습니다.');
-    navigate('/part-time');
+    try {
+      await upsertPartTimeTask(newTask);
+      alert('작업이 등록되었습니다.');
+      navigate('/part-time');
+    } catch (err) {
+      alert('작업 등록에 실패했습니다. 다시 시도해 주세요.');
+      console.error('작업 등록 실패:', err);
+    }
   };
 
   return (

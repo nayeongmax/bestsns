@@ -12,14 +12,6 @@ interface Props {
 type TargetType = 'all' | 'buyer' | 'seller';
 type IssuanceMode = 'manual' | 'auto';
 
-function loadCampaignsFromStorage(): AutoCouponCampaign[] {
-  try {
-    return JSON.parse(localStorage.getItem('auto_coupon_campaigns') || '[]');
-  } catch {
-    return [];
-  }
-}
-
 const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
   const { showConfirm, showAlert } = useConfirm();
   const [targetFilter, setTargetFilter] = useState<TargetType>('all');
@@ -32,7 +24,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
   const [issuanceMode, setIssuanceMode] = useState<IssuanceMode>('manual');
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
 
-  const [campaigns, setCampaigns] = useState<AutoCouponCampaign[]>(loadCampaignsFromStorage);
+  const [campaigns, setCampaigns] = useState<AutoCouponCampaign[]>([]);
 
   // Supabase 로드
   useEffect(() => {
@@ -46,7 +38,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
         }
       } catch (err) {
         if (!cancelled) {
-          console.warn('쿠폰 캠페인 DB 로드 실패, localStorage 사용:', err);
+          console.warn('쿠폰 캠페인 DB 로드 실패:', err);
           campaignDbLoaded.current = true;
         }
       }
@@ -59,9 +51,6 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
     if (!campaignDbLoaded.current) return;
     upsertCouponCampaigns(campaigns).catch((err) => console.warn('coupon_campaigns 저장:', err));
   }, [campaigns]);
-
-  // localStorage 백업
-  useEffect(() => localStorage.setItem('auto_coupon_campaigns', JSON.stringify(campaigns)), [campaigns]);
 
   // 쿠폰 폼 상태
   const [couponForm, setCouponForm] = useState({

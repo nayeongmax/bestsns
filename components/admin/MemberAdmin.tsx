@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduct, ChannelProduct, StoreOrder, GradeConfig, ChannelOrder, getUserGrade, Review, NotificationType } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import { getFreelancerBalance } from '@/constants';
+import { fetchFreelancerBalance } from '../../parttimeDb';
 import MyPage from '@/pages/MyPage';
 
 interface Props {
@@ -43,6 +43,18 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
   
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [freelancerBalances, setFreelancerBalances] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (members.length === 0) return;
+    Promise.all(
+      members.map(m => fetchFreelancerBalance(m.id).then(bal => ({ id: m.id, bal })).catch(() => ({ id: m.id, bal: 0 })))
+    ).then(results => {
+      const map: Record<string, number> = {};
+      results.forEach(r => { map[r.id] = r.bal; });
+      setFreelancerBalances(map);
+    });
+  }, [members]);
 
   const resolveGrade = (m: UserProfile) => getUserGrade(m, gradeConfigs);
 
@@ -196,7 +208,7 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                      <td className="px-8 py-4 text-right text-blue-600">₩{(m.totalPurchaseAmount || 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-right text-orange-600">₩{(m.totalSalesAmount || 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-right text-blue-600">{(m.points || 0).toLocaleString()}P</td>
-                     <td className="px-8 py-4 text-right text-emerald-600">₩{getFreelancerBalance(m.id).toLocaleString()}</td>
+                     <td className="px-8 py-4 text-right text-emerald-600">₩{(freelancerBalances[m.id] ?? 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-center">
                         <button onClick={() => setEditingMember({ ...m })} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black">관리</button>
                      </td>
