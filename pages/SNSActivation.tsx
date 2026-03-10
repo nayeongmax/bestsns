@@ -442,13 +442,13 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             {categoriesForPlatform.length > 0 && (
               <div>
                 <h3 className="text-[10px] sm:text-[11px] font-black text-gray-300 uppercase italic tracking-[0.2em] px-1 sm:px-2 mb-4 sm:mb-6">카테고리</h3>
-                <div className="flex flex-wrap gap-3 sm:gap-4">
+                <div className="grid gap-3 sm:gap-4" style={{ gridTemplateColumns: `repeat(${categoriesForPlatform.length}, 1fr)` }}>
                   {categoriesForPlatform.map((cat) => (
                     <button
                       key={cat}
                       type="button"
                       onClick={() => { setSelectedCategory(cat); setSelectedProductId(''); }}
-                      className={`px-5 py-2.5 sm:px-8 sm:py-3.5 rounded-2xl font-black text-[13px] sm:text-[14px] italic uppercase tracking-wide transition-all duration-200 ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] scale-[1.03]' : 'bg-white text-gray-400 border border-gray-200 hover:border-blue-300 hover:text-blue-500 hover:shadow-sm'}`}
+                      className={`w-full py-2.5 sm:py-3.5 rounded-2xl font-black text-[13px] sm:text-[14px] italic uppercase tracking-wide transition-all duration-200 ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] scale-[1.03]' : 'bg-white text-gray-400 border border-gray-200 hover:border-blue-300 hover:text-blue-500 hover:shadow-sm'}`}
                     >
                       {cat}
                     </button>
@@ -484,10 +484,10 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                             key={p.id}
                             type="button"
                             onClick={() => { setSelectedProductId(p.id); setIsDropdownOpen(false); setComments(''); }}
-                            className={`w-full text-left px-5 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-[15px] font-black transition-all flex items-center justify-between gap-4 ${selectedProductId === p.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'}`}
+                            className={`w-full text-left px-5 sm:px-7 py-3.5 sm:py-4 text-[15px] sm:text-[17px] font-black transition-all flex items-center justify-between gap-4 ${selectedProductId === p.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'}`}
                           >
                             <span>{p.name}</span>
-                            <span className={`text-[12px] font-black shrink-0 ${selectedProductId === p.id ? 'text-blue-200' : 'text-blue-500'}`}>{(p.sellingPrice ?? 0).toLocaleString()}P</span>
+                            <span className={`text-[14px] sm:text-[16px] font-black shrink-0 ${selectedProductId === p.id ? 'text-blue-200' : 'text-blue-500'}`}>{(p.sellingPrice ?? 0).toLocaleString()}P</span>
                           </button>
                         ))}
                       </div>
