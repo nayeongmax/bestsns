@@ -98,14 +98,15 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     [selectedProduct]
   );
 
-  // 공통 교집합 수량: 모든 활성 소스의 min 중 최대값 ~ max 중 최소값 (예: A 10~1000, B 20~10000, C 50~100000 → 50~1000)
+  // 합집합 수량: 모든 활성 소스 중 가장 낮은 min ~ 가장 높은 max (예: A 10~100000, B 10~1000000 → 10~1000000)
+  // 주문 수량에 맞는 소스를 자동 선택하므로 소스 중 하나라도 커버 가능하면 주문 허용
   const effectiveQuantityRange = useMemo(() => {
     if (!selectedProduct) return { min: 0, max: 999999999 };
     const active = (selectedProduct.sources || []).filter(s => activeProviderIds.has(s.providerId));
     if (active.length === 0) return { min: selectedProduct.minQuantity ?? 0, max: selectedProduct.maxQuantity ?? 999999999 };
     const mins = active.map(s => s.minQuantity ?? selectedProduct.minQuantity ?? 0);
     const maxs = active.map(s => s.maxQuantity ?? selectedProduct.maxQuantity ?? 999999999);
-    return { min: Math.max(...mins), max: Math.min(...maxs) };
+    return { min: Math.min(...mins), max: Math.max(...maxs) };
   }, [selectedProduct, activeProviderIds]);
 
   const handleAddOption = () => {
@@ -162,13 +163,13 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const doOrder = async () => {
     setIsProcessing(true);
     try {
-      // 주문 수량 검증: 공통 교집합(모든 소스 교집합) 기준
+      // 주문 수량 검증: 합집합 기준 (소스 중 하나라도 커버 가능하면 허용)
       for (const opt of selectedOptions) {
         const product = smmProducts.find(p => p.id === opt.serviceId);
         if (!product) continue;
         const active = (product.sources || []).filter(s => activeProviderIds.has(s.providerId));
-        const minQ = active.length === 0 ? (product.minQuantity ?? 0) : Math.max(...active.map(s => s.minQuantity ?? product.minQuantity ?? 0));
-        const maxQ = active.length === 0 ? (product.maxQuantity ?? 999999999) : Math.min(...active.map(s => s.maxQuantity ?? product.maxQuantity ?? 999999999));
+        const minQ = active.length === 0 ? (product.minQuantity ?? 0) : Math.min(...active.map(s => s.minQuantity ?? product.minQuantity ?? 0));
+        const maxQ = active.length === 0 ? (product.maxQuantity ?? 999999999) : Math.max(...active.map(s => s.maxQuantity ?? product.maxQuantity ?? 999999999));
         if (opt.quantity < minQ || opt.quantity > maxQ) {
           showAlert({ description: `"${product.name}" 주문 수량이 허용 범위(최소 ${minQ.toLocaleString()}~최대 ${maxQ.toLocaleString()}개)를 벗어났습니다.` });
           setIsProcessing(false);
