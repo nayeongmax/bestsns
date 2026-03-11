@@ -187,7 +187,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       let totalRefund = 0;
       for (const opt of selectedOptions) {
         const product = smmProducts.find(p => p.id === opt.serviceId);
-        if (!product || !product.sources?.length) continue;
+        if (!product || !product.sources?.length) {
+          console.warn(`[주문] 상품(${opt.serviceId}) 없음 또는 소스 없음 → 환불 처리`);
+          totalRefund += opt.totalPrice;
+          continue;
+        }
 
         // 활성화된 공급처 AND 주문 수량이 해당 소스 min~max 범위 내인 것만 선택
         const validActiveSources = product.sources.filter(s => {
@@ -196,7 +200,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
           const srcMax = s.maxQuantity ?? product.maxQuantity ?? 999999999;
           return opt.quantity >= srcMin && opt.quantity <= srcMax;
         });
-        if (validActiveSources.length === 0) continue;
+        if (validActiveSources.length === 0) {
+          console.warn(`[주문] 유효한 소스 없음 (product:${product.name}, qty:${opt.quantity}, activeProviders:[${[...activeProviderIds].join(',')}], sources:[${product.sources.map(s=>s.providerId+'/'+s.serviceId).join(',')}]) → 환불 처리`);
+          totalRefund += opt.totalPrice;
+          continue;
+        }
 
         // 우선순위 순으로 정렬 (가격 낮은 순 → 시간 빠른 순), 순서대로 모두 시도
         const sortedSources = [...validActiveSources].sort((a, b) => {
@@ -225,6 +233,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               })
             });
             const result = await resp.json();
+            console.log(`[주문시도] provider:${source.providerId} service:${source.serviceId} qty:${opt.quantity} → status:${result.status} orderId:${result.orderId || '-'} msg:${result.message || '-'}`);
             if (result.status === 'success' && result.orderId) {
               const order: SMMOrder = {
                 id: `ORD${Date.now()}${Math.floor(Math.random()*100)}`,

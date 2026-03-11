@@ -80,10 +80,11 @@ exports.handler = async (event, context) => {
       const apiKey = process.env[envKeyName];
 
       if (!apiKey) {
+        console.error(`[smm-api] API 키 없음: ${envKeyName} (providerId: ${providerId})`);
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ status: 'error', message: 'API 키가 설정되지 않았습니다.' })
+          body: JSON.stringify({ status: 'error', message: `API 키 미설정 (${envKeyName})` })
         };
       }
 
