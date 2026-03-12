@@ -512,9 +512,6 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                     <input type="text" placeholder="https://..." className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white text-sm sm:text-base pr-4 sm:pr-24" value={link} onChange={(e) => setLink(e.target.value)} />
                     <button type="button" onClick={checkLink} className="sm:absolute sm:right-3 sm:top-1/2 sm:-translate-y-1/2 bg-black text-white px-4 py-3 sm:px-6 sm:py-3 rounded-xl sm:rounded-[20px] font-black text-[11px] hover:bg-blue-600 transition-all shrink-0">확인 ↗</button>
                   </div>
-                  <p className="text-[11px] sm:text-[12px] font-bold text-red-500 px-1 sm:px-2 leading-relaxed">
-                    ⚠️ 부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 게시물 불법 작업 사용을 엄격히 제한합니다.
-                  </p>
                 </div>
                 <div className="md:col-span-4 space-y-3 sm:space-y-4">
                   <div className="flex items-center gap-2 px-1 sm:px-4">
@@ -527,6 +524,12 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                   </div>
                   <input type="number" placeholder="0" min={effectiveQuantityRange.min} max={effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max : undefined} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white text-sm sm:text-base" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} />
                 </div>
+              </div>
+              <div className="flex items-center gap-3 bg-yellow-400 border-2 border-yellow-500 rounded-2xl px-4 py-3 shadow-sm">
+                <span className="text-lg shrink-0">🚫</span>
+                <p className="text-[11px] sm:text-[12px] font-black text-red-700 leading-snug whitespace-nowrap overflow-hidden text-ellipsis">
+                  부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 게시물 불법 작업 사용을 엄격히 제한합니다.
+                </p>
               </div>
               {/* 댓글 섹션: 댓글 상품 선택 시에만 노출 */}
               {isCommentProduct && (
