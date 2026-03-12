@@ -262,12 +262,14 @@ exports.handler = async (event, context) => {
         orders: orderIds.join(','),
       });
 
+      console.log('[smm-api] orderStatus 요청 - providerId:', providerId, '| orderIds:', orderIds);
       const fetchResponse = await fetch(String(apiUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData.toString(),
       });
       const data = await fetchResponse.json();
+      console.log('[smm-api] orderStatus 응답:', JSON.stringify(data));
 
       return {
         statusCode: 200,

@@ -249,9 +249,9 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         } catch (e) { console.error('orderStatus fetch error:', e); }
       }
 
-      // 공급처에서 Canceled된 주문: 다른 serviceId로 재시도, 전부 실패 시 포인트 환불 + 주문취소
+      // 공급처에서 Canceled/Refunded된 주문: 다른 serviceId로 재시도, 전부 실패 시 포인트 환불 + 주문취소
       const canceledOurIds = Object.entries(next)
-        .filter(([, v]) => v.status === 'Canceled')
+        .filter(([, v]) => v.status === 'Canceled' || v.status === 'Refunded')
         .map(([id]) => id);
 
       for (const ourId of canceledOurIds) {
