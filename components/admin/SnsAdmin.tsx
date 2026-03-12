@@ -1113,9 +1113,11 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                          <tr><td colSpan={7} className="py-40 text-center text-gray-300 font-black italic text-lg">기록된 주문 데이터가 없습니다.</td></tr>
                        ) : filteredOrders.map(o => (
                          <tr key={o.id} className="hover:bg-blue-50/20 transition-all group">
-                            <td className="px-6 py-6 whitespace-nowrap">
-                               <span className="text-[12px] font-black text-gray-800">{o.orderTime}</span>
-                               <span className="text-[10px] text-blue-500 font-bold ml-2">#{o.id}</span>
+                            <td className="px-6 py-6">
+                               <div className="flex flex-col gap-0.5">
+                                 <span className="text-[12px] font-black text-gray-800 whitespace-nowrap">{o.orderTime}</span>
+                                 <span className="text-[10px] text-blue-500 font-bold whitespace-nowrap">#{o.id}</span>
+                               </div>
                             </td>
                             <td className="px-6 py-6 whitespace-nowrap">
                                <div className="flex items-center gap-2">
