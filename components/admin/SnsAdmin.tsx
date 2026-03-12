@@ -77,8 +77,27 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     reader.readAsDataURL(file);
   };
 
+  const BANNER_LS_KEY = 'banner_ads_local';
+
+  const saveBannersToLocal = (list: BannerAd[]) => {
+    // base64 이미지는 용량이 크므로 id/meta만 localStorage에 저장하고 전체는 state로만 관리
+    localStorage.setItem(BANNER_LS_KEY, JSON.stringify(list));
+  };
+
   useEffect(() => {
-    fetchBannerAds().then(setBannerAds).catch(e => console.warn('배너 조회 실패:', e));
+    fetchBannerAds()
+      .then(data => {
+        if (data.length > 0) {
+          setBannerAds(data);
+        } else {
+          // DB에 데이터 없으면 localStorage 폴백
+          try { const local = JSON.parse(localStorage.getItem(BANNER_LS_KEY) || '[]'); setBannerAds(local); } catch { /* ignore */ }
+        }
+      })
+      .catch(() => {
+        // DB 연결 실패 시 localStorage 사용
+        try { const local = JSON.parse(localStorage.getItem(BANNER_LS_KEY) || '[]'); setBannerAds(local); } catch { /* ignore */ }
+      });
   }, []);
 
   const handleSaveBanner = async () => {
@@ -87,16 +106,24 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     }
     const now = new Date().toISOString();
     const saved: BannerAd = { ...bannerForm, id: bannerForm.id || `BNR${Date.now()}`, createdAt: bannerForm.createdAt || now };
-    await upsertBannerAd(saved);
-    setBannerAds(prev => { const idx = prev.findIndex(b => b.id === saved.id); return idx >= 0 ? prev.map(b => b.id === saved.id ? saved : b) : [saved, ...prev]; });
+    // UI 즉시 업데이트
+    const next = bannerAds.some(b => b.id === saved.id)
+      ? bannerAds.map(b => b.id === saved.id ? saved : b)
+      : [saved, ...bannerAds];
+    setBannerAds(next);
+    saveBannersToLocal(next);
     setBannerForm(initialBannerForm);
     setEditingBannerId(null);
+    // DB 저장 시도 (실패해도 localStorage에는 저장됨)
+    upsertBannerAd(saved).catch(e => console.warn('배너 DB 저장 실패 (localStorage에는 저장됨):', e));
   };
 
   const handleDeleteBanner = async (id: string) => {
     if (!confirm('배너를 삭제하시겠습니까?')) return;
-    await deleteBannerAd(id);
-    setBannerAds(prev => prev.filter(b => b.id !== id));
+    const next = bannerAds.filter(b => b.id !== id);
+    setBannerAds(next);
+    saveBannersToLocal(next);
+    deleteBannerAd(id).catch(e => console.warn('배너 DB 삭제 실패:', e));
   };
 
   const [japStatuses, setJapStatuses] = useState<Record<string, { status: string; remains: number; startCount?: number }>>({});
