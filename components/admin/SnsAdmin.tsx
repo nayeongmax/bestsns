@@ -4,7 +4,6 @@ import { SNS_PLATFORMS } from '../../constants.tsx';
 import { upsertSmmOrder } from '../../smmDb';
 import { fetchProfileRow, updateProfile } from '../../profileDb';
 import { fetchBannerAds, upsertBannerAd, deleteBannerAd } from '../../bannerDb';
-import { supabase } from '../../supabase';
 
 interface Props {
   smmProviders: SMMProvider[];
@@ -60,28 +59,22 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
 
-  const handleBannerImageUpload = async (file: File) => {
+  const handleBannerImageUpload = (file: File) => {
     const allowed = ['image/jpeg', 'image/png', 'image/gif'];
     if (!allowed.includes(file.type)) { alert('jpg, png, gif 파일만 업로드 가능합니다.'); return; }
-    if (file.size > 5 * 1024 * 1024) { alert('파일 크기는 5MB 이하여야 합니다.'); return; }
+    if (file.size > 3 * 1024 * 1024) { alert('파일 크기는 3MB 이하여야 합니다.'); return; }
     setBannerUploading(true);
-    try {
-      const BUCKET = 'public-assets';
-      // 버킷이 없으면 자동 생성 (이미 있으면 무시)
-      await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
-
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const path = `banners/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      setBannerForm(p => ({ ...p, imageUrl: data.publicUrl }));
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      alert('업로드 실패: ' + msg);
-    } finally {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setBannerForm(p => ({ ...p, imageUrl: base64 }));
       setBannerUploading(false);
-    }
+    };
+    reader.onerror = () => {
+      alert('파일 읽기 실패. 다시 시도해주세요.');
+      setBannerUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   useEffect(() => {
