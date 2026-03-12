@@ -1184,7 +1184,8 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
             ) : (
               <div className="space-y-5">
                 {bannerAds.map(b => {
-                  const today = new Date().toISOString().slice(0, 10);
+                  const _d = new Date();
+                  const today = [_d.getFullYear(), String(_d.getMonth()+1).padStart(2,'0'), String(_d.getDate()).padStart(2,'0')].join('-');
                   const isLive = b.isActive && b.startDate <= today && b.endDate >= today;
                   return (
                     <div key={b.id} className="flex flex-col sm:flex-row gap-5 p-5 bg-gray-50/60 rounded-3xl border border-gray-100 group">

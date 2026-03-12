@@ -38,17 +38,18 @@ export async function fetchBannerAds(): Promise<BannerAd[]> {
   return (data ?? []).map((row) => rowToBanner(row as Record<string, unknown>));
 }
 
-/** 오늘 기준 활성화된 배너만 조회 (프론트 노출용) */
+/** 오늘 기준 활성화된 배너만 조회 (프론트 노출용) - 날짜 필터는 클라이언트에서 처리 */
 export async function fetchActiveBannerAds(): Promise<BannerAd[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const _d = new Date();
+  const today = [_d.getFullYear(), String(_d.getMonth()+1).padStart(2,'0'), String(_d.getDate()).padStart(2,'0')].join('-');
   const { data, error } = await supabase
     .from('banner_ads')
     .select('*')
-    .eq('is_active', true)
-    .lte('start_date', today)
-    .gte('end_date', today);
+    .eq('is_active', true);
   if (error) throw error;
-  return (data ?? []).map((row) => rowToBanner(row as Record<string, unknown>));
+  return (data ?? [])
+    .map((row) => rowToBanner(row as Record<string, unknown>))
+    .filter(b => b.startDate <= today && b.endDate >= today);
 }
 
 export async function upsertBannerAd(banner: BannerAd): Promise<void> {
