@@ -10,7 +10,7 @@ import React, { useEffect, useRef } from 'react';
 const COUPANG_ID = 972069;
 const COUPANG_TRACKING = 'AF3446409';
 const BANNER_TEMPLATE = 'carousel';
-const BANNER_WIDTH = 160;
+const BANNER_WIDTH = 300;
 const BANNER_HEIGHT = 600;
 
 const CoupangSidebarBanner: React.FC = () => {
@@ -70,7 +70,7 @@ const CoupangSidebarBanner: React.FC = () => {
     );
   }
 
-  return <div ref={containerRef} style={{ width: BANNER_WIDTH, minHeight: BANNER_HEIGHT }} />;
+  return <div ref={containerRef} className="w-full" style={{ minHeight: BANNER_HEIGHT }} />;
 };
 
 export default CoupangSidebarBanner;
