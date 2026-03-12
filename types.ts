@@ -366,6 +366,18 @@ export interface Notice {
   isHidden: boolean;
 }
 
+export interface BannerAd {
+  id: string;
+  companyName: string;   // 업체명
+  imageUrl: string;      // 배너 이미지 URL
+  linkUrl: string;       // 클릭 시 이동 URL
+  startDate: string;     // 광고 시작일 (YYYY-MM-DD)
+  endDate: string;       // 광고 종료일 (YYYY-MM-DD)
+  isActive: boolean;     // 활성화 여부
+  memo?: string;         // 관리자 메모
+  createdAt: string;
+}
+
 export interface Post {
   id: string;
   category: string;

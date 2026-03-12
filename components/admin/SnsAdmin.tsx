@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert, NotificationType } from '@/types';
+import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert, NotificationType, BannerAd } from '@/types';
 import { SNS_PLATFORMS } from '../../constants.tsx';
 import { upsertSmmOrder } from '../../smmDb';
 import { fetchProfileRow, updateProfile } from '../../profileDb';
+import { fetchBannerAds, upsertBannerAd, deleteBannerAd } from '../../bannerDb';
 
 interface Props {
   smmProviders: SMMProvider[];
@@ -15,7 +16,7 @@ interface Props {
   addNotif: (userId: string, type: NotificationType, title: string, message: string) => void;
 }
 
-type SnsTab = 'provider' | 'manage' | 'list' | 'order' | 'monitor';
+type SnsTab = 'provider' | 'manage' | 'list' | 'order' | 'monitor' | 'banner';
 type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders, setSmmOrders, addNotif }) => {
@@ -51,6 +52,34 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   // JAP 주문 상태 (orderId → { status, remains })
+  // 배너 광고 관리
+  const [bannerAds, setBannerAds] = useState<BannerAd[]>([]);
+  const initialBannerForm: BannerAd = { id: '', companyName: '', imageUrl: '', linkUrl: '', startDate: '', endDate: '', isActive: true, memo: '', createdAt: '' };
+  const [bannerForm, setBannerForm] = useState<BannerAd>(initialBannerForm);
+  const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchBannerAds().then(setBannerAds).catch(e => console.warn('배너 조회 실패:', e));
+  }, []);
+
+  const handleSaveBanner = async () => {
+    if (!bannerForm.companyName || !bannerForm.imageUrl || !bannerForm.linkUrl || !bannerForm.startDate || !bannerForm.endDate) {
+      alert('업체명, 이미지 URL, 링크 URL, 광고 기간은 필수입니다.'); return;
+    }
+    const now = new Date().toISOString();
+    const saved: BannerAd = { ...bannerForm, id: bannerForm.id || `BNR${Date.now()}`, createdAt: bannerForm.createdAt || now };
+    await upsertBannerAd(saved);
+    setBannerAds(prev => { const idx = prev.findIndex(b => b.id === saved.id); return idx >= 0 ? prev.map(b => b.id === saved.id ? saved : b) : [saved, ...prev]; });
+    setBannerForm(initialBannerForm);
+    setEditingBannerId(null);
+  };
+
+  const handleDeleteBanner = async (id: string) => {
+    if (!confirm('배너를 삭제하시겠습니까?')) return;
+    await deleteBannerAd(id);
+    setBannerAds(prev => prev.filter(b => b.id !== id));
+  };
+
   const [japStatuses, setJapStatuses] = useState<Record<string, { status: string; remains: number; startCount?: number }>>({});
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
@@ -672,6 +701,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
           { id: 'list', label: '📋 상품 인벤토리' },
           { id: 'order', label: '📈 주문 분석' },
           { id: 'monitor', label: `🔔 원가 모니터링${unreadAlertsCount > 0 ? ` (${unreadAlertsCount})` : ''}` },
+          { id: 'banner', label: '🖼️ 배너 광고 관리' },
         ].map(tab => (
           <button
             key={tab.id}
@@ -1051,6 +1081,77 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'banner' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          {/* 배너 등록/수정 폼 */}
+          <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 space-y-6">
+            <h3 className="text-xl font-black text-gray-900 italic uppercase">{editingBannerId ? '✏️ 배너 수정' : '➕ 배너 광고 등록'}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">업체명 *</label><input type="text" value={bannerForm.companyName} onChange={e => setBannerForm(p => ({...p, companyName: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="예: 나이키코리아" /></div>
+              <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">링크 URL *</label><input type="text" value={bannerForm.linkUrl} onChange={e => setBannerForm(p => ({...p, linkUrl: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="https://..." /></div>
+              <div className="space-y-2 md:col-span-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">이미지 URL *</label><input type="text" value={bannerForm.imageUrl} onChange={e => setBannerForm(p => ({...p, imageUrl: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="https://... (이미지 직접 URL)" /></div>
+              <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">광고 시작일 *</label><input type="date" value={bannerForm.startDate} onChange={e => setBannerForm(p => ({...p, startDate: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" /></div>
+              <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">광고 종료일 *</label><input type="date" value={bannerForm.endDate} onChange={e => setBannerForm(p => ({...p, endDate: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" /></div>
+              <div className="space-y-2 md:col-span-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">메모 (내부용)</label><input type="text" value={bannerForm.memo || ''} onChange={e => setBannerForm(p => ({...p, memo: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="광고비 금액, 담당자 등 메모" /></div>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={bannerForm.isActive} onChange={e => setBannerForm(p => ({...p, isActive: e.target.checked}))} className="w-4 h-4 rounded accent-blue-600" />
+                <span className="font-black text-sm text-gray-700">광고 활성화</span>
+              </label>
+            </div>
+            {bannerForm.imageUrl && (
+              <div className="space-y-2">
+                <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">미리보기</p>
+                <a href={bannerForm.linkUrl || '#'} target="_blank" rel="noopener noreferrer" className="block max-w-lg rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                  <img src={bannerForm.imageUrl} alt="미리보기" className="w-full h-auto object-cover" />
+                </a>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={handleSaveBanner} className="px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all shadow-md">{editingBannerId ? '✅ 수정 저장' : '➕ 배너 등록'}</button>
+              {editingBannerId && <button onClick={() => { setBannerForm(initialBannerForm); setEditingBannerId(null); }} className="px-8 py-3.5 bg-gray-100 text-gray-500 rounded-2xl font-black text-sm hover:bg-gray-200 transition-all">취소</button>}
+            </div>
+          </div>
+
+          {/* 배너 목록 */}
+          <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 space-y-6">
+            <h3 className="text-xl font-black text-gray-900 italic uppercase">등록된 배너 목록 ({bannerAds.length}개)</h3>
+            {bannerAds.length === 0 ? (
+              <p className="text-gray-300 font-black text-center py-16">등록된 배너가 없습니다.</p>
+            ) : (
+              <div className="space-y-5">
+                {bannerAds.map(b => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  const isLive = b.isActive && b.startDate <= today && b.endDate >= today;
+                  return (
+                    <div key={b.id} className="flex flex-col sm:flex-row gap-5 p-5 bg-gray-50/60 rounded-3xl border border-gray-100 group">
+                      <a href={b.linkUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                        <img src={b.imageUrl} alt={b.companyName} className="w-full sm:w-48 h-24 object-cover rounded-2xl shadow-sm" />
+                      </a>
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-black text-gray-900 text-[15px]">{b.companyName}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${isLive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>{isLive ? '● 노출중' : '○ 비활성'}</span>
+                        </div>
+                        <p className="text-[11px] text-blue-500 font-bold truncate">{b.linkUrl}</p>
+                        <p className="text-[11px] text-gray-400 font-bold">{b.startDate} ~ {b.endDate}</p>
+                        {b.memo && <p className="text-[11px] text-gray-400 italic">{b.memo}</p>}
+                      </div>
+                      <div className="flex sm:flex-col gap-2 shrink-0">
+                        <button onClick={() => { setBannerForm({...b}); setEditingBannerId(b.id); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-black text-[12px] hover:bg-blue-100 transition-all">수정</button>
+                        <button onClick={() => handleDeleteBanner(b.id)} className="px-4 py-2 bg-red-50 text-red-500 rounded-xl font-black text-[12px] hover:bg-red-100 transition-all">삭제</button>
+                        <button onClick={async () => { const updated = {...b, isActive: !b.isActive}; await upsertBannerAd(updated); setBannerAds(prev => prev.map(x => x.id === b.id ? updated : x)); }} className={`px-4 py-2 rounded-xl font-black text-[12px] transition-all ${b.isActive ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{b.isActive ? '비활성화' : '활성화'}</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
