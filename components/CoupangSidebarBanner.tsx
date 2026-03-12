@@ -7,8 +7,9 @@ import React, { useEffect, useRef } from 'react';
  * 쿠팡 파트너스: https://partners.coupang.com
  * 배너 코드 발급 위치: 광고관리 → 배너/텍스트 광고 → 코드 복사
  */
-const COUPANG_ID = 0;           // ← 쿠팡 파트너스 ID (숫자)
-const COUPANG_TRACKING = '';    // ← 트래킹 코드 (예: 'AF1234567')
+const COUPANG_ID = 972069;
+const COUPANG_TRACKING = 'AF3446409';
+const BANNER_TEMPLATE = 'carousel';
 const BANNER_WIDTH = 160;
 const BANNER_HEIGHT = 600;
 
@@ -36,7 +37,7 @@ const CoupangSidebarBanner: React.FC = () => {
           if (typeof PartnersCoupang !== 'undefined') {
             new PartnersCoupang.G({
               "id": ${COUPANG_ID},
-              "template": "banner",
+              "template": "${BANNER_TEMPLATE}",
               "trackingCode": "${COUPANG_TRACKING}",
               "width": "${BANNER_WIDTH}",
               "height": "${BANNER_HEIGHT}"
