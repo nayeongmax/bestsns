@@ -4,6 +4,7 @@ import { SNS_PLATFORMS } from '../../constants.tsx';
 import { upsertSmmOrder } from '../../smmDb';
 import { fetchProfileRow, updateProfile } from '../../profileDb';
 import { fetchBannerAds, upsertBannerAd, deleteBannerAd } from '../../bannerDb';
+import { supabase } from '../../supabase';
 
 interface Props {
   smmProviders: SMMProvider[];
@@ -57,6 +58,27 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const initialBannerForm: BannerAd = { id: '', companyName: '', imageUrl: '', linkUrl: '', startDate: '', endDate: '', isActive: true, memo: '', createdAt: '' };
   const [bannerForm, setBannerForm] = useState<BannerAd>(initialBannerForm);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
+  const [bannerUploading, setBannerUploading] = useState(false);
+
+  const handleBannerImageUpload = async (file: File) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!allowed.includes(file.type)) { alert('jpg, png, gif 파일만 업로드 가능합니다.'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('파일 크기는 5MB 이하여야 합니다.'); return; }
+    setBannerUploading(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const path = `banners/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('public-assets').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from('public-assets').getPublicUrl(path);
+      setBannerForm(p => ({ ...p, imageUrl: data.publicUrl }));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert('업로드 실패: ' + msg);
+    } finally {
+      setBannerUploading(false);
+    }
+  };
 
   useEffect(() => {
     fetchBannerAds().then(setBannerAds).catch(e => console.warn('배너 조회 실패:', e));
@@ -64,7 +86,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   const handleSaveBanner = async () => {
     if (!bannerForm.companyName || !bannerForm.imageUrl || !bannerForm.linkUrl || !bannerForm.startDate || !bannerForm.endDate) {
-      alert('업체명, 이미지 URL, 링크 URL, 광고 기간은 필수입니다.'); return;
+      alert('업체명, 배너 이미지, 링크 URL, 광고 기간은 필수입니다.'); return;
     }
     const now = new Date().toISOString();
     const saved: BannerAd = { ...bannerForm, id: bannerForm.id || `BNR${Date.now()}`, createdAt: bannerForm.createdAt || now };
@@ -1092,7 +1114,20 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">업체명 *</label><input type="text" value={bannerForm.companyName} onChange={e => setBannerForm(p => ({...p, companyName: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="예: 나이키코리아" /></div>
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">링크 URL *</label><input type="text" value={bannerForm.linkUrl} onChange={e => setBannerForm(p => ({...p, linkUrl: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="https://..." /></div>
-              <div className="space-y-2 md:col-span-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">이미지 URL *</label><input type="text" value={bannerForm.imageUrl} onChange={e => setBannerForm(p => ({...p, imageUrl: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="https://... (이미지 직접 URL)" /></div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">배너 이미지 * <span className="normal-case text-gray-300 font-bold">(jpg · png · gif, 최대 5MB)</span></label>
+                <label className={`flex items-center gap-4 p-4 bg-gray-50 rounded-2xl cursor-pointer border-2 border-dashed transition-all ${bannerUploading ? 'border-blue-300 opacity-60' : 'border-gray-200 hover:border-blue-400'}`}>
+                  <input type="file" accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif" className="hidden" disabled={bannerUploading}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleBannerImageUpload(f); e.target.value = ''; }} />
+                  {bannerUploading ? (
+                    <span className="flex items-center gap-2 text-blue-500 font-black text-sm"><span className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></span>업로드 중...</span>
+                  ) : bannerForm.imageUrl ? (
+                    <span className="flex items-center gap-2 text-green-600 font-black text-sm">✅ 이미지 업로드 완료 <span className="text-gray-400 font-bold text-[11px]">(클릭해서 교체)</span></span>
+                  ) : (
+                    <span className="flex items-center gap-2 text-gray-400 font-bold text-sm">📁 파일 선택 (jpg · png · gif)</span>
+                  )}
+                </label>
+              </div>
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">광고 시작일 *</label><input type="date" value={bannerForm.startDate} onChange={e => setBannerForm(p => ({...p, startDate: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" /></div>
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">광고 종료일 *</label><input type="date" value={bannerForm.endDate} onChange={e => setBannerForm(p => ({...p, endDate: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" /></div>
               <div className="space-y-2 md:col-span-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">메모 (내부용)</label><input type="text" value={bannerForm.memo || ''} onChange={e => setBannerForm(p => ({...p, memo: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="광고비 금액, 담당자 등 메모" /></div>
