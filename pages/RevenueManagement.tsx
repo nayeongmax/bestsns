@@ -456,8 +456,8 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                   <>
                     <span className={`text-[9px] sm:text-[12px] font-black ${i % 7 === 0 ? 'text-red-400' : i % 7 === 6 ? 'text-blue-400' : 'text-gray-900'}`}>{date}</span>
                     <div className="mt-0.5 sm:mt-3 space-y-0.5 sm:space-y-1.5">
-                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsStart.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-blue-600 text-white p-0.5 sm:p-1 rounded truncate italic">🚀 {p.clientName}</div>)}
-                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsEnd.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-red-600 text-white p-0.5 sm:p-1 rounded truncate italic">🏁 {p.clientName}</div>)}
+                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsStart.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-blue-600 text-white p-0.5 sm:p-1 rounded truncate italic">🚀 {p.cafeName || p.clientName}</div>)}
+                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsEnd.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-red-600 text-white p-0.5 sm:p-1 rounded truncate italic">🏁 {p.cafeName || p.clientName}</div>)}
                        {(calendarFilter === 'all' || calendarFilter === 'todo') && dayTodos.map(t => <div key={t.id} className={`text-[8px] sm:text-[9px] font-black p-0.5 sm:p-1 rounded truncate italic border ${t.completed ? 'bg-gray-100 text-gray-300 border-gray-200 line-through' : 'bg-green-50 text-green-600 border-green-100'}`}>✓ {t.text}</div>)}
                     </div>
                   </>
