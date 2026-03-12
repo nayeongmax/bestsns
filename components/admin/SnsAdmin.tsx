@@ -66,11 +66,15 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     if (file.size > 5 * 1024 * 1024) { alert('파일 크기는 5MB 이하여야 합니다.'); return; }
     setBannerUploading(true);
     try {
+      const BUCKET = 'public-assets';
+      // 버킷이 없으면 자동 생성 (이미 있으면 무시)
+      await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
+
       const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
       const path = `banners/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('public-assets').upload(path, file, { upsert: true, contentType: file.type });
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) throw upErr;
-      const { data } = supabase.storage.from('public-assets').getPublicUrl(path);
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
       setBannerForm(p => ({ ...p, imageUrl: data.publicUrl }));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
