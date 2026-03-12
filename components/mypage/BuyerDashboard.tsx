@@ -124,7 +124,9 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       }));
 
     const base = [...snsItems, ...channelItems, ...storeItems];
-    return base.filter(o => o.type === activeTab);
+    return base
+      .filter(o => o.type === activeTab)
+      .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
   }, [smmOrders, channelOrders, storeOrders, user.id, activeTab]);
 
   const handleConfirmOrder = (order: OrderItem, e: React.MouseEvent) => {
@@ -281,9 +283,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                                   <div className="flex gap-2"><span>링크</span> <a href={order.link} target="_blank" rel="noreferrer" className="text-blue-500 underline break-all">{order.link}</a></div>
                                   <div className="flex gap-2"><span>주문시간</span> <span className="text-gray-900">{order.orderTime}</span></div>
                                   <div className="flex gap-2"><span>비용</span> <span className="text-gray-900">{order.totalPrice.toLocaleString()}P</span></div>
-                                  <div className="flex gap-2"><span>수량</span> <span className="text-gray-900">{order.quantity}</span></div>
+                                  <div className="flex gap-2"><span>주문수량</span> <span className="text-gray-900">{order.quantity}</span></div>
                                   <div className="flex gap-2"><span>최초수량</span> <span className="text-orange-600">{order.initialCount || 0}</span></div>
-                                  <div className="flex gap-2"><span>남은 수량</span> <span className="text-gray-900">{order.remains || 0}</span></div>
                                   <div className="pt-6 flex justify-end">
                                     <button onClick={(e) => handleConfirmOrder(order, e)} className={`px-8 py-3 rounded-xl font-black text-sm transition-all ${confirmedList.includes(order.id) ? 'bg-gray-200 text-gray-400' : 'bg-blue-600 text-white hover:bg-black shadow-lg'}`}>{confirmedList.includes(order.id) ? '확정 완료 ✓' : '구매 확정'}</button>
                                   </div>

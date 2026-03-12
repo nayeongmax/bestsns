@@ -51,7 +51,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   // JAP 주문 상태 (orderId → { status, remains })
-  const [japStatuses, setJapStatuses] = useState<Record<string, { status: string; remains: number }>>({});
+  const [japStatuses, setJapStatuses] = useState<Record<string, { status: string; remains: number; startCount?: number }>>({});
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
   // 원가 모니터링 알림
@@ -241,12 +241,24 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
           });
           const result = await resp.json();
           if (result.status === 'success' && result.orders) {
-            for (const [extId, data] of Object.entries(result.orders as Record<string, { status?: string; remains?: number }>)) {
+            for (const [extId, data] of Object.entries(result.orders as Record<string, { status?: string; remains?: number; start_count?: number }>)) {
               const ourId = g.extToOurId.get(extId);
-              if (ourId) next[ourId] = { status: data.status || '', remains: Number(data.remains ?? 0) };
+              if (ourId) next[ourId] = { status: data.status || '', remains: Number(data.remains ?? 0), startCount: Number(data.start_count ?? 0) };
             }
           }
         } catch (e) { console.error('orderStatus fetch error:', e); }
+      }
+
+      // start_count > 0인 주문의 initialCount 업데이트
+      for (const [ourId, jap] of Object.entries(next)) {
+        if ((jap.startCount ?? 0) > 0) {
+          const order = pending.find(o => o.id === ourId);
+          if (order && order.initialCount === 0) {
+            const updated = { ...order, initialCount: jap.startCount! };
+            setSmmOrders(prev => prev.map(o => o.id === ourId ? updated : o));
+            upsertSmmOrder(updated).catch(e => console.warn('initialCount 업데이트 실패:', e));
+          }
+        }
       }
 
       // 공급처에서 Canceled/Refunded된 주문: 다른 serviceId로 재시도, 전부 실패 시 포인트 환불 + 주문취소
@@ -1084,7 +1096,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
            <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
-                 <table className="w-full text-left">
+                 <table className="w-full text-left" style={{minWidth: '1200px'}}>
                     <thead className="bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest italic">
                        <tr>
                           <th className="px-6 py-5 whitespace-nowrap">일시 / 주문ID</th>
@@ -1093,7 +1105,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                           <th className="px-6 py-5 whitespace-nowrap">작업 링크</th>
                           <th className="px-6 py-5 text-center whitespace-nowrap">주문량</th>
                           <th className="px-6 py-5 text-right whitespace-nowrap">포인트 / 수익</th>
-                          <th className="px-6 py-5 text-center whitespace-nowrap">상태</th>
+                          <th className="px-6 py-5 text-center whitespace-nowrap" style={{minWidth:'200px'}}>상태</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -1128,7 +1140,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                             </td>
                             <td className="px-6 py-6 text-center whitespace-nowrap">
                                <span className="text-[13px] font-black text-gray-900 italic">{o.quantity.toLocaleString()}</span>
-                               <span className="text-[9.5px] font-bold text-gray-400 ml-2 uppercase">최초 {o.initialCount?.toLocaleString() || 0} | <span className="text-red-400">잔량 {o.remains?.toLocaleString() || 0}</span></span>
+                               <span className="text-[9.5px] font-bold text-gray-400 ml-2 uppercase">최초 {(japStatuses[o.id]?.startCount ?? o.initialCount ?? 0).toLocaleString()}</span>
                             </td>
                             <td className="px-6 py-6 text-right whitespace-nowrap">
                                <span className="text-[15px] font-black text-gray-900 italic">{(o.sellingPrice * o.quantity).toLocaleString()}P</span>
@@ -1179,7 +1191,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                      {/* 공급처 완료 안내 + 작업완료 버튼 */}
                                      {japDone && (
                                        <div className="flex flex-col items-center gap-1.5 mt-1">
-                                         <p className="text-[10px] font-black text-green-600 text-center leading-tight">공급처에서<br/>완료되었습니다</p>
+                                         <p className="text-[10px] font-black text-green-600 text-center leading-tight whitespace-nowrap">공급처 작업 완료</p>
                                          <button
                                            onClick={() => handleMarkComplete(o)}
                                            className="px-4 py-1.5 bg-green-500 text-white rounded-xl text-[11px] font-black hover:bg-green-600 transition-all shadow-md"
