@@ -7,6 +7,7 @@ import { updateProfile } from '../profileDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import AdBanner from '@/components/AdBanner';
 import CoupangSidebarBanner from '@/components/CoupangSidebarBanner';
+import BannerRotator from '@/components/BannerRotator';
 
 interface Props {
   smmProducts: SMMProduct[];
@@ -343,8 +344,8 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         </div>
       </div>
 
-      {/* 광고 배너: 히어로 바로 아래 */}
-      <AdBanner variant="leaderboard" />
+      {/* 업체 배너 광고: 히어로 바로 아래 (등록된 배너 없으면 빈 슬롯) */}
+      <BannerRotator slots={2} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-10">
         {/* 우측 사이드바 */}
