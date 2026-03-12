@@ -19,9 +19,20 @@ const BannerRotator: React.FC<Props> = ({ slots = 2, className = '' }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const getLocalActive = (): BannerAd[] => {
+      try {
+        const all: BannerAd[] = JSON.parse(localStorage.getItem('banner_ads_local') || '[]');
+        return all.filter(b => b.isActive && b.startDate <= today && b.endDate >= today);
+      } catch { return []; }
+    };
+
     fetchActiveBannerAds()
-      .then(ads => setShown(pickRandom(ads, slots)))
-      .catch(() => setShown([]))
+      .then(ads => {
+        const source = ads.length > 0 ? ads : getLocalActive();
+        setShown(pickRandom(source, slots));
+      })
+      .catch(() => setShown(pickRandom(getLocalActive(), slots)))
       .finally(() => setLoading(false));
   }, [slots]);
 
