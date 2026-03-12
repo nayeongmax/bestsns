@@ -6,6 +6,7 @@ import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice,
 import { updateProfile } from '../profileDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import AdBanner from '@/components/AdBanner';
+import CoupangSidebarBanner from '@/components/CoupangSidebarBanner';
 
 interface Props {
   smmProducts: SMMProduct[];
@@ -346,10 +347,10 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       <AdBanner variant="leaderboard" />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-10">
-        {/* 모바일에서 먼저 보이도록 My Wallet 상단 배치 (order) */}
-        <div className="lg:col-span-4 space-y-5 sm:space-y-8 lg:sticky lg:top-24 lg:h-fit order-1 lg:order-2">
-          {/* 모바일에서만 상단에 My Wallet 노출 (데스크톱은 아래 동일 블록 사용) */}
-          <div className="lg:hidden bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+        {/* 우측 사이드바 */}
+        <div className="lg:col-span-4 order-1 lg:order-2">
+          {/* 모바일에서만 상단에 My Wallet 노출 */}
+          <div className="lg:hidden bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
             <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] tracking-widest px-1 mb-3">
               <span className="w-1 h-3 bg-blue-600 rounded-full"></span> My Wallet
             </h3>
@@ -366,26 +367,36 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               </div>
             </div>
           </div>
-          <div className="hidden lg:block bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
-            <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest px-1">
-              <span className="w-1 h-3 sm:h-3.5 bg-blue-600 rounded-full"></span> My Wallet
-            </h3>
-            <div className="bg-[#111827] rounded-xl sm:rounded-[24px] p-4 sm:p-6 text-white relative overflow-hidden shadow-xl">
-               <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
-               <div className="relative z-10 space-y-3 sm:space-y-4">
-                 <div className="flex justify-between items-center">
-                   <p className="text-[9px] sm:text-[10px] font-black text-blue-400 uppercase italic tracking-widest">Available Points</p>
-                   <span className="text-[8px] sm:text-[9px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded font-bold text-white/40 uppercase">Real-time sync</span>
+
+          {/* 데스크톱: 월렛 + 쿠팡 광고 고정 (sticky) */}
+          <div className="hidden lg:flex flex-col gap-5 sticky top-24">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
+              <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest px-1">
+                <span className="w-1 h-3 sm:h-3.5 bg-blue-600 rounded-full"></span> My Wallet
+              </h3>
+              <div className="bg-[#111827] rounded-xl sm:rounded-[24px] p-4 sm:p-6 text-white relative overflow-hidden shadow-xl">
+                 <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
+                 <div className="relative z-10 space-y-3 sm:space-y-4">
+                   <div className="flex justify-between items-center">
+                     <p className="text-[9px] sm:text-[10px] font-black text-blue-400 uppercase italic tracking-widest">Available Points</p>
+                     <span className="text-[8px] sm:text-[9px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded font-bold text-white/40 uppercase">Real-time sync</span>
+                   </div>
+                   <h4 className="text-2xl sm:text-3xl font-black italic tracking-tighter leading-none break-all">{(userPoints ?? 0).toLocaleString()} <span className="text-xs sm:text-sm text-gray-500 not-italic uppercase ml-0.5 font-bold">P</span></h4>
+                   <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/payment/point')} className="w-full bg-blue-600 text-white py-3 sm:py-3.5 rounded-xl text-[12px] sm:text-[13px] font-black shadow-lg hover:bg-white hover:text-blue-600 transition-all uppercase italic tracking-wider">
+                     포인트 충전하기
+                   </button>
                  </div>
-                 <h4 className="text-2xl sm:text-3xl font-black italic tracking-tighter leading-none break-all">{(userPoints ?? 0).toLocaleString()} <span className="text-xs sm:text-sm text-gray-500 not-italic uppercase ml-0.5 font-bold">P</span></h4>
-                 <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/payment/point')} className="w-full bg-blue-600 text-white py-3 sm:py-3.5 rounded-xl text-[12px] sm:text-[13px] font-black shadow-lg hover:bg-white hover:text-blue-600 transition-all uppercase italic tracking-wider">
-                   포인트 충전하기
-                 </button>
-               </div>
+              </div>
+            </div>
+
+            {/* 쿠팡 세로형 광고 배너 */}
+            <div className="flex justify-center">
+              <CoupangSidebarBanner />
             </div>
           </div>
-          
-          <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[40px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
+
+          {/* 공지사항 (sticky 아님, 자연스럽게 스크롤) */}
+          <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[40px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6 mt-5">
             <div className="flex justify-between items-center px-1">
               <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest">
                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span> 공지사항
