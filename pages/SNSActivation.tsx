@@ -368,8 +368,9 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             </div>
           </div>
 
-          {/* 데스크톱: 월렛 + 쿠팡 광고 고정 (sticky) */}
+          {/* 데스크톱: 월렛 + 공지사항 + 쿠팡 광고 전체 고정 (sticky) */}
           <div className="hidden lg:flex flex-col gap-5 sticky top-24">
+            {/* My Wallet */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
               <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest px-1">
                 <span className="w-1 h-3 sm:h-3.5 bg-blue-600 rounded-full"></span> My Wallet
@@ -389,25 +390,41 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               </div>
             </div>
 
-            {/* 쿠팡 세로형 광고 배너 */}
-            <div className="flex justify-center">
-              <CoupangSidebarBanner />
+            {/* 공지사항 */}
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4">
+              <div className="flex justify-between items-center px-1">
+                <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest">
+                   <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span> 공지사항
+                </h3>
+                <button type="button" onClick={() => navigate('/notices')} className="text-[9px] sm:text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all uppercase italic">전체보기 +</button>
+              </div>
+              <div className="space-y-2.5">
+                 {notices.filter(n => !n.isHidden).slice(0, 3).map(n => (
+                   <div key={n.id} onClick={() => navigate('/notices')} className="p-3 bg-gray-50/50 rounded-xl hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-gray-100 group">
+                      <p className="text-[12px] font-black text-gray-800 break-words mb-0.5 group-hover:text-blue-600">{n.title}</p>
+                      <span className="text-[9px] font-bold text-gray-300 uppercase italic">{n.date}</span>
+                   </div>
+                 ))}
+              </div>
             </div>
+
+            {/* 쿠팡 세로형 광고 배너 */}
+            <CoupangSidebarBanner />
           </div>
 
-          {/* 공지사항 (sticky 아님, 자연스럽게 스크롤) */}
-          <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[40px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6 mt-5">
+          {/* 모바일 공지사항 */}
+          <div className="lg:hidden bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-4 mt-4">
             <div className="flex justify-between items-center px-1">
-              <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest">
+              <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] tracking-widest">
                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span> 공지사항
               </h3>
-              <button type="button" onClick={() => navigate('/notices')} className="text-[9px] sm:text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all uppercase italic">전체보기 +</button>
+              <button type="button" onClick={() => navigate('/notices')} className="text-[9px] font-black text-gray-400 hover:text-blue-600 transition-all uppercase italic">전체보기 +</button>
             </div>
-            <div className="space-y-2.5 sm:space-y-3.5">
+            <div className="space-y-2.5">
                {notices.filter(n => !n.isHidden).slice(0, 3).map(n => (
-                 <div key={n.id} onClick={() => navigate('/notices')} className="p-3 sm:p-4 bg-gray-50/50 rounded-xl sm:rounded-2xl hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-gray-100 group">
-                    <p className="text-[12px] sm:text-[13.5px] font-black text-gray-800 break-words mb-0.5 group-hover:text-blue-600">{n.title}</p>
-                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-300 uppercase italic">{n.date}</span>
+                 <div key={n.id} onClick={() => navigate('/notices')} className="p-3 bg-gray-50/50 rounded-xl hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-gray-100 group">
+                    <p className="text-[12px] font-black text-gray-800 break-words mb-0.5 group-hover:text-blue-600">{n.title}</p>
+                    <span className="text-[9px] font-bold text-gray-300 uppercase italic">{n.date}</span>
                  </div>
                ))}
             </div>
