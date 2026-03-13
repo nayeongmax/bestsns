@@ -337,16 +337,15 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
            </div>
         </div>
 
-        <div className="relative z-10 w-full flex flex-col items-center text-center px-3 pt-10 pb-3 sm:pt-12 sm:pb-4 md:pt-14 md:pb-4">
+        <div className="relative z-10 w-full flex flex-col items-center text-center px-3 pt-10 pb-6 sm:pt-12 sm:pb-8 md:pt-14 md:pb-10">
            <h1 key={`main-${mainIdx}`} className="text-2xl sm:text-5xl md:text-6xl font-black text-white italic tracking-tighter animate-punch-in leading-none drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
              {mainSequence[mainIdx]}
            </h1>
         </div>
-        {/* 업체 배너 광고: 히어로 박스 안쪽 하단 */}
-        <div className="relative z-10 w-full px-3 pb-3 sm:px-4 sm:pb-4">
-          <BannerRotator slots={2} />
-        </div>
       </div>
+
+      {/* 업체 배너 광고: 히어로 바로 아래 */}
+      <BannerRotator slots={2} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-10">
         {/* 우측 사이드바 */}
