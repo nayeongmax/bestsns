@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import type { BannerAd } from '@/types';
 
 function rowToBanner(row: Record<string, unknown>): BannerAd {
+  const loc = row.location;
   return {
     id: String(row.id),
     companyName: String(row.company_name ?? ''),
@@ -11,6 +12,7 @@ function rowToBanner(row: Record<string, unknown>): BannerAd {
     endDate: String(row.end_date ?? ''),
     isActive: Boolean(row.is_active),
     displayMode: (row.display_mode === 'fixed' ? 'fixed' : 'random') as 'fixed' | 'random',
+    location: (loc === 'sns' || loc === 'freeboard' || loc === 'both' ? loc : 'both') as 'sns' | 'freeboard' | 'both',
     memo: row.memo ? String(row.memo) : undefined,
     createdAt: String(row.created_at ?? ''),
   };
@@ -26,6 +28,7 @@ function bannerToRow(b: BannerAd): Record<string, unknown> {
     end_date: b.endDate,
     is_active: b.isActive,
     display_mode: b.displayMode ?? 'random',
+    location: b.location ?? 'both',
     memo: b.memo ?? null,
     created_at: b.createdAt,
   };
@@ -40,7 +43,7 @@ export async function fetchBannerAds(): Promise<BannerAd[]> {
   return (data ?? []).map((row) => rowToBanner(row as Record<string, unknown>));
 }
 
-/** 오늘 기준 활성화된 배너만 조회 (프론트 노출용) - 날짜 필터는 클라이언트에서 처리 */
+/** 오늘 기준 활성화된 배너만 조회 - 위치 필터는 컴포넌트에서 처리 */
 export async function fetchActiveBannerAds(): Promise<BannerAd[]> {
   const _d = new Date();
   const today = [_d.getFullYear(), String(_d.getMonth()+1).padStart(2,'0'), String(_d.getDate()).padStart(2,'0')].join('-');
