@@ -30,12 +30,9 @@ const Footer: React.FC = () => {
             <div className="space-y-2 flex flex-col items-center md:items-start">
               <p className="text-xs font-black text-gray-500 uppercase">약관 및 정책</p>
               <div className="flex flex-col gap-2">
-                <Link to="/terms" className="text-sm font-bold text-blue-600 hover:underline">
-                  이용약관
-                </Link>
-                <Link to="/privacy" className="text-sm font-bold text-blue-600 hover:underline">
-                  개인정보 처리방침
-                </Link>
+                <Link to="/terms" className="text-sm font-bold text-blue-600 hover:underline">이용약관</Link>
+                <Link to="/privacy" className="text-sm font-bold text-blue-600 hover:underline">개인정보 처리방침</Link>
+                <Link to="/marketing-consent" className="text-sm font-bold text-blue-600 hover:underline">마케팅 정보 수신 동의</Link>
               </div>
             </div>
           </div>
@@ -64,6 +61,7 @@ const Footer: React.FC = () => {
               <div className="flex items-center gap-3 text-[11px] sm:text-xs">
                 <Link to="/terms" className="font-bold text-blue-600 hover:underline">이용약관</Link>
                 <Link to="/privacy" className="font-bold text-blue-600 hover:underline">개인정보처리방침</Link>
+                <Link to="/marketing-consent" className="font-bold text-blue-600 hover:underline">마케팅수신동의</Link>
               </div>
             </div>
           </div>

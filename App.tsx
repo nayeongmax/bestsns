@@ -63,6 +63,7 @@ import CouponBox from '@/pages/CouponBox';
 import NoticePage from '@/pages/NoticePage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import MarketingConsentPage from '@/pages/MarketingConsentPage';
 import ReviewWritePage from '@/pages/ReviewWritePage';
 import AuthPage from '@/pages/AuthPage';
 import ChannelDetail from '@/pages/ChannelDetail';
@@ -134,6 +135,7 @@ function ContainerRoutes(props: {
       <Route path="/notices" element={<NoticePage notices={props.notices} setNotices={props.setNotices} user={props.user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/marketing-consent" element={<MarketingConsentPage />} />
       <Route path="/login" element={<AuthPage onLoginSuccess={props.handleLoginSuccess} />} />
       <Route path="/" element={<Navigate to="/sns" />} />
     </Routes>
