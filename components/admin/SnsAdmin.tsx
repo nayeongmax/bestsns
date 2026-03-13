@@ -54,7 +54,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   // JAP 주문 상태 (orderId → { status, remains })
   // 배너 광고 관리
   const [bannerAds, setBannerAds] = useState<BannerAd[]>([]);
-  const initialBannerForm: BannerAd = { id: '', companyName: '', imageUrl: '', linkUrl: '', startDate: '', endDate: '', isActive: true, displayMode: 'random', memo: '', createdAt: '' };
+  const initialBannerForm: BannerAd = { id: '', companyName: '', imageUrl: '', linkUrl: '', startDate: '', endDate: '', isActive: true, displayMode: 'random', location: 'sns', memo: '', createdAt: '' };
   const [bannerForm, setBannerForm] = useState<BannerAd>(initialBannerForm);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
@@ -1172,6 +1172,23 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                   ))}
                 </div>
               </div>
+              {/* 노출 위치 선택 */}
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">노출 위치 *</label>
+                <div className="flex gap-3">
+                  {([
+                    ['sns',       'SNS활성화',  '월 30만원', 'bg-blue-50 border-blue-500', 'text-blue-700'],
+                    ['freeboard', '자유게시판', '월 10만원', 'bg-green-50 border-green-500', 'text-green-700'],
+                    ['both',      '전체',       '월 40만원', 'bg-purple-50 border-purple-500', 'text-purple-700'],
+                  ] as const).map(([val, label, price, activeBg, priceColor]) => (
+                    <label key={val} className={`flex-1 p-4 rounded-2xl border-2 cursor-pointer transition-all ${bannerForm.location === val ? activeBg : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}>
+                      <input type="radio" name="location" value={val} checked={bannerForm.location === val} onChange={() => setBannerForm(p => ({...p, location: val}))} className="hidden" />
+                      <p className="font-black text-sm text-gray-800">{label}</p>
+                      <p className={`text-[12px] font-black mt-0.5 ${bannerForm.location === val ? priceColor : 'text-gray-400'}`}>{price}</p>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">광고 시작일 *</label><input type="date" value={bannerForm.startDate} onChange={e => setBannerForm(p => ({...p, startDate: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" /></div>
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">광고 종료일 *</label><input type="date" value={bannerForm.endDate} onChange={e => setBannerForm(p => ({...p, endDate: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" /></div>
               <div className="space-y-2 md:col-span-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">메모 (내부용)</label><input type="text" value={bannerForm.memo || ''} onChange={e => setBannerForm(p => ({...p, memo: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="광고비 금액, 담당자 등 메모" /></div>
@@ -1216,6 +1233,9 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-black text-gray-900 text-[15px]">{b.companyName}</span>
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${isLive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>{isLive ? '● 노출중' : '○ 비활성'}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${b.location === 'sns' ? 'bg-blue-100 text-blue-600' : b.location === 'freeboard' ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'}`}>
+                            {b.location === 'sns' ? 'SNS활성화' : b.location === 'freeboard' ? '자유게시판' : '전체'}
+                          </span>
                         </div>
                         <p className="text-[11px] text-blue-500 font-bold truncate">{b.linkUrl}</p>
                         <p className="text-[11px] text-gray-400 font-bold">{b.startDate} ~ {b.endDate}</p>

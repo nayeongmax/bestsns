@@ -375,6 +375,7 @@ export interface BannerAd {
   endDate: string;       // 광고 종료일 (YYYY-MM-DD)
   isActive: boolean;     // 활성화 여부
   displayMode: 'fixed' | 'random'; // 고정형(항상노출) | 자유형(새로고침마다 랜덤)
+  location: 'sns' | 'freeboard' | 'both'; // 노출 위치: SNS활성화(월30) | 자유게시판(월10) | 전체(월40)
   memo?: string;         // 관리자 메모
   createdAt: string;
 }
