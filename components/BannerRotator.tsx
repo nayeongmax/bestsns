@@ -12,9 +12,9 @@ function pickRandom<T>(arr: T[], n: number): T[] {
 }
 
 const EmptySlot: React.FC = () => (
-  <div className="flex-1 min-w-0 h-[100px] rounded-xl bg-gray-100 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1">
-    <span className="text-[11px] font-black text-gray-400 tracking-widest">광고모집중</span>
-    <span className="text-[9px] text-gray-300">문의: 관리자에게 연락</span>
+  <div className="flex-1 min-w-0 h-[130px] rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5">
+    <span className="text-[16px] font-black text-gray-600 tracking-widest">광고모집중</span>
+    <span className="text-[11px] text-gray-500 font-semibold">문의: 관리자에게 연락</span>
   </div>
 );
 
@@ -37,9 +37,9 @@ const BannerRotator: React.FC<Props> = ({ slots = 2, className = '' }) => {
     <div className={`w-full flex flex-row gap-2 ${className}`}>
       {shown.map(ad => (
         <a key={ad.id} href={ad.linkUrl} target="_blank" rel="noopener noreferrer"
-          className="flex-1 min-w-0 overflow-hidden rounded-xl hover:opacity-90 transition-opacity"
+          className="flex-1 min-w-0 overflow-hidden rounded-xl bg-black hover:opacity-90 transition-opacity"
           title={ad.companyName}>
-          <img src={ad.imageUrl} alt={ad.companyName} className="w-full h-[100px] object-cover block" />
+          <img src={ad.imageUrl} alt={ad.companyName} className="w-full h-[130px] object-contain block" />
         </a>
       ))}
       {Array.from({ length: empties }).map((_, i) => (
