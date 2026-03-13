@@ -1241,7 +1241,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                         <p className="text-[11px] text-gray-400 font-bold">{b.startDate} ~ {b.endDate}</p>
                         {b.memo && <p className="text-[11px] text-gray-400 italic">{b.memo}</p>}
                       </div>
-                      <div className="flex sm:flex-col gap-2 shrink-0">
+                      <div className="grid grid-cols-2 gap-2 shrink-0">
                         <button onClick={() => { setBannerForm({...b}); setEditingBannerId(b.id); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-black text-[12px] hover:bg-blue-100 transition-all">수정</button>
                         <button onClick={() => handleDeleteBanner(b.id)} className="px-4 py-2 bg-red-50 text-red-500 rounded-xl font-black text-[12px] hover:bg-red-100 transition-all">삭제</button>
                         <button onClick={async () => { const updated = {...b, isActive: !b.isActive}; await upsertBannerAd(updated); setBannerAds(prev => prev.map(x => x.id === b.id ? updated : x)); }} className={`px-4 py-2 rounded-xl font-black text-[12px] transition-all ${b.isActive ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>{b.isActive ? '비활성화' : '활성화'}</button>
