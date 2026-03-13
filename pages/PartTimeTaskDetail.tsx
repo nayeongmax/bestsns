@@ -871,12 +871,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           aria-label="닫기"
         >
           <button type="button" onClick={() => setZoomedImage(null)} className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none">×</button>
-          <div className="max-w-[95vw] max-h-[90vh] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4" onClick={(e) => e.stopPropagation()}>
             <img
               src={zoomedImage}
               alt="이미지 크게 보기"
-              className="max-w-full max-h-[88vh] object-contain rounded-lg shadow-2xl"
-              style={{ width: 'auto', height: 'auto' }}
+              className="block max-w-[92vw] max-h-[88vh] rounded-lg shadow-2xl"
             />
           </div>
         </div>

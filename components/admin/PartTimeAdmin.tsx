@@ -1093,9 +1093,9 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                           key={i}
                           type="button"
                           onClick={() => setZoomedExampleImage(src)}
-                          className="w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden hover:border-emerald-400 focus:ring-2 focus:ring-emerald-300 focus:outline-none transition-all"
+                          className="rounded-xl border-2 border-gray-200 overflow-hidden hover:border-emerald-400 focus:ring-2 focus:ring-emerald-300 focus:outline-none transition-all bg-gray-50"
                         >
-                          <img src={src} alt={`예시 ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
+                          <img src={src} alt={`예시 ${i + 1}`} className="block max-h-28 max-w-[160px] object-contain pointer-events-none" />
                         </button>
                       ))}
                     </div>
@@ -1146,12 +1146,11 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
             aria-label="닫기"
           >
             <button type="button" onClick={() => setZoomedExampleImage(null)} className="absolute top-4 right-4 z-10 w-14 h-14 rounded-full bg-white/95 text-gray-800 text-3xl font-black hover:bg-white shadow-xl leading-none">×</button>
-            <div className="w-[95vw] h-[90vh] flex items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4" onClick={(e) => e.stopPropagation()}>
               <img
                 src={zoomedExampleImage}
                 alt="예시 크게 보기"
-                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                style={{ width: 'auto', height: 'auto' }}
+                className="block max-w-[92vw] max-h-[88vh] rounded-lg shadow-2xl"
               />
             </div>
           </div>
