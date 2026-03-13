@@ -34,6 +34,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const location = useLocation();
   const focusWorkLink = (location.state as { focusWorkLink?: boolean; fromAdmin?: boolean })?.focusWorkLink;
   const fromAdmin = (location.state as { fromAdmin?: boolean })?.fromAdmin;
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [jobRequests, setJobRequests] = useState<Awaited<ReturnType<typeof fetchPartTimeJobRequests>>>([]);
   const [isEditingWorkLinks, setIsEditingWorkLinks] = useState(false);
@@ -537,7 +538,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                         <div className="flex flex-wrap gap-2 mb-3">
                           {sections.이미지목록.map((src, i) => (
                             <div key={i} className="relative">
-                              <img src={src} alt={`참고 ${i + 1}`} className="max-h-32 rounded-lg object-contain border border-gray-200" />
+                              <img
+                                src={src}
+                                alt={`참고 ${i + 1}`}
+                                className="max-h-32 rounded-lg object-contain border border-gray-200 cursor-zoom-in hover:opacity-90 transition-opacity"
+                                onClick={() => setZoomedImage(src)}
+                              />
                               {meSelected && (
                                 <button type="button" onClick={() => downloadMedia(src, `이미지_${i + 1}.png`)} className="absolute bottom-1 right-1 px-2 py-1 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>
                               )}
@@ -547,7 +553,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                       )}
                       {sections.이미지?.startsWith('data:') && !sections.이미지목록?.length ? (
                         <div className="relative inline-block">
-                          <img src={sections.이미지} alt="참고" className="max-h-40 rounded-lg object-contain border border-gray-200" />
+                          <img src={sections.이미지} alt="참고" className="max-h-40 rounded-lg object-contain border border-gray-200 cursor-zoom-in hover:opacity-90 transition-opacity" onClick={() => setZoomedImage(sections.이미지!)} />
                           {meSelected && (
                             <button type="button" onClick={() => downloadMedia(sections.이미지!, '이미지.png')} className="absolute bottom-2 right-2 px-2 py-1 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>
                           )}
@@ -850,6 +856,28 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 수정요청 전송
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 이미지 원본 크게 보기 팝업 */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90"
+          onClick={() => setZoomedImage(null)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Escape' && setZoomedImage(null)}
+          aria-label="닫기"
+        >
+          <button type="button" onClick={() => setZoomedImage(null)} className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none">×</button>
+          <div className="max-w-[95vw] max-h-[90vh] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={zoomedImage}
+              alt="이미지 크게 보기"
+              className="max-w-full max-h-[88vh] object-contain rounded-lg shadow-2xl"
+              style={{ width: 'auto', height: 'auto' }}
+            />
           </div>
         </div>
       )}

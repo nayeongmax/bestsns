@@ -1150,7 +1150,8 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
               <img
                 src={zoomedExampleImage}
                 alt="예시 크게 보기"
-                className="max-w-full max-h-full w-full h-full object-contain rounded-lg shadow-2xl"
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                style={{ width: 'auto', height: 'auto' }}
               />
             </div>
           </div>
