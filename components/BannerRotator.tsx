@@ -3,17 +3,16 @@ import { fetchActiveBannerAds } from '@/bannerDb';
 import type { BannerAd } from '@/types';
 
 interface Props {
-  /** 한 줄에 보여줄 배너 수 (기본 2) */
   cols?: number;
-  /** true면 전체 배너를 모두 표시 (자유게시판), false면 cols개만 표시 (SNS) */
-  showAll?: boolean;
+  /**
+   * 'sequential' (SNS): cols개씩 순차 로테이션, 새로고침마다 다음 배너로 이동
+   * 'all' (자유게시판): 전체 배너를 고정 순서로 표시
+   */
+  mode?: 'sequential' | 'all';
   className?: string;
 }
 
-const gridClass: Record<number, string> = {
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
-};
+const gridClass: Record<number, string> = { 2: 'grid-cols-2', 3: 'grid-cols-3' };
 
 const EmptySlot: React.FC = () => (
   <div className="h-[130px] rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5">
@@ -30,37 +29,49 @@ const BannerItem: React.FC<{ ad: BannerAd }> = ({ ad }) => (
   </a>
 );
 
-const BannerRotator: React.FC<Props> = ({ cols = 2, showAll = false, className = '' }) => {
+const ROTATION_KEY = 'banner_rotation_idx';
+
+const BannerRotator: React.FC<Props> = ({ cols = 2, mode = 'sequential', className = '' }) => {
   const [ads, setAds] = useState<BannerAd[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchActiveBannerAds()
       .then(all => {
-        const fixed = all.filter(b => b.displayMode === 'fixed');
-        const random = [...all.filter(b => b.displayMode !== 'fixed')].sort(() => Math.random() - 0.5);
+        // 등록일 기준 안정적 정렬
+        const sorted = [...all].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
-        if (showAll) {
-          // 자유게시판: 전체 표시 (고정 먼저, 랜덤 뒤)
-          setAds([...fixed, ...random]);
+        if (mode === 'all') {
+          // 자유게시판: 전체 고정 표시
+          setAds(sorted);
         } else {
-          // SNS: cols개만 표시 (고정 우선, 부족하면 랜덤으로 채움)
-          const picked = [...fixed];
-          const remaining = cols - fixed.length;
-          if (remaining > 0) picked.push(...random.slice(0, remaining));
-          setAds(picked.slice(0, cols));
+          // SNS sequential: 배너 수가 cols 이하면 그냥 전부 표시
+          if (sorted.length <= cols) {
+            setAds(sorted);
+            return;
+          }
+          // cols개씩 순차 로테이션 (localStorage로 인덱스 유지)
+          const stored = parseInt(localStorage.getItem(ROTATION_KEY) ?? '0', 10);
+          const idx = isNaN(stored) ? 0 : stored % sorted.length;
+          const picked: BannerAd[] = [];
+          for (let i = 0; i < cols; i++) {
+            picked.push(sorted[(idx + i) % sorted.length]);
+          }
+          // 다음 로드 때 쓸 인덱스 저장
+          localStorage.setItem(ROTATION_KEY, String((idx + cols) % sorted.length));
+          setAds(picked);
         }
       })
       .catch(err => { console.error('[BannerRotator] 배너 조회 실패:', err); setAds([]); })
       .finally(() => setLoading(false));
-  }, [cols, showAll]);
+  }, [cols, mode]);
 
   if (loading) return null;
 
-  // 마지막 줄을 채울 빈 슬롯 수 계산
-  const totalCells = showAll
-    ? (ads.length === 0 ? cols : Math.ceil(ads.length / cols) * cols)
-    : cols;
+  // sequential: 항상 cols칸 / all: 행이 꽉 차도록 (빈 자리 채움)
+  const totalCells = mode === 'sequential'
+    ? cols
+    : Math.ceil(Math.max(ads.length, 1) / cols) * cols;
   const empties = totalCells - ads.length;
 
   return (
