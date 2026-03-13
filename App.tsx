@@ -73,6 +73,9 @@ import WishlistPage from '@/pages/WishlistPage';
 import PartTimePage, { PartTimeTaskRegister } from '@/pages/PartTimePage';
 import PartTimeTaskDetail from '@/pages/PartTimeTaskDetail';
 import PartTimeJobRequestPage from '@/pages/PartTimeJobRequestPage';
+import MarketingLanding from '@/pages/MarketingLanding';
+import QuoteBuilder from '@/pages/QuoteBuilder';
+import WorkReport from '@/pages/WorkReport';
 
 /** pathname이 /ebooks일 때 항상 EbookSales만 렌더 (다른 라우트 간섭 방지) */
 function ContainerRoutes(props: {
@@ -692,6 +695,12 @@ const App: React.FC = () => {
       return next;
     });
   }, [user?.id]);
+
+  // 마케팅 랜딩페이지 전용 라우트 (Header/Footer 없이 독립 렌더링)
+  const pathname = location.pathname || '';
+  if (pathname === '/marketing') return <MarketingLanding />;
+  if (pathname === '/marketing/quote') return <QuoteBuilder />;
+  if (pathname === '/marketing/report') return <WorkReport />;
 
   const content = (
     <>

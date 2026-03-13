@@ -73,6 +73,26 @@
         .auth-rocket-float {
             animation: float 3.8s ease-in-out infinite;
         }
+
+        /* Marketing Landing Page Animations */
+        @keyframes floatParticle {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
+            25% { transform: translateY(-20px) translateX(10px); opacity: 0.35; }
+            50% { transform: translateY(-10px) translateX(-10px); opacity: 0.2; }
+            75% { transform: translateY(-30px) translateX(5px); opacity: 0.3; }
+        }
+        .animate-in { animation: fadeUp 0.5s ease both; }
+        @media print {
+            .print\\:hidden { display: none !important; }
+            .print\\:p-0 { padding: 0 !important; }
+            .print\\:px-0 { padding-left: 0 !important; padding-right: 0 !important; }
+            .print\\:py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
+            .print\\:shadow-none { box-shadow: none !important; }
+            .print\\:border-none { border: none !important; }
+            .print\\:rounded-none { border-radius: 0 !important; }
+            .print\\:max-w-none { max-width: none !important; }
+            .print\\:p-6 { padding: 1.5rem !important; }
+        }
     </style>
 <script type="importmap">
 {
