@@ -33,12 +33,12 @@ const BannerRotator: React.FC<Props> = ({ slots = 2, className = '' }) => {
   }
 
   return (
-    <div className={`w-full flex flex-col gap-2 ${className}`}>
+    <div className={`w-full flex flex-row gap-2 ${className}`}>
       {shown.map(ad => (
         <a key={ad.id} href={ad.linkUrl} target="_blank" rel="noopener noreferrer"
-          className="block w-full rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+          className="flex-1 min-w-0 overflow-hidden rounded-xl hover:opacity-90 transition-opacity"
           title={ad.companyName}>
-          <img src={ad.imageUrl} alt={ad.companyName} className="w-full h-auto object-cover block" />
+          <img src={ad.imageUrl} alt={ad.companyName} className="w-full h-[100px] object-cover block" />
         </a>
       ))}
     </div>
