@@ -15,7 +15,7 @@ const today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const SECTION_KEYS: (keyof PartTimeTaskSections)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif'];
+const SECTION_KEYS: (keyof PartTimeTaskSections)[] = ['제목', '내용', '댓글', '키워드', '이미지', 'gif'];
 
 const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
@@ -38,6 +38,7 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
   const [workStart, setWorkStart] = useState(today());
   const [workEnd, setWorkEnd] = useState(today());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const gifInputRef = useRef<HTMLInputElement>(null);
 
   if (!user || user.role !== 'admin') {
     navigate('/part-time', { replace: true });
@@ -54,6 +55,17 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
     const reader = new FileReader();
     reader.onload = () => {
       setSections((s) => ({ ...s, 이미지: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleGifUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSections((s) => ({ ...s, gif: reader.result as string }));
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -92,7 +104,6 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
         댓글: sections.댓글,
         키워드: sections.키워드,
         이미지: sections.이미지,
-        동영상: sections.동영상,
         gif: sections.gif,
       },
       applicationPeriod: { start: appStart, end: appEnd },
@@ -256,39 +267,30 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
                 <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{key}</label>
                 {key === '이미지' ? (
                   <div className="flex flex-col gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm"
-                    >
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm">
                       이미지 업로드 (참고용)
                     </button>
                     {sections.이미지 && (
                       <div className="relative inline-block max-w-[200px]">
-                        <img src={sections.이미지} alt="참고" className="rounded-xl border border-gray-100 max-h-32 object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setSections((s) => ({ ...s, 이미지: '' }))}
-                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-black"
-                        >
-                          ×
-                        </button>
+                        <img src={sections.이미지} alt="참고" className="rounded-xl border border-gray-100 max-h-32 object-contain" />
+                        <button type="button" onClick={() => setSections((s) => ({ ...s, 이미지: '' }))} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-black">×</button>
                       </div>
                     )}
-                    <input
-                      type="text"
-                      value={sections.이미지?.startsWith('data:') ? '' : (sections.이미지 ?? '')}
-                      onChange={(e) => handleSectionChange('이미지', e.target.value)}
-                      placeholder="또는 이미지 관련 지시사항 텍스트"
-                      className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
-                    />
+                    <input type="text" value={sections.이미지?.startsWith('data:') ? '' : (sections.이미지 ?? '')} onChange={(e) => handleSectionChange('이미지', e.target.value)} placeholder="또는 이미지 관련 지시사항 텍스트" className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
+                  </div>
+                ) : key === 'gif' ? (
+                  <div className="flex flex-col gap-2">
+                    <input ref={gifInputRef} type="file" accept=".gif,image/gif" onChange={handleGifUpload} className="hidden" />
+                    <button type="button" onClick={() => gifInputRef.current?.click()} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm">
+                      GIF 파일 업로드
+                    </button>
+                    {sections.gif?.startsWith('data:') && (
+                      <div className="relative inline-block max-w-[200px]">
+                        <img src={sections.gif} alt="GIF 미리보기" className="rounded-xl border border-gray-100 max-h-32" />
+                        <button type="button" onClick={() => setSections((s) => ({ ...s, gif: '' }))} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-black">×</button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <input
