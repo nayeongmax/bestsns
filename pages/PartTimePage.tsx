@@ -7,6 +7,7 @@ import {
   fetchPartTimeTasks,
   fetchPartTimeJobRequests,
   upsertPartTimeTask,
+  deletePartTimeTask,
   fetchFreelancerBalance,
   fetchPartTimeCompletedIds,
   processAutoApprovalsInDb,
@@ -194,30 +195,30 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
               {sortedTasks.map((task) => {
                 const done = isTaskDone(task);
                 return (
-                  <button
+                  <div
                     key={task.id}
-                    type="button"
-                    onClick={() => navigate(`/part-time/${task.id}`)}
-                    className={`w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
+                    className={`w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
                       done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-sm'
                     }`}
                   >
-                    <div className="flex-1">
+                    <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className="flex-1 text-left">
                       <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
                       <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
                       <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
-                    </div>
-                    <div className="flex items-center gap-4 shrink-0">
+                    </button>
+                    <div className="flex items-center gap-3 shrink-0">
                       <span className="font-black text-emerald-600 text-base">+{task.reward.toLocaleString()}원</span>
-                      {done ? (
-                        <span className="px-4 py-2 rounded-xl bg-gray-200 text-gray-500 text-sm font-black">완료됨</span>
-                      ) : task.applicants?.some((a) => a.selected) ? (
-                        <span className="px-4 py-2 rounded-xl bg-amber-100 text-amber-700 text-sm font-black">선정완료 →</span>
-                      ) : (
-                        <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-sm font-black">상세보기 →</span>
+                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className={`px-4 py-2 rounded-xl text-sm font-black ${done ? 'bg-gray-200 text-gray-500' : task.applicants?.some((a) => a.selected) ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {done ? '완료됨' : task.applicants?.some((a) => a.selected) ? '선정완료 →' : '상세보기 →'}
+                      </button>
+                      {user?.role === 'admin' && (
+                        <>
+                          <Link to={`/part-time-register`} state={{ editTask: task }} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100">수정</Link>
+                          <button type="button" onClick={async (e) => { e.stopPropagation(); if (!confirm(`"${task.title}" 작업을 삭제할까요?`)) return; await deletePartTimeTask(task.id); setTasks(prev => prev.filter(x => x.id !== task.id)); }} className="px-3 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-black hover:bg-red-100">삭제</button>
+                        </>
                       )}
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -690,18 +691,14 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                       onChange={async (e) => {
                         const f = e.target.files?.[0];
                         if (!f) return;
+                        // GIF는 canvas 압축 시 애니메이션 손실 → raw 그대로 저장
                         const raw = await new Promise<string>((res, rej) => {
                           const r = new FileReader();
                           r.onload = () => res(r.result as string);
                           r.onerror = () => rej(new Error('읽기 실패'));
                           r.readAsDataURL(f);
                         });
-                        try {
-                          const compressed = await compressImageForStorage(raw, 480, 0.45);
-                          updateSection(item.id, { gifFile: compressed });
-                        } catch {
-                          updateSection(item.id, { gifFile: raw });
-                        }
+                        updateSection(item.id, { gifFile: raw });
                         e.target.value = '';
                       }}
                       className="hidden"

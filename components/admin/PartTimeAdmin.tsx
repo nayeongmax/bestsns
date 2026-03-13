@@ -9,6 +9,8 @@ import {
   fetchPartTimeJobRequests,
   upsertPartTimeTasks,
   upsertPartTimeJobRequest,
+  deletePartTimeTask,
+  deletePartTimeJobRequest,
   fetchFreelancerWithdrawRequests,
   updateFreelancerWithdrawRequestStatusToDb,
   refundFreelancerWithdrawalInDb,
@@ -182,13 +184,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     try {
       await upsertPartTimeJobRequest(updated);
       setJobRequests((prev) => prev.map((r) => (r.id === estimateModal.id ? updated : r)));
+      const isResend = !!estimateModal.operatorEstimate?.sentAt;
       if (estimateModal.applicantUserId && addNotif) {
-        addNotif(estimateModal.applicantUserId, 'approval', '견적서 도착', `[${estimateModal.title}] 견적서가 도착했습니다. 마이페이지 → 알바의뢰 탭에서 확인해 주세요.`, undefined);
+        addNotif(estimateModal.applicantUserId, 'approval',
+          isResend ? '견적서 수정 도착' : '견적서 도착',
+          `[${estimateModal.title}] ${isResend ? '수정된 견적서가 도착했습니다' : '견적서가 도착했습니다'}. 마이페이지 → 알바의뢰 탭에서 확인해 주세요.`,
+          undefined);
       }
       setEstimateModal(null);
       setEstimateForm({ workName: '', recipientName: '', recipientContact: '', workPeriodStart: '', workPeriodEnd: '', items: [{ content: '', unitPrice: '', quantity: '1', remarks: '' }], note: '' });
       setDetailJr(null);
-      alert('견적서가 전송되었습니다. 광고주에게 알림이 전송되었습니다.');
+      alert(isResend ? '견적서가 수정 전송되었습니다. 광고주에게 알림이 발송됩니다.' : '견적서가 전송되었습니다. 광고주에게 알림이 전송되었습니다.');
     } catch (e) {
       console.error(e);
       alert('저장에 실패했습니다.');
@@ -467,7 +473,13 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                     <td className="px-6 py-4 text-sm text-gray-700">{jr.workPeriodStart} ~ {jr.workPeriodEnd}</td>
                     <td className="px-6 py-4 text-sm font-bold text-gray-800">{jr.contact}</td>
                     <td className="px-6 py-4 text-center">
-                      <button type="button" onClick={() => setDetailJr(jr)} className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700">견적확인하기</button>
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <button type="button" onClick={() => setDetailJr(jr)} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700">견적확인</button>
+                        {jr.operatorEstimate && (
+                          <button type="button" onClick={() => { setDetailJr(null); setEstimateModal(jr); setEstimateForm({ workName: jr.operatorEstimate!.workName ?? jr.title, recipientName: jr.operatorEstimate!.recipientName ?? '', recipientContact: jr.operatorEstimate!.recipientContact ?? jr.contact, workPeriodStart: jr.operatorEstimate!.workPeriodStart ?? jr.workPeriodStart, workPeriodEnd: jr.operatorEstimate!.workPeriodEnd ?? jr.workPeriodEnd, items: (jr.operatorEstimate!.items ?? []).map(it => ({ content: it.content, unitPrice: String(it.unitPrice), quantity: String(it.quantity), remarks: it.remarks ?? '' })), note: jr.operatorEstimate!.note ?? '' }); }} className="px-4 py-2 rounded-xl bg-blue-100 text-blue-700 font-black text-xs hover:bg-blue-200">견적수정</button>
+                        )}
+                        <button type="button" onClick={async () => { if (!confirm('이 견적요청을 삭제할까요?')) return; await deletePartTimeJobRequest(jr.id); setJobRequests(prev => prev.filter(x => x.id !== jr.id)); }} className="px-4 py-2 rounded-xl bg-red-50 text-red-500 font-black text-xs hover:bg-red-100">삭제</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -692,6 +704,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                     <th className="px-4 py-3 text-center">채팅하기</th>
                     <th className="px-4 py-3 text-center">수정요청</th>
                     <th className="px-4 py-3 text-center">비상 알바비</th>
+                    <th className="px-4 py-3 text-center">관리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -764,6 +777,12 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                           ) : (
                             <span className="text-gray-400 text-xs">-</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Link to={`/part-time-register?edit=${t.id}`} state={{ editTask: t }} className="inline-block px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100">수정</Link>
+                            <button type="button" onClick={async () => { if (!confirm(`"${t.title}" 작업을 삭제할까요?\n신청자 데이터도 함께 삭제됩니다.`)) return; await deletePartTimeTask(t.id); setTasks(prev => prev.filter(x => x.id !== t.id)); }} className="inline-block px-3 py-1.5 rounded-lg bg-red-50 text-red-500 font-bold text-xs hover:bg-red-100">삭제</button>
+                          </div>
                         </td>
                       </tr>
                     );
