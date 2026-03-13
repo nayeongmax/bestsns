@@ -21,7 +21,7 @@ interface Props {
   addNotif?: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
 }
 
-const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
+const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', 'gif', '작업링크', '작업안내'];
 
 const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) => {
   const displayUser = useMemo(() => {
@@ -509,8 +509,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               if (key === '이미지' && !hasImageContent) return null;
               if (key === '댓글' && (sections.댓글목록?.length || !sections.댓글)) return null;
               if (key === '작업링크' && (sections.작업링크목록?.length || !sections.작업링크)) return null;
-              if (key !== '이미지' && key !== '댓글' && key !== '작업링크' && key !== '동영상' && key !== 'gif' && !sections[key]) return null;
-              if (key === '동영상' && !sections.동영상) return null;
+              if (key !== '이미지' && key !== '댓글' && key !== '작업링크' && key !== 'gif' && !sections[key]) return null;
               if (key === 'gif' && !sections.gif) return null;
               const meSelected = user && task.applicants.some((a) => a.userId === user.id && a.selected);
               const downloadMedia = (src: string, filename: string) => {
@@ -562,24 +561,20 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                         <p className="text-gray-800 whitespace-pre-wrap">{sections.이미지}</p>
                       ) : null}
                     </>
-                  ) : key === '동영상' && sections.동영상?.startsWith('data:') ? (
-                    <div className="space-y-2">
-                      <video src={sections.동영상} className="max-h-48 rounded-lg border border-gray-200" controls />
-                      {meSelected && (
-                        <button type="button" onClick={() => downloadMedia(sections.동영상!, '동영상.mp4')} className="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>
-                      )}
-                    </div>
                   ) : key === 'gif' && sections.gif?.startsWith('data:') ? (
                     <div className="space-y-2">
-                      <img src={sections.gif} alt="GIF 참고" className="max-h-40 rounded-lg border border-gray-200" />
+                      <img
+                        src={sections.gif}
+                        alt="GIF 참고"
+                        className="max-h-40 rounded-lg border border-gray-200 cursor-zoom-in hover:opacity-90 transition-opacity"
+                        onClick={() => setZoomedImage(sections.gif!)}
+                      />
                       {meSelected && (
                         <button type="button" onClick={() => downloadMedia(sections.gif!, '참고.gif')} className="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>
                       )}
                     </div>
                   ) : key === '작업링크' && sections.작업링크 && (sections.작업링크.startsWith('http://') || sections.작업링크.startsWith('https://')) ? (
                     <p className="text-gray-800 whitespace-pre-wrap"><a href={sections.작업링크} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{sections.작업링크}</a></p>
-                  ) : (key === '동영상' || key === 'gif') && sections[key] && !sections[key]?.startsWith('data:') ? (
-                    <p className="text-gray-800 whitespace-pre-wrap">{sections[key]}</p>
                   ) : (
                     <p className="text-gray-800 whitespace-pre-wrap">{sections[key]}</p>
                   )}
