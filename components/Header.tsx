@@ -34,7 +34,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
   const isAdmin = user?.role === 'admin' || user?.id?.toLowerCase() === 'admin';
 
   const navItems = [
-    { label: 'SNS활성화', path: '/sns', icon: '📈' },
+    { label: '마케팅주문', path: '/sns', icon: '📈' },
     { label: '채널판매', path: '/channels', icon: '📺' },
     { label: 'N잡스토어', path: '/ebooks', icon: '📖', badge: '누구나 판매OK' },
     { label: '누구나알바', path: '/part-time', icon: '👷', badge: '누구나 지원OK' },
