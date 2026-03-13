@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Post, Notice, UserProfile, GradeConfig } from '@/types';
+import BannerRotator from '@/components/BannerRotator';
 
 /** 데스크톱 레이아웃 고정. 폰/태블릿 대응 시 데스크톱용 스타일은 수정하지 말 것. */
 interface Props {
@@ -74,6 +75,9 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
           </button>
         </div>
       )}
+
+      {/* 광고 배너: 3열, 전체 표시 */}
+      <BannerRotator cols={3} showAll={true} />
 
       {/* 상단 헤더 섹션 */}
       <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 space-y-6">

@@ -54,7 +54,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   // JAP 주문 상태 (orderId → { status, remains })
   // 배너 광고 관리
   const [bannerAds, setBannerAds] = useState<BannerAd[]>([]);
-  const initialBannerForm: BannerAd = { id: '', companyName: '', imageUrl: '', linkUrl: '', startDate: '', endDate: '', isActive: true, memo: '', createdAt: '' };
+  const initialBannerForm: BannerAd = { id: '', companyName: '', imageUrl: '', linkUrl: '', startDate: '', endDate: '', isActive: true, displayMode: 'random', memo: '', createdAt: '' };
   const [bannerForm, setBannerForm] = useState<BannerAd>(initialBannerForm);
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
@@ -1140,6 +1140,13 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">링크 URL *</label><input type="text" value={bannerForm.linkUrl} onChange={e => setBannerForm(p => ({...p, linkUrl: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="https://..." /></div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">배너 이미지 * <span className="normal-case text-gray-300 font-bold">(jpg · png · gif, 최대 5MB)</span></label>
+                {/* 이미지 사이즈 안내 */}
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-3 text-[11px] text-blue-700 font-bold space-y-0.5">
+                  <p className="font-black text-blue-800">📐 권장 이미지 사이즈 (잘림·여백 없이 딱 맞게)</p>
+                  <p>• SNS활성화 (2열) → <span className="font-black">1400 × 260px</span> (비율 약 16:3)</p>
+                  <p>• 자유게시판 (3열) → <span className="font-black">900 × 260px</span> (비율 약 7:2)</p>
+                  <p className="text-blue-500 font-normal">이미지 비율이 다르면 검정 여백이 생길 수 있습니다.</p>
+                </div>
                 <label className={`flex items-center gap-4 p-4 bg-gray-50 rounded-2xl cursor-pointer border-2 border-dashed transition-all ${bannerUploading ? 'border-blue-300 opacity-60' : 'border-gray-200 hover:border-blue-400'}`}>
                   <input type="file" accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif" className="hidden" disabled={bannerUploading}
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleBannerImageUpload(f); e.target.value = ''; }} />
@@ -1151,6 +1158,19 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                     <span className="flex items-center gap-2 text-gray-400 font-bold text-sm">📁 파일 선택 (jpg · png · gif)</span>
                   )}
                 </label>
+              </div>
+              {/* 노출 유형 선택 */}
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">노출 유형 *</label>
+                <div className="flex gap-3">
+                  {([['fixed', '고정형', '항상 같은 자리에 노출 (새로고침해도 유지)'], ['random', '자유형', '새로고침마다 랜덤으로 노출']] as const).map(([val, label, desc]) => (
+                    <label key={val} className={`flex-1 p-4 rounded-2xl border-2 cursor-pointer transition-all ${bannerForm.displayMode === val ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-blue-300'}`}>
+                      <input type="radio" name="displayMode" value={val} checked={bannerForm.displayMode === val} onChange={() => setBannerForm(p => ({...p, displayMode: val}))} className="hidden" />
+                      <p className="font-black text-sm text-gray-800">{label}</p>
+                      <p className="text-[11px] text-gray-400 font-bold mt-0.5">{desc}</p>
+                    </label>
+                  ))}
+                </div>
               </div>
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">광고 시작일 *</label><input type="date" value={bannerForm.startDate} onChange={e => setBannerForm(p => ({...p, startDate: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" /></div>
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">광고 종료일 *</label><input type="date" value={bannerForm.endDate} onChange={e => setBannerForm(p => ({...p, endDate: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" /></div>
