@@ -10,6 +10,7 @@ function rowToBanner(row: Record<string, unknown>): BannerAd {
     startDate: String(row.start_date ?? ''),
     endDate: String(row.end_date ?? ''),
     isActive: Boolean(row.is_active),
+    displayMode: (row.display_mode === 'fixed' ? 'fixed' : 'random') as 'fixed' | 'random',
     memo: row.memo ? String(row.memo) : undefined,
     createdAt: String(row.created_at ?? ''),
   };
@@ -24,6 +25,7 @@ function bannerToRow(b: BannerAd): Record<string, unknown> {
     start_date: b.startDate,
     end_date: b.endDate,
     is_active: b.isActive,
+    display_mode: b.displayMode ?? 'random',
     memo: b.memo ?? null,
     created_at: b.createdAt,
   };
