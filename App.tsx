@@ -137,8 +137,7 @@ function ContainerRoutes(props: {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/marketing-consent" element={<MarketingConsentPage />} />
       <Route path="/login" element={<AuthPage onLoginSuccess={props.handleLoginSuccess} />} />
-      {/* KG이니시스 심사 중 임시 변경: /sns → /ebooks, 심사 통과 후 /sns로 복구 */}
-      <Route path="/" element={<Navigate to="/ebooks" />} />
+      <Route path="/" element={<Navigate to="/sns" />} />
     </Routes>
   );
 }
