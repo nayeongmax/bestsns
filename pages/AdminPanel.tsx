@@ -30,6 +30,7 @@ interface Props {
   members: UserProfile[];
   setMembers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
   channelOrders: ChannelOrder[];
+  setChannelOrders?: React.Dispatch<React.SetStateAction<ChannelOrder[]>>;
   storeOrders: StoreOrder[];
   onIssueCoupons?: (targetIds: string[], couponData: Omit<Coupon, 'id' | 'status'>) => void;
   /** 회원 목록(profiles) 다시 불러오기 - 판매자 승인 대기 목록 갱신용 */
@@ -48,7 +49,7 @@ interface Props {
 const AdminPanel: React.FC<Props> = ({ 
   user, ebooks, setEbooks, channels, setChannels, setNotifications,
   smmProviders, setSmmProviders, smmProducts, setSmmProducts, onDeleteSmmProducts, smmOrders, setSmmOrders,
-  members, setMembers, channelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
+  members, setMembers, channelOrders, setChannelOrders, storeOrders, onIssueCoupons, onRefreshMembers, addNotif,
   gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
   const { showAlert } = useConfirm();
@@ -117,7 +118,7 @@ const AdminPanel: React.FC<Props> = ({
             addNotif={addNotif}
           />
         )}
-        {activeTab === 'channel' && <ChannelAdmin channels={channels} setChannels={setChannels} channelOrders={channelOrders} />}
+        {activeTab === 'channel' && <ChannelAdmin channels={channels} setChannels={setChannels} channelOrders={channelOrders} setChannelOrders={setChannelOrders} />}
         {/**
          * Fixed: Passed addNotif down to StoreAdmin
          */}

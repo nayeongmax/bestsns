@@ -266,6 +266,7 @@ export interface ChannelOrder {
   paymentId?: string;
   paymentMethod?: string;
   paymentLog?: string;
+  buyerAccount?: string;
 }
 
 export interface StoreOrder {

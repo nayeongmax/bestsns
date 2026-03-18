@@ -5,16 +5,19 @@ import React, { useState, useRef, useMemo } from 'react';
  */
 import { ChannelProduct, ChannelOrder } from '@/types';
 import { CHANNEL_CATEGORIES } from '../../constants.tsx';
-import { deleteChannelProduct } from '../../channelDb';
+import { deleteChannelProduct, upsertChannelOrder } from '../../channelDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
+
+const PORTONE_API_SECRET = (import.meta as any).env?.VITE_PORTONE_API_SECRET as string;
 
 interface Props {
   channels: ChannelProduct[];
   setChannels: React.Dispatch<React.SetStateAction<ChannelProduct[]>>;
   channelOrders: ChannelOrder[];
+  setChannelOrders?: React.Dispatch<React.SetStateAction<ChannelOrder[]>>;
 }
 
-const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders }) => {
+const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, setChannelOrders }) => {
   const { showConfirm, showAlert } = useConfirm();
   const [activeSubTab, setActiveSubTab] = useState<'manage' | 'order'>('manage');
   const [editingChannel, setEditingChannel] = useState<ChannelProduct | null>(null);
@@ -27,6 +30,8 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
   
   // 결제 상세 모달 상태
   const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<ChannelOrder | null>(null);
+  // 환불 처리 중인 주문 ID
+  const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null);
 
   const [thumbnail, setThumbnail] = useState('');
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
@@ -173,6 +178,45 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
       return matchSearch && matchStatus && matchMonth;
     });
   }, [channelOrders, orderSearchQuery, orderStatusFilter, orderMonthFilter]);
+
+  const handleRefund = (order: ChannelOrder) => {
+    if (!order.paymentId) {
+      showAlert({ description: '결제 ID가 없어 환불할 수 없습니다.' });
+      return;
+    }
+    showConfirm({
+      title: '결제 취소 (환불)',
+      description: `[${order.productName}] 결제를 취소하시겠습니까?\n환불 금액: ₩${order.price.toLocaleString()}`,
+      confirmLabel: '환불하기',
+      cancelLabel: '취소',
+      danger: true,
+      onConfirm: async () => {
+        setRefundingOrderId(order.id);
+        try {
+          const res = await fetch(`https://api.portone.io/payments/${order.paymentId}/cancel`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `PortOne ${PORTONE_API_SECRET}`,
+            },
+            body: JSON.stringify({ reason: '관리자 환불 처리' }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error((err as any).message || `환불 실패 (HTTP ${res.status})`);
+          }
+          const updatedOrder: ChannelOrder = { ...order, status: 'refunded' };
+          await upsertChannelOrder(updatedOrder);
+          setChannelOrders?.(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
+          showAlert({ description: '환불이 완료되었습니다.' });
+        } catch (e: any) {
+          showAlert({ description: `환불 실패: ${e.message}` });
+        } finally {
+          setRefundingOrderId(null);
+        }
+      },
+    });
+  };
 
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
@@ -462,14 +506,16 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
                           <th className="px-8 py-5">계약일시 / ID</th>
                           <th className="px-8 py-5">구매 희망자</th>
                           <th className="px-8 py-5">채널 매물 정보</th>
+                          <th className="px-8 py-5">구매자 계정</th>
                           <th className="px-8 py-5">결제 정보 (자동수집)</th>
                           <th className="px-8 py-5 text-right">최종 매매가</th>
                           <th className="px-8 py-5 text-center">진행 상태</th>
+                          <th className="px-8 py-5 text-center">결제취소</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                        {filteredOrders.length === 0 ? (
-                         <tr><td colSpan={6} className="py-32 text-center text-gray-300 font-black italic text-lg">기록된 거래 내역이 존재하지 않습니다.</td></tr>
+                         <tr><td colSpan={8} className="py-32 text-center text-gray-300 font-black italic text-lg">기록된 거래 내역이 존재하지 않습니다.</td></tr>
                        ) : filteredOrders.map(o => (
                          <tr key={o.id} className="hover:bg-indigo-50/20 transition-all group">
                            <td className="px-8 py-6">
@@ -485,9 +531,16 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
                               <p className="text-[13px] font-black text-gray-900 mt-1 truncate max-w-[250px]">{o.productName}</p>
                            </td>
                            <td className="px-8 py-6">
+                              {o.buyerAccount ? (
+                                <span className="text-[13px] font-black text-gray-900">{o.buyerAccount}</span>
+                              ) : (
+                                <span className="text-[11px] text-gray-300 italic font-bold">-</span>
+                              )}
+                           </td>
+                           <td className="px-8 py-6">
                               {o.paymentId ? (
                                 <div className="space-y-1">
-                                   <button 
+                                   <button
                                       onClick={() => setSelectedOrderForPayment(o)}
                                       className="text-[12px] font-black text-blue-600 hover:underline underline-offset-4 decoration-2 decoration-blue-200 block"
                                    >
@@ -505,12 +558,26 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders })
                            <td className="px-8 py-6 text-right font-black text-lg italic text-gray-900">₩{o.price.toLocaleString()}</td>
                            <td className="px-8 py-6 text-center">
                               <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm transition-all ${
-                                o.status === '완료' ? 'bg-green-500 text-white' : 
-                                o.status === '양도진행중' ? 'bg-indigo-600 text-white animate-pulse' : 
+                                o.status === '완료' ? 'bg-green-500 text-white' :
+                                o.status === '양도진행중' ? 'bg-indigo-600 text-white animate-pulse' :
+                                o.status === 'refunded' ? 'bg-red-100 text-red-500' :
                                 'bg-gray-100 text-gray-400'
                               }`}>
-                                {o.status}
+                                {o.status === 'refunded' ? '환불완료' : o.status}
                               </span>
+                           </td>
+                           <td className="px-8 py-6 text-center">
+                              {o.status !== 'refunded' && o.paymentId ? (
+                                <button
+                                  onClick={() => handleRefund(o)}
+                                  disabled={refundingOrderId === o.id}
+                                  className="px-4 py-2 bg-red-500 text-white rounded-xl text-[11px] font-black hover:bg-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {refundingOrderId === o.id ? '처리중...' : '결제취소'}
+                                </button>
+                              ) : (
+                                <span className="text-[11px] text-gray-300 italic">-</span>
+                              )}
                            </td>
                          </tr>
                        ))}
