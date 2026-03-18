@@ -65,7 +65,7 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, members = [], addNotif }) => {
         customer: {
           fullName: user.nickname,
           phoneNumber: '01000000000',
-          email: 'user@thebestsns.com',
+          email: user.email || `user_${user.id.slice(0, 8)}@thebestsns.com`,
         },
       };
       if (paymentMethod === 'toss') paymentData.easyPay = { provider: 'TOSSPAY' };

@@ -87,6 +87,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
             productName: channel.title,
             userId: user.id,
             userNickname: user.nickname,
+            userEmail: user.email,
             sellerNickname: channel.sellerNickname,
           });
 
