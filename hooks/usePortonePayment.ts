@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
-import PortOne from '@portone/browser-sdk/v2';
 import { supabase } from '@/supabase';
+
+declare const window: any;
 
 const STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID as string;
 const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY as string;
@@ -18,6 +19,8 @@ export interface PaymentParams {
   userId: string;
   /** 구매자 닉네임 */
   userNickname: string;
+  /** 구매자 이메일 */
+  userEmail?: string;
   /** 판매자 닉네임 (스토어 상품인 경우) */
   sellerNickname?: string;
   /** 티어명 (스토어 상품인 경우) */
@@ -40,7 +43,13 @@ export function usePortonePayment() {
       return { success: false, error: '결제 설정이 올바르지 않습니다.' };
     }
 
+    const { PortOne } = window;
+    if (!PortOne) {
+      return { success: false, error: '결제 모듈이 로드되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.' };
+    }
+
     const paymentId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const buyerEmail = params.userEmail || `user_${params.userId.slice(0, 8)}@thebestsns.com`;
 
     try {
       const response = await PortOne.requestPayment({
@@ -49,8 +58,13 @@ export function usePortonePayment() {
         paymentId,
         orderName: params.orderName,
         totalAmount: params.totalAmount,
-        currency: 'KRW',
+        currency: 'CURRENCY_KRW',
         payMethod: 'CARD',
+        customer: {
+          fullName: params.userNickname,
+          email: buyerEmail,
+          phoneNumber: '01000000000',
+        },
       });
 
       if (!response) {

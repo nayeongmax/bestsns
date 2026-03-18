@@ -122,6 +122,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             productName: `${ebook.title} [${selectedTier.name}]`,
             userId: user.id,
             userNickname: user.nickname,
+            userEmail: user.email,
             sellerNickname: ebook.author,
             tierName: selectedTier.name,
             storeType: currentStoreType,
@@ -498,7 +499,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                 문의하기 ✉
               </button>
               <button onClick={handleBuyNow} disabled={isMine || isProcessing} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 transition-all shadow-2xl uppercase italic tracking-[0.2em] ${!isMine && !isProcessing ? 'animate-pulse' : 'opacity-60 cursor-not-allowed'}`}>
-                {isProcessing ? '결제 처리 중...' : '즉시 구매하기 🚀'}
+                {isMine ? '내 상품입니다' : isProcessing ? '결제 처리 중...' : '즉시 구매하기 🚀'}
               </button>
             </div>
           </div>
