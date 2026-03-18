@@ -91,6 +91,7 @@ function orderToRow(o: ChannelOrder): Record<string, unknown> {
     payment_id: o.paymentId ?? null,
     payment_method: o.paymentMethod ?? null,
     payment_log: o.paymentLog ?? null,
+    buyer_account: o.buyerAccount ?? null,
   };
 }
 
@@ -108,6 +109,7 @@ function rowToOrder(row: Record<string, unknown>): ChannelOrder {
     paymentId: row.payment_id != null ? String(row.payment_id) : undefined,
     paymentMethod: row.payment_method != null ? String(row.payment_method) : undefined,
     paymentLog: row.payment_log != null ? String(row.payment_log) : undefined,
+    buyerAccount: row.buyer_account != null ? String(row.buyer_account) : undefined,
   };
 }
 

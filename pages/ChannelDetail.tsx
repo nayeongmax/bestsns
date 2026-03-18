@@ -25,6 +25,8 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
   const [showActionModal, setShowActionModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [buyerAccountInput, setBuyerAccountInput] = useState('');
   
   const channel = channels.find(c => c.id === id);
 
@@ -71,56 +73,58 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
 
   const handleBuyNow = () => {
     if (isProcessing || !user) return;
-    showConfirm({
-      title: '채널 구매',
-      description: `[${channel.title}] 채널을 즉시 구매하시겠습니까?\n결제 금액: ₩${channel.price.toLocaleString()}`,
-      confirmLabel: '결제하기',
-      cancelLabel: '취소',
-      danger: false,
-      onConfirm: async () => {
-        setIsProcessing(true);
-        try {
-          const result = await requestPayment({
-            orderName: `[채널구매] ${channel.title}`,
-            totalAmount: channel.price,
-            productId: channel.id,
-            productName: channel.title,
-            userId: user.id,
-            userNickname: user.nickname,
-            userEmail: user.email,
-            sellerNickname: channel.sellerNickname,
-          });
+    setBuyerAccountInput('');
+    setShowBuyModal(true);
+  };
 
-          if (result.success) {
-            const newOrder: ChannelOrder = {
-              id: `CO_${Date.now()}_${user.id.slice(0, 6)}`,
-              userId: user.id,
-              userNickname: user.nickname,
-              orderTime: new Date().toISOString(),
-              productId: channel.id,
-              productName: channel.title,
-              platform: channel.platform ?? '',
-              price: channel.price,
-              status: '결제완료',
-              paymentId: result.paymentId,
-              paymentMethod: 'CARD',
-            };
-            onChannelOrderCreated?.(newOrder);
-            upsertChannelOrder(newOrder).catch(e => console.warn('[ChannelDetail] 주문 저장 실패:', e));
-            if (channel.sellerId) {
-              addNotif?.(channel.sellerId, 'channel', '💰 채널 판매 알림', `[${channel.title}] 채널이 판매되었습니다.`);
-            }
-            addNotif?.(user.id, 'payment', '💳 결제 완료', `[${channel.title}] 채널 구매가 완료되었습니다. 마이페이지에서 확인하세요.`);
-            alert('결제가 완료되었습니다!');
-            navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'channel' } });
-          } else if (result.error) {
-            alert(`결제 실패: ${result.error}`);
-          }
-        } finally {
-          setIsProcessing(false);
+  const handleConfirmBuy = async () => {
+    if (!buyerAccountInput.trim()) {
+      alert('구매할 계정을 입력해주세요.');
+      return;
+    }
+    setShowBuyModal(false);
+    setIsProcessing(true);
+    try {
+      const result = await requestPayment({
+        orderName: `[채널구매] ${channel.title}`,
+        totalAmount: channel.price,
+        productId: channel.id,
+        productName: channel.title,
+        userId: user!.id,
+        userNickname: user!.nickname,
+        userEmail: user!.email,
+        sellerNickname: channel.sellerNickname,
+      });
+
+      if (result.success) {
+        const newOrder: ChannelOrder = {
+          id: `CO_${Date.now()}_${user!.id.slice(0, 6)}`,
+          userId: user!.id,
+          userNickname: user!.nickname,
+          orderTime: new Date().toISOString(),
+          productId: channel.id,
+          productName: channel.title,
+          platform: channel.platform ?? '',
+          price: channel.price,
+          status: '결제완료',
+          paymentId: result.paymentId,
+          paymentMethod: 'CARD',
+          buyerAccount: buyerAccountInput.trim(),
+        };
+        onChannelOrderCreated?.(newOrder);
+        upsertChannelOrder(newOrder).catch(e => console.warn('[ChannelDetail] 주문 저장 실패:', e));
+        if (channel.sellerId) {
+          addNotif?.(channel.sellerId, 'channel', '💰 채널 판매 알림', `[${channel.title}] 채널이 판매되었습니다.`);
         }
-      },
-    });
+        addNotif?.(user!.id, 'payment', '💳 결제 완료', `[${channel.title}] 채널 구매가 완료되었습니다. 마이페이지에서 확인하세요.`);
+        alert('결제가 완료되었습니다!');
+        navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'channel' } });
+      } else if (result.error) {
+        alert(`결제 실패: ${result.error}`);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -294,6 +298,40 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
           </button>
         </div>
       </div>
+
+      {showBuyModal && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={() => setShowBuyModal(false)}>
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 p-6 sm:p-8 space-y-6" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-black text-gray-900">채널 구매</h3>
+              <button type="button" onClick={() => setShowBuyModal(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700">✕</button>
+            </div>
+            <div className="bg-gray-50 rounded-2xl p-4">
+              <p className="font-black text-gray-800 truncate">{channel.title}</p>
+              <p className="text-2xl font-black text-gray-900 mt-1">₩ {channel.price.toLocaleString()}</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-black text-gray-700">구매할 계정 입력 <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={buyerAccountInput}
+                onChange={e => setBuyerAccountInput(e.target.value)}
+                placeholder="이전받을 계정 아이디를 입력하세요"
+                className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-gray-800 outline-none focus:ring-4 focus:ring-blue-100 border border-gray-200"
+                autoFocus
+              />
+              <p className="text-red-500 text-sm font-bold">※ 구매 즉시 계정 이전 작업이 진행되므로 환불이 불가합니다</p>
+            </div>
+            <button
+              onClick={handleConfirmBuy}
+              disabled={!buyerAccountInput.trim()}
+              className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-lg hover:bg-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              결제하기
+            </button>
+          </div>
+        </div>
+      )}
 
       {selectedImg && (
         <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 cursor-pointer animate-in fade-in" onClick={() => setSelectedImg(null)}>
