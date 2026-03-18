@@ -8,7 +8,6 @@ import { CHANNEL_CATEGORIES } from '../../constants.tsx';
 import { deleteChannelProduct, upsertChannelOrder } from '../../channelDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
-const PORTONE_API_SECRET = (import.meta as any).env?.VITE_PORTONE_API_SECRET as string;
 
 interface Props {
   channels: ChannelProduct[];
@@ -193,17 +192,14 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
       onConfirm: async () => {
         setRefundingOrderId(order.id);
         try {
-          const res = await fetch(`https://api.portone.io/payments/${order.paymentId}/cancel`, {
+          const res = await fetch('/.netlify/functions/portone-refund', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `PortOne ${PORTONE_API_SECRET}`,
-            },
-            body: JSON.stringify({ reason: '관리자 환불 처리' }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId: order.paymentId, reason: '관리자 환불 처리' }),
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error((err as any).message || `환불 실패 (HTTP ${res.status})`);
+            throw new Error((err as any).error || `환불 실패 (HTTP ${res.status})`);
           }
           const updatedOrder: ChannelOrder = { ...order, status: 'refunded' };
           await upsertChannelOrder(updatedOrder);
