@@ -6,6 +6,7 @@ const MobileBottomNav: React.FC = () => {
   const pathname = location.pathname;
   const navItems = [
     { label: '마케팅주문', path: '/sns', icon: '📈' },
+    { label: '채널판매', path: '/channels', icon: '📺' },
     {
       label: 'N잡스토어',
       path: '/ebooks',
