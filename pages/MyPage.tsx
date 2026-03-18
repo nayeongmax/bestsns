@@ -20,6 +20,8 @@ interface Props {
   smmOrders: SMMOrder[];
   channelOrders: ChannelOrder[];
   storeOrders: StoreOrder[];
+  setStoreOrders?: React.Dispatch<React.SetStateAction<StoreOrder[]>>;
+  setChannelOrders?: React.Dispatch<React.SetStateAction<ChannelOrder[]>>;
   onAddReview: (review: Review) => void;
   onUpdateReview: (review: Review) => void;
   reviews: Review[];
@@ -35,7 +37,7 @@ type NicknameStatus = 'idle' | 'available' | 'unavailable';
 /**
  * Fixed: Added addNotif to component destructuring
  */
-const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, onAddReview, onUpdateReview, reviews, addNotif, onRefetchProfile, gradeConfigs = [] }) => {
+const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, setStoreOrders, setChannelOrders, onAddReview, onUpdateReview, reviews, addNotif, onRefetchProfile, gradeConfigs = [] }) => {
   const displayUser = useMemo(() => {
     if (!user) return null;
     const m = members.find((x) => x.id === user.id);
@@ -201,7 +203,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
             addNotif={addNotif}
           />
         )}
-        {activeMainTab === 'buyer' && <BuyerDashboard user={effectiveUser} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} ebooks={ebooks} onAddReview={onAddReview} initialSubTab={(location.state as any)?.buyerSubTab} />}
+        {activeMainTab === 'buyer' && <BuyerDashboard user={effectiveUser} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} setStoreOrders={setStoreOrders} setChannelOrders={setChannelOrders} ebooks={ebooks} onAddReview={onAddReview} initialSubTab={(location.state as any)?.buyerSubTab} />}
         {activeMainTab === 'freelancer' && <FreelancerDashboard user={effectiveUser} onUpdate={onUpdate} onApplyFreelancer={() => goToExpertRegistration('freelancer')} initialSubTab={(location.state as any)?.freelancerSubTab} addNotif={addNotif} />}
         {activeMainTab === 'seller' && (
           <SellerDashboard 
