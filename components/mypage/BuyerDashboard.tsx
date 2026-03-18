@@ -223,7 +223,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        alert(`환불 실패: ${data.error || '알 수 없는 오류가 발생했습니다.'}`);
+        alert(`환불 실패: ${data.error || '알 수 없는 오류가 발생했습니다.'}\n\n카드 내역에 환불이 확인된다면 관리자에게 문의해 주세요.`);
         return;
       }
 
@@ -239,7 +239,10 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       }
 
       setRefundedOrderIds(prev => new Set([...prev, order.id]));
-      alert('환불 신청이 완료되었습니다. 환불 금액은 영업일 기준 3~5일 내에 처리됩니다.');
+      const msg = data.alreadyCancelled
+        ? '이미 환불 처리된 주문입니다. 카드 환불 내역을 확인해 주세요.'
+        : '환불 신청이 완료되었습니다. 환불 금액은 영업일 기준 3~5일 내에 처리됩니다.';
+      alert(msg);
     } catch (e) {
       alert(`환불 처리 중 오류가 발생했습니다: ${(e as Error).message}`);
     } finally {
