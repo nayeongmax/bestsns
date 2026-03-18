@@ -104,7 +104,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
   const scrollToReviews = () => reviewRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   const handleBuyNow = () => {
-    if (isMine || isProcessing) return;
+    if (isProcessing) return;
     const selectedTier = tiers[activeTierIdx];
     showConfirm({
       title: '상품 구매',
@@ -498,8 +498,8 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               <button onClick={openInquiry} className="w-full py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-[32px] font-black text-lg hover:bg-gray-50 transition-all shadow-xl italic uppercase tracking-widest active:scale-95">
                 문의하기 ✉
               </button>
-              <button onClick={handleBuyNow} disabled={isMine || isProcessing} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 transition-all shadow-2xl uppercase italic tracking-[0.2em] ${!isMine && !isProcessing ? 'animate-pulse' : 'opacity-60 cursor-not-allowed'}`}>
-                {isMine ? '내 상품입니다' : isProcessing ? '결제 처리 중...' : '즉시 구매하기 🚀'}
+              <button onClick={handleBuyNow} disabled={isProcessing} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 transition-all shadow-2xl uppercase italic tracking-[0.2em] ${!isProcessing ? 'animate-pulse' : 'opacity-60 cursor-not-allowed'}`}>
+                {isProcessing ? '결제 처리 중...' : '즉시 구매하기 🚀'}
               </button>
             </div>
           </div>
