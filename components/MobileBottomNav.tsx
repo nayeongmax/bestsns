@@ -6,6 +6,7 @@ const MobileBottomNav: React.FC = () => {
   const pathname = location.pathname;
   const navItems = [
     { label: '마케팅주문', path: '/sns', icon: '📈' },
+    { label: '채널판매', path: '/channels', icon: '📺' },
     {
       label: 'N잡스토어',
       path: '/ebooks',
@@ -18,9 +19,8 @@ const MobileBottomNav: React.FC = () => {
       icon: '👷',
       badge: '누구나 지원OK'
     },
-    { label: '채널판매', path: '/channels', icon: '📺' },
-    { label: '자유게시판', path: '/board', icon: '🗨️' },
     { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
+    { label: '자유게시판', path: '/board', icon: '🗨️' },
     { label: '매출관리', path: '/revenue', icon: '📊' },
   ];
 
