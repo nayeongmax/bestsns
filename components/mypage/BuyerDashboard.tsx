@@ -117,11 +117,18 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
 
     const storeItems: OrderItem[] = storeOrders
       .filter(o => o.userId === user.id)
-      .map(o => ({
-        id: o.id, type: 'store', orderTime: o.orderTime, productName: o.productName,
-        thumbnail: '', productId: o.productId, sellerName: o.sellerNickname || '',
-        price: o.price, quantity: 1, totalPrice: o.price, status: o.status, storeType: o.storeType
-      }));
+      .map(o => {
+        const ebook = ebooks.find(e => e.id === o.productId);
+        const isDownloadType = o.storeType === 'ebook' || o.storeType === 'template';
+        // 전자책/템플릿: ebook에 fileUrl이 있으면 사용, 없으면 '#' (다운로드 시작 시간만 기록)
+        const downloadUrl = isDownloadType ? ((ebook as any)?.fileUrl || '#') : undefined;
+        return {
+          id: o.id, type: 'store', orderTime: o.orderTime, productName: o.productName,
+          thumbnail: ebook?.thumbnail || '', productId: o.productId, sellerName: o.sellerNickname || '',
+          price: o.price, quantity: 1, totalPrice: o.price, status: o.status, storeType: o.storeType,
+          downloadUrl,
+        };
+      });
 
     const base = [...snsItems, ...channelItems, ...storeItems];
     return base
@@ -415,20 +422,28 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                          <span className="bg-orange-50 text-orange-600 px-5 py-1.5 rounded-full text-[13px] font-black italic shadow-sm animate-pulse flex items-center gap-1 border border-orange-100">
                            ⚡ 90일 이내 다운로드 가능
                          </span>
-                         
+
                          {expired ? (
                            <div className="w-full px-8 py-4 bg-gray-200 text-gray-400 rounded-[20px] font-black text-[14px] italic flex items-center justify-center gap-2 border border-gray-100 cursor-not-allowed">
                              🚫 다운로드 기간 만료
                            </div>
-                         ) : (
-                           <a 
-                             href={order.downloadUrl} 
+                         ) : order.downloadUrl !== '#' ? (
+                           <a
+                             href={order.downloadUrl}
                              download
                              onClick={() => handleDownloadClick(order.id)}
                              className="w-full px-8 py-4 bg-emerald-600 text-white rounded-[20px] font-black text-[14px] italic flex items-center justify-center gap-2 border border-emerald-500 shadow-lg hover:bg-emerald-700 transition-all"
                            >
-                             다운로드
+                             📥 다운로드
                            </a>
+                         ) : (
+                           <button
+                             onClick={() => handleDownloadClick(order.id)}
+                             disabled={!!downloadStarts[order.id]}
+                             className={`w-full px-8 py-4 rounded-[20px] font-black text-[14px] italic flex items-center justify-center gap-2 shadow-lg transition-all ${downloadStarts[order.id] ? 'bg-gray-100 text-gray-400 cursor-default border border-gray-100' : 'bg-emerald-600 text-white border border-emerald-500 hover:bg-emerald-700'}`}
+                           >
+                             {downloadStarts[order.id] ? '✓ 다운로드 활성화됨' : '📥 다운로드 활성화'}
+                           </button>
                          )}
                       </div>
                     )}
@@ -504,34 +519,42 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                          <span className="bg-orange-50 text-orange-600 px-5 py-1.5 rounded-full text-[13px] font-black italic shadow-sm animate-pulse flex items-center gap-1 border border-orange-100">
                            ⚡ 90일 이내 다운로드 가능
                          </span>
-                         
+
                          {expired ? (
                            <div className="w-full px-8 py-4 bg-gray-200 text-gray-400 rounded-[20px] font-black text-[14px] italic flex items-center justify-center gap-2 border border-gray-100 cursor-not-allowed">
                              🚫 다운로드 기간 만료
                            </div>
-                         ) : (
-                           <a 
-                             href={order.downloadUrl} 
-                             download 
+                         ) : order.downloadUrl !== '#' ? (
+                           <a
+                             href={order.downloadUrl}
+                             download
                              onClick={() => handleDownloadClick(order.id)}
                              className="w-full px-8 py-4 bg-[#00B06B] text-white rounded-[20px] font-black text-[14px] shadow-xl hover:bg-black transition-all italic flex items-center justify-center gap-2"
                            >
                              📥 파일 다운로드
                            </a>
+                         ) : (
+                           <button
+                             onClick={() => handleDownloadClick(order.id)}
+                             disabled={!!downloadStarts[order.id]}
+                             className={`w-full px-8 py-4 rounded-[20px] font-black text-[14px] italic flex items-center justify-center gap-2 shadow-lg transition-all ${downloadStarts[order.id] ? 'bg-gray-100 text-gray-400 cursor-default border border-gray-100' : 'bg-[#00B06B] text-white hover:bg-black'}`}
+                           >
+                             {downloadStarts[order.id] ? '✓ 다운로드 활성화됨' : '📥 다운로드 활성화'}
+                           </button>
                          )}
                       </div>
                     )}
-                    
+
                     <div className="flex gap-2 w-full">
-                      {!confirmedList.includes(order.id) ? (
+                      {!order.downloadUrl && !confirmedList.includes(order.id) ? (
                         <button onClick={(e) => handleConfirmOrder(order, e)} className="flex-1 px-8 py-4 bg-gray-900 text-white rounded-[20px] font-black text-[13px] shadow-lg hover:bg-blue-600 transition-all italic uppercase tracking-tighter">구매 확정</button>
-                      ) : (
+                      ) : !order.downloadUrl && confirmedList.includes(order.id) ? (
                         reviewedList.includes(order.id) ? (
                           <button className="flex-1 px-8 py-4 bg-gray-100 text-gray-400 rounded-[20px] font-black text-[13px] italic cursor-default border border-gray-100">리뷰 완료 ✓</button>
                         ) : (
                           <button onClick={(e) => handleOpenReview(order, e)} className="flex-1 px-8 py-4 bg-orange-500 text-white rounded-[20px] font-black text-[13px] shadow-lg hover:bg-black transition-all italic animate-bounce uppercase tracking-tighter">리뷰 쓰기</button>
                         )
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>

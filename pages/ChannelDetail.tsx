@@ -1,8 +1,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChannelProduct, WishlistItem, Review, UserProfile } from '@/types';
+import { ChannelProduct, WishlistItem, Review, UserProfile, ChannelOrder, NotificationType } from '@/types';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { usePortonePayment } from '@/hooks/usePortonePayment';
+import { upsertChannelOrder } from '../channelDb';
 
 interface Props {
   channels: ChannelProduct[];
@@ -10,14 +12,19 @@ interface Props {
   onToggleWishlist: (item: WishlistItem) => void;
   reviews: Review[];
   members: UserProfile[];
+  user?: UserProfile;
+  addNotif?: (userId: string, type: NotificationType, title: string, message: string) => void;
+  onChannelOrderCreated?: (order: ChannelOrder) => void;
 }
 
-const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, reviews, members }) => {
+const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, reviews, members, user, addNotif, onChannelOrderCreated }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showConfirm } = useConfirm();
+  const { requestPayment } = usePortonePayment();
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
   const [showActionModal, setShowActionModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const channel = channels.find(c => c.id === id);
 
@@ -63,13 +70,55 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
   };
 
   const handleBuyNow = () => {
+    if (isProcessing || !user) return;
     showConfirm({
       title: '채널 구매',
-      description: '해당 채널을 즉시 구매하시겠습니까?\n결제 페이지로 이동합니다.',
-      confirmLabel: '구매하기',
+      description: `[${channel.title}] 채널을 즉시 구매하시겠습니까?\n결제 금액: ₩${channel.price.toLocaleString()}`,
+      confirmLabel: '결제하기',
       cancelLabel: '취소',
       danger: false,
-      onConfirm: () => navigate('/payment/point', { state: { amount: channel.price, product: channel } }),
+      onConfirm: async () => {
+        setIsProcessing(true);
+        try {
+          const result = await requestPayment({
+            orderName: `[채널구매] ${channel.title}`,
+            totalAmount: channel.price,
+            productId: channel.id,
+            productName: channel.title,
+            userId: user.id,
+            userNickname: user.nickname,
+            sellerNickname: channel.sellerNickname,
+          });
+
+          if (result.success) {
+            const newOrder: ChannelOrder = {
+              id: `CO_${Date.now()}_${user.id.slice(0, 6)}`,
+              userId: user.id,
+              userNickname: user.nickname,
+              orderTime: new Date().toISOString(),
+              productId: channel.id,
+              productName: channel.title,
+              platform: channel.platform ?? '',
+              price: channel.price,
+              status: '결제완료',
+              paymentId: result.paymentId,
+              paymentMethod: 'CARD',
+            };
+            onChannelOrderCreated?.(newOrder);
+            upsertChannelOrder(newOrder).catch(e => console.warn('[ChannelDetail] 주문 저장 실패:', e));
+            if (channel.sellerId) {
+              addNotif?.(channel.sellerId, 'channel', '💰 채널 판매 알림', `[${channel.title}] 채널이 판매되었습니다.`);
+            }
+            addNotif?.(user.id, 'payment', '💳 결제 완료', `[${channel.title}] 채널 구매가 완료되었습니다. 마이페이지에서 확인하세요.`);
+            alert('결제가 완료되었습니다!');
+            navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'channel' } });
+          } else if (result.error) {
+            alert(`결제 실패: ${result.error}`);
+          }
+        } finally {
+          setIsProcessing(false);
+        }
+      },
     });
   };
 
@@ -109,7 +158,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
                 <div className="text-4xl md:text-6xl font-black text-gray-900 italic tracking-tighter leading-none whitespace-nowrap">₩ {channel.price.toLocaleString()}</div>
                 <div className="flex flex-row gap-3 w-full">
                   <button onClick={handleStartConsultation} className="flex-1 py-3.5 bg-white border-2 border-gray-900 text-gray-900 rounded-[24px] font-black text-base hover:bg-gray-50 transition-all shadow-lg active:scale-95 italic uppercase">상담하기</button>
-                  <button onClick={handleBuyNow} className="flex-[2] py-3.5 bg-gray-900 text-white rounded-[24px] font-black text-base hover:bg-blue-600 transition-all shadow-2xl shadow-blue-100 active:scale-95 italic uppercase">즉시구매</button>
+                  <button onClick={handleBuyNow} disabled={isProcessing || !user} className={`flex-[2] py-3.5 bg-gray-900 text-white rounded-[24px] font-black text-base transition-all shadow-2xl shadow-blue-100 italic uppercase ${!isProcessing && user ? 'hover:bg-blue-600 active:scale-95' : 'opacity-60 cursor-not-allowed'}`}>{isProcessing ? '결제 처리 중...' : '즉시구매'}</button>
                 </div>
               </div>
               <div className="bg-[#f4f9ff] p-6 md:p-10 rounded-[36px] border border-[#dce9ff] relative overflow-hidden">
@@ -239,8 +288,8 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
           <button onClick={handleStartConsultation} className="py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-50 active:scale-[0.98] transition-all">
             문의하기
           </button>
-          <button onClick={handleBuyNow} className="py-4 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-blue-600 active:scale-[0.98] transition-all">
-            구매하기
+          <button onClick={handleBuyNow} disabled={isProcessing || !user} className={`py-4 bg-gray-900 text-white rounded-xl font-bold text-sm transition-all ${!isProcessing && user ? 'hover:bg-blue-600 active:scale-[0.98]' : 'opacity-60 cursor-not-allowed'}`}>
+            {isProcessing ? '결제 중...' : '구매하기'}
           </button>
         </div>
       </div>
@@ -267,8 +316,8 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
               <button onClick={() => { setShowActionModal(false); handleStartConsultation(); }} className="py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all">
                 상담하기
               </button>
-              <button onClick={() => { setShowActionModal(false); handleBuyNow(); }} className="py-4 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition-all">
-                즉시구매
+              <button onClick={() => { setShowActionModal(false); handleBuyNow(); }} disabled={isProcessing || !user} className={`py-4 bg-gray-900 text-white rounded-xl font-bold text-sm transition-all ${!isProcessing && user ? 'hover:bg-blue-600' : 'opacity-60 cursor-not-allowed'}`}>
+                {isProcessing ? '결제 중...' : '즉시구매'}
               </button>
             </div>
           </div>

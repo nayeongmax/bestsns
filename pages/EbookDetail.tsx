@@ -1,8 +1,10 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade } from '@/types';
+import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade, NotificationType } from '@/types';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { usePortonePayment } from '@/hooks/usePortonePayment';
+import { upsertStoreOrder } from '../storeDb';
 
 interface Props {
   ebooks: EbookProduct[];
@@ -13,14 +15,18 @@ interface Props {
   storeOrders: StoreOrder[];
   members: UserProfile[];
   gradeConfigs?: GradeConfig[];
+  addNotif?: (userId: string, type: NotificationType, title: string, message: string) => void;
+  onStoreOrderCreated?: (order: StoreOrder) => void;
 }
 
-const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user, reviews, storeOrders, members, gradeConfigs = [] }) => {
+const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user, reviews, storeOrders, members, gradeConfigs = [], addNotif, onStoreOrderCreated }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showConfirm } = useConfirm();
+  const { requestPayment } = usePortonePayment();
   const [activeTierIdx, setSelectedTierIdx] = useState(0);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const reviewRef = useRef<HTMLDivElement>(null);
 
@@ -98,23 +104,56 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
   const scrollToReviews = () => reviewRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   const handleBuyNow = () => {
+    if (isMine || isProcessing) return;
     const selectedTier = tiers[activeTierIdx];
     showConfirm({
       title: '상품 구매',
-      description: `${ebook.title} (${selectedTier.name}) 상품을 구매하시겠습니까?`,
-      confirmLabel: '구매하기',
+      description: `${ebook.title} (${selectedTier.name}) 상품을 구매하시겠습니까?\n결제 금액: ₩${selectedTier.price.toLocaleString()}`,
+      confirmLabel: '결제하기',
       cancelLabel: '취소',
       danger: false,
-      onConfirm: () => {
-        navigate('/payment/point', {
-          state: {
-            amount: selectedTier.price,
-            product: { title: `${ebook.title} [${selectedTier.name}]`, id: ebook.id },
-            tier: selectedTier,
-            storeType: currentStoreType,
+      onConfirm: async () => {
+        setIsProcessing(true);
+        try {
+          const result = await requestPayment({
+            orderName: `${ebook.title} [${selectedTier.name}]`,
+            totalAmount: selectedTier.price,
+            productId: ebook.id,
+            productName: `${ebook.title} [${selectedTier.name}]`,
+            userId: user.id,
+            userNickname: user.nickname,
             sellerNickname: ebook.author,
-          },
-        });
+            tierName: selectedTier.name,
+            storeType: currentStoreType,
+          });
+
+          if (result.success) {
+            const newOrder: StoreOrder = {
+              id: result.orderId || `SO_${Date.now()}_${user.id.slice(0, 6)}`,
+              userId: user.id,
+              userNickname: user.nickname,
+              sellerNickname: ebook.author,
+              orderTime: new Date().toISOString(),
+              productId: ebook.id,
+              productName: `${ebook.title} [${selectedTier.name}]`,
+              tierName: selectedTier.name,
+              price: selectedTier.price,
+              storeType: currentStoreType,
+              status: '결제완료',
+              paymentId: result.paymentId,
+            };
+            onStoreOrderCreated?.(newOrder);
+            upsertStoreOrder(newOrder).catch(e => console.warn('[EbookDetail] 주문 저장 실패:', e));
+            addNotif?.(ebook.authorId, 'ebook', '💰 상품 판매 알림', `[${ebook.title}] 상품이 판매되었습니다.`);
+            addNotif?.(user.id, 'payment', '💳 결제 완료', `[${ebook.title}] 구매가 완료되었습니다. 마이페이지에서 확인하세요.`);
+            alert('결제가 완료되었습니다!');
+            navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'store' } });
+          } else if (result.error) {
+            alert(`결제 실패: ${result.error}`);
+          }
+        } finally {
+          setIsProcessing(false);
+        }
       },
     });
   };
@@ -458,8 +497,8 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               <button onClick={openInquiry} className="w-full py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-[32px] font-black text-lg hover:bg-gray-50 transition-all shadow-xl italic uppercase tracking-widest active:scale-95">
                 문의하기 ✉
               </button>
-              <button onClick={handleBuyNow} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 transition-all shadow-2xl uppercase italic tracking-[0.2em] animate-pulse`}>
-                즉시 구매하기 🚀
+              <button onClick={handleBuyNow} disabled={isMine || isProcessing} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 transition-all shadow-2xl uppercase italic tracking-[0.2em] ${!isMine && !isProcessing ? 'animate-pulse' : 'opacity-60 cursor-not-allowed'}`}>
+                {isProcessing ? '결제 처리 중...' : '즉시 구매하기 🚀'}
               </button>
             </div>
           </div>

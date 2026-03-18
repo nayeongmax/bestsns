@@ -324,15 +324,20 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         } catch (e) { console.error('orderStatus fetch error:', e); }
       }
 
-      // start_count > 0인 주문의 initialCount 업데이트
+      // JAP에서 받은 remains/startCount를 smmOrders에 동기화 (DB 저장 포함)
       for (const [ourId, jap] of Object.entries(next)) {
-        if ((jap.startCount ?? 0) > 0) {
-          const order = pending.find(o => o.id === ourId);
-          if (order && order.initialCount === 0) {
-            const updated = { ...order, initialCount: jap.startCount! };
-            setSmmOrders(prev => prev.map(o => o.id === ourId ? updated : o));
-            upsertSmmOrder(updated).catch(e => console.warn('initialCount 업데이트 실패:', e));
-          }
+        const order = pending.find(o => o.id === ourId);
+        if (!order) continue;
+        const shouldUpdateInitialCount = (jap.startCount ?? 0) > 0 && order.initialCount === 0;
+        const shouldUpdateRemains = jap.remains !== undefined && jap.remains !== order.remains;
+        if (shouldUpdateInitialCount || shouldUpdateRemains) {
+          const updated = {
+            ...order,
+            ...(shouldUpdateInitialCount ? { initialCount: jap.startCount! } : {}),
+            ...(shouldUpdateRemains ? { remains: jap.remains } : {}),
+          };
+          setSmmOrders(prev => prev.map(o => o.id === ourId ? updated : o));
+          upsertSmmOrder(updated).catch(e => console.warn('order 동기화 실패:', e));
         }
       }
 
@@ -423,7 +428,9 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   // 작업완료 처리: 상태 업데이트 + 주문자에게 알림
   const handleMarkComplete = useCallback((order: SMMOrder) => {
-    setSmmOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: '작업완료' } : o));
+    const completed = { ...order, status: '작업완료', remains: 0 };
+    setSmmOrders(prev => prev.map(o => o.id === order.id ? completed : o));
+    upsertSmmOrder(completed).catch(e => console.warn('작업완료 DB 실패:', e));
     addNotif(order.userId, 'sns_activation', '✅ 작업 완료', `[${order.productName}] 주문하신 작업이 완료되었습니다. 링크를 확인해주세요.`);
     setJapStatuses(prev => { const n = { ...prev }; delete n[order.id]; return n; });
   }, [setSmmOrders, addNotif]);

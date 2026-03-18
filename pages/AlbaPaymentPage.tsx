@@ -7,12 +7,16 @@ import { upsertPartTimeJobRequest } from '../parttimeDb';
 
 declare const window: any;
 
+const STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID as string;
+const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY as string;
+
 interface Props {
   user: UserProfile;
+  members?: UserProfile[];
   addNotif?: (userId: string, type: string, title: string, message: string, reason?: string) => void;
 }
 
-const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
+const AlbaPaymentPage: React.FC<Props> = ({ user, members = [], addNotif }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const jobRequest = location.state?.jobRequest as PartTimeJobRequest | undefined;
@@ -51,8 +55,8 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
     setIsProcessing(true);
     try {
       const paymentData: any = {
-        storeId: 'store-77114631',
-        channelKey: 'channel-key-8be52e64-59e5-4b03-9118-e320f7895e6a',
+        storeId: STORE_ID,
+        channelKey: CHANNEL_KEY,
         paymentId: `ALBA_${Date.now()}_${jobRequest.id}`,
         orderName: `[알바의뢰] ${jobRequest.title}`,
         totalAmount,
@@ -71,7 +75,12 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
       if (!response.code) {
         const updated = { ...jobRequest, paid: true };
         await upsertPartTimeJobRequest(updated);
+        // 의뢰자 알림
         addNotif?.(user.id, 'payment', '알바의뢰 결제 완료', `[${jobRequest.title}] 결제가 완료되었습니다. 프리랜서 모집이 진행될 예정입니다.`);
+        // 운영자(어드민) 알림 - 결제완료 및 작업 진행 예정 안내
+        members.filter(m => m.role === 'admin').forEach(admin => {
+          addNotif?.(admin.id, 'payment', '🔔 알바의뢰 결제 완료 (어드민)', `[${jobRequest.title}] 의뢰인 @${user.nickname}의 결제가 완료되었습니다. 프리랜서 모집을 진행해 주세요.`);
+        });
         alert('결제가 정상적으로 완료되었습니다.');
         navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
       } else {
@@ -143,6 +152,9 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, addNotif }) => {
                   const updated = { ...jobRequest!, paid: true };
                   await upsertPartTimeJobRequest(updated);
                   addNotif?.(targetUserId, 'payment', '알바의뢰 결제 완료', `[${jobRequest!.title}] 결제가 완료되었습니다. 프리랜서 모집이 진행될 예정입니다.`);
+                  members.filter(m => m.role === 'admin').forEach(admin => {
+                    addNotif?.(admin.id, 'payment', '🔔 알바의뢰 결제 완료 (어드민)', `[${jobRequest!.title}] 결제가 완료되었습니다 (테스트). 프리랜서 모집을 진행해 주세요.`);
+                  });
                   alert('테스트 결제가 임시통과 처리되었습니다.');
                   navigate('/mypage', { state: { activeTab: 'freelancer', freelancerSubTab: 'alba' } });
                 } finally {
