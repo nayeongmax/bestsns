@@ -7,6 +7,9 @@ import { insertPointTransaction } from '../pointDb';
 
 declare const window: any;
 
+const STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID as string;
+const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY as string;
+
 interface Props {
   user: UserProfile;
   ebooks: EbookProduct[];
@@ -62,8 +65,8 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
     try {
       // 포트원 V2 결제 요청 파라미터
       const paymentData: any = {
-        storeId: "store-77114631", // 실제 상점 ID
-        channelKey: "channel-key-8be52e64-59e5-4b03-9118-e320f7895e6a", // 채널 키
+        storeId: STORE_ID,
+        channelKey: CHANNEL_KEY,
         paymentId: `PAY_${Date.now()}_${user.id.slice(0, 4)}`,
         orderName: isProductPayment 
           ? `[상품구매] ${productInfo.title}` 
