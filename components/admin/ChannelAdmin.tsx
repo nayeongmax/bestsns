@@ -521,7 +521,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                        ) : filteredOrders.map(o => (
                          <tr key={o.id} className="hover:bg-indigo-50/20 transition-all group">
                            <td className="px-8 py-6">
-                              <p className="text-[13px] font-black text-gray-800">{o.orderTime}</p>
+                              <p className="text-[13px] font-black text-gray-800">{o.orderTime ? new Date(o.orderTime).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-'}</p>
                               <p className="text-[10px] text-indigo-500 font-bold mt-0.5">#{o.id}</p>
                            </td>
                            <td className="px-8 py-6">

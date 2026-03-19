@@ -110,7 +110,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
           const channelProduct = channels.find((c: ChannelProduct) => c.id === productInfo.id) ?? (productInfo as ChannelProduct);
           if (channelProduct && 'platform' in channelProduct) {
             const newOrder: ChannelOrder = {
-              id: `CO_${Date.now()}_${user.id.slice(0, 6)}`,
+              id: `CO_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
               userId: user.id,
               userNickname: user.nickname ?? user.id,
               orderTime: new Date().toISOString(),
@@ -132,7 +132,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
             const targetProduct = ebooks.find((e) => e.id === productInfo.id);
             if (targetProduct && ebookTier && sellerNickname) {
               const newStoreOrder: StoreOrder = {
-                id: `SO_${Date.now()}_${user.id.slice(0, 6)}`,
+                id: `SO_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                 userId: user.id,
                 userNickname: user.nickname ?? user.id,
                 sellerNickname,
