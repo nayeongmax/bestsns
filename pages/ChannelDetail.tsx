@@ -158,12 +158,10 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
               <div className="flex flex-col items-center gap-2 text-center border-x border-gray-200"><span className="text-[12px] font-black text-gray-400 uppercase italic tracking-widest">월 평균 수입</span><span className="text-2xl md:text-3xl font-black text-green-600 tracking-tight">${income.toLocaleString()}</span></div>
               <div className="flex flex-col items-center gap-2 text-center"><span className="text-[12px] font-black text-gray-400 uppercase italic tracking-widest">월 평균 지출</span><span className="text-2xl md:text-3xl font-black text-red-400 tracking-tight">${expense.toLocaleString()}</span></div>
             </div>
-            <div className="flex flex-col gap-3 pb-6 border-b border-gray-100">
-                <div className="text-4xl md:text-6xl font-black text-gray-900 italic tracking-tighter leading-none whitespace-nowrap">₩ {channel.price.toLocaleString()}</div>
-                <div className="flex flex-row gap-3 w-full">
-                  <button onClick={handleStartConsultation} className="flex-1 py-3.5 bg-white border-2 border-gray-900 text-gray-900 rounded-[24px] font-black text-base hover:bg-gray-50 transition-all shadow-lg active:scale-95 italic uppercase">상담하기</button>
-                  <button onClick={handleBuyNow} disabled={isProcessing || !user} className={`flex-[2] py-3.5 bg-gray-900 text-white rounded-[24px] font-black text-base transition-all shadow-2xl shadow-blue-100 italic uppercase ${!isProcessing && user ? 'hover:bg-blue-600 active:scale-95' : 'opacity-60 cursor-not-allowed'}`}>{isProcessing ? '결제 처리 중...' : '즉시구매'}</button>
-                </div>
+            <div className="flex flex-row items-center gap-3 pb-6 border-b border-gray-100">
+                <div className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter leading-none whitespace-nowrap shrink-0">₩ {channel.price.toLocaleString()}</div>
+                <button onClick={handleStartConsultation} className="flex-1 py-3 bg-white border-2 border-gray-900 text-gray-900 rounded-[24px] font-black text-sm hover:bg-gray-50 transition-all shadow-lg active:scale-95 italic uppercase">상담하기</button>
+                <button onClick={handleBuyNow} disabled={isProcessing || !user} className={`flex-1 py-3 bg-gray-900 text-white rounded-[24px] font-black text-sm transition-all shadow-2xl shadow-blue-100 italic uppercase ${!isProcessing && user ? 'hover:bg-blue-600 active:scale-95' : 'opacity-60 cursor-not-allowed'}`}>{isProcessing ? '결제 처리 중...' : '구매하기'}</button>
               </div>
           </div>
         </div>
@@ -368,7 +366,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
                 상담하기
               </button>
               <button onClick={() => { setShowActionModal(false); handleBuyNow(); }} disabled={isProcessing || !user} className={`py-4 bg-gray-900 text-white rounded-xl font-bold text-sm transition-all ${!isProcessing && user ? 'hover:bg-blue-600' : 'opacity-60 cursor-not-allowed'}`}>
-                {isProcessing ? '결제 중...' : '즉시구매'}
+                {isProcessing ? '결제 중...' : '구매하기'}
               </button>
             </div>
           </div>
