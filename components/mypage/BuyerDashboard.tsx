@@ -261,6 +261,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
   const isRefunded = (orderId: string) => refundedOrderIds.has(orderId);
   const getEffectiveStatus = (order: OrderItem) => {
     if (isRefunded(order.id)) return '취소';
+    if (order.status === 'refunded') return '취소';
     return order.status;
   };
 
@@ -603,8 +604,13 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                         // 채널 주문 액션
                         <div className="flex flex-col items-center gap-2 w-full">
                           {getEffectiveStatus(order) === '취소' ? (
-                            <div className="w-full px-8 py-4 bg-gray-100 text-gray-400 rounded-[20px] font-black text-[14px] italic flex items-center justify-center gap-2 border border-gray-200 cursor-default">
-                              ✓ 환불 완료
+                            <div className="flex flex-col gap-2 w-full">
+                              <div className="w-full px-8 py-4 bg-gray-100 text-gray-400 rounded-[20px] font-black text-[14px] italic flex items-center justify-center gap-2 border border-gray-200 cursor-default">
+                                ✓ 환불 완료
+                              </div>
+                              <div className="w-full px-4 py-3 bg-blue-50 border border-blue-100 rounded-[16px] text-[12px] font-bold text-blue-600 text-center leading-relaxed">
+                                환불완료 되었습니다.<br />영업일 2~3일 후 내역을 확인하시기 바랍니다.
+                              </div>
                             </div>
                           ) : (
                             <>
