@@ -346,6 +346,17 @@ const App: React.FC = () => {
     upsertSmmProducts(smmProducts).catch((e) => console.warn('smm_products 저장:', e));
   }, [smmProducts]);
 
+  // /mypage, /admin 진입 시 채널/스토어 주문 재로드 (결제 직후 반영 & 웹훅 취소 상태 동기화)
+  useEffect(() => {
+    if (location.pathname !== '/mypage' && location.pathname !== '/admin') return;
+    fetchChannelOrders()
+      .then((orders) => setChannelOrders(orders))
+      .catch((e) => console.warn('채널 주문 재로드 실패:', e));
+    fetchStoreOrders()
+      .then((orders) => setStoreOrders(orders))
+      .catch((e) => console.warn('스토어 주문 재로드 실패:', e));
+  }, [location.pathname]);
+
   // 공지/등급/게시글: 변경 시 DB 저장
   useEffect(() => {
     if (!siteDbLoaded.current) return;
