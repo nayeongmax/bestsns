@@ -4,6 +4,7 @@ import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder }
 import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, upsertStoreOrder, type OrderBuyerFlag } from '../../storeDb';
 import { upsertChannelOrder } from '../../channelDb';
 import { fetchPointTransactions, type PointTransaction } from '../../pointDb';
+import { supabase } from '../../supabase';
 
 interface Props {
   user: UserProfile;
@@ -236,6 +237,10 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
         const updated: ChannelOrder = { ...channelOrder, status: '취소' };
         await upsertChannelOrder(updated);
         setChannelOrders?.(prev => prev.map(o => o.id === order.id ? updated : o));
+      }
+      // orders 테이블도 환불 상태로 동기화 (payment_id 기준)
+      if (paymentId) {
+        await supabase.from('orders').update({ status: '환불완료' }).eq('payment_id', paymentId);
       }
 
       setRefundedOrderIds(prev => new Set([...prev, order.id]));
