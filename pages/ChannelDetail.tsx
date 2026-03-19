@@ -98,7 +98,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
 
       if (result.success) {
         const newOrder: ChannelOrder = {
-          id: `CO_${Date.now()}_${user!.id.slice(0, 6)}`,
+          id: `CO_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
           userId: user!.id,
           userNickname: user!.nickname,
           orderTime: new Date().toISOString(),
@@ -112,7 +112,11 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
           buyerAccount: buyerAccountInput.trim(),
         };
         onChannelOrderCreated?.(newOrder);
-        upsertChannelOrder(newOrder).catch(e => console.warn('[ChannelDetail] 주문 저장 실패:', e));
+        try {
+          await upsertChannelOrder(newOrder);
+        } catch (e) {
+          console.error('[ChannelDetail] 주문 DB 저장 실패:', e);
+        }
         if (channel.sellerId) {
           addNotif?.(channel.sellerId, 'channel', '💰 채널 판매 알림', `[${channel.title}] 채널이 판매되었습니다.`);
         }

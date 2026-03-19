@@ -6,6 +6,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { ChannelProduct, ChannelOrder } from '@/types';
 import { CHANNEL_CATEGORIES } from '../../constants.tsx';
 import { deleteChannelProduct, upsertChannelOrder } from '../../channelDb';
+import { supabase } from '../../supabase';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
 
@@ -203,6 +204,10 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
           }
           const updatedOrder: ChannelOrder = { ...order, status: 'refunded' };
           await upsertChannelOrder(updatedOrder);
+          // orders 테이블도 환불 상태로 동기화 (payment_id 기준)
+          if (order.paymentId) {
+            await supabase.from('orders').update({ status: '환불완료' }).eq('payment_id', order.paymentId);
+          }
           setChannelOrders?.(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
           showAlert({ description: '환불이 완료되었습니다.' });
         } catch (e: any) {
@@ -516,7 +521,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                        ) : filteredOrders.map(o => (
                          <tr key={o.id} className="hover:bg-indigo-50/20 transition-all group">
                            <td className="px-8 py-6">
-                              <p className="text-[13px] font-black text-gray-800">{o.orderTime}</p>
+                              <p className="text-[13px] font-black text-gray-800">{o.orderTime ? new Date(o.orderTime).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-'}</p>
                               <p className="text-[10px] text-indigo-500 font-bold mt-0.5">#{o.id}</p>
                            </td>
                            <td className="px-8 py-6">

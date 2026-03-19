@@ -4,6 +4,7 @@ import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder }
 import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, upsertStoreOrder, type OrderBuyerFlag } from '../../storeDb';
 import { upsertChannelOrder } from '../../channelDb';
 import { fetchPointTransactions, type PointTransaction } from '../../pointDb';
+import { supabase } from '../../supabase';
 
 interface Props {
   user: UserProfile;
@@ -237,6 +238,10 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
         await upsertChannelOrder(updated);
         setChannelOrders?.(prev => prev.map(o => o.id === order.id ? updated : o));
       }
+      // orders 테이블도 환불 상태로 동기화 (payment_id 기준)
+      if (paymentId) {
+        await supabase.from('orders').update({ status: '환불완료' }).eq('payment_id', paymentId);
+      }
 
       setRefundedOrderIds(prev => new Set([...prev, order.id]));
       const msg = data.alreadyCancelled
@@ -279,6 +284,13 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     const m = dateStr.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
     if (m) return `${m[1]}. ${m[2]}. ${m[3]}.`;
     return dateStr;
+  };
+
+  const formatOrderTime = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
   };
 
   const formatDateTime = (timestamp: number) => {
@@ -461,7 +473,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                             <td className="py-5 px-4 text-center whitespace-nowrap">
                               <span className={`px-3 py-1 rounded text-[11px] font-black ${expandedId === order.id ? 'bg-white text-[#2D3E5E]' : 'bg-gray-100 text-gray-400'}`}>{order.status}</span>
                             </td>
-                            <td className="py-5 px-6 text-right text-[13px] font-bold italic opacity-80 whitespace-nowrap">{order.orderTime} <span className="ml-2">{expandedId === order.id ? '▲' : '▼'}</span></td>
+                            <td className="py-5 px-6 text-right text-[13px] font-bold italic opacity-80 whitespace-nowrap">{formatOrderTime(order.orderTime)} <span className="ml-2">{expandedId === order.id ? '▲' : '▼'}</span></td>
                           </tr>
                           {expandedId === order.id && (
                             <tr className="bg-[#F8FAFC] animate-in slide-in-from-top-1">
@@ -470,7 +482,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                                   <div className="flex items-center gap-2"><span>주문 번호</span> <span className="text-gray-900 font-black">{order.id}</span> <button onClick={(e) => copyToClipboard(order.id, e)} className="text-blue-500">📋</button></div>
                                   <div className="flex gap-2"><span>서비스</span> <span className="text-gray-900">{order.productName}</span></div>
                                   <div className="flex gap-2"><span>링크</span> <a href={order.link} target="_blank" rel="noreferrer" className="text-blue-500 underline break-all">{order.link}</a></div>
-                                  <div className="flex gap-2"><span>주문시간</span> <span className="text-gray-900">{order.orderTime}</span></div>
+                                  <div className="flex gap-2"><span>주문시간</span> <span className="text-gray-900">{formatOrderTime(order.orderTime)}</span></div>
                                   <div className="flex gap-2"><span>비용</span> <span className="text-gray-900">{order.totalPrice.toLocaleString()}P</span></div>
                                   <div className="flex gap-2"><span>주문수량</span> <span className="text-gray-900">{order.quantity}</span></div>
                                   <div className="flex gap-2"><span>최초수량</span> <span className="text-orange-600">{order.initialCount || 0}</span></div>
@@ -576,7 +588,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                           <span className="opacity-30">|</span>
                           <div className="flex items-center gap-1.5">
                              <span className="text-[10px] font-black text-gray-300 uppercase italic">주문:</span>
-                             <span>{order.orderTime}</span>
+                             <span>{formatOrderTime(order.orderTime)}</span>
                           </div>
                           {downloadTime && (
                             <>
@@ -659,7 +671,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                           <span className="opacity-30">|</span>
                           <div className="flex items-center gap-1.5">
                              <span className="text-[10px] font-black text-gray-300 uppercase italic">주문:</span>
-                             <span>{order.orderTime}</span>
+                             <span>{formatOrderTime(order.orderTime)}</span>
                           </div>
                           {downloadTime && (
                             <>
