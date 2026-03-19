@@ -471,7 +471,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                        {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
 
-                    <select 
+                    <select
                        value={orderStatusFilter}
                        onChange={(e) => setOrderStatusFilter(e.target.value)}
                        className="px-6 py-4 bg-gray-50 border-none rounded-full font-black text-[13px] shadow-inner outline-none cursor-pointer"
@@ -480,6 +480,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                        <option>입금대기</option>
                        <option>양도진행중</option>
                        <option>완료</option>
+                       <option value="refunded">환불완료</option>
                     </select>
                     
                     <button onClick={() => { setOrderSearchQuery(''); setOrderStatusFilter('전체 상태'); setOrderMonthFilter('전체 기간'); }} className="px-5 py-4 bg-gray-100 text-gray-400 rounded-full font-black text-[11px] hover:bg-gray-200 uppercase shrink-0">Reset</button>
@@ -621,12 +622,19 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                  <div className="bg-[#F9FAFB] p-6 rounded-[32px] space-y-3">
                     <div className="flex justify-between items-center">
                        <span className="text-xs font-black text-gray-400 uppercase italic tracking-widest">Amount Paid</span>
-                       <span className="text-2xl font-black text-gray-900 italic tracking-tighter">₩{selectedOrderForPayment.price.toLocaleString()}</span>
+                       <span className={`text-2xl font-black italic tracking-tighter ${selectedOrderForPayment.status === 'refunded' ? 'text-red-400 line-through' : 'text-gray-900'}`}>₩{selectedOrderForPayment.price.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between items-center text-[11px] font-bold text-green-500">
-                       <span className="uppercase italic tracking-widest">Gateway Status</span>
-                       <span className="font-black italic uppercase">PAID & VERIFIED ✓</span>
-                    </div>
+                    {selectedOrderForPayment.status === 'refunded' ? (
+                      <div className="flex justify-between items-center text-[11px] font-bold text-red-500">
+                         <span className="uppercase italic tracking-widest">Gateway Status</span>
+                         <span className="font-black italic uppercase">CANCELLED & REFUNDED ✕</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center text-[11px] font-bold text-green-500">
+                         <span className="uppercase italic tracking-widest">Gateway Status</span>
+                         <span className="font-black italic uppercase">PAID & VERIFIED ✓</span>
+                      </div>
+                    )}
                  </div>
               </div>
 
