@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
  */
 import { EbookProduct, ChannelProduct, SiteNotification, SMMProvider, SMMProduct, SMMOrder, UserProfile, ChannelOrder, StoreOrder, Coupon, NotificationType, GradeConfig, Review } from '@/types';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { fetchChannelOrders } from '../channelDb';
 import SnsAdmin from '../components/admin/SnsAdmin.tsx';
 import ChannelAdmin from '../components/admin/ChannelAdmin.tsx';
 import StoreAdmin from '../components/admin/StoreAdmin.tsx';
@@ -64,6 +65,15 @@ const AdminPanel: React.FC<Props> = ({
   useEffect(() => {
     if (activeTab === 'member' && onRefreshMembers) onRefreshMembers();
   }, [activeTab, onRefreshMembers]);
+
+  // 채널 거래 탭 열 때마다 channel_orders 재조회 → 결제/취소 상태 최신화
+  useEffect(() => {
+    if (activeTab === 'channel') {
+      fetchChannelOrders()
+        .then((orders) => setChannelOrders?.(orders))
+        .catch((e) => console.warn('채널 주문 재로드 실패:', e));
+    }
+  }, [activeTab]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
