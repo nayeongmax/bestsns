@@ -122,7 +122,7 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist })
                 <h3 className={`font-bold text-gray-900 mt-0.5 line-clamp-2 text-sm sm:text-base leading-snug ${!ch.isSoldOut && 'hover:text-blue-600'}`}>{ch.title}</h3>
                 <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
                   <span>구독 {ch.subscribers.toLocaleString()}명</span>
-                  <span className="font-bold text-blue-600">₩{(ch.price / 10000).toLocaleString()}만</span>
+                  <span className="font-bold text-blue-600">₩{ch.price.toLocaleString()}</span>
                 </div>
               </div>
             </Link>
@@ -176,7 +176,7 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist })
                 <h3 className={`font-black text-gray-900 mb-6 h-10 line-clamp-2 leading-tight transition-colors text-[15px] ${!ch.isSoldOut && 'group-hover:text-blue-600'}`}>{ch.title}</h3>
                 <div className="flex justify-between items-end border-t border-gray-50 pt-4">
                   <div className="flex flex-col"><span className="text-[9px] text-gray-300 font-black uppercase tracking-widest mb-1 italic">Subscribers</span><span className="text-[12px] font-black text-gray-700">{ch.subscribers.toLocaleString()}명</span></div>
-                  <div className="flex flex-col items-end"><span className="text-[9px] text-gray-300 font-black uppercase tracking-widest mb-1 italic">Price</span><span className="text-xl font-black text-blue-600 italic tracking-tighter">₩{(ch.price / 10000).toLocaleString()}만</span></div>
+                  <div className="flex flex-col items-end"><span className="text-[9px] text-gray-300 font-black uppercase tracking-widest mb-1 italic">Price</span><span className="text-xl font-black text-blue-600 italic tracking-tighter">₩{ch.price.toLocaleString()}</span></div>
                 </div>
               </div>
             </Link>
