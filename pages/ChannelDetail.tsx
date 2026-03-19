@@ -158,23 +158,30 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
               <div className="flex flex-col items-center gap-2 text-center border-x border-gray-200"><span className="text-[12px] font-black text-gray-400 uppercase italic tracking-widest">월 평균 수입</span><span className="text-2xl md:text-3xl font-black text-green-600 tracking-tight">${income.toLocaleString()}</span></div>
               <div className="flex flex-col items-center gap-2 text-center"><span className="text-[12px] font-black text-gray-400 uppercase italic tracking-widest">월 평균 지출</span><span className="text-2xl md:text-3xl font-black text-red-400 tracking-tight">${expense.toLocaleString()}</span></div>
             </div>
-            <div className="space-y-8">
-              <div className="flex flex-col gap-3 pb-6 border-b border-gray-100">
+            <div className="flex flex-col gap-3 pb-6 border-b border-gray-100">
                 <div className="text-4xl md:text-6xl font-black text-gray-900 italic tracking-tighter leading-none whitespace-nowrap">₩ {channel.price.toLocaleString()}</div>
                 <div className="flex flex-row gap-3 w-full">
                   <button onClick={handleStartConsultation} className="flex-1 py-3.5 bg-white border-2 border-gray-900 text-gray-900 rounded-[24px] font-black text-base hover:bg-gray-50 transition-all shadow-lg active:scale-95 italic uppercase">상담하기</button>
                   <button onClick={handleBuyNow} disabled={isProcessing || !user} className={`flex-[2] py-3.5 bg-gray-900 text-white rounded-[24px] font-black text-base transition-all shadow-2xl shadow-blue-100 italic uppercase ${!isProcessing && user ? 'hover:bg-blue-600 active:scale-95' : 'opacity-60 cursor-not-allowed'}`}>{isProcessing ? '결제 처리 중...' : '즉시구매'}</button>
                 </div>
               </div>
-              <div className="bg-[#f4f9ff] p-6 md:p-10 rounded-[36px] border border-[#dce9ff] relative overflow-hidden">
-                <div className="absolute right-0 top-0 opacity-5"><svg className="w-64 h-64 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></div>
-                <p className="text-[#2b6cb0] text-xl font-black italic tracking-tight uppercase">THEBESTSNS Escrow Protection 가동 중</p>
-                <ul className="mt-3 space-y-2 text-[#4a5568] text-[15px] font-bold italic">
-                  <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 7일 후, 판매자는 에스크로 대리인에게 주요 소유권을 양도합니다.</li>
-                  <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 에스크로 대리인 확인 후 매수인에게 소유권을 양도합니다.</li>
-                </ul>
-              </div>
-            </div>
+          </div>
+        </div>
+
+        {/* 데스크톱 전용: 에스크로 보호 카드 (전체 너비) */}
+        <div className="hidden lg:block mt-8">
+          <div className="bg-[#f4f9ff] p-8 md:p-10 rounded-[36px] border border-[#dce9ff] relative overflow-hidden">
+            <div className="absolute right-0 top-0 opacity-5"><svg className="w-64 h-64 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></div>
+            <p className="text-[#2b6cb0] text-xl font-black italic tracking-tight uppercase">THEBESTSNS Escrow Protection 가동 중</p>
+            <ul className="mt-3 space-y-2 text-[#4a5568] text-[15px] font-bold italic">
+              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 7일 후, 판매자는 에스크로 대리인에게 주요 소유권을 양도합니다.</li>
+              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 에스크로 대리인 확인 후 매수인에게 소유권을 양도합니다.</li>
+              <li className="flex items-start gap-3"><span className="text-red-500 font-black shrink-0">✓</span> 채널 양도를 받을 계정을 꼭 정확하게 입력해주세요 (오타 및 계정 문제는 플랫폼 책임이 아니기에 환불되지 않습니다)</li>
+              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 유튜브 정책 상 채널 양도 기간인 7일이 지나야 양도됩니다.</li>
+              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 채널 인도 후 최소 10일 동안 채널 운영 및 작업을 진행하지 않는것을 권장합니다.</li>
+              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 채널 인도 후 초반부터 유튜브 정책을 어긋나는 과도한 매크로 작업, 선정적 및 위법성 등은 자제해주시기 바랍니다.</li>
+              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 채널 인수 이후 해킹 또는 계정 및 채널 문제는 회원의 과실로 판단됩니다.</li>
+            </ul>
           </div>
         </div>
 
@@ -204,10 +211,15 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
 
           <div className="bg-[#f4f9ff] p-4 sm:p-6 rounded-2xl border border-[#dce9ff] mt-6 relative overflow-hidden">
             <div className="absolute right-0 top-0 opacity-5"><svg className="w-24 h-24 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></div>
-            <p className="text-[#2b6cb0] text-sm font-black uppercase tracking-tight">THEBESTSNS Escrow Protection</p>
-            <ul className="mt-2 space-y-1 text-[#4a5568] text-xs sm:text-sm font-medium">
-              <li className="flex items-start gap-2"><span className="text-blue-500">✓</span> 7일 후 판매자가 에스크로 대리인에게 소유권 양도</li>
-              <li className="flex items-start gap-2"><span className="text-blue-500">✓</span> 에스크로 대리인 확인 후 매수인에게 양도</li>
+            <p className="text-[#2b6cb0] text-sm font-black uppercase tracking-tight">THEBESTSNS Escrow Protection 가동 중</p>
+            <ul className="mt-2 space-y-1.5 text-[#4a5568] text-xs sm:text-sm font-medium">
+              <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 7일 후 판매자가 에스크로 대리인에게 소유권 양도</li>
+              <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 에스크로 대리인 확인 후 매수인에게 양도</li>
+              <li className="flex items-start gap-2"><span className="text-red-500 shrink-0 font-black">✓</span> <span className="font-bold">채널 양도를 받을 계정을 꼭 정확하게 입력해주세요 (오타 및 계정 문제는 플랫폼 책임이 아니기에 환불되지 않습니다)</span></li>
+              <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 유튜브 정책 상 채널 양도 기간인 7일이 지나야 양도됩니다.</li>
+              <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 채널 인도 후 최소 10일 동안 채널 운영 및 작업을 진행하지 않는것을 권장합니다.</li>
+              <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 채널 인도 후 초반부터 유튜브 정책을 어긋나는 과도한 매크로 작업, 선정적 및 위법성 등은 자제해주시기 바랍니다.</li>
+              <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 채널 인수 이후 해킹 또는 계정 및 채널 문제는 회원의 과실로 판단됩니다.</li>
             </ul>
           </div>
           {channel.publicLink && (<a href={channel.publicLink} target="_blank" rel="noreferrer" className="inline-block mt-4 text-blue-600 font-bold text-sm underline">🔗 채널 정보 직접 확인하기</a>)}
