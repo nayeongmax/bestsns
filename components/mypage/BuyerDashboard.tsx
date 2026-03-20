@@ -561,7 +561,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                               totalPrice: item.amount,
                               status: '결제완료',
                               paymentId: item.id,
-                              paymentMethod: item.description.includes('카드') ? 'CARD' : item.description.includes('토스') ? 'EASY_PAY' : item.description.includes('계좌') ? 'TRANSFER' : undefined,
+                              paymentMethod: item.payment_method ?? (item.description.includes('카드') ? 'CARD' : item.description.includes('토스') ? 'EASY_PAY' : item.description.includes('계좌') ? 'TRANSFER' : undefined),
+                              paymentLog: item.payment_log,
                             })}
                             className="text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all whitespace-nowrap"
                           >
