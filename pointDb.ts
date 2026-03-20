@@ -4,13 +4,18 @@
  * 필요한 Supabase 테이블 생성 SQL:
  * ----------------------------------------
  * CREATE TABLE IF NOT EXISTS point_transactions (
- *   id          text        PRIMARY KEY,
- *   user_id     text        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
- *   type        text        NOT NULL CHECK (type IN ('charge', 'usage', 'refund')),
- *   description text        NOT NULL,
- *   amount      integer     NOT NULL,
- *   created_at  timestamptz NOT NULL DEFAULT now()
+ *   id             text        PRIMARY KEY,
+ *   user_id        text        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+ *   type           text        NOT NULL CHECK (type IN ('charge', 'usage', 'refund')),
+ *   description    text        NOT NULL,
+ *   amount         integer     NOT NULL,
+ *   created_at     timestamptz NOT NULL DEFAULT now(),
+ *   payment_method text,
+ *   payment_log    text
  * );
+ * -- 기존 테이블에 컬럼 추가 시:
+ * ALTER TABLE point_transactions ADD COLUMN IF NOT EXISTS payment_method text;
+ * ALTER TABLE point_transactions ADD COLUMN IF NOT EXISTS payment_log text;
  * CREATE INDEX IF NOT EXISTS idx_pt_user_id ON point_transactions(user_id);
  * ALTER TABLE point_transactions ENABLE ROW LEVEL SECURITY;
  * CREATE POLICY "own_read"   ON point_transactions FOR SELECT USING (auth.uid()::text = user_id);
@@ -27,6 +32,8 @@ export interface PointTransaction {
   description: string;
   amount: number;
   created_at: string;
+  payment_method?: string;
+  payment_log?: string;
 }
 
 /** 포인트 거래 내역 1건 INSERT */

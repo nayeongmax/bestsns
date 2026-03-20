@@ -165,6 +165,8 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
             description: paymentMethod === 'card' ? '카드 충전' : paymentMethod === 'toss' ? '토스페이 충전' : '계좌이체 충전',
             amount,
             created_at: new Date().toISOString(),
+            payment_method: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
+            payment_log: response ? JSON.stringify(response) : undefined,
           }).catch((e) => console.warn('충전 내역 DB 저장 실패:', e));
         }
         alert('결제가 정상적으로 완료되었습니다.');
