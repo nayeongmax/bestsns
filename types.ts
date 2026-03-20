@@ -283,6 +283,8 @@ export interface StoreOrder {
   storeType: StoreType;
   status: '결제완료' | '작업중' | '배송완료' | '구매확정' | '취소';
   paymentId?: string;
+  paymentMethod?: string;
+  paymentLog?: string;
   downloadedAt?: string;
   buyerTaxInfo?: string;
   reviewId?: string;

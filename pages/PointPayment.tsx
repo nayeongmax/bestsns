@@ -144,6 +144,8 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
                 storeType,
                 status: '결제완료',
                 paymentId,
+                paymentMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
+                paymentLog: response ? JSON.stringify(response) : undefined,
               };
               setStoreOrders((prev) => [...prev, newStoreOrder]);
               addNotif(targetProduct.authorId, 'ebook', '💰 상품 판매 알림', `축하합니다! 회원님의 [${targetProduct.title}] 상품이 판매되었습니다.`);
