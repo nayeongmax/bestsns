@@ -5,7 +5,6 @@ declare const window: any;
 
 const STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID as string;
 const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY as string;
-const DANAL_CHANNEL_KEY = import.meta.env.VITE_PORTONE_DANAL_CHANNEL_KEY as string;
 
 export interface PaymentParams {
   /** 결제 주문명 */
@@ -25,7 +24,7 @@ export interface PaymentParams {
   /** 구매자 휴대폰 번호 (휴대폰 결제 시 필수) */
   userPhone?: string;
   /** 결제 수단 (기본값: CARD) */
-  payMethod?: 'CARD' | 'MOBILE';
+  payMethod?: 'CARD';
   /** 판매자 닉네임 (스토어 상품인 경우) */
   sellerNickname?: string;
   /** 티어명 (스토어 상품인 경우) */
@@ -43,11 +42,8 @@ export interface PaymentResult {
 
 export function usePortonePayment() {
   const requestPayment = useCallback(async (params: PaymentParams): Promise<PaymentResult> => {
-    const isMobile = params.payMethod === 'MOBILE';
-    const activeChannelKey = isMobile ? DANAL_CHANNEL_KEY : CHANNEL_KEY;
-
-    if (!STORE_ID || !activeChannelKey) {
-      console.error('[PortOne] 환경변수 VITE_PORTONE_STORE_ID, VITE_PORTONE_CHANNEL_KEY(또는 VITE_PORTONE_DANAL_CHANNEL_KEY)를 확인하세요.');
+    if (!STORE_ID || !CHANNEL_KEY) {
+      console.error('[PortOne] 환경변수 VITE_PORTONE_STORE_ID, VITE_PORTONE_CHANNEL_KEY를 확인하세요.');
       return { success: false, error: '결제 설정이 올바르지 않습니다.' };
     }
 
@@ -62,12 +58,12 @@ export function usePortonePayment() {
     try {
       const response = await PortOne.requestPayment({
         storeId: STORE_ID,
-        channelKey: activeChannelKey,
+        channelKey: CHANNEL_KEY,
         paymentId,
         orderName: params.orderName,
         totalAmount: params.totalAmount,
         currency: 'CURRENCY_KRW',
-        payMethod: isMobile ? 'MOBILE' : 'CARD',
+        payMethod: 'CARD',
         customer: {
           fullName: params.userNickname,
           email: buyerEmail,
@@ -100,7 +96,7 @@ export function usePortonePayment() {
         store_type: params.storeType ?? null,
         status: '결제완료',
         payment_id: response.paymentId,
-        payment_method: isMobile ? 'MOBILE' : 'CARD',
+        payment_method: 'CARD',
       };
 
       const { data, error: dbError } = await supabase

@@ -9,7 +9,6 @@ declare const window: any;
 
 const STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID as string;
 const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY as string;
-const DANAL_CHANNEL_KEY = import.meta.env.VITE_PORTONE_DANAL_CHANNEL_KEY as string;
 
 interface Props {
   user: UserProfile;
@@ -32,8 +31,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
   const storeType = (location.state?.storeType as StoreType) || 'ebook';
   const sellerNickname = location.state?.sellerNickname as string | undefined;
 
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'toss' | 'mobile'>('card');
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'toss'>('card');
   const [amount, setAmount] = useState<number>(initialAmount); 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,7 +56,6 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
 
   const handleCharge = async () => {
     if (amount <= 0) return alert('결제할 금액을 선택하거나 입력해주세요.');
-    if (paymentMethod === 'mobile' && !phoneNumber.trim()) return alert('휴대폰 번호를 입력해주세요.');
     if (isProcessing) return;
 
     const { PortOne } = window;
@@ -66,28 +63,20 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
 
     setIsProcessing(true);
     try {
-      const isMobile = paymentMethod === 'mobile';
-      const activeChannelKey = isMobile ? DANAL_CHANNEL_KEY : CHANNEL_KEY;
-
-      if (isMobile && !activeChannelKey) {
-        setIsProcessing(false);
-        return alert('다날 휴대폰 결제 채널이 설정되지 않았습니다. 관리자에게 문의하세요.');
-      }
-
       // 포트원 V2 결제 요청 파라미터
       const paymentData: any = {
         storeId: STORE_ID,
-        channelKey: activeChannelKey,
+        channelKey: CHANNEL_KEY,
         paymentId: `PAY_${Date.now()}_${user.id.slice(0, 4)}`,
         orderName: isProductPayment
           ? `[상품구매] ${productInfo.title}`
           : `[포인트충전] ${amount.toLocaleString()}원`,
         totalAmount: finalPayAmount,
         currency: "CURRENCY_KRW",
-        payMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : paymentMethod === 'mobile' ? 'MOBILE' : 'TRANSFER',
+        payMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
         customer: {
           fullName: user.nickname,
-          phoneNumber: isMobile ? phoneNumber.replace(/-/g, '') : "01000000000",
+          phoneNumber: "01000000000",
           email: "user@thebestsns.com",
         },
       };
@@ -131,7 +120,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
               price: finalPayAmount,
               status: '결제완료',
               paymentId,
-              paymentMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : paymentMethod === 'mobile' ? 'MOBILE' : 'TRANSFER',
+              paymentMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
               paymentLog: response ? JSON.stringify(response) : undefined,
             };
             setChannelOrders((prev) => [...prev, newOrder]);
@@ -155,7 +144,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
                 storeType,
                 status: '결제완료',
                 paymentId,
-                paymentMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : paymentMethod === 'mobile' ? 'MOBILE' : 'TRANSFER',
+                paymentMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
                 paymentLog: response ? JSON.stringify(response) : undefined,
               };
               setStoreOrders((prev) => [...prev, newStoreOrder]);
@@ -175,10 +164,10 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
             id: paymentId,
             user_id: user.id,
             type: 'charge',
-            description: paymentMethod === 'card' ? '카드 충전' : paymentMethod === 'toss' ? '토스페이 충전' : paymentMethod === 'mobile' ? '휴대폰 충전' : '계좌이체 충전',
+            description: paymentMethod === 'card' ? '카드 충전' : paymentMethod === 'toss' ? '토스페이 충전' : '계좌이체 충전',
             amount,
             created_at: new Date().toISOString(),
-            payment_method: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : paymentMethod === 'mobile' ? 'MOBILE' : 'TRANSFER',
+            payment_method: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
             payment_log: response ? JSON.stringify(response) : undefined,
           }).catch((e) => console.warn('충전 내역 DB 저장 실패:', e));
         }
@@ -210,26 +199,13 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
           <div className="flex-1 bg-white p-8 md:p-12 rounded-[48px] border border-gray-100 shadow-sm space-y-12">
             <div className="space-y-6">
               <label className="text-[12px] font-black text-gray-400 uppercase italic px-1">01. 결제 수단 선택</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {(['card', 'transfer', 'toss', 'mobile'] as const).map((m) => (
+              <div className="grid grid-cols-3 gap-4">
+                {(['card', 'transfer', 'toss'] as const).map((m) => (
                   <button key={m} onClick={() => setPaymentMethod(m)} className={`py-6 rounded-[24px] font-black transition-all border-4 ${paymentMethod === m ? 'bg-gray-900 text-white border-gray-900 shadow-xl' : 'bg-gray-50 text-gray-400 border-transparent hover:border-gray-100'}`}>
-                    {m === 'card' ? '신용카드' : m === 'transfer' ? '계좌이체' : m === 'toss' ? '토스페이' : '휴대폰'}
+                    {m === 'card' ? '신용카드' : m === 'transfer' ? '계좌이체' : '토스페이'}
                   </button>
                 ))}
               </div>
-              {paymentMethod === 'mobile' && (
-                <div className="mt-4 space-y-2">
-                  <label className="text-[12px] font-black text-gray-400 uppercase italic px-1">결제할 휴대폰 번호</label>
-                  <input
-                    type="tel"
-                    placeholder="010-0000-0000"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="w-full p-5 bg-gray-50 rounded-[20px] font-bold text-gray-800 border-2 border-gray-100 focus:outline-none focus:border-gray-400 text-lg"
-                  />
-                  <p className="text-[11px] text-gray-400 px-1">※ 입력한 번호로 휴대폰 소액결제(다날)가 진행됩니다.</p>
-                </div>
-              )}
             </div>
 
             <div className="space-y-6">
