@@ -316,6 +316,7 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                  <thead className="bg-[#0f172a] text-white text-[11px] font-black uppercase tracking-widest italic">
                     <tr>
                        <th className="px-10 py-6">주문일시 / ID</th>
+                       <th className="px-10 py-6">고객사 거래번호</th>
                        <th className="px-10 py-6">구매자 정보</th>
                        <th className="px-10 py-6">판매자 정보</th>
                        <th className="px-10 py-6">상품 및 옵션</th>
@@ -325,12 +326,18 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                  </thead>
                  <tbody className="divide-y divide-gray-50">
                     {storeOrders.length === 0 ? (
-                      <tr><td colSpan={6} className="py-40 text-center text-gray-300 italic font-black text-lg">기록된 판매 내역이 없습니다.</td></tr>
+                      <tr><td colSpan={7} className="py-40 text-center text-gray-300 italic font-black text-lg">기록된 판매 내역이 없습니다.</td></tr>
                     ) : storeOrders.sort((a,b) => b.orderTime.localeCompare(a.orderTime)).map(o => (
                       <tr key={o.id} className="hover:bg-purple-50/20 transition-all font-bold text-[14px]">
                         <td className="px-10 py-6">
                            <p className="text-gray-800">{o.orderTime}</p>
                            <p className="text-[11px] text-purple-500 mt-1">#{o.id}</p>
+                        </td>
+                        <td className="px-10 py-6">
+                           {o.paymentId
+                             ? <span className="text-[11px] text-blue-600 font-black italic break-all">{o.paymentId}</span>
+                             : <span className="text-[11px] text-gray-300 italic">-</span>
+                           }
                         </td>
                         <td className="px-10 py-6 whitespace-nowrap">
                            <span className="text-gray-900">@{o.userId}</span>
@@ -343,8 +350,8 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                         </td>
                         <td className="px-10 py-6 text-right font-black text-gray-900 italic text-lg">₩{o.price.toLocaleString()}</td>
                         <td className="px-10 py-6 text-center">
-                           <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm uppercase ${o.status === '구매확정' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                             {o.status}
+                           <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm uppercase ${o.status === '구매확정' ? 'bg-green-100 text-green-600' : o.status === '취소' ? 'bg-orange-100 text-orange-500' : 'bg-gray-100 text-gray-400'}`}>
+                             {o.status === '취소' ? '환불완료' : o.status}
                            </span>
                         </td>
                       </tr>
