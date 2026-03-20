@@ -76,7 +76,8 @@ exports.handler = async (event) => {
   console.log(`[portone-webhook] type=${type} paymentId=${paymentId}`);
 
   if (!paymentId) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing paymentId in webhook data' }) };
+    console.log(`[portone-webhook] paymentId 없음 (type=${type}) → 200 반환 (재시도 방지)`);
+    return { statusCode: 200, headers, body: JSON.stringify({ message: 'No paymentId, event ignored' }) };
   }
 
   // 결제 취소 이벤트 처리

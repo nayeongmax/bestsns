@@ -289,7 +289,8 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const handleCheckOrderStatuses = useCallback(async () => {
     if (isCheckingStatus) return;
     const pending = smmOrders.filter(o =>
-      o.status !== '작업완료' && o.externalOrderId && o.externalOrderId !== 'PENDING'
+      o.status !== '작업완료' && o.status !== '주문취소' &&
+      o.externalOrderId && o.externalOrderId !== 'PENDING' && o.externalOrderId !== 'FAILED'
     );
     if (pending.length === 0) { alert('조회할 진행 중인 주문이 없습니다.'); return; }
 
