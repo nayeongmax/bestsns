@@ -47,6 +47,9 @@ interface OrderItem {
   remains?: number;
   storeType?: string;
   downloadUrl?: string;
+  paymentId?: string;
+  paymentMethod?: string;
+  paymentLog?: string;
 }
 
 const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, initialSubTab }) => {
@@ -78,6 +81,9 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       }, {}),
     [flags]
   );
+
+  // 결제정보 모달 상태
+  const [paymentModalOrder, setPaymentModalOrder] = useState<OrderItem | null>(null);
 
   // 환불 처리 로컬 상태 (환불된 주문 id 추적)
   const [refundedOrderIds, setRefundedOrderIds] = useState<Set<string>>(new Set());
@@ -120,7 +126,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
       .map(o => ({
         id: o.id, type: 'channel', orderTime: o.orderTime, productName: o.productName,
         thumbnail: '', productId: o.productId, sellerName: o.platform || '채널',
-        price: o.price, quantity: 1, totalPrice: o.price, status: o.status
+        price: o.price, quantity: 1, totalPrice: o.price, status: o.status,
+        paymentId: o.paymentId, paymentMethod: o.paymentMethod, paymentLog: o.paymentLog
       }));
 
     const storeItems: OrderItem[] = storeOrders
@@ -134,7 +141,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
           id: o.id, type: 'store', orderTime: o.orderTime, productName: o.productName,
           thumbnail: ebook?.thumbnail || '', productId: o.productId, sellerName: o.sellerNickname || '',
           price: o.price, quantity: 1, totalPrice: o.price, status: o.status, storeType: o.storeType,
-          downloadUrl,
+          downloadUrl, paymentId: o.paymentId,
         };
       });
 
@@ -302,6 +309,21 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     const mi = String(date.getMinutes()).padStart(2, '0');
     const s = String(date.getSeconds()).padStart(2, '0');
     return `${y}-${m}-${d} ${h}:${mi}:${s}`;
+  };
+
+  // 결제수단 한글 변환
+  const getPayMethodLabel = (method?: string) => {
+    if (!method) return '-';
+    if (method === 'CARD') return '신용/체크카드';
+    if (method === 'TRANSFER') return '계좌이체';
+    if (method === 'EASY_PAY') return '간편결제 (토스페이)';
+    return method;
+  };
+
+  // 결제 로그에서 카드 정보 파싱
+  const parsePaymentLog = (logStr?: string) => {
+    if (!logStr) return null;
+    try { return JSON.parse(logStr); } catch { return null; }
   };
 
   // ─── 스토어 주문 카드 액션 버튼 렌더 ─────────────────────────────────
@@ -514,6 +536,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                       <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">충전유형</th>
                       <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전금액</th>
                       <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전일</th>
+                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">결제정보</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -523,6 +546,28 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                         <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
                         <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
                         <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{safeFormatDate(item.created_at)}</td>
+                        <td className="py-3 px-5 text-right">
+                          <button
+                            onClick={() => setPaymentModalOrder({
+                              id: item.id,
+                              type: 'sns',
+                              orderTime: item.created_at,
+                              productName: item.description,
+                              thumbnail: '',
+                              productId: '',
+                              sellerName: '',
+                              price: item.amount,
+                              quantity: 1,
+                              totalPrice: item.amount,
+                              status: '결제완료',
+                              paymentId: item.id,
+                              paymentMethod: item.description.includes('카드') ? 'CARD' : item.description.includes('토스') ? 'EASY_PAY' : item.description.includes('계좌') ? 'TRANSFER' : undefined,
+                            })}
+                            className="text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all whitespace-nowrap"
+                          >
+                            💳 확인
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -600,6 +645,15 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                             </>
                           )}
                        </div>
+
+                       {order.paymentId && (
+                         <button
+                           onClick={() => setPaymentModalOrder(order)}
+                           className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all mb-1"
+                         >
+                           💳 결제정보 확인
+                         </button>
+                       )}
 
                        {order.type === 'store' && (order.storeType === 'ebook' || order.storeType === 'template') && (
                          <p className="text-[12px] font-bold text-red-500 whitespace-nowrap overflow-hidden text-ellipsis italic">
@@ -684,6 +738,15 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                           )}
                        </div>
 
+                       {order.paymentId && (
+                         <button
+                           onClick={() => setPaymentModalOrder(order)}
+                           className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all mb-1"
+                         >
+                           💳 결제정보 확인
+                         </button>
+                       )}
+
                        {order.type === 'store' && (order.storeType === 'ebook' || order.storeType === 'template') && (
                          <p className="text-[12px] font-bold text-red-500 whitespace-nowrap overflow-hidden text-ellipsis italic">
                            ※ 전자책/자료·템플릿 상품의 경우는 다운로드 시 환불이 불가하며, 7일 후 자동으로 구매가 확정됩니다.
@@ -699,6 +762,106 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
               );
             })
           )}
+        </div>
+      )}
+
+      {paymentModalOrder && (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" onClick={() => setPaymentModalOrder(null)}>
+          <div className="bg-white w-full max-w-lg rounded-[40px] p-10 shadow-2xl space-y-6 animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-black text-indigo-500 uppercase italic tracking-widest">Payment Info</p>
+                <h3 className="text-2xl font-black text-gray-900">결제 정보</h3>
+              </div>
+              <button onClick={() => setPaymentModalOrder(null)} className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center font-black text-gray-400 transition-all">✕</button>
+            </div>
+
+            <div className="bg-indigo-50 rounded-[24px] p-6 space-y-4">
+              {/* 상품명 */}
+              <div className="flex justify-between items-start gap-4">
+                <span className="text-[13px] font-black text-gray-400 shrink-0">상품명</span>
+                <span className="text-[13px] font-bold text-gray-800 text-right">{paymentModalOrder.productName}</span>
+              </div>
+              {/* 결제 번호 */}
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-[13px] font-black text-gray-400 shrink-0">결제 번호</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-bold text-gray-700 break-all text-right">{paymentModalOrder.paymentId}</span>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(paymentModalOrder.paymentId || ''); alert('복사되었습니다.'); }}
+                    className="shrink-0 bg-indigo-500 text-white px-2 py-0.5 rounded text-[10px] font-black"
+                  >복사</button>
+                </div>
+              </div>
+              {/* 결제 수단 */}
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-[13px] font-black text-gray-400 shrink-0">결제 수단</span>
+                <span className="text-[13px] font-bold text-gray-800">{getPayMethodLabel(paymentModalOrder.paymentMethod)}</span>
+              </div>
+              {/* 결제 금액 */}
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-[13px] font-black text-gray-400 shrink-0">결제 금액</span>
+                <span className="text-[16px] font-black text-indigo-600">₩{paymentModalOrder.totalPrice.toLocaleString()}</span>
+              </div>
+              {/* 주문 일시 */}
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-[13px] font-black text-gray-400 shrink-0">결제 일시</span>
+                <span className="text-[13px] font-bold text-gray-800">{formatOrderTime(paymentModalOrder.orderTime)}</span>
+              </div>
+              {/* 결제 상태 */}
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-[13px] font-black text-gray-400 shrink-0">결제 상태</span>
+                <span className={`px-3 py-1 rounded-full text-[12px] font-black ${getEffectiveStatus(paymentModalOrder) === '취소' ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-600'}`}>
+                  {getEffectiveStatus(paymentModalOrder) === '취소' ? '환불/취소' : '결제 완료'}
+                </span>
+              </div>
+              {/* paymentLog 카드 정보 (있을 경우) */}
+              {(() => {
+                const log = parsePaymentLog(paymentModalOrder.paymentLog);
+                if (!log) return null;
+                const card = log.card || log.payment?.card;
+                const bank = log.transfer || log.payment?.transfer;
+                const easyPay = log.easyPay || log.payment?.easyPay;
+                return (
+                  <>
+                    {card && (
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="text-[13px] font-black text-gray-400 shrink-0">카드 정보</span>
+                        <span className="text-[13px] font-bold text-gray-800">
+                          {card.issuerName || card.publisher || ''}{card.number ? ` (${card.number})` : ''}
+                        </span>
+                      </div>
+                    )}
+                    {bank && (
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="text-[13px] font-black text-gray-400 shrink-0">계좌 정보</span>
+                        <span className="text-[13px] font-bold text-gray-800">
+                          {bank.bankName || bank.bank || ''}{bank.accountNumber ? ` (${bank.accountNumber})` : ''}
+                        </span>
+                      </div>
+                    )}
+                    {easyPay && (
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="text-[13px] font-black text-gray-400 shrink-0">간편결제</span>
+                        <span className="text-[13px] font-bold text-gray-800">{easyPay.provider || easyPay.providerName || 'TossPay'}</span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            <p className="text-[11px] font-bold text-gray-400 text-center leading-relaxed">
+              결제 관련 문의는 고객센터로 연락해 주세요.
+            </p>
+
+            <button
+              onClick={() => setPaymentModalOrder(null)}
+              className="w-full py-5 bg-gray-900 text-white rounded-[24px] font-black text-[15px] hover:bg-indigo-600 transition-all"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       )}
 
