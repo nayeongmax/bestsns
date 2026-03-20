@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
               <div className="text-sm text-gray-700 space-y-1">
                 <p><strong>상호</strong> 더베스트[THEBEST]</p>
                 <p><strong>대표자</strong> 김나영</p>
-                <p><strong>연락처</strong> 010-5315-6542</p>
+                <p><strong>연락처</strong> 070-4571-9555</p>
               </div>
             </div>
             <div className="space-y-2">
