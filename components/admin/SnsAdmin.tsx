@@ -425,7 +425,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     } finally {
       setIsCheckingStatus(false);
     }
-  }, [smmOrders, smmProviders, isCheckingStatus, japStatuses]);
+  }, [smmOrders, smmProviders, smmProducts, isCheckingStatus, japStatuses, addNotif]);
 
   // 작업완료 처리: 상태 업데이트 + 주문자에게 알림
   const handleMarkComplete = useCallback((order: SMMOrder) => {
