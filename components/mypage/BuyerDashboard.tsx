@@ -141,7 +141,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
           id: o.id, type: 'store', orderTime: o.orderTime, productName: o.productName,
           thumbnail: ebook?.thumbnail || '', productId: o.productId, sellerName: o.sellerNickname || '',
           price: o.price, quantity: 1, totalPrice: o.price, status: o.status, storeType: o.storeType,
-          downloadUrl, paymentId: o.paymentId,
+          downloadUrl, paymentId: o.paymentId, paymentMethod: o.paymentMethod, paymentLog: o.paymentLog,
         };
       });
 

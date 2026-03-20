@@ -1,6 +1,10 @@
 /**
  * N잡스토어 / 구매자·판매자 워크페이스 Supabase DB 연동
  * - store_products (상품), store_orders (주문), reviews (리뷰), order_buyer_flags (구매확정/리뷰/다운로드)
+ *
+ * DB 마이그레이션 (store_orders 테이블에 결제 수단/로그 컬럼 추가):
+ *   ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS payment_method text;
+ *   ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS payment_log text;
  */
 import { supabase } from './supabase';
 import type { EbookProduct, EbookTier, StoreOrder, Review, StoreType } from '@/types';
@@ -100,6 +104,8 @@ function orderToRow(o: StoreOrder): Record<string, unknown> {
     store_type: o.storeType ?? 'ebook',
     status: o.status,
     payment_id: o.paymentId ?? null,
+    payment_method: o.paymentMethod ?? null,
+    payment_log: o.paymentLog ?? null,
     downloaded_at: o.downloadedAt ?? null,
     buyer_tax_info: o.buyerTaxInfo ?? null,
     review_id: o.reviewId ?? null,
@@ -121,6 +127,8 @@ function rowToOrder(row: Record<string, unknown>): StoreOrder {
     storeType: (row.store_type as StoreType) ?? 'ebook',
     status: (row.status as StoreOrder['status']) ?? '결제완료',
     paymentId: row.payment_id != null ? String(row.payment_id) : undefined,
+    paymentMethod: row.payment_method != null ? String(row.payment_method) : undefined,
+    paymentLog: row.payment_log != null ? String(row.payment_log) : undefined,
     downloadedAt: row.downloaded_at != null ? String(row.downloaded_at) : undefined,
     buyerTaxInfo: row.buyer_tax_info != null ? String(row.buyer_tax_info) : undefined,
     reviewId: row.review_id != null ? String(row.review_id) : undefined,
