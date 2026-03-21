@@ -38,6 +38,8 @@ export interface PaymentResult {
   paymentId?: string;
   orderId?: string;
   error?: string;
+  paymentMethod?: string;
+  paymentLog?: string;
 }
 
 export function usePortonePayment() {
@@ -108,10 +110,16 @@ export function usePortonePayment() {
       if (dbError) {
         console.error('[PortOne] 주문 저장 실패:', dbError.message);
         // 결제는 성공했으므로 paymentId는 반환
-        return { success: true, paymentId: response.paymentId, error: `결제는 완료됐으나 주문 저장에 실패했습니다: ${dbError.message}` };
+        return { success: true, paymentId: response.paymentId, paymentMethod: 'CARD', paymentLog: JSON.stringify(response), error: `결제는 완료됐으나 주문 저장에 실패했습니다: ${dbError.message}` };
       }
 
-      return { success: true, paymentId: response.paymentId, orderId: data?.id };
+      return {
+        success: true,
+        paymentId: response.paymentId,
+        orderId: data?.id,
+        paymentMethod: 'CARD',
+        paymentLog: JSON.stringify(response),
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       console.error('[PortOne] 결제 요청 오류:', message);

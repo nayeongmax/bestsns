@@ -142,6 +142,8 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               storeType: currentStoreType,
               status: '결제완료',
               paymentId: result.paymentId,
+              paymentMethod: result.paymentMethod,
+              paymentLog: result.paymentLog,
             };
             onStoreOrderCreated?.(newOrder);
             upsertStoreOrder(newOrder).catch(e => console.warn('[EbookDetail] 주문 저장 실패:', e));
