@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const COUPANG_ID = 972069;
 const COUPANG_TRACKING = 'AF3446409';
-const BANNER_TEMPLATE = 'carousel';
-const BANNER_HEIGHT = 600;
+const BANNER_TEMPLATE = 'banner';
+const BANNER_HEIGHT = 250;
 
 const CoupangSidebarBanner: React.FC = () => {
   const wrapperRef = useRef<HTMLDivElement>(null);
