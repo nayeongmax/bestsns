@@ -68,8 +68,8 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
         storeId: STORE_ID,
         channelKey: CHANNEL_KEY,
         paymentId: `PAY_${Date.now()}_${user.id.slice(0, 4)}`,
-        orderName: isProductPayment 
-          ? `[상품구매] ${productInfo.title}` 
+        orderName: isProductPayment
+          ? `[상품구매] ${productInfo.title}`
           : `[포인트충전] ${amount.toLocaleString()}원`,
         totalAmount: finalPayAmount,
         currency: "CURRENCY_KRW",
@@ -200,8 +200,8 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
             <div className="space-y-6">
               <label className="text-[12px] font-black text-gray-400 uppercase italic px-1">01. 결제 수단 선택</label>
               <div className="grid grid-cols-3 gap-4">
-                {['card', 'transfer', 'toss'].map((m) => (
-                  <button key={m} onClick={() => setPaymentMethod(m as any)} className={`py-6 rounded-[24px] font-black transition-all border-4 ${paymentMethod === m ? 'bg-gray-900 text-white border-gray-900 shadow-xl' : 'bg-gray-50 text-gray-400 border-transparent hover:border-gray-100'}`}>
+                {(['card', 'transfer', 'toss'] as const).map((m) => (
+                  <button key={m} onClick={() => setPaymentMethod(m)} className={`py-6 rounded-[24px] font-black transition-all border-4 ${paymentMethod === m ? 'bg-gray-900 text-white border-gray-900 shadow-xl' : 'bg-gray-50 text-gray-400 border-transparent hover:border-gray-100'}`}>
                     {m === 'card' ? '신용카드' : m === 'transfer' ? '계좌이체' : '토스페이'}
                   </button>
                 ))}

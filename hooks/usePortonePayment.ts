@@ -21,6 +21,10 @@ export interface PaymentParams {
   userNickname: string;
   /** 구매자 이메일 */
   userEmail?: string;
+  /** 구매자 휴대폰 번호 (휴대폰 결제 시 필수) */
+  userPhone?: string;
+  /** 결제 수단 (기본값: CARD) */
+  payMethod?: 'CARD';
   /** 판매자 닉네임 (스토어 상품인 경우) */
   sellerNickname?: string;
   /** 티어명 (스토어 상품인 경우) */
@@ -63,7 +67,7 @@ export function usePortonePayment() {
         customer: {
           fullName: params.userNickname,
           email: buyerEmail,
-          phoneNumber: '01000000000',
+          phoneNumber: params.userPhone || '01000000000',
         },
       });
 
