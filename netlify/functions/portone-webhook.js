@@ -81,12 +81,12 @@ async function fetchChannelOrderByPaymentId(paymentId) {
 }
 
 /**
- * Supabase REST API로 orders 테이블 row 조회 (payment_id 기준)
+ * Supabase REST API로 store_orders 테이블 row 조회 (payment_id 기준)
  */
-async function fetchOrderByPaymentId(paymentId) {
+async function fetchStoreOrderByPaymentId(paymentId) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?payment_id=eq.${encodeURIComponent(paymentId)}&select=*&limit=1`,
+    `${SUPABASE_URL}/rest/v1/store_orders?payment_id=eq.${encodeURIComponent(paymentId)}&select=*&limit=1`,
     {
       headers: {
         'apikey': SUPABASE_SERVICE_KEY,
@@ -151,14 +151,13 @@ exports.handler = async (event) => {
       console.log(`[portone-webhook] Transaction.Paid PortOne status for ${paymentId}: ${status}`);
 
       if (status === 'PAID') {
-        // orders 테이블: 결제 완료 상태 동기화 (클라이언트에서 이미 생성됐을 수 있으므로 upsert 방식으로 처리)
-        const existingOrder = await fetchOrderByPaymentId(paymentId);
-        if (existingOrder) {
-          // 이미 존재하면 상태만 업데이트
-          const r1 = await updateSupabaseByPaymentId('orders', paymentId, { status: '결제완료' });
-          console.log(`[portone-webhook] Transaction.Paid orders status update: ${r1?.status}`);
+        // store_orders: 결제 완료 상태 동기화
+        const existingStoreOrder = await fetchStoreOrderByPaymentId(paymentId);
+        if (existingStoreOrder) {
+          const r1 = await updateSupabaseByPaymentId('store_orders', paymentId, { status: '결제완료' });
+          console.log(`[portone-webhook] Transaction.Paid store_orders status update: ${r1?.status}`);
         } else {
-          console.log(`[portone-webhook] Transaction.Paid: order not found in DB for ${paymentId} (클라이언트에서 생성 예정)`);
+          console.log(`[portone-webhook] Transaction.Paid: store_order not found for ${paymentId} (클라이언트에서 생성 예정)`);
         }
 
         // channel_orders: payment_id 기준으로 결제완료 상태 동기화
@@ -192,9 +191,7 @@ exports.handler = async (event) => {
           }
         }
 
-        // store_orders: payment_id 기준으로 결제완료 상태 동기화
-        const r3 = await updateSupabaseByPaymentId('store_orders', paymentId, { status: '결제완료' });
-        console.log(`[portone-webhook] Transaction.Paid store_orders update: ${r3?.status}`);
+        // store_orders: 위에서 이미 처리됨 (existingStoreOrder 분기)
       }
     } catch (err) {
       console.error('[portone-webhook] Transaction.Paid 처리 중 오류:', err);

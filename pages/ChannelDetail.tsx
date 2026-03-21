@@ -108,7 +108,8 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
           price: channel.price,
           status: '결제완료',
           paymentId: result.paymentId,
-          paymentMethod: 'CARD',
+          paymentMethod: result.paymentMethod,
+          paymentLog: result.paymentLog,
           buyerAccount: buyerAccountInput.trim(),
         };
         onChannelOrderCreated?.(newOrder);

@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { supabase } from '@/supabase';
 
 declare const window: any;
 
@@ -85,41 +84,12 @@ export function usePortonePayment() {
         return { success: false, paymentId, error: errMsg };
       }
 
-      // 결제 성공 → Supabase orders 테이블에 저장
-      const orderRow = {
-        id: paymentId,
-        user_id: params.userId,
-        user_nickname: params.userNickname,
-        seller_nickname: params.sellerNickname ?? null,
-        order_time: new Date().toISOString(),
-        product_id: params.productId,
-        product_name: params.productName,
-        tier_name: params.tierName ?? null,
-        price: params.totalAmount,
-        store_type: params.storeType ?? null,
-        status: '결제완료',
-        payment_id: response.paymentId,
-        payment_method: 'CARD',
-      };
-
-      const { data, error: dbError } = await supabase
-        .from('orders')
-        .insert(orderRow)
-        .select('id')
-        .single();
-
+      // 결제 성공 → paymentId, paymentLog, receiptUrl 반환 (실제 DB 저장은 각 호출부에서 처리)
       const receiptUrl = (response as any).receiptUrl ?? (response as any).receipt_url;
-
-      if (dbError) {
-        console.error('[PortOne] 주문 저장 실패:', dbError.message);
-        // 결제는 성공했으므로 paymentId는 반환
-        return { success: true, paymentId: response.paymentId, paymentMethod: 'CARD', paymentLog: JSON.stringify(response), receiptUrl, error: `결제는 완료됐으나 주문 저장에 실패했습니다: ${dbError.message}` };
-      }
 
       return {
         success: true,
         paymentId: response.paymentId,
-        orderId: data?.id,
         paymentMethod: 'CARD',
         paymentLog: JSON.stringify(response),
         receiptUrl,
