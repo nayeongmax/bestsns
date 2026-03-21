@@ -2,6 +2,20 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, EbookProduct, ChannelProduct, StoreOrder, Review, SMMOrder, ChannelOrder } from '@/types';
+
+const formatKoreanDateTime = (dateStr: string | undefined): string => {
+  if (!dateStr) return '-';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString('ko-KR', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true
+    });
+  } catch {
+    return dateStr;
+  }
+};
 import { deleteStoreProduct } from '../../storeDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
@@ -197,8 +211,12 @@ const SellerDashboard: React.FC<Props> = ({
                 <tbody className="divide-y divide-gray-50">
                   {filteredStoreOrders.length === 0 ? (
                     <tr><td colSpan={5} className="py-40 text-center text-gray-300 font-black italic text-xl">조회된 판매 내역이 없습니다.</td></tr>
-                  ) : filteredStoreOrders.map(order => (
-                    <tr key={order.id} className="hover:bg-blue-50/10 transition-colors group">
+                  ) : filteredStoreOrders.map(order => {
+                    const isCancelled = order.status === '취소';
+                    const isCashPayment = order.paymentMethod === 'TRANSFER' || order.paymentMethod === 'VIRTUAL_ACCOUNT';
+                    const showTaxBtn = !isCancelled && isCashPayment;
+                    return (
+                    <tr key={order.id} className={`transition-colors group ${isCancelled ? 'opacity-50 grayscale bg-gray-50' : 'hover:bg-blue-50/10'}`}>
                       <td className="px-10 py-10">
                         <div className="flex items-center gap-8">
                            <img src={`https://picsum.photos/seed/${order.productId}/200/200`} className="w-16 h-16 bg-gray-100 rounded-2xl object-cover shadow-sm" alt="p" />
@@ -211,15 +229,15 @@ const SellerDashboard: React.FC<Props> = ({
                       </td>
                       <td className="px-10 py-10 text-center">
                          <div className="space-y-1">
-                            <p className="text-[12px] font-bold text-gray-400 italic">주문: {order.orderTime}</p>
-                            {order.confirmedAt && <p className="text-[12px] font-black text-blue-500 italic">확정: {order.confirmedAt}</p>}
+                            <p className="text-[12px] font-bold text-gray-400 italic">주문: {formatKoreanDateTime(order.orderTime)}</p>
+                            {order.confirmedAt && <p className="text-[12px] font-black text-blue-500 italic">확정: {formatKoreanDateTime(order.confirmedAt)}</p>}
                          </div>
                       </td>
                       <td className="px-10 py-10 text-right"><p className="text-2xl font-black text-gray-900 italic tracking-tighter mb-1">₩{order.price.toLocaleString()}</p><p className="text-[10px] text-gray-300 font-bold uppercase">{order.tierName}</p></td>
                       <td className="px-10 py-10 text-center">
                         <span className={`px-6 py-2 rounded-full text-[11px] font-black italic shadow-sm transition-all ${
-                          order.status === '구매확정' 
-                          ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100' 
+                          order.status === '구매확정'
+                          ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100'
                           : order.status === '작업중' ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400'
                         }`}>
                           {order.status}
@@ -227,12 +245,13 @@ const SellerDashboard: React.FC<Props> = ({
                       </td>
                       <td className="px-10 py-10 text-center">
                          <div className="flex flex-col gap-2 items-center">
-                            <button onClick={() => setShowTaxModal(order)} className="px-5 py-2 bg-orange-50 text-orange-600 rounded-xl font-black text-[11px] hover:bg-black hover:text-white transition-all shadow-sm italic">세금계산서</button>
+                            {showTaxBtn && <button onClick={() => setShowTaxModal(order)} className="px-5 py-2 bg-orange-50 text-orange-600 rounded-xl font-black text-[11px] hover:bg-black hover:text-white transition-all shadow-sm italic">세금계산서</button>}
                             {order.reviewId && <button onClick={() => handleReviewManage(order)} className="px-5 py-2 bg-black text-white rounded-xl font-black text-[11px] shadow-lg hover:bg-blue-600 transition-all italic">리뷰관리</button>}
                          </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -393,7 +412,23 @@ const SellerDashboard: React.FC<Props> = ({
       </main>
 
       {/* 모달: 세금계산서 정보 */}
-      {showTaxModal && (
+      {showTaxModal && (() => {
+        let taxInfo: Record<string, string> = {};
+        if (showTaxModal.buyerTaxInfo) {
+          try { taxInfo = JSON.parse(showTaxModal.buyerTaxInfo); } catch { /* ignore */ }
+        }
+        const rows: [string, string][] = [
+          ['회사명(법인명)', taxInfo.companyName || '-'],
+          ['사업자 등록번호', taxInfo.businessNumber || '-'],
+          ['대표자명', taxInfo.ceoName || '-'],
+          ['사업장 주소', taxInfo.address || '-'],
+          ['업태', taxInfo.businessType || '-'],
+          ['종목', taxInfo.businessCategory || '-'],
+          ['세금계산서 이메일', taxInfo.email || '-'],
+          ['담당자명', taxInfo.managerName || '-'],
+          ['담당자 연락처', taxInfo.managerPhone || '-'],
+        ];
+        return (
         <div className="fixed inset-0 z-[500] bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
            <div className="bg-white w-full max-w-xl rounded-[56px] p-12 shadow-2xl space-y-8 animate-in zoom-in-95 border-8 border-orange-50">
               <div className="flex justify-between items-center mb-4">
@@ -401,45 +436,18 @@ const SellerDashboard: React.FC<Props> = ({
                  <button onClick={() => setShowTaxModal(null)} className="text-gray-300 hover:text-gray-900 font-black text-2xl">✕</button>
               </div>
 
+              {!showTaxModal.buyerTaxInfo ? (
+                <div className="py-10 text-center text-gray-400 font-bold">구매자가 입력한 세금계산서 정보가 없습니다.</div>
+              ) : (
               <div className="border border-gray-200 rounded-[24px] overflow-hidden shadow-sm bg-white">
                  <table className="w-full text-sm text-left border-collapse">
                     <tbody className="divide-y divide-gray-200">
-                       <tr>
-                          <td className="w-1/3 bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">회사명(법인명)</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">{user.nickname}</td>
-                       </tr>
-                       <tr>
-                          <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">사업자 등록번호</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">1888601676</td>
-                       </tr>
-                       <tr>
-                          <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">대표자명</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">최진한, 박기혁</td>
-                       </tr>
-                       <tr>
-                          <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">사업장 주소</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">공항대로 227 마곡센트럴타워 409호</td>
-                       </tr>
-                       <tr>
-                          <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">업태</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">서비스업</td>
-                       </tr>
-                       <tr>
-                          <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">종목</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">장기렌터카 중개업</td>
-                       </tr>
-                       <tr>
-                          <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">세금계산서 이메일</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">hbchu@rentncar.net</td>
-                       </tr>
-                       <tr>
-                          <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">담당자명</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">추형빈</td>
-                       </tr>
-                       <tr>
-                          <td className="bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">담당자 연락처</td>
-                          <td className="px-6 py-4 font-bold text-gray-900">01046137845</td>
-                       </tr>
+                       {rows.map(([label, value]) => (
+                         <tr key={label}>
+                           <td className="w-1/3 bg-gray-50 px-6 py-4 font-black text-gray-700 italic border-r">{label}</td>
+                           <td className="px-6 py-4 font-bold text-gray-900">{value}</td>
+                         </tr>
+                       ))}
                        <tr className="bg-orange-50/30">
                           <td className="bg-orange-50 px-6 py-4 font-black text-orange-700 italic border-r">신청 금액</td>
                           <td className="px-6 py-4 font-black text-blue-600 text-lg">₩{showTaxModal.price.toLocaleString()}원 (VAT 포함)</td>
@@ -447,6 +455,7 @@ const SellerDashboard: React.FC<Props> = ({
                     </tbody>
                  </table>
               </div>
+              )}
 
               <div className="bg-blue-50 p-6 rounded-[32px] border border-blue-100 space-y-3">
                  <div className="flex items-center gap-2 text-blue-600 font-black italic text-[13px]">
@@ -463,7 +472,8 @@ const SellerDashboard: React.FC<Props> = ({
               <button onClick={() => setShowTaxModal(null)} className="w-full py-6 bg-gray-900 text-white rounded-[24px] font-black text-xl hover:bg-orange-600 transition-all shadow-xl italic uppercase">정보 확인 완료</button>
            </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* 모달: 리뷰 관리 (리뷰관리 버튼 클릭 시 노출) */}
       {selectedReview && (

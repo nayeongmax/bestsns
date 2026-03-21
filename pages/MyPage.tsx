@@ -153,7 +153,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
           <div className="bg-gray-50 p-6 rounded-[32px] flex items-center gap-6 min-w-[200px]">
             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xl shadow-sm">💰</div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase italic">Points</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase italic">Points <span className="text-red-500 normal-case not-italic font-black text-[9px]">(SNS활성화 전용)</span></p>
               <h3 className="text-xl font-black text-gray-900 italic">{(effectiveUser.points || 0).toLocaleString()} P</h3>
             </div>
             <Link to="/payment/point" className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[11px] shadow-lg hover:bg-black transition-all">충전</Link>

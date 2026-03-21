@@ -96,19 +96,13 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     fetchPointTransactions(user.id, 'charge').then(setChargeItems).catch((e) => console.warn('충전 내역 로드 실패:', e));
   }, [user?.id]);
 
-  // 포인트 사용 내역 (주문에서 파생)
+  // 포인트 사용 내역 (SNS 활성화 주문만 표시 - N잡스토어/채널판매는 카드결제로 포인트 차감 아님)
   const usageItems: PointUsageItem[] = useMemo(() => {
     const sns = smmOrders
       .filter(o => o.userId === user.id && o.status !== '주문취소')
       .map(o => ({ id: o.id, description: `SNS 활성화 사용 (${o.productName})`, amount: o.sellingPrice * o.quantity, date: o.orderTime }));
-    const ch = channelOrders
-      .filter(o => o.userId === user.id)
-      .map(o => ({ id: o.id, description: `채널 구매 (${o.productName})`, amount: o.price, date: typeof o.orderTime === 'string' ? o.orderTime : new Date(o.orderTime).toISOString() }));
-    const st = storeOrders
-      .filter(o => o.userId === user.id)
-      .map(o => ({ id: o.id, description: `N잡스토어 구매 (${o.productName})`, amount: o.price, date: typeof o.orderTime === 'string' ? o.orderTime : new Date(o.orderTime).toISOString() }));
-    return [...sns, ...ch, ...st].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [smmOrders, channelOrders, storeOrders, user.id]);
+    return [...sns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [smmOrders, user.id]);
 
   // 데이터 통합 (실제 주문만 표시)
   const buyerOrders: OrderItem[] = useMemo(() => {
