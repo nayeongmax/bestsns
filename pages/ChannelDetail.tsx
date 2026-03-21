@@ -110,6 +110,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
           paymentId: result.paymentId,
           paymentMethod: result.paymentMethod,
           paymentLog: result.paymentLog,
+          receiptUrl: result.receiptUrl,
           buyerAccount: buyerAccountInput.trim(),
         };
         onChannelOrderCreated?.(newOrder);

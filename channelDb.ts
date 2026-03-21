@@ -91,6 +91,7 @@ function orderToRow(o: ChannelOrder): Record<string, unknown> {
     payment_id: o.paymentId ?? null,
     payment_method: o.paymentMethod ?? null,
     payment_log: o.paymentLog ?? null,
+    receipt_url: o.receiptUrl ?? null,
     buyer_account: o.buyerAccount ?? null,
   };
 }
@@ -109,6 +110,7 @@ function rowToOrder(row: Record<string, unknown>): ChannelOrder {
     paymentId: row.payment_id != null ? String(row.payment_id) : undefined,
     paymentMethod: row.payment_method != null ? String(row.payment_method) : undefined,
     paymentLog: row.payment_log != null ? String(row.payment_log) : undefined,
+    receiptUrl: row.receipt_url != null ? String(row.receipt_url) : undefined,
     buyerAccount: row.buyer_account != null ? String(row.buyer_account) : undefined,
   };
 }
@@ -131,8 +133,8 @@ export async function upsertChannelOrder(o: ChannelOrder): Promise<void> {
     const { buyer_account: _ba, ...rowWithout } = row;
     const { error: e2 } = await supabase.from('channel_orders').upsert(rowWithout, { onConflict: 'id' });
     if (!e2) return;
-    // 3차: 결제 관련 컬럼 전체 제외 (payment_id, payment_method, payment_log, buyer_account 없을 때)
-    const { payment_id: _pid, payment_method: _pm, payment_log: _pl, buyer_account: _ba2, ...baseRow } = row;
+    // 3차: 결제 관련 컬럼 전체 제외 (payment_id, payment_method, payment_log, receipt_url, buyer_account 없을 때)
+    const { payment_id: _pid, payment_method: _pm, payment_log: _pl, receipt_url: _ru2, buyer_account: _ba2, ...baseRow } = row;
     const { error: e3 } = await supabase.from('channel_orders').upsert(baseRow, { onConflict: 'id' });
     if (e3) throw e3;
     return;
@@ -148,7 +150,7 @@ export async function upsertChannelOrder(o: ChannelOrder): Promise<void> {
     error.code === '42703'
   ) {
     // 결제 관련 컬럼 전체 제외하고 재시도
-    const { payment_id: _pid, payment_method: _pm, payment_log: _pl, buyer_account: _ba, ...baseRow } = row;
+    const { payment_id: _pid, payment_method: _pm, payment_log: _pl, receipt_url: _ru, buyer_account: _ba, ...baseRow } = row;
     const { error: e2 } = await supabase.from('channel_orders').upsert(baseRow, { onConflict: 'id' });
     if (e2) throw e2;
     return;
@@ -171,7 +173,7 @@ export async function upsertChannelOrders(list: ChannelOrder[]): Promise<void> {
     const { error: e2 } = await supabase.from('channel_orders').upsert(rowsWithout, { onConflict: 'id' });
     if (!e2) return;
     // 3차: 결제 관련 컬럼 전체 제외
-    const rowsBase = rows.map(({ payment_id: _pid, payment_method: _pm, payment_log: _pl, buyer_account: _ba2, ...r }) => r);
+    const rowsBase = rows.map(({ payment_id: _pid, payment_method: _pm, payment_log: _pl, receipt_url: _ru2, buyer_account: _ba2, ...r }) => r);
     const { error: e3 } = await supabase.from('channel_orders').upsert(rowsBase, { onConflict: 'id' });
     if (e3) throw e3;
     return;
@@ -186,7 +188,7 @@ export async function upsertChannelOrders(list: ChannelOrder[]): Promise<void> {
     error.code === 'PGRST200' ||
     error.code === '42703'
   ) {
-    const rowsBase = rows.map(({ payment_id: _pid, payment_method: _pm, payment_log: _pl, buyer_account: _ba, ...r }) => r);
+    const rowsBase = rows.map(({ payment_id: _pid, payment_method: _pm, payment_log: _pl, receipt_url: _ru, buyer_account: _ba, ...r }) => r);
     const { error: e2 } = await supabase.from('channel_orders').upsert(rowsBase, { onConflict: 'id' });
     if (e2) throw e2;
     return;

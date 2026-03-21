@@ -93,6 +93,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
       // 결제 성공 시 (response.code가 없으면 성공으로 간주하는 V2 방식)
       if (!response.code) {
         const paymentId = paymentData.paymentId as string;
+        const receiptUrl: string | undefined = (response as any).receiptUrl ?? (response as any).receipt_url;
         // 쿠폰 사용 시 DB 반영
         let nextUser = { ...user };
         if (appliedCoupon) {
@@ -122,6 +123,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
               paymentId,
               paymentMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
               paymentLog: response ? JSON.stringify(response) : undefined,
+              receiptUrl,
             };
             setChannelOrders((prev) => [...prev, newOrder]);
             if (channelProduct.sellerId) {
@@ -146,6 +148,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
                 paymentId,
                 paymentMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
                 paymentLog: response ? JSON.stringify(response) : undefined,
+                receiptUrl,
               };
               setStoreOrders((prev) => [...prev, newStoreOrder]);
               addNotif(targetProduct.authorId, 'ebook', '💰 상품 판매 알림', `축하합니다! 회원님의 [${targetProduct.title}] 상품이 판매되었습니다.`);
