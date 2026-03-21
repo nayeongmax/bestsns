@@ -55,13 +55,22 @@ const SellerDashboard: React.FC<Props> = ({
   const isAdmin = user.role === 'admin';
   const isApproved = user.sellerStatus === 'approved';
 
+  // 어드민이 아닌 판매자는 스토어 판매만 볼 수 있음
+  const effectiveOrderCategory = (!isAdmin && activeOrderCategory !== 'store') ? 'store' : activeOrderCategory;
+
   const actualStoreOrders = useMemo(() => storeOrders.filter(o => o.sellerNickname === user.nickname), [storeOrders, user.nickname]);
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
-    actualStoreOrders.forEach(o => months.add(o.orderTime.substring(0, 7).replace('.', '-')));
+    if (effectiveOrderCategory === 'sns') {
+      smmOrders.forEach(o => months.add(o.orderTime.substring(0, 7)));
+    } else if (effectiveOrderCategory === 'channel') {
+      channelOrders.forEach(o => months.add(o.orderTime.substring(0, 7)));
+    } else {
+      actualStoreOrders.forEach(o => months.add(o.orderTime.substring(0, 7).replace('.', '-')));
+    }
     return Array.from(months).sort((a, b) => b.localeCompare(a));
-  }, [actualStoreOrders]);
+  }, [effectiveOrderCategory, smmOrders, channelOrders, actualStoreOrders]);
 
   const filteredStoreOrders = useMemo(() => {
     let combined = [...actualStoreOrders];
@@ -72,6 +81,30 @@ const SellerDashboard: React.FC<Props> = ({
     else if (orderFilter === 'done') combined = combined.filter(o => o.status === '구매확정');
     return combined.sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
   }, [actualStoreOrders, orderFilter, monthFilter]);
+
+  // 어드민 전용: SNS 주문 필터링
+  const filteredSmmOrders = useMemo(() => {
+    if (!isAdmin) return [];
+    let list = [...smmOrders];
+    if (monthFilter !== '전체') {
+      list = list.filter(o => o.orderTime.startsWith(monthFilter));
+    }
+    if (orderFilter === 'trading') list = list.filter(o => o.status !== '완료' && o.status !== '주문취소');
+    else if (orderFilter === 'done') list = list.filter(o => o.status === '완료');
+    return list.sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
+  }, [isAdmin, smmOrders, orderFilter, monthFilter]);
+
+  // 어드민 전용: 채널 주문 필터링
+  const filteredChannelOrders = useMemo(() => {
+    if (!isAdmin) return [];
+    let list = [...channelOrders];
+    if (monthFilter !== '전체') {
+      list = list.filter(o => o.orderTime.startsWith(monthFilter));
+    }
+    if (orderFilter === 'trading') list = list.filter(o => o.status !== '구매확정' && o.status !== '취소' && o.status !== 'refunded');
+    else if (orderFilter === 'done') list = list.filter(o => o.status === '구매확정');
+    return list.sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
+  }, [isAdmin, channelOrders, orderFilter, monthFilter]);
 
   // 내 판매 상품 필터링 (승인 대기 중 포함)
   const myProducts = useMemo(() => {
@@ -182,9 +215,9 @@ const SellerDashboard: React.FC<Props> = ({
 
             <div className="flex flex-col md:flex-row justify-between items-center px-4 gap-4">
               <div className="flex bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm gap-1">
-                 <button onClick={() => setActiveOrderCategory('sns')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${activeOrderCategory === 'sns' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>SNS 판매</button>
-                 <button onClick={() => setActiveOrderCategory('channel')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${activeOrderCategory === 'channel' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>채널 판매</button>
-                 <button onClick={() => setActiveOrderCategory('store')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${activeOrderCategory === 'store' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>스토어 판매</button>
+                 {isAdmin && <button onClick={() => setActiveOrderCategory('sns')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${effectiveOrderCategory === 'sns' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>SNS 판매</button>}
+                 {isAdmin && <button onClick={() => setActiveOrderCategory('channel')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${effectiveOrderCategory === 'channel' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>채널 판매</button>}
+                 <button onClick={() => setActiveOrderCategory('store')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${effectiveOrderCategory === 'store' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>스토어 판매</button>
               </div>
               <div className="flex gap-2">
                 <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="px-6 py-2.5 rounded-xl text-[13px] font-black bg-white border border-gray-100 outline-none shadow-sm cursor-pointer">
@@ -209,49 +242,127 @@ const SellerDashboard: React.FC<Props> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filteredStoreOrders.length === 0 ? (
-                    <tr><td colSpan={5} className="py-40 text-center text-gray-300 font-black italic text-xl">조회된 판매 내역이 없습니다.</td></tr>
-                  ) : filteredStoreOrders.map(order => {
-                    const isCancelled = order.status === '취소';
-                    const isCashPayment = order.paymentMethod === 'TRANSFER' || order.paymentMethod === 'VIRTUAL_ACCOUNT';
-                    const showTaxBtn = !isCancelled && isCashPayment;
-                    return (
-                    <tr key={order.id} className={`transition-colors group ${isCancelled ? 'opacity-50 grayscale bg-gray-50' : 'hover:bg-blue-50/10'}`}>
-                      <td className="px-10 py-10">
-                        <div className="flex items-center gap-8">
-                           <img src={`https://picsum.photos/seed/${order.productId}/200/200`} className="w-16 h-16 bg-gray-100 rounded-2xl object-cover shadow-sm" alt="p" />
-                           <div className="min-w-0">
-                             <p className="text-[12px] font-black text-blue-600 uppercase italic mb-1 tracking-tighter">#{order.id}</p>
-                             <p className="text-[17px] font-black text-gray-900 truncate mb-1 italic tracking-tight">{order.productName}</p>
-                             <span className="text-[11px] text-gray-400 font-bold uppercase italic">구매자: @{order.userNickname}</span>
-                           </div>
-                        </div>
-                      </td>
-                      <td className="px-10 py-10 text-center">
-                         <div className="space-y-1">
+                  {/* SNS 판매 탭 (어드민 전용) */}
+                  {effectiveOrderCategory === 'sns' && (
+                    filteredSmmOrders.length === 0 ? (
+                      <tr><td colSpan={5} className="py-40 text-center text-gray-300 font-black italic text-xl">조회된 SNS 판매 내역이 없습니다.</td></tr>
+                    ) : filteredSmmOrders.map(order => {
+                      const isCancelled = order.status === '주문취소';
+                      return (
+                        <tr key={order.id} className={`transition-colors group ${isCancelled ? 'opacity-50 grayscale bg-gray-50' : 'hover:bg-blue-50/10'}`}>
+                          <td className="px-10 py-10">
+                            <div className="flex items-center gap-8">
+                              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm">📈</div>
+                              <div className="min-w-0">
+                                <p className="text-[12px] font-black text-blue-600 uppercase italic mb-1 tracking-tighter">#{order.id}</p>
+                                <p className="text-[17px] font-black text-gray-900 truncate mb-1 italic tracking-tight">[{order.platform}] {order.productName}</p>
+                                <span className="text-[11px] text-gray-400 font-bold uppercase italic">구매자: @{order.userNickname}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-10 py-10 text-center">
                             <p className="text-[12px] font-bold text-gray-400 italic">주문: {formatKoreanDateTime(order.orderTime)}</p>
-                            {order.confirmedAt && <p className="text-[12px] font-black text-blue-500 italic">확정: {formatKoreanDateTime(order.confirmedAt)}</p>}
-                         </div>
-                      </td>
-                      <td className="px-10 py-10 text-right"><p className="text-2xl font-black text-gray-900 italic tracking-tighter mb-1">₩{order.price.toLocaleString()}</p><p className="text-[10px] text-gray-300 font-bold uppercase">{order.tierName}</p></td>
-                      <td className="px-10 py-10 text-center">
-                        <span className={`px-6 py-2 rounded-full text-[11px] font-black italic shadow-sm transition-all ${
-                          order.status === '구매확정'
-                          ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100'
-                          : order.status === '작업중' ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-10 py-10 text-center">
-                         <div className="flex flex-col gap-2 items-center">
-                            {showTaxBtn && <button onClick={() => setShowTaxModal(order)} className="px-5 py-2 bg-orange-50 text-orange-600 rounded-xl font-black text-[11px] hover:bg-black hover:text-white transition-all shadow-sm italic">세금계산서</button>}
-                            {order.reviewId && <button onClick={() => handleReviewManage(order)} className="px-5 py-2 bg-black text-white rounded-xl font-black text-[11px] shadow-lg hover:bg-blue-600 transition-all italic">리뷰관리</button>}
-                         </div>
-                      </td>
-                    </tr>
-                    );
-                  })}
+                          </td>
+                          <td className="px-10 py-10 text-right">
+                            <p className="text-2xl font-black text-gray-900 italic tracking-tighter mb-1">₩{order.sellingPrice.toLocaleString()}</p>
+                            <p className="text-[10px] text-green-500 font-bold">수익 ₩{order.profit.toLocaleString()}</p>
+                          </td>
+                          <td className="px-10 py-10 text-center">
+                            <span className={`px-6 py-2 rounded-full text-[11px] font-black italic shadow-sm transition-all ${
+                              order.status === '완료' ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100'
+                              : order.status === '처리중' ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400'
+                            }`}>{order.status}</span>
+                          </td>
+                          <td className="px-10 py-10 text-center"><span className="text-[11px] text-gray-300 font-bold italic">-</span></td>
+                        </tr>
+                      );
+                    })
+                  )}
+
+                  {/* 채널 판매 탭 (어드민 전용) */}
+                  {effectiveOrderCategory === 'channel' && (
+                    filteredChannelOrders.length === 0 ? (
+                      <tr><td colSpan={5} className="py-40 text-center text-gray-300 font-black italic text-xl">조회된 채널 판매 내역이 없습니다.</td></tr>
+                    ) : filteredChannelOrders.map(order => {
+                      const isCancelled = order.status === '취소' || order.status === 'refunded';
+                      return (
+                        <tr key={order.id} className={`transition-colors group ${isCancelled ? 'opacity-50 grayscale bg-gray-50' : 'hover:bg-blue-50/10'}`}>
+                          <td className="px-10 py-10">
+                            <div className="flex items-center gap-8">
+                              <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm">📺</div>
+                              <div className="min-w-0">
+                                <p className="text-[12px] font-black text-blue-600 uppercase italic mb-1 tracking-tighter">#{order.id}</p>
+                                <p className="text-[17px] font-black text-gray-900 truncate mb-1 italic tracking-tight">{order.productName}</p>
+                                <span className="text-[11px] text-gray-400 font-bold uppercase italic">구매자: @{order.userNickname}</span>
+                                {order.buyerAccount && <span className="ml-2 text-[11px] text-blue-500 font-bold italic">({order.buyerAccount})</span>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-10 py-10 text-center">
+                            <p className="text-[12px] font-bold text-gray-400 italic">주문: {formatKoreanDateTime(order.orderTime)}</p>
+                          </td>
+                          <td className="px-10 py-10 text-right">
+                            <p className="text-2xl font-black text-gray-900 italic tracking-tighter mb-1">₩{order.price.toLocaleString()}</p>
+                            <p className="text-[10px] text-gray-300 font-bold uppercase">{order.platform}</p>
+                          </td>
+                          <td className="px-10 py-10 text-center">
+                            <span className={`px-6 py-2 rounded-full text-[11px] font-black italic shadow-sm transition-all ${
+                              order.status === '구매확정' ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100'
+                              : order.status === '결제완료' ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400'
+                            }`}>{order.status}</span>
+                          </td>
+                          <td className="px-10 py-10 text-center"><span className="text-[11px] text-gray-300 font-bold italic">-</span></td>
+                        </tr>
+                      );
+                    })
+                  )}
+
+                  {/* 스토어 판매 탭 */}
+                  {effectiveOrderCategory === 'store' && (
+                    filteredStoreOrders.length === 0 ? (
+                      <tr><td colSpan={5} className="py-40 text-center text-gray-300 font-black italic text-xl">조회된 판매 내역이 없습니다.</td></tr>
+                    ) : filteredStoreOrders.map(order => {
+                      const isCancelled = order.status === '취소';
+                      const isCashPayment = order.paymentMethod === 'TRANSFER' || order.paymentMethod === 'VIRTUAL_ACCOUNT';
+                      const showTaxBtn = !isCancelled && isCashPayment;
+                      return (
+                        <tr key={order.id} className={`transition-colors group ${isCancelled ? 'opacity-50 grayscale bg-gray-50' : 'hover:bg-blue-50/10'}`}>
+                          <td className="px-10 py-10">
+                            <div className="flex items-center gap-8">
+                              <img src={`https://picsum.photos/seed/${order.productId}/200/200`} className="w-16 h-16 bg-gray-100 rounded-2xl object-cover shadow-sm" alt="p" />
+                              <div className="min-w-0">
+                                <p className="text-[12px] font-black text-blue-600 uppercase italic mb-1 tracking-tighter">#{order.id}</p>
+                                <p className="text-[17px] font-black text-gray-900 truncate mb-1 italic tracking-tight">{order.productName}</p>
+                                <span className="text-[11px] text-gray-400 font-bold uppercase italic">구매자: @{order.userNickname}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-10 py-10 text-center">
+                            <div className="space-y-1">
+                              <p className="text-[12px] font-bold text-gray-400 italic">주문: {formatKoreanDateTime(order.orderTime)}</p>
+                              {order.confirmedAt && <p className="text-[12px] font-black text-blue-500 italic">확정: {formatKoreanDateTime(order.confirmedAt)}</p>}
+                            </div>
+                          </td>
+                          <td className="px-10 py-10 text-right"><p className="text-2xl font-black text-gray-900 italic tracking-tighter mb-1">₩{order.price.toLocaleString()}</p><p className="text-[10px] text-gray-300 font-bold uppercase">{order.tierName}</p></td>
+                          <td className="px-10 py-10 text-center">
+                            <span className={`px-6 py-2 rounded-full text-[11px] font-black italic shadow-sm transition-all ${
+                              order.status === '구매확정'
+                              ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100'
+                              : order.status === '작업중' ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="px-10 py-10 text-center">
+                            <div className="flex flex-col gap-2 items-center">
+                              {showTaxBtn && <button onClick={() => setShowTaxModal(order)} className="px-5 py-2 bg-orange-50 text-orange-600 rounded-xl font-black text-[11px] hover:bg-black hover:text-white transition-all shadow-sm italic">세금계산서</button>}
+                              {order.reviewId && <button onClick={() => handleReviewManage(order)} className="px-5 py-2 bg-black text-white rounded-xl font-black text-[11px] shadow-lg hover:bg-blue-600 transition-all italic">리뷰관리</button>}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

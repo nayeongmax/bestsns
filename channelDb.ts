@@ -120,12 +120,32 @@ export async function fetchChannelOrders(): Promise<ChannelOrder[]> {
 }
 
 export async function upsertChannelOrder(o: ChannelOrder): Promise<void> {
-  const { error } = await supabase.from('channel_orders').upsert(orderToRow(o), { onConflict: 'id' });
-  if (error) throw error;
+  const row = orderToRow(o);
+  const { error } = await supabase.from('channel_orders').upsert(row, { onConflict: 'id' });
+  if (error) {
+    // buyer_account 컬럼이 아직 스키마 캐시에 없을 경우 해당 필드를 제외하고 재시도
+    if (error.message?.includes('buyer_account') || error.code === 'PGRST204') {
+      const { buyer_account: _ba, ...rowWithoutBuyerAccount } = row;
+      const { error: error2 } = await supabase.from('channel_orders').upsert(rowWithoutBuyerAccount, { onConflict: 'id' });
+      if (error2) throw error2;
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function upsertChannelOrders(list: ChannelOrder[]): Promise<void> {
   if (list.length === 0) return;
-  const { error } = await supabase.from('channel_orders').upsert(list.map(orderToRow), { onConflict: 'id' });
-  if (error) throw error;
+  const rows = list.map(orderToRow);
+  const { error } = await supabase.from('channel_orders').upsert(rows, { onConflict: 'id' });
+  if (error) {
+    // buyer_account 컬럼이 아직 스키마 캐시에 없을 경우 해당 필드를 제외하고 재시도
+    if (error.message?.includes('buyer_account') || error.code === 'PGRST204') {
+      const rowsWithout = rows.map(({ buyer_account: _ba, ...r }) => r);
+      const { error: error2 } = await supabase.from('channel_orders').upsert(rowsWithout, { onConflict: 'id' });
+      if (error2) throw error2;
+      return;
+    }
+    throw error;
+  }
 }

@@ -350,10 +350,24 @@ const App: React.FC = () => {
   useEffect(() => {
     if (location.pathname !== '/mypage' && location.pathname !== '/admin') return;
     fetchChannelOrders()
-      .then((orders) => setChannelOrders(orders))
+      .then((dbOrders) => {
+        // DB 주문과 로컬 상태를 병합 (DB에 아직 반영 안 된 로컬 주문 보존)
+        setChannelOrders((prev) => {
+          const dbIds = new Set(dbOrders.map((o) => o.id));
+          const localOnly = prev.filter((o) => !dbIds.has(o.id));
+          return [...dbOrders, ...localOnly];
+        });
+      })
       .catch((e) => console.warn('채널 주문 재로드 실패:', e));
     fetchStoreOrders()
-      .then((orders) => setStoreOrders(orders))
+      .then((dbOrders) => {
+        // DB 주문과 로컬 상태를 병합 (DB에 아직 반영 안 된 로컬 주문 보존)
+        setStoreOrders((prev) => {
+          const dbIds = new Set(dbOrders.map((o) => o.id));
+          const localOnly = prev.filter((o) => !dbIds.has(o.id));
+          return [...dbOrders, ...localOnly];
+        });
+      })
       .catch((e) => console.warn('스토어 주문 재로드 실패:', e));
   }, [location.pathname]);
 
