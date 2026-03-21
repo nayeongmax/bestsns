@@ -237,12 +237,12 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
 
       // DB 상태 업데이트 + 상위 상태 반영
       if (storeOrder) {
+        await supabase.from('store_orders').update({ status: '취소' }).eq('id', order.id);
         const updated: StoreOrder = { ...storeOrder, status: '취소' };
-        await upsertStoreOrder(updated);
         setStoreOrders?.(prev => prev.map(o => o.id === order.id ? updated : o));
       } else if (channelOrder) {
+        await supabase.from('channel_orders').update({ status: '취소' }).eq('id', order.id);
         const updated: ChannelOrder = { ...channelOrder, status: '취소' };
-        await upsertChannelOrder(updated);
         setChannelOrders?.(prev => prev.map(o => o.id === order.id ? updated : o));
       }
       // orders 테이블도 환불 상태로 동기화 (payment_id 기준)
@@ -256,7 +256,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
         : '환불 신청이 완료되었습니다. 환불 금액은 영업일 기준 3~5일 내에 처리됩니다.';
       alert(msg);
     } catch (e) {
-      alert(`환불 처리 중 오류가 발생했습니다: ${(e as Error).message}`);
+      console.error('환불 처리 오류:', (e as Error).message);
+      alert('환불 처리 중 오류가 발생했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해 주세요.');
     } finally {
       setRefundLoading(null);
     }
