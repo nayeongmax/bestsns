@@ -49,7 +49,8 @@ exports.handler = async (event, context) => {
     if (!res.ok) {
       // 이미 취소된 결제인 경우 성공으로 처리 (실제 카드 환불은 완료된 상태)
       const alreadyCancelledTypes = ['ALREADY_CANCELLED', 'CANCELLATION_NOT_ALLOWED'];
-      if (alreadyCancelledTypes.includes(data.type)) {
+      const msg = (data.message || '').toLowerCase();
+      if (alreadyCancelledTypes.includes(data.type) || msg.includes('already cancelled') || msg.includes('already canceled')) {
         return { statusCode: 200, headers, body: JSON.stringify({ ...data, alreadyCancelled: true }) };
       }
       return {
