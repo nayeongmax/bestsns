@@ -25,6 +25,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/portone-webhook"
+  to = "/.netlify/functions/portone-webhook"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
