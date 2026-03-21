@@ -642,14 +642,30 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                           )}
                        </div>
 
-                       {order.paymentId && (
-                         <button
-                           onClick={() => setPaymentModalOrder(order)}
-                           className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all mb-1"
-                         >
-                           💳 결제정보 확인
-                         </button>
-                       )}
+                       {order.paymentId && (() => {
+                         const log = parsePaymentLog(order.paymentLog);
+                         const receiptUrl = log?.receiptUrl || log?.receipt_url;
+                         if (receiptUrl) {
+                           return (
+                             <a
+                               href={receiptUrl}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="inline-flex items-center gap-1 text-[11px] font-black text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-full transition-all mb-1"
+                             >
+                               🧾 PG사 영수증 보기
+                             </a>
+                           );
+                         }
+                         return (
+                           <button
+                             onClick={() => setPaymentModalOrder(order)}
+                             className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all mb-1"
+                           >
+                             💳 결제정보 확인
+                           </button>
+                         );
+                       })()}
 
                        {order.type === 'store' && (order.storeType === 'ebook' || order.storeType === 'template') && (
                          <p className="text-[12px] font-bold text-red-500 whitespace-nowrap overflow-hidden text-ellipsis italic">
@@ -734,14 +750,30 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
                           )}
                        </div>
 
-                       {order.paymentId && (
-                         <button
-                           onClick={() => setPaymentModalOrder(order)}
-                           className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all mb-1"
-                         >
-                           💳 결제정보 확인
-                         </button>
-                       )}
+                       {order.paymentId && (() => {
+                         const log = parsePaymentLog(order.paymentLog);
+                         const receiptUrl = log?.receiptUrl || log?.receipt_url;
+                         if (receiptUrl) {
+                           return (
+                             <a
+                               href={receiptUrl}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="inline-flex items-center gap-1 text-[11px] font-black text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-full transition-all mb-1"
+                             >
+                               🧾 PG사 영수증 보기
+                             </a>
+                           );
+                         }
+                         return (
+                           <button
+                             onClick={() => setPaymentModalOrder(order)}
+                             className="inline-flex items-center gap-1 text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all mb-1"
+                           >
+                             💳 결제정보 확인
+                           </button>
+                         );
+                       })()}
 
                        {order.type === 'store' && (order.storeType === 'ebook' || order.storeType === 'template') && (
                          <p className="text-[12px] font-bold text-red-500 whitespace-nowrap overflow-hidden text-ellipsis italic">

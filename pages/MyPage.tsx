@@ -206,12 +206,14 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
         {activeMainTab === 'buyer' && <BuyerDashboard user={effectiveUser} smmOrders={smmOrders} channelOrders={channelOrders} storeOrders={storeOrders} setStoreOrders={setStoreOrders} setChannelOrders={setChannelOrders} ebooks={ebooks} onAddReview={onAddReview} initialSubTab={(location.state as any)?.buyerSubTab} />}
         {activeMainTab === 'freelancer' && <FreelancerDashboard user={effectiveUser} onUpdate={onUpdate} onApplyFreelancer={() => goToExpertRegistration('freelancer')} initialSubTab={(location.state as any)?.freelancerSubTab} addNotif={addNotif} />}
         {activeMainTab === 'seller' && (
-          <SellerDashboard 
-            user={effectiveUser} 
-            ebooks={ebooks} 
+          <SellerDashboard
+            user={effectiveUser}
+            ebooks={ebooks}
             setEbooks={setEbooks}
-            channels={channels} 
+            channels={channels}
             storeOrders={storeOrders}
+            smmOrders={smmOrders}
+            channelOrders={channelOrders}
             onApplySeller={() => goToExpertRegistration('seller')}
             reviews={reviews}
             onUpdateReview={onUpdateReview}
