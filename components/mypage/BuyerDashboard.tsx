@@ -851,6 +851,22 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
               결제 관련 문의는 고객센터로 연락해 주세요.
             </p>
 
+            {(() => {
+              const log = parsePaymentLog(paymentModalOrder.paymentLog);
+              const receiptUrl = log?.receiptUrl || log?.receipt_url;
+              if (!receiptUrl) return null;
+              return (
+                <a
+                  href={receiptUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-4 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 rounded-[24px] font-black text-[15px] hover:bg-blue-100 transition-all"
+                >
+                  🧾 영수증 보기
+                </a>
+              );
+            })()}
+
             <button
               onClick={() => setPaymentModalOrder(null)}
               className="w-full py-5 bg-gray-900 text-white rounded-[24px] font-black text-[15px] hover:bg-indigo-600 transition-all"
