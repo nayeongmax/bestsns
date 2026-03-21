@@ -40,6 +40,47 @@ async function updateSupabaseByPaymentId(table, paymentId, updateData) {
 }
 
 /**
+ * Supabase REST API로 테이블에 row 삽입
+ */
+async function insertSupabaseRow(table, rowData) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/${table}`,
+    {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify(rowData),
+    }
+  );
+  return res;
+}
+
+/**
+ * Supabase REST API로 channel_orders 테이블 row 조회 (payment_id 기준)
+ */
+async function fetchChannelOrderByPaymentId(paymentId) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/channel_orders?payment_id=eq.${encodeURIComponent(paymentId)}&select=id&limit=1`,
+    {
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (!res.ok) return null;
+  const rows = await res.json().catch(() => null);
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+}
+
+/**
  * Supabase REST API로 orders 테이블 row 조회 (payment_id 기준)
  */
 async function fetchOrderByPaymentId(paymentId) {
@@ -121,8 +162,35 @@ exports.handler = async (event) => {
         }
 
         // channel_orders: payment_id 기준으로 결제완료 상태 동기화
-        const r2 = await updateSupabaseByPaymentId('channel_orders', paymentId, { status: '결제완료' });
-        console.log(`[portone-webhook] Transaction.Paid channel_orders update: ${r2?.status}`);
+        // 클라이언트에서 INSERT가 실패한 경우를 대비해 row 존재 여부 확인 후 없으면 INSERT
+        const channelOrderExists = await fetchChannelOrderByPaymentId(paymentId);
+        if (channelOrderExists) {
+          const r2 = await updateSupabaseByPaymentId('channel_orders', paymentId, { status: '결제완료' });
+          console.log(`[portone-webhook] Transaction.Paid channel_orders update: ${r2?.status}`);
+        } else {
+          // 클라이언트 INSERT가 실패한 경우: PortOne 결제 정보로 최소한의 row INSERT
+          const orderName = portonePayment.orderName ?? '';
+          const isChannelOrder = orderName.includes('[채널구매]');
+          if (isChannelOrder) {
+            const newRow = {
+              id: `CO_webhook_${paymentId}`,
+              user_id: portonePayment.customer?.customerId ?? 'unknown',
+              user_nickname: portonePayment.customer?.fullName ?? 'unknown',
+              order_time: portonePayment.paidAt ?? new Date().toISOString(),
+              product_id: 'unknown',
+              product_name: orderName.replace('[채널구매] ', ''),
+              platform: '',
+              price: portonePayment.amount?.total ?? 0,
+              status: '결제완료',
+              payment_id: paymentId,
+              payment_method: 'CARD',
+            };
+            const insertRes = await insertSupabaseRow('channel_orders', newRow);
+            console.log(`[portone-webhook] Transaction.Paid channel_orders INSERT fallback: ${insertRes?.status}`);
+          } else {
+            console.log(`[portone-webhook] Transaction.Paid channel_orders: no row found but not a channel order (${orderName})`);
+          }
+        }
 
         // store_orders: payment_id 기준으로 결제완료 상태 동기화
         const r3 = await updateSupabaseByPaymentId('store_orders', paymentId, { status: '결제완료' });

@@ -121,31 +121,76 @@ export async function fetchChannelOrders(): Promise<ChannelOrder[]> {
 
 export async function upsertChannelOrder(o: ChannelOrder): Promise<void> {
   const row = orderToRow(o);
+
+  // 1차 시도: 전체 필드
   const { error } = await supabase.from('channel_orders').upsert(row, { onConflict: 'id' });
-  if (error) {
-    // buyer_account 컬럼이 아직 스키마 캐시에 없을 경우 해당 필드를 제외하고 재시도
-    if (error.message?.includes('buyer_account') || error.code === 'PGRST204') {
-      const { buyer_account: _ba, ...rowWithoutBuyerAccount } = row;
-      const { error: error2 } = await supabase.from('channel_orders').upsert(rowWithoutBuyerAccount, { onConflict: 'id' });
-      if (error2) throw error2;
-      return;
-    }
-    throw error;
+  if (!error) return;
+
+  // 2차 시도: buyer_account 제외 (컬럼 미존재 시)
+  if (error.message?.includes('buyer_account') || error.code === 'PGRST204') {
+    const { buyer_account: _ba, ...rowWithout } = row;
+    const { error: e2 } = await supabase.from('channel_orders').upsert(rowWithout, { onConflict: 'id' });
+    if (!e2) return;
+    // 3차: 결제 관련 컬럼 전체 제외 (payment_id, payment_method, payment_log, buyer_account 없을 때)
+    const { payment_id: _pid, payment_method: _pm, payment_log: _pl, buyer_account: _ba2, ...baseRow } = row;
+    const { error: e3 } = await supabase.from('channel_orders').upsert(baseRow, { onConflict: 'id' });
+    if (e3) throw e3;
+    return;
   }
+
+  // 컬럼 자체가 없는 경우 (payment_id, payment_method, payment_log 등)
+  if (
+    error.message?.includes('payment_id') ||
+    error.message?.includes('payment_method') ||
+    error.message?.includes('payment_log') ||
+    error.message?.includes('column') ||
+    error.code === 'PGRST200' ||
+    error.code === '42703'
+  ) {
+    // 결제 관련 컬럼 전체 제외하고 재시도
+    const { payment_id: _pid, payment_method: _pm, payment_log: _pl, buyer_account: _ba, ...baseRow } = row;
+    const { error: e2 } = await supabase.from('channel_orders').upsert(baseRow, { onConflict: 'id' });
+    if (e2) throw e2;
+    return;
+  }
+
+  throw error;
 }
 
 export async function upsertChannelOrders(list: ChannelOrder[]): Promise<void> {
   if (list.length === 0) return;
   const rows = list.map(orderToRow);
+
+  // 1차 시도: 전체 필드
   const { error } = await supabase.from('channel_orders').upsert(rows, { onConflict: 'id' });
-  if (error) {
-    // buyer_account 컬럼이 아직 스키마 캐시에 없을 경우 해당 필드를 제외하고 재시도
-    if (error.message?.includes('buyer_account') || error.code === 'PGRST204') {
-      const rowsWithout = rows.map(({ buyer_account: _ba, ...r }) => r);
-      const { error: error2 } = await supabase.from('channel_orders').upsert(rowsWithout, { onConflict: 'id' });
-      if (error2) throw error2;
-      return;
-    }
-    throw error;
+  if (!error) return;
+
+  // 2차 시도: buyer_account 제외
+  if (error.message?.includes('buyer_account') || error.code === 'PGRST204') {
+    const rowsWithout = rows.map(({ buyer_account: _ba, ...r }) => r);
+    const { error: e2 } = await supabase.from('channel_orders').upsert(rowsWithout, { onConflict: 'id' });
+    if (!e2) return;
+    // 3차: 결제 관련 컬럼 전체 제외
+    const rowsBase = rows.map(({ payment_id: _pid, payment_method: _pm, payment_log: _pl, buyer_account: _ba2, ...r }) => r);
+    const { error: e3 } = await supabase.from('channel_orders').upsert(rowsBase, { onConflict: 'id' });
+    if (e3) throw e3;
+    return;
   }
+
+  // 결제 관련 컬럼 없는 경우
+  if (
+    error.message?.includes('payment_id') ||
+    error.message?.includes('payment_method') ||
+    error.message?.includes('payment_log') ||
+    error.message?.includes('column') ||
+    error.code === 'PGRST200' ||
+    error.code === '42703'
+  ) {
+    const rowsBase = rows.map(({ payment_id: _pid, payment_method: _pm, payment_log: _pl, buyer_account: _ba, ...r }) => r);
+    const { error: e2 } = await supabase.from('channel_orders').upsert(rowsBase, { onConflict: 'id' });
+    if (e2) throw e2;
+    return;
+  }
+
+  throw error;
 }
