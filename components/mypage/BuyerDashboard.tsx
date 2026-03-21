@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder } from '@/types';
+import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder, ChannelProduct } from '@/types';
 import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, upsertStoreOrder, type OrderBuyerFlag } from '../../storeDb';
 import { upsertChannelOrder } from '../../channelDb';
 import { fetchPointTransactions, type PointTransaction } from '../../pointDb';
@@ -10,6 +10,7 @@ interface Props {
   user: UserProfile;
   smmOrders: SMMOrder[];
   channelOrders: ChannelOrder[];
+  channelProducts?: ChannelProduct[];
   storeOrders: StoreOrder[];
   setStoreOrders?: React.Dispatch<React.SetStateAction<StoreOrder[]>>;
   setChannelOrders?: React.Dispatch<React.SetStateAction<ChannelOrder[]>>;
@@ -52,7 +53,7 @@ interface OrderItem {
   paymentLog?: string;
 }
 
-const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, initialSubTab }) => {
+const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, channelProducts = [], storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, initialSubTab }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BuyerSubTab>(() => initialSubTab ?? 'sns');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -117,12 +118,15 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
 
     const channelItems: OrderItem[] = channelOrders
       .filter(o => o.userId === user.id)
-      .map(o => ({
-        id: o.id, type: 'channel', orderTime: o.orderTime, productName: o.productName,
-        thumbnail: '', productId: o.productId, sellerName: o.platform || '채널',
-        price: o.price, quantity: 1, totalPrice: o.price, status: o.status,
-        paymentId: o.paymentId, paymentMethod: o.paymentMethod, paymentLog: o.paymentLog
-      }));
+      .map(o => {
+        const product = channelProducts.find(p => p.id === o.productId);
+        return {
+          id: o.id, type: 'channel', orderTime: o.orderTime, productName: o.productName,
+          thumbnail: product?.thumbnail || '', productId: o.productId, sellerName: o.platform || '채널',
+          price: o.price, quantity: 1, totalPrice: o.price, status: o.status,
+          paymentId: o.paymentId, paymentMethod: o.paymentMethod, paymentLog: o.paymentLog
+        };
+      });
 
     const storeItems: OrderItem[] = storeOrders
       .filter(o => o.userId === user.id)
@@ -143,7 +147,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, store
     return base
       .filter(o => o.type === activeTab)
       .sort((a, b) => new Date(b.orderTime).getTime() - new Date(a.orderTime).getTime());
-  }, [smmOrders, channelOrders, storeOrders, user.id, activeTab]);
+  }, [smmOrders, channelOrders, channelProducts, storeOrders, user.id, activeTab]);
 
   const handleConfirmOrder = (order: OrderItem, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
