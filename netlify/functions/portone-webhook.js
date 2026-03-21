@@ -183,6 +183,7 @@ exports.handler = async (event) => {
               status: '결제완료',
               payment_id: paymentId,
               payment_method: 'CARD',
+              receipt_url: portonePayment.receiptUrl ?? null,
             };
             const insertRes = await insertSupabaseRow('channel_orders', newRow);
             console.log(`[portone-webhook] Transaction.Paid channel_orders INSERT fallback: ${insertRes?.status}`);

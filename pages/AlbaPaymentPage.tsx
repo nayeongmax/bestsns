@@ -72,7 +72,8 @@ const AlbaPaymentPage: React.FC<Props> = ({ user, members = [], addNotif }) => {
       const response = await PortOne.requestPayment(paymentData);
 
       if (!response.code) {
-        const updated = { ...jobRequest, paid: true };
+        const receiptUrl: string | undefined = (response as any).receiptUrl ?? (response as any).receipt_url;
+        const updated = { ...jobRequest, paid: true, receiptUrl };
         await upsertPartTimeJobRequest(updated);
         // 의뢰자 알림
         addNotif?.(user.id, 'payment', '알바의뢰 결제 완료', `[${jobRequest.title}] 결제가 완료되었습니다. 프리랜서 모집이 진행될 예정입니다.`);

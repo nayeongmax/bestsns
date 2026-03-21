@@ -155,6 +155,8 @@ export interface PartTimeJobRequest {
   rejectReason?: string;
   /** 결제 완료 여부 (구매자 PG 결제 후) */
   paid?: boolean;
+  /** 포트원 영수증 URL */
+  receiptUrl?: string;
   /** 광고주가 원하는 예시 이미지 (data URL, 최대 10개) */
   exampleImages?: string[];
   /** 운영자가 발송한 견적서 */
@@ -266,6 +268,7 @@ export interface ChannelOrder {
   paymentId?: string;
   paymentMethod?: string;
   paymentLog?: string;
+  receiptUrl?: string;
   buyerAccount?: string;
 }
 
@@ -285,6 +288,7 @@ export interface StoreOrder {
   paymentId?: string;
   paymentMethod?: string;
   paymentLog?: string;
+  receiptUrl?: string;
   downloadedAt?: string;
   buyerTaxInfo?: string;
   reviewId?: string;
