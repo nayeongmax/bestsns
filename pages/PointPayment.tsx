@@ -64,8 +64,11 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
   const totalChargePoints = amount + bonusPoints;
 
   // 보너스 기간 표시용 날짜 포맷 (YY.MM.DD.)
+  const isUnlimitedBonus = isBonusWithinPeriod && user.pointBonusExpiryDays == null;
   const bonusPeriodLabel = (() => {
-    if (!isBonusWithinPeriod || user.pointBonusExpiryDays == null || !user.pointBonusStartDate) return null;
+    if (!isBonusWithinPeriod) return null;
+    if (user.pointBonusExpiryDays == null) return '무기한';
+    if (!user.pointBonusStartDate) return '무기한';
     const fmt = (d: Date) => `${String(d.getFullYear()).slice(2)}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}.`;
     const start = new Date(user.pointBonusStartDate);
     const end = new Date(start);
@@ -319,6 +322,9 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
                   </div>
                   {bonusPeriodLabel && (
                     <p className="text-[11px] text-amber-500 font-bold text-right">{bonusPeriodLabel}</p>
+                  )}
+                  {isUnlimitedBonus && (
+                    <p className="text-[11px] text-amber-400 leading-relaxed">※ 기간이 정해지지 않은 일시적 보너스 포인트로, 추후 보너스 혜택이 사라질 수 있습니다.</p>
                   )}
                 </div>
               )}
