@@ -570,6 +570,15 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       if (profileErr) {
         console.error('Profiles 저장 실패(회원가입):', profileErr.message, '- supabase-profiles-alter-and-backfill.sql 실행 여부를 확인하세요.');
       }
+      // Supabase Auth 트리거가 UUID 기반 중복 프로필 생성 시 제거 (같은 이메일, 다른 ID)
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const { data: dupRows } = await supabase.from('profiles').select('id').eq('email', email).neq('id', id);
+      if (dupRows && dupRows.length > 0) {
+        const uuidIds = dupRows.map((r: { id: string }) => r.id).filter((rid: string) => uuidPattern.test(rid));
+        if (uuidIds.length > 0) {
+          await supabase.from('profiles').delete().in('id', uuidIds).catch(() => {});
+        }
+      }
       await updateProfile(id, { coupons: [welcomeCoupon] }).catch((e) => console.warn('가입 쿠폰 DB 반영 실패:', e));
 
       onLoginSuccess(newUser);

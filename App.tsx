@@ -482,10 +482,36 @@ const App: React.FC = () => {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // 채팅 알림음 (딩동) - suspended 상태 resume 후 재생
+  // AudioContext 재사용 ref (브라우저 자동재생 정책 대응)
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // 첫 사용자 인터랙션(클릭/키) 시 AudioContext 잠금 해제
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new AudioContext();
+        }
+        if (audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume().catch(() => {});
+        }
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('click', unlock);
+    window.addEventListener('keydown', unlock);
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
+  // 채팅 알림음 (딩동) - AudioContext 재사용으로 브라우저 차단 우회
   const playDingDong = useCallback(() => {
     try {
-      const ctx = new AudioContext();
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
       const playTones = () => {
         const playTone = (freq: number, startTime: number, duration: number) => {
           const osc = ctx.createOscillator();
@@ -495,7 +521,7 @@ const App: React.FC = () => {
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, startTime);
           osc.frequency.exponentialRampToValueAtTime(freq * 0.8, startTime + duration * 0.8);
-          gain.gain.setValueAtTime(0.25, startTime);
+          gain.gain.setValueAtTime(0.3, startTime);
           gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
           osc.start(startTime);
           osc.stop(startTime + duration);
@@ -516,13 +542,48 @@ const App: React.FC = () => {
     try { localStorage.setItem('unread_chat_count', String(unreadChatCount)); } catch { /* ignore */ }
   }, [unreadChatCount]);
 
-  // /chat 진입 시 미읽음 카운트 초기화
+  // /chat 진입 시 미읽음 카운트 초기화 + 마지막 읽은 시각 저장
   useEffect(() => {
     if (location.pathname === '/chat') {
       setUnreadChatCount(0);
-      try { localStorage.setItem('unread_chat_count', '0'); } catch { /* ignore */ }
+      try {
+        localStorage.setItem('unread_chat_count', '0');
+        if (user?.id) {
+          localStorage.setItem(`chat_last_read_${user.id}`, new Date().toISOString());
+        }
+      } catch { /* ignore */ }
     }
-  }, [location.pathname]);
+  }, [location.pathname, user?.id]);
+
+  // 로그인 시 DB에서 미읽음 채팅 수 로드 (마지막 /chat 방문 이후 받은 메시지)
+  useEffect(() => {
+    if (!user?.id) return;
+    const userId = user.id;
+    let cancelled = false;
+    (async () => {
+      try {
+        const lastReadKey = `chat_last_read_${userId}`;
+        let lastRead = localStorage.getItem(lastReadKey);
+        if (!lastRead) {
+          // 최초: 24시간 이내 메시지만 확인
+          lastRead = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          localStorage.setItem(lastReadKey, lastRead);
+        }
+        const { count, error } = await supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .or(`room_id.like.${userId}_%,room_id.like.%_${userId}`)
+          .neq('sender_id', userId)
+          .gt('created_at', lastRead);
+        if (cancelled || error) return;
+        if ((count ?? 0) > 0) {
+          setUnreadChatCount(count!);
+          try { localStorage.setItem('unread_chat_count', String(count)); } catch { /* ignore */ }
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   // 채팅 메시지 실시간 구독 → 미읽음 카운트 + 알림음
   useEffect(() => {
