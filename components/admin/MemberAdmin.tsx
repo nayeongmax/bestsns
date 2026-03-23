@@ -58,9 +58,42 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
 
   const resolveGrade = (m: UserProfile) => getUserGrade(m, gradeConfigs);
 
+  // 환불/취소 반영 실시간 계산: profiles에 저장된 누적값 대신 실제 주문 데이터로 정확한 금액 산출
+  const realTimeAmounts = useMemo(() => {
+    const map: Record<string, { sales: number; purchase: number }> = {};
+    members.forEach(m => { map[m.id] = { sales: 0, purchase: 0 }; });
+
+    // 구매액: storeOrders (취소 제외) + channelOrders (refunded 제외) + smmOrders
+    storeOrders.forEach(o => {
+      if (o.status !== '취소') {
+        if (map[o.userId]) map[o.userId].purchase += o.price;
+      }
+    });
+    channelOrders.forEach(o => {
+      if (o.status !== 'refunded') {
+        if (map[o.userId]) map[o.userId].purchase += o.price;
+      }
+    });
+    smmOrders.forEach(o => {
+      if (map[o.userId]) map[o.userId].purchase += o.sellingPrice * o.quantity;
+    });
+
+    // 판매액: storeOrders (취소 제외), sellerNickname 기준
+    const nicknameToId: Record<string, string> = {};
+    members.forEach(m => { if (m.nickname) nicknameToId[m.nickname] = m.id; });
+    storeOrders.forEach(o => {
+      if (o.status !== '취소' && o.sellerNickname) {
+        const sid = nicknameToId[o.sellerNickname];
+        if (sid && map[sid]) map[sid].sales += o.price;
+      }
+    });
+
+    return map;
+  }, [members, storeOrders, channelOrders, smmOrders]);
+
   const filteredMembers = useMemo(() => {
-    let result = members.filter(m => 
-      (m.nickname || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    let result = members.filter(m =>
+      (m.nickname || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.id || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -72,14 +105,14 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
       result = result.filter(m => m.freelancerStatus === 'approved');
     }
 
-    if (sortKey === 'purchase') result.sort((a, b) => (b.totalPurchaseAmount || 0) - (a.totalPurchaseAmount || 0));
-    else if (sortKey === 'sales') result.sort((a, b) => (b.totalSalesAmount || 0) - (a.totalSalesAmount || 0));
+    if (sortKey === 'purchase') result.sort((a, b) => (realTimeAmounts[b.id]?.purchase || 0) - (realTimeAmounts[a.id]?.purchase || 0));
+    else if (sortKey === 'sales') result.sort((a, b) => (realTimeAmounts[b.id]?.sales || 0) - (realTimeAmounts[a.id]?.sales || 0));
     else if (sortKey === 'violations') result.sort((a, b) => (b.violationCount || 0) - (a.violationCount || 0));
     else if (sortKey === 'points') result.sort((a, b) => (b.points || 0) - (a.points || 0));
     else if (sortKey === 'join') result.sort((a, b) => new Date(b.joinDate || '').getTime() - new Date(a.joinDate || '').getTime());
 
     return result;
-  }, [members, searchQuery, userTypeFilter, sortKey]);
+  }, [members, searchQuery, userTypeFilter, sortKey, realTimeAmounts]);
 
   const pendingRequests = useMemo(() => 
     members.filter(m => m.sellerStatus === 'pending' || !!m.pendingApplication), 
@@ -219,8 +252,8 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                      <td className="px-8 py-4 text-center">
                         <span className={`${resolveGrade(m)?.color || 'bg-gray-400'} text-white text-[10px] font-black px-3 py-1 rounded-full`}>{resolveGrade(m)?.name || '-'}</span>
                      </td>
-                     <td className="px-8 py-4 text-right text-blue-600">₩{(m.totalPurchaseAmount || 0).toLocaleString()}</td>
-                     <td className="px-8 py-4 text-right text-orange-600">₩{(m.totalSalesAmount || 0).toLocaleString()}</td>
+                     <td className="px-8 py-4 text-right text-blue-600">₩{(realTimeAmounts[m.id]?.purchase || 0).toLocaleString()}</td>
+                     <td className="px-8 py-4 text-right text-orange-600">₩{(realTimeAmounts[m.id]?.sales || 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-right text-blue-600">{(m.points || 0).toLocaleString()}P</td>
                      <td className="px-8 py-4 text-right text-emerald-600">₩{(freelancerBalances[m.id] ?? 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-center">
