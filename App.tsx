@@ -484,10 +484,30 @@ const App: React.FC = () => {
 
   // 채팅 알림음 - /notification.mp3 재생
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUnlockedRef = useRef(false);
 
   useEffect(() => {
-    notificationAudioRef.current = new Audio('/notification.mp3');
-    notificationAudioRef.current.preload = 'auto';
+    const audio = new Audio('/notification.mp3');
+    audio.preload = 'auto';
+    notificationAudioRef.current = audio;
+
+    // 브라우저 자동재생 정책 해제: 첫 사용자 인터랙션 시 무음 재생으로 잠금 해제
+    const unlock = () => {
+      if (audioUnlockedRef.current) return;
+      audio.volume = 0;
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = 1;
+        audioUnlockedRef.current = true;
+      }).catch(() => {});
+    };
+    window.addEventListener('click', unlock, { once: false });
+    window.addEventListener('keydown', unlock, { once: false });
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
   }, []);
 
   const playDingDong = useCallback(() => {
