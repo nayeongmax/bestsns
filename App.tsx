@@ -186,6 +186,7 @@ const App: React.FC = () => {
     } catch { return []; }
   });
 
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const storeDbLoaded = useRef(false);
 
@@ -477,6 +478,58 @@ const App: React.FC = () => {
     return () => { cancelled = true; };
   }, [user?.id]);
 
+  // 채팅 알림음 (딩동)
+  const playDingDong = useCallback(() => {
+    try {
+      const ctx = new AudioContext();
+      const playTone = (freq: number, startTime: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.8, startTime + duration * 0.8);
+        gain.gain.setValueAtTime(0.25, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+      playTone(880, ctx.currentTime, 0.35);        // 딩 (A5)
+      playTone(660, ctx.currentTime + 0.4, 0.45);  // 동 (E5)
+    } catch { /* AudioContext 차단 시 무시 */ }
+  }, []);
+
+  // /chat 진입 시 미읽음 카운트 초기화
+  useEffect(() => {
+    if (location.pathname === '/chat') {
+      setUnreadChatCount(0);
+    }
+  }, [location.pathname]);
+
+  // 채팅 메시지 실시간 구독 → 미읽음 카운트 + 알림음
+  useEffect(() => {
+    if (!user?.id) return;
+    const userId = user.id;
+    const channel = supabase
+      .channel(`chat-unread-${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+        const msg = payload.new as { room_id?: string; sender_id?: string; sender_nickname?: string };
+        const roomId = msg.room_id || '';
+        const senderId = msg.sender_id || '';
+        // 내가 참여한 채팅방(room_id에 내 id 포함)에 상대방이 보낸 메시지
+        if (roomId.includes(userId) && senderId !== userId) {
+          // /chat 페이지에 있는 경우엔 카운트 증가 안 함 (화면에서 바로 확인 가능)
+          if (window.location.pathname !== '/chat') {
+            setUnreadChatCount(prev => prev + 1);
+            playDingDong();
+          }
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, playDingDong]);
+
   // 회원 목록 단일 소스: Supabase profiles에서 로드 (DEPLOY 가이드)
   useEffect(() => {
     let cancelled = false;
@@ -492,7 +545,28 @@ const App: React.FC = () => {
           const parsed = data
             .map((r: Record<string, unknown>) => profileRowToUserProfile(r))
             .filter((p: UserProfile) => p.id);
-          setMembers(parsed);
+
+          // 같은 이메일로 중복 프로필 제거: Supabase Auth UUID와 커스텀 ID가 공존할 때
+          // (예: 'payverse' + '5bbab497-...' → 커스텀 ID 우선 유지)
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          const deduped = parsed.reduce<UserProfile[]>((acc, p) => {
+            if (!p.email) return [...acc, p];
+            const sameEmail = acc.findIndex(e => e.email === p.email);
+            if (sameEmail === -1) return [...acc, p];
+            // 중복: 커스텀 ID 우선 (UUID가 아닌 것)
+            const existingIsUuid = uuidPattern.test(acc[sameEmail].id);
+            const currentIsUuid = uuidPattern.test(p.id);
+            if (existingIsUuid && !currentIsUuid) {
+              // 기존(UUID)을 커스텀 ID로 교체
+              const next = [...acc];
+              next[sameEmail] = p;
+              return next;
+            }
+            // 기존이 이미 커스텀 ID이거나 둘 다 UUID면 현재 스킵
+            return acc;
+          }, []);
+
+          setMembers(deduped);
         }
       } catch (e) {
         if (!cancelled) console.warn('profiles fetch 오류:', e);
@@ -720,7 +794,7 @@ const App: React.FC = () => {
   const content = (
     <>
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20 sm:pb-24 xl:pb-0">
-      <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={0} onLogout={handleLogout} onOpenLoginModal={() => setShowAuthModal(true)} />
+      <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={unreadChatCount} onLogout={handleLogout} onOpenLoginModal={() => setShowAuthModal(true)} />
       <LiveNotification />
       <div className="container mx-auto py-10 px-4 flex-1">
         <ContainerRoutes
