@@ -21,12 +21,13 @@ import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
   user: UserProfile;
+  members?: UserProfile[];
   ebooks: EbookProduct[];
   setEbooks: React.Dispatch<React.SetStateAction<EbookProduct[]>>;
   channels: ChannelProduct[];
   storeOrders: StoreOrder[];
-  smmOrders?: SMMOrder[]; 
-  channelOrders?: ChannelOrder[]; 
+  smmOrders?: SMMOrder[];
+  channelOrders?: ChannelOrder[];
   onApplySeller: () => void;
   reviews: Review[];
   onUpdateReview: (updated: Review) => void;
@@ -35,9 +36,9 @@ interface Props {
 type SellerTab = 'orders' | 'my-products' | 'ads';
 type OrderCategory = 'sns' | 'channel' | 'store';
 
-const SellerDashboard: React.FC<Props> = ({ 
-  user, ebooks, setEbooks, channels, storeOrders, smmOrders = [], channelOrders = [], 
-  onApplySeller, reviews, onUpdateReview 
+const SellerDashboard: React.FC<Props> = ({
+  user, members = [], ebooks, setEbooks, channels, storeOrders, smmOrders = [], channelOrders = [],
+  onApplySeller, reviews, onUpdateReview
 }) => {
   const navigate = useNavigate();
   const { showConfirm, showAlert } = useConfirm();
@@ -357,6 +358,18 @@ const SellerDashboard: React.FC<Props> = ({
                             <div className="flex flex-col gap-2 items-center">
                               {showTaxBtn && <button onClick={() => setShowTaxModal(order)} className="px-5 py-2 bg-orange-50 text-orange-600 rounded-xl font-black text-[11px] hover:bg-black hover:text-white transition-all shadow-sm italic">세금계산서</button>}
                               {order.reviewId && <button onClick={() => handleReviewManage(order)} className="px-5 py-2 bg-black text-white rounded-xl font-black text-[11px] shadow-lg hover:bg-blue-600 transition-all italic">리뷰관리</button>}
+                              {(() => {
+                                const buyer = members.find(m => m.nickname === order.userNickname);
+                                if (!buyer || buyer.id === user.id) return null;
+                                return (
+                                  <button
+                                    onClick={() => navigate('/chat', { state: { targetUser: { id: buyer.id, nickname: buyer.nickname, profileImage: buyer.profileImage } } })}
+                                    className="px-5 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-black text-[11px] hover:bg-emerald-600 hover:text-white transition-all shadow-sm italic"
+                                  >
+                                    💬 구매자 채팅
+                                  </button>
+                                );
+                              })()}
                             </div>
                           </td>
                         </tr>
