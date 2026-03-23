@@ -8,6 +8,7 @@ import { supabase } from '../../supabase';
 
 interface Props {
   user: UserProfile;
+  members?: UserProfile[];
   smmOrders: SMMOrder[];
   channelOrders: ChannelOrder[];
   channelProducts?: ChannelProduct[];
@@ -53,7 +54,7 @@ interface OrderItem {
   paymentLog?: string;
 }
 
-const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, channelProducts = [], storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, initialSubTab }) => {
+const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channelOrders, channelProducts = [], storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, initialSubTab }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BuyerSubTab>(() => initialSubTab ?? 'sns');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -681,7 +682,23 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, chann
 
                   <div className="flex flex-col items-center lg:items-end gap-3 min-w-[200px] shrink-0">
                     {order.type === 'store'
-                      ? renderStoreOrderActions(order)
+                      ? (
+                        <>
+                          {renderStoreOrderActions(order)}
+                          {order.sellerName && (() => {
+                            const seller = members.find(m => m.nickname === order.sellerName);
+                            if (!seller || seller.id === user.id) return null;
+                            return (
+                              <button
+                                onClick={() => navigate('/chat', { state: { targetUser: { id: seller.id, nickname: seller.nickname, profileImage: seller.profileImage } } })}
+                                className="w-full px-8 py-3 rounded-[20px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-black text-[13px] italic hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                              >
+                                💬 판매자와 채팅
+                              </button>
+                            );
+                          })()}
+                        </>
+                      )
                       : (
                         // 채널 주문 액션
                         <div className="flex flex-col items-center gap-2 w-full">
@@ -789,6 +806,18 @@ const BuyerDashboard: React.FC<Props> = ({ user, smmOrders, channelOrders, chann
 
                   <div className="flex flex-col items-center lg:items-end gap-3 min-w-[200px] shrink-0">
                     {renderStoreOrderActions(order)}
+                    {order.sellerName && (() => {
+                      const seller = members.find(m => m.nickname === order.sellerName);
+                      if (!seller || seller.id === user.id) return null;
+                      return (
+                        <button
+                          onClick={() => navigate('/chat', { state: { targetUser: { id: seller.id, nickname: seller.nickname, profileImage: seller.profileImage } } })}
+                          className="w-full px-8 py-3 rounded-[20px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-black text-[13px] italic hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                        >
+                          💬 판매자와 채팅
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               );
