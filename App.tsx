@@ -691,9 +691,11 @@ const App: React.FC = () => {
       (fromDb.points ?? 0) === (user.points ?? 0) &&
       (fromDb.totalPurchaseAmount ?? 0) === (user.totalPurchaseAmount ?? 0) &&
       (fromDb.totalSalesAmount ?? 0) === (user.totalSalesAmount ?? 0) &&
-      (fromDb.freelancerEarnings ?? 0) === (user.freelancerEarnings ?? 0);
-    if (!same) setUser(prev => prev ? { ...prev, points: fromDb.points, totalPurchaseAmount: fromDb.totalPurchaseAmount, totalSalesAmount: fromDb.totalSalesAmount, freelancerEarnings: fromDb.freelancerEarnings, coupons: fromDb.coupons ?? prev.coupons } : null);
-  }, [members, user?.id, user?.points, user?.totalPurchaseAmount, user?.totalSalesAmount, user?.freelancerEarnings]);
+      (fromDb.freelancerEarnings ?? 0) === (user.freelancerEarnings ?? 0) &&
+      (fromDb.pointBonusActive ?? false) === (user.pointBonusActive ?? false) &&
+      (fromDb.pointBonusPercent ?? 0) === (user.pointBonusPercent ?? 0);
+    if (!same) setUser(prev => prev ? { ...prev, points: fromDb.points, totalPurchaseAmount: fromDb.totalPurchaseAmount, totalSalesAmount: fromDb.totalSalesAmount, freelancerEarnings: fromDb.freelancerEarnings, coupons: fromDb.coupons ?? prev.coupons, pointBonusActive: fromDb.pointBonusActive, pointBonusPercent: fromDb.pointBonusPercent } : null);
+  }, [members, user?.id, user?.points, user?.totalPurchaseAmount, user?.totalSalesAmount, user?.freelancerEarnings, user?.pointBonusActive, user?.pointBonusPercent]);
 
   useEffect(() => {
     try {
