@@ -10,6 +10,7 @@ interface Props {
   members: UserProfile[];
   onResetUnread?: () => void;
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
+  onlineUserIds?: Set<string>;
 }
 
 interface ChatMessageExtended extends ChatMessage {
@@ -66,7 +67,7 @@ function getOtherParticipantId(roomId: string, myId: string): string {
 
 type PendingTargetUser = { id: string; nickname: string; profileImage?: string };
 
-const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) => {
+const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif, onlineUserIds: propOnlineUserIds }) => {
   const location = useLocation();
   const [messages, setMessages] = useState<ChatMessageExtended[]>([]);
   const [input, setInput] = useState('');
@@ -80,7 +81,8 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
 
   const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
   const [tempMemoValue, setTempMemoValue] = useState('');
-  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
+  // 온라인 상태: App.tsx 전역 presence에서 전달받음 (채팅창에 있을 때만이 아니라 사이트 접속 중이면 초록색)
+  const onlineUserIds = propOnlineUserIds ?? new Set<string>();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -241,29 +243,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif }) =
 
   useEffect(() => { if (onResetUnread) onResetUnread(); }, [onResetUnread]);
 
-  // 채팅 페이지 접속 시 presence로 온라인 표시 (상대방 접속 여부)
-  useEffect(() => {
-    const channel = supabase.channel('chat_presence');
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState() as Record<string, { user_id?: string }[]>;
-        const ids = new Set<string>();
-        Object.values(state).forEach((payloads) => {
-          payloads.forEach((p) => {
-            if (p.user_id && p.user_id !== user.id) ids.add(p.user_id);
-          });
-        });
-        setOnlineUserIds(ids);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({ user_id: user.id, updated_at: new Date().toISOString() });
-        }
-      });
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user.id]);
+  // presence 추적은 App.tsx에서 전역으로 처리 (onlineUserIds prop으로 전달받음)
 
   const navState = (location.state as { targetUser?: PendingTargetUser } | null) || undefined;
   const pendingTargetFromNav = navState?.targetUser;

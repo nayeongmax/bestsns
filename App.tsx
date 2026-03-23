@@ -89,6 +89,7 @@ function ContainerRoutes(props: {
   onRefreshMembers?: () => void;
   onRefetchProfile?: () => void;
   onDeleteSmmProducts?: (ids: string[]) => void;
+  onlineUserIds?: Set<string>;
 }) {
   const location = useLocation();
   const pathname = location.pathname || '';
@@ -123,7 +124,7 @@ function ContainerRoutes(props: {
       <Route path="/board/write" element={props.user ? <FreeBoardWrite user={props.user} posts={props.posts} setPosts={props.setPosts} /> : <Navigate to="/login" />} />
       <Route path="/revenue" element={props.user ? <RevenueManagement user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/profit-mgmt" element={props.user ? <ProfitManagement user={props.user} storeOrders={props.storeOrders} /> : <Navigate to="/login" />} />
-      <Route path="/chat" element={props.user ? <ChatPage user={props.user} members={props.members} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
+      <Route path="/chat" element={props.user ? <ChatPage user={props.user} members={props.members} addNotif={props.addNotif} onlineUserIds={props.onlineUserIds} /> : <Navigate to="/login" />} />
       <Route path="/mypage" element={props.user ? <MyPage user={props.user} members={props.members} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} setStoreOrders={props.setStoreOrders} setChannelOrders={props.setChannelOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={props.onRefetchProfile} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/notifications" element={props.user ? <NotificationsPage notifications={props.notifications} setNotifications={props.setNotifications} user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/wishlist" element={<WishlistPage wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channels={props.channels} ebooks={props.ebooks} />} />
@@ -186,7 +187,10 @@ const App: React.FC = () => {
     } catch { return []; }
   });
 
-  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem('unread_chat_count') || '0', 10) || 0; } catch { return 0; }
+  });
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [showAuthModal, setShowAuthModal] = useState(false);
   const storeDbLoaded = useRef(false);
 
@@ -478,32 +482,45 @@ const App: React.FC = () => {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // 채팅 알림음 (딩동)
+  // 채팅 알림음 (딩동) - suspended 상태 resume 후 재생
   const playDingDong = useCallback(() => {
     try {
       const ctx = new AudioContext();
-      const playTone = (freq: number, startTime: number, duration: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, startTime);
-        osc.frequency.exponentialRampToValueAtTime(freq * 0.8, startTime + duration * 0.8);
-        gain.gain.setValueAtTime(0.25, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-        osc.start(startTime);
-        osc.stop(startTime + duration);
+      const playTones = () => {
+        const playTone = (freq: number, startTime: number, duration: number) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.8, startTime + duration * 0.8);
+          gain.gain.setValueAtTime(0.25, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        };
+        playTone(880, ctx.currentTime, 0.35);        // 딩 (A5)
+        playTone(660, ctx.currentTime + 0.4, 0.45);  // 동 (E5)
       };
-      playTone(880, ctx.currentTime, 0.35);        // 딩 (A5)
-      playTone(660, ctx.currentTime + 0.4, 0.45);  // 동 (E5)
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(playTones).catch(() => {});
+      } else {
+        playTones();
+      }
     } catch { /* AudioContext 차단 시 무시 */ }
   }, []);
+
+  // unreadChatCount 변경 시 localStorage 저장
+  useEffect(() => {
+    try { localStorage.setItem('unread_chat_count', String(unreadChatCount)); } catch { /* ignore */ }
+  }, [unreadChatCount]);
 
   // /chat 진입 시 미읽음 카운트 초기화
   useEffect(() => {
     if (location.pathname === '/chat') {
       setUnreadChatCount(0);
+      try { localStorage.setItem('unread_chat_count', '0'); } catch { /* ignore */ }
     }
   }, [location.pathname]);
 
@@ -517,18 +534,38 @@ const App: React.FC = () => {
         const msg = payload.new as { room_id?: string; sender_id?: string; sender_nickname?: string };
         const roomId = msg.room_id || '';
         const senderId = msg.sender_id || '';
-        // 내가 참여한 채팅방(room_id에 내 id 포함)에 상대방이 보낸 메시지
+        // 내가 참여한 채팅방(room_id에 내 id 포함)에 상대방이 보낸 메시지 → 무조건 알림
         if (roomId.includes(userId) && senderId !== userId) {
-          // /chat 페이지에 있는 경우엔 카운트 증가 안 함 (화면에서 바로 확인 가능)
-          if (window.location.pathname !== '/chat') {
-            setUnreadChatCount(prev => prev + 1);
-            playDingDong();
-          }
+          setUnreadChatCount(prev => prev + 1);
+          playDingDong();
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user?.id, playDingDong]);
+
+  // 전역 presence 추적 - 사이트에 로그인해 있으면 온라인으로 표시 (ChatPage에서만이 아니라 전체 사이트에서)
+  useEffect(() => {
+    if (!user?.id) return;
+    const presenceChannel = supabase.channel('chat_presence');
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState() as Record<string, { user_id?: string }[]>;
+        const ids = new Set<string>();
+        Object.values(state).forEach((payloads) => {
+          payloads.forEach((p) => {
+            if (p.user_id && p.user_id !== user.id) ids.add(p.user_id);
+          });
+        });
+        setOnlineUserIds(ids);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({ user_id: user.id, updated_at: new Date().toISOString() });
+        }
+      });
+    return () => { supabase.removeChannel(presenceChannel); };
+  }, [user?.id]);
 
   // 회원 목록 단일 소스: Supabase profiles에서 로드 (DEPLOY 가이드)
   useEffect(() => {
@@ -835,6 +872,7 @@ const App: React.FC = () => {
             setGradeConfigs={setGradeConfigs}
             onRefreshMembers={refreshMembers}
             onRefetchProfile={refetchCurrentUserProfile}
+            onlineUserIds={onlineUserIds}
           />
       </div>
       <Footer />

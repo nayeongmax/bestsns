@@ -93,10 +93,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     const meta = user.user_metadata || {};
     const email = (user.email || '').trim().toLowerCase();
     const { data: profileRow } = await supabase.from('profiles').select('id, nickname, profile_image, phone').eq('email', email).maybeSingle();
-    // 기존 프로필이 있으면 그 id 유지, 없으면 Supabase Auth UUID 사용 → profiles INSERT/upsert 정상 동작
-    const id = (profileRow?.id ?? user.id).toString();
+    // 기존 프로필이 있으면 그 id 유지
+    // RLS로 이메일 조회 실패 시: 회원가입 때 저장한 user_metadata.user_id(커스텀 ID) 우선 → 없으면 Auth UUID
+    const metaCustomId = (meta.user_id as string) || null;
+    const id = (profileRow?.id ?? metaCustomId ?? user.id).toString();
     // 현재 로그인한 사용자(session)와 같은 행일 때만 profileRow 값 사용 → 다른 계정(예: 네이버) 데이터가 섞여 보이는 것 방지
-    const isSameUser = profileRow && profileRow.id === user.id;
+    const isSameUser = profileRow && (profileRow.id === user.id || profileRow.id === id);
     const nickname = ((isSameUser ? (profileRow.nickname || '') : '') || (meta.nickname as string) || (meta.name as string) || (meta.full_name as string) || id).toString();
     const profileImage = ((isSameUser ? (profileRow.profile_image || '') : '') || (meta.avatar_url as string) || (meta.picture as string) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`).toString();
     return {
