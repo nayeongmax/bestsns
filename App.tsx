@@ -28,6 +28,8 @@ function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
     manualGrade: row.manual_grade != null ? String(row.manual_grade) : undefined,
     pointBonusPercent: row.point_bonus_percent != null ? Number(row.point_bonus_percent) : 0,
     pointBonusActive: row.point_bonus_active != null ? Boolean(row.point_bonus_active) : false,
+    pointBonusExpiryDays: row.point_bonus_expiry_days != null ? Number(row.point_bonus_expiry_days) : null,
+    pointBonusStartDate: row.point_bonus_start_date != null ? String(row.point_bonus_start_date) : null,
     coupons: Array.isArray(row.coupons) ? (row.coupons as UserProfile['coupons']) : (row.coupons as UserProfile['coupons']) ?? [],
     totalPurchaseAmount: Number(row.total_purchase_amount ?? 0),
     totalSalesAmount: Number(row.total_sales_amount ?? 0),

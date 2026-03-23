@@ -24,6 +24,10 @@ export interface UserProfile {
   pointBonusPercent?: number;
   /** 포인트 충전 보너스 이벤트 활성 여부 */
   pointBonusActive?: boolean;
+  /** 포인트 충전 보너스 이벤트 적용 기간 (일). null이면 무기한 */
+  pointBonusExpiryDays?: number | null;
+  /** 포인트 충전 보너스 이벤트 시작일 (ISO 날짜 문자열 YYYY-MM-DD). 만료일 계산 기준 */
+  pointBonusStartDate?: string | null;
   /** 프리랜서 수익통장 잔액 (누구나알바 작업으로 쌓인 포인트) */
   freelancerEarnings?: number;
   /** 프리랜서 등록 상태 */
