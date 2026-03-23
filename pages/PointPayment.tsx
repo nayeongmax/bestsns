@@ -46,12 +46,32 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
   const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
   const finalPayAmount = Math.max(0, amount - discountAmount);
 
-  // 포인트 충전 보너스 계산
-  const bonusPercent = (!isProductPayment && user.pointBonusActive && (user.pointBonusPercent || 0) > 0)
+  // 포인트 충전 보너스 계산 (기간 만료 여부 포함)
+  const isBonusWithinPeriod = (() => {
+    if (!user.pointBonusActive || (user.pointBonusPercent || 0) <= 0) return false;
+    if (user.pointBonusExpiryDays == null) return true; // 무기한
+    if (!user.pointBonusStartDate) return true;
+    const start = new Date(user.pointBonusStartDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + user.pointBonusExpiryDays);
+    end.setHours(23, 59, 59, 999);
+    return new Date() <= end;
+  })();
+  const bonusPercent = (!isProductPayment && isBonusWithinPeriod)
     ? (user.pointBonusPercent || 0)
     : 0;
   const bonusPoints = bonusPercent > 0 ? Math.floor(amount * bonusPercent / 100) : 0;
   const totalChargePoints = amount + bonusPoints;
+
+  // 보너스 기간 표시용 날짜 포맷 (YY.MM.DD.)
+  const bonusPeriodLabel = (() => {
+    if (!isBonusWithinPeriod || user.pointBonusExpiryDays == null || !user.pointBonusStartDate) return null;
+    const fmt = (d: Date) => `${String(d.getFullYear()).slice(2)}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}.`;
+    const start = new Date(user.pointBonusStartDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + user.pointBonusExpiryDays);
+    return `${fmt(start)}~${fmt(end)}`;
+  })();
 
   // 금액 선택 프리셋
   const amountPresets = [10000, 30000, 50000, 100000, 300000, 500000];
@@ -292,9 +312,14 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
                 </div>
               )}
               {bonusPoints > 0 && (
-                <div className="flex justify-between items-center text-[15px] font-bold bg-amber-50 px-4 py-3 rounded-2xl border border-amber-200">
-                  <span className="text-amber-600 italic">🎁 보너스 포인트 +{bonusPercent}%</span>
-                  <span className="text-amber-600 font-black">+{bonusPoints.toLocaleString()} P</span>
+                <div className="bg-amber-50 px-4 py-3 rounded-2xl border border-amber-200 space-y-1">
+                  <div className="flex justify-between items-center text-[15px] font-bold">
+                    <span className="text-amber-600 italic">🎁 보너스 포인트 +{bonusPercent}%</span>
+                    <span className="text-amber-600 font-black">+{bonusPoints.toLocaleString()} P</span>
+                  </div>
+                  {bonusPeriodLabel && (
+                    <p className="text-[11px] text-amber-500 font-bold text-right">{bonusPeriodLabel}</p>
+                  )}
                 </div>
               )}
               <div className="pt-8 border-t space-y-3">

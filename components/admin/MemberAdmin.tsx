@@ -150,12 +150,20 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
       onUpdateUser(editingMember);
     }
     try {
+      // 보너스 활성화 시 시작일 자동 설정 (기존 시작일 없을 때만)
+      const bonusStartDate = editingMember.pointBonusActive
+        ? (editingMember.pointBonusStartDate || new Date().toISOString().split('T')[0])
+        : null;
       await supabase.from('profiles').update({
         role: editingMember.role,
         points: editingMember.points ?? 0,
         manual_grade: editingMember.manualGrade || null,
         point_bonus_percent: editingMember.pointBonusPercent ?? 0,
         point_bonus_active: editingMember.pointBonusActive ?? false,
+        point_bonus_expiry_days: (editingMember.pointBonusActive && editingMember.pointBonusExpiryDays != null)
+          ? editingMember.pointBonusExpiryDays
+          : null,
+        point_bonus_start_date: bonusStartDate,
         updated_at: new Date().toISOString()
       }).eq('id', editingMember.id);
     } catch (_) {}
@@ -448,11 +456,11 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                  {gradeConfigs.filter(g => (g.name || '').trim()).map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
                </select>
              </div>
-             <div className="flex items-center gap-2 bg-orange-50 px-3 py-2 rounded-xl border border-orange-200">
+             <div className="flex flex-wrap items-center gap-2 bg-orange-50 px-3 py-2 rounded-xl border border-orange-200">
                <label className="text-[11px] font-black text-orange-700">🎁 충전 보너스 이벤트</label>
                <button
                  type="button"
-                 onClick={() => setEditingMember({...editingMember, pointBonusActive: !editingMember.pointBonusActive})}
+                 onClick={() => setEditingMember({...editingMember, pointBonusActive: !editingMember.pointBonusActive, pointBonusStartDate: !editingMember.pointBonusActive ? new Date().toISOString().split('T')[0] : null})}
                  className={`px-3 py-1 rounded-lg text-[11px] font-black transition-all ${editingMember.pointBonusActive ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-500'}`}
                >
                  {editingMember.pointBonusActive ? 'ON' : 'OFF'}
@@ -466,6 +474,39 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                  className="w-16 px-2 py-1 rounded-lg font-bold text-[12px] border border-orange-200 text-center"
                />
                <span className="text-[11px] font-black text-orange-700">%</span>
+               {editingMember.pointBonusActive && (
+                 <>
+                   <span className="text-[11px] text-orange-400">|</span>
+                   <label className="text-[11px] font-black text-orange-700">적용기간</label>
+                   <select
+                     value={editingMember.pointBonusExpiryDays == null ? 'unlimited' : 'custom'}
+                     onChange={e => setEditingMember({...editingMember, pointBonusExpiryDays: e.target.value === 'unlimited' ? null : (editingMember.pointBonusExpiryDays ?? 30)})}
+                     className="px-2 py-1 rounded-lg font-bold text-[12px] border border-orange-200"
+                   >
+                     <option value="unlimited">무기한</option>
+                     <option value="custom">기간 설정</option>
+                   </select>
+                   {editingMember.pointBonusExpiryDays != null && (
+                     <>
+                       <input
+                         type="number"
+                         min={1}
+                         value={editingMember.pointBonusExpiryDays}
+                         onChange={e => setEditingMember({...editingMember, pointBonusExpiryDays: Math.max(1, Number(e.target.value))})}
+                         className="w-16 px-2 py-1 rounded-lg font-bold text-[12px] border border-orange-200 text-center"
+                       />
+                       <span className="text-[11px] font-black text-orange-700">일</span>
+                       {editingMember.pointBonusStartDate && (() => {
+                         const start = new Date(editingMember.pointBonusStartDate!);
+                         const end = new Date(start);
+                         end.setDate(end.getDate() + editingMember.pointBonusExpiryDays!);
+                         const fmt = (d: Date) => `${String(d.getFullYear()).slice(2)}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}.`;
+                         return <span className="text-[11px] text-orange-500 font-bold">({fmt(start)}~{fmt(end)})</span>;
+                       })()}
+                     </>
+                   )}
+                 </>
+               )}
              </div>
            </div>
            <div className="flex-1 overflow-y-auto p-4 md:p-6">
