@@ -534,13 +534,10 @@ const App: React.FC = () => {
         const msg = payload.new as { room_id?: string; sender_id?: string; sender_nickname?: string };
         const roomId = msg.room_id || '';
         const senderId = msg.sender_id || '';
-        // 내가 참여한 채팅방(room_id에 내 id 포함)에 상대방이 보낸 메시지
+        // 내가 참여한 채팅방(room_id에 내 id 포함)에 상대방이 보낸 메시지 → 무조건 알림
         if (roomId.includes(userId) && senderId !== userId) {
-          // /chat 페이지에 있는 경우엔 카운트 증가 안 함 (화면에서 바로 확인 가능)
-          if (window.location.pathname !== '/chat') {
-            setUnreadChatCount(prev => prev + 1);
-            playDingDong();
-          }
+          setUnreadChatCount(prev => prev + 1);
+          playDingDong();
         }
       })
       .subscribe();
