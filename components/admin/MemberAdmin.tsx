@@ -145,6 +145,10 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
   const handleUpdateMemberInfo = async () => {
     if (!editingMember) return;
     setMembers(prev => prev.map(m => m.id === editingMember.id ? editingMember : m));
+    // 현재 로그인 유저와 동일한 회원이면 전역 user 상태도 즉시 갱신 (보너스 이벤트 등 반영)
+    if (currentUser?.id === editingMember.id && onUpdateUser) {
+      onUpdateUser(editingMember);
+    }
     try {
       await supabase.from('profiles').update({
         role: editingMember.role,
