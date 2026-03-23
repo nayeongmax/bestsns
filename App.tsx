@@ -605,17 +605,20 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!user?.id) return;
     const presenceChannel = supabase.channel('chat_presence');
-    presenceChannel
-      .on('presence', { event: 'sync' }, () => {
-        const state = presenceChannel.presenceState() as Record<string, { user_id?: string }[]>;
-        const ids = new Set<string>();
-        Object.values(state).forEach((payloads) => {
-          payloads.forEach((p) => {
-            if (p.user_id && p.user_id !== user.id) ids.add(p.user_id);
-          });
+    const syncOnlineIds = () => {
+      const state = presenceChannel.presenceState() as Record<string, { user_id?: string }[]>;
+      const ids = new Set<string>();
+      Object.values(state).forEach((payloads) => {
+        payloads.forEach((p) => {
+          if (p.user_id && p.user_id !== user.id) ids.add(p.user_id);
         });
-        setOnlineUserIds(ids);
-      })
+      });
+      setOnlineUserIds(ids);
+    };
+    presenceChannel
+      .on('presence', { event: 'sync' }, syncOnlineIds)
+      .on('presence', { event: 'join' }, syncOnlineIds)
+      .on('presence', { event: 'leave' }, syncOnlineIds)
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await presenceChannel.track({ user_id: user.id, updated_at: new Date().toISOString() });
