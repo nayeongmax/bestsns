@@ -20,6 +20,10 @@ export interface UserProfile {
   violationCount?: number;
   isOnline?: boolean;
   manualGrade?: string;
+  /** 포인트 충전 보너스 비율 (%) — 관리자가 특정 회원에게 부여, 0이면 비활성 */
+  pointBonusPercent?: number;
+  /** 포인트 충전 보너스 이벤트 활성 여부 */
+  pointBonusActive?: boolean;
   /** 프리랜서 수익통장 잔액 (누구나알바 작업으로 쌓인 포인트) */
   freelancerEarnings?: number;
   /** 프리랜서 등록 상태 */

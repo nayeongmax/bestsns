@@ -26,6 +26,8 @@ function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
     phone: row.phone != null ? String(row.phone) : undefined,
     points: Number(row.points ?? 0),
     manualGrade: row.manual_grade != null ? String(row.manual_grade) : undefined,
+    pointBonusPercent: row.point_bonus_percent != null ? Number(row.point_bonus_percent) : 0,
+    pointBonusActive: row.point_bonus_active != null ? Boolean(row.point_bonus_active) : false,
     coupons: Array.isArray(row.coupons) ? (row.coupons as UserProfile['coupons']) : (row.coupons as UserProfile['coupons']) ?? [],
     totalPurchaseAmount: Number(row.total_purchase_amount ?? 0),
     totalSalesAmount: Number(row.total_sales_amount ?? 0),
