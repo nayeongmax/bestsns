@@ -324,7 +324,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
                     <p className="text-[11px] text-amber-500 font-bold text-right">{bonusPeriodLabel}</p>
                   )}
                   {isUnlimitedBonus && (
-                    <p className="text-[11px] text-amber-400 leading-relaxed">※ 기간이 정해지지 않은 일시적 보너스 포인트로, 추후 보너스 혜택이 사라질 수 있습니다.</p>
+                    <p className="text-[11px] text-gray-900 leading-relaxed">※ 기간이 정해지지 않은 일시적 보너스 포인트입니다.<br />추후 보너스 혜택이 사라질 수 있습니다.</p>
                   )}
                 </div>
               )}

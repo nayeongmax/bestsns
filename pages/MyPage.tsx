@@ -44,6 +44,24 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
     return m ? { ...user, ...m } : user;
   }, [user, members]);
   const effectiveUser = displayUser || user;
+
+  // 환불/취소 반영 실시간 계산: profiles에 저장된 누적값 대신 실제 주문 데이터로 정확한 금액 산출
+  const accurateEffectiveUser = useMemo(() => {
+    const uid = effectiveUser.id;
+    const nickname = effectiveUser.nickname;
+
+    const activePurchaseStore = storeOrders.filter(o => o.userId === uid && o.status !== '취소').reduce((s, o) => s + o.price, 0);
+    const activePurchaseChannel = channelOrders.filter(o => o.userId === uid && o.status !== 'refunded').reduce((s, o) => s + o.price, 0);
+    const activePurchaseSmm = smmOrders.filter(o => o.userId === uid).reduce((s, o) => s + o.sellingPrice * o.quantity, 0);
+
+    const activeSales = storeOrders.filter(o => o.sellerNickname === nickname && o.status !== '취소').reduce((s, o) => s + o.price, 0);
+
+    return {
+      ...effectiveUser,
+      totalPurchaseAmount: activePurchaseStore + activePurchaseChannel + activePurchaseSmm,
+      totalSalesAmount: activeSales,
+    };
+  }, [effectiveUser, storeOrders, channelOrders, smmOrders]);
   const navigate = useNavigate();
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -193,10 +211,10 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
 
       <div className="w-full">
         {activeMainTab === 'settings' && (
-          <UserInfoSection 
-            user={effectiveUser} 
-            onUpdate={onUpdate} 
-            forcedTab={settingsSubTab} 
+          <UserInfoSection
+            user={accurateEffectiveUser}
+            onUpdate={onUpdate}
+            forcedTab={settingsSubTab}
             onTabChange={(tab) => setSettingsSubTab(tab as any)}
             expertRegistrationFor={expertRegistrationFor}
             onExpertRegistrationDone={() => setExpertRegistrationFor(null)}
