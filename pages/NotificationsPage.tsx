@@ -30,6 +30,19 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
     setSelectedNotif(null);
   };
 
+  // 모두 읽음 처리 (알림 배지 초기화)
+  const handleMarkAllRead = () => {
+    if (!user) return;
+    const unreadIds = myNotifications.filter(n => !n.isRead).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    setNotifications(prev => prev.map(n =>
+      n.userId === user.id ? { ...n, isRead: true } : n
+    ));
+    supabase.from('site_notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false).then(() => {});
+  };
+
+  const unreadCount = myNotifications.filter(n => !n.isRead).length;
+
   // 알림 타입별 스타일 매핑
   const getBadgeStyle = (type: NotificationType) => {
     switch (type) {
@@ -56,7 +69,17 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
         <h2 className="text-2xl sm:text-3xl xl:text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
           <span className="w-2.5 h-7 sm:h-8 xl:h-8 bg-blue-600 rounded-full"></span> 활동 알림 센터
         </h2>
-        <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest italic">Personal notification updates</p>
+        <div className="flex items-center gap-3">
+          {unreadCount > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              className="px-5 py-2.5 bg-blue-600 text-white text-[11px] font-black rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm uppercase italic tracking-wide"
+            >
+              모두 읽음 ({unreadCount})
+            </button>
+          )}
+          <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest italic">Personal notification updates</p>
+        </div>
       </div>
 
       {myNotifications.length === 0 ? (

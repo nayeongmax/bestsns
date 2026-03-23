@@ -150,6 +150,8 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
         role: editingMember.role,
         points: editingMember.points ?? 0,
         manual_grade: editingMember.manualGrade || null,
+        point_bonus_percent: editingMember.pointBonusPercent ?? 0,
+        point_bonus_active: editingMember.pointBonusActive ?? false,
         updated_at: new Date().toISOString()
       }).eq('id', editingMember.id);
     } catch (_) {}
@@ -441,6 +443,25 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                  <option value="">자동 (기준에 따라)</option>
                  {gradeConfigs.filter(g => (g.name || '').trim()).map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
                </select>
+             </div>
+             <div className="flex items-center gap-2 bg-orange-50 px-3 py-2 rounded-xl border border-orange-200">
+               <label className="text-[11px] font-black text-orange-700">🎁 충전 보너스 이벤트</label>
+               <button
+                 type="button"
+                 onClick={() => setEditingMember({...editingMember, pointBonusActive: !editingMember.pointBonusActive})}
+                 className={`px-3 py-1 rounded-lg text-[11px] font-black transition-all ${editingMember.pointBonusActive ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-500'}`}
+               >
+                 {editingMember.pointBonusActive ? 'ON' : 'OFF'}
+               </button>
+               <input
+                 type="number"
+                 min={0}
+                 max={100}
+                 value={editingMember.pointBonusPercent ?? 0}
+                 onChange={e => setEditingMember({...editingMember, pointBonusPercent: Number(e.target.value)})}
+                 className="w-16 px-2 py-1 rounded-lg font-bold text-[12px] border border-orange-200 text-center"
+               />
+               <span className="text-[11px] font-black text-orange-700">%</span>
              </div>
            </div>
            <div className="flex-1 overflow-y-auto p-4 md:p-6">

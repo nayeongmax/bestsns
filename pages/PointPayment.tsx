@@ -46,6 +46,13 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
   const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
   const finalPayAmount = Math.max(0, amount - discountAmount);
 
+  // 포인트 충전 보너스 계산
+  const bonusPercent = (!isProductPayment && user.pointBonusActive && (user.pointBonusPercent || 0) > 0)
+    ? (user.pointBonusPercent || 0)
+    : 0;
+  const bonusPoints = bonusPercent > 0 ? Math.floor(amount * bonusPercent / 100) : 0;
+  const totalChargePoints = amount + bonusPoints;
+
   // 금액 선택 프리셋
   const amountPresets = [10000, 30000, 50000, 100000, 300000, 500000];
 
@@ -157,11 +164,14 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
             }
           }
         } else {
-          // 포인트 충전 처리 + DB 반영
-          const nextPoints = (user.points || 0) + amount;
+          // 포인트 충전 처리 + DB 반영 (보너스 포인트 포함)
+          const nextPoints = (user.points || 0) + totalChargePoints;
           onUpdateUser({ ...nextUser, points: nextPoints });
           updateProfile(user.id, { points: nextPoints }).catch((e) => console.warn('포인트 충전 DB 반영 실패:', e));
-          addNotif(user.id, 'payment', '💰 포인트 충전 완료', `${amount.toLocaleString()}P 충전이 완료되었습니다. 현재 잔액: ${nextPoints.toLocaleString()}P`);
+          const notifMsg = bonusPoints > 0
+            ? `${amount.toLocaleString()}P + 보너스 ${bonusPoints.toLocaleString()}P(${bonusPercent}%) = 총 ${totalChargePoints.toLocaleString()}P 충전! 현재 잔액: ${nextPoints.toLocaleString()}P`
+            : `${amount.toLocaleString()}P 충전이 완료되었습니다. 현재 잔액: ${nextPoints.toLocaleString()}P`;
+          addNotif(user.id, 'payment', '💰 포인트 충전 완료', notifMsg);
           // 충전 내역 DB 저장
           insertPointTransaction({
             id: paymentId,
@@ -281,9 +291,18 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
                   <span className="text-red-500 font-black">-{appliedCoupon.discount.toLocaleString()} 원</span>
                 </div>
               )}
+              {bonusPoints > 0 && (
+                <div className="flex justify-between items-center text-[15px] font-bold bg-amber-50 px-4 py-3 rounded-2xl border border-amber-200">
+                  <span className="text-amber-600 italic">🎁 보너스 포인트 +{bonusPercent}%</span>
+                  <span className="text-amber-600 font-black">+{bonusPoints.toLocaleString()} P</span>
+                </div>
+              )}
               <div className="pt-8 border-t space-y-3">
                 <span className="text-[11px] font-black text-blue-400 uppercase italic block text-center">실제 결제 금액 (VAT포함)</span>
                 <p className="text-5xl font-black text-gray-900 text-center italic tracking-tighter">{finalPayAmount.toLocaleString()}원</p>
+                {bonusPoints > 0 && (
+                  <p className="text-center text-[13px] font-black text-amber-600">충전 포인트: {totalChargePoints.toLocaleString()}P</p>
+                )}
               </div>
             </div>
             {!isProductPayment && (
