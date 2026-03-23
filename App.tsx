@@ -482,59 +482,21 @@ const App: React.FC = () => {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // AudioContext 재사용 ref (브라우저 자동재생 정책 대응)
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  // 채팅 알림음 - /notification.mp3 재생
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // 첫 사용자 인터랙션(클릭/키) 시 AudioContext 잠금 해제
   useEffect(() => {
-    const unlock = () => {
-      try {
-        if (!audioCtxRef.current) {
-          audioCtxRef.current = new AudioContext();
-        }
-        if (audioCtxRef.current.state === 'suspended') {
-          audioCtxRef.current.resume().catch(() => {});
-        }
-      } catch { /* ignore */ }
-    };
-    window.addEventListener('click', unlock);
-    window.addEventListener('keydown', unlock);
-    return () => {
-      window.removeEventListener('click', unlock);
-      window.removeEventListener('keydown', unlock);
-    };
+    notificationAudioRef.current = new Audio('/notification.mp3');
+    notificationAudioRef.current.preload = 'auto';
   }, []);
 
-  // 채팅 알림음 (딩동) - AudioContext 재사용으로 브라우저 차단 우회
   const playDingDong = useCallback(() => {
     try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext();
-      }
-      const ctx = audioCtxRef.current;
-      const playTones = () => {
-        const playTone = (freq: number, startTime: number, duration: number) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, startTime);
-          osc.frequency.exponentialRampToValueAtTime(freq * 0.8, startTime + duration * 0.8);
-          gain.gain.setValueAtTime(0.3, startTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-          osc.start(startTime);
-          osc.stop(startTime + duration);
-        };
-        playTone(880, ctx.currentTime, 0.35);        // 딩 (A5)
-        playTone(660, ctx.currentTime + 0.4, 0.45);  // 동 (E5)
-      };
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(playTones).catch(() => {});
-      } else {
-        playTones();
-      }
-    } catch { /* AudioContext 차단 시 무시 */ }
+      const audio = notificationAudioRef.current;
+      if (!audio) return;
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch { /* 재생 차단 시 무시 */ }
   }, []);
 
   // unreadChatCount 변경 시 localStorage 저장
