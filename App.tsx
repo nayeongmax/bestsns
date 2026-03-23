@@ -482,40 +482,26 @@ const App: React.FC = () => {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  // 채팅 알림음 - /notification.mp3 재생
-  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
-  const audioUnlockedRef = useRef(false);
-
-  useEffect(() => {
-    const audio = new Audio('/notification.mp3');
-    audio.preload = 'auto';
-    notificationAudioRef.current = audio;
-
-    // 브라우저 자동재생 정책 해제: 첫 사용자 인터랙션 시 무음 재생으로 잠금 해제
-    const unlock = () => {
-      if (audioUnlockedRef.current) return;
-      audio.volume = 0;
-      audio.play().then(() => {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.volume = 1;
-        audioUnlockedRef.current = true;
-      }).catch(() => {});
-    };
-    window.addEventListener('click', unlock, { once: false });
-    window.addEventListener('keydown', unlock, { once: false });
-    return () => {
-      window.removeEventListener('click', unlock);
-      window.removeEventListener('keydown', unlock);
-    };
-  }, []);
-
+  // 채팅 알림음 - Web Audio API로 딩동 소리 생성 (외부 파일 불필요)
   const playDingDong = useCallback(() => {
     try {
-      const audio = notificationAudioRef.current;
-      if (!audio) return;
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const play = (freq: number, startTime: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.25, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+      play(880, ctx.currentTime, 0.15);
+      play(660, ctx.currentTime + 0.15, 0.25);
     } catch { /* 재생 차단 시 무시 */ }
   }, []);
 
@@ -577,14 +563,42 @@ const App: React.FC = () => {
         const msg = payload.new as { room_id?: string; sender_id?: string; sender_nickname?: string };
         const roomId = msg.room_id || '';
         const senderId = msg.sender_id || '';
-        // 내가 참여한 채팅방(room_id에 내 id 포함)에 상대방이 보낸 메시지 → 무조건 알림
-        if (roomId.includes(userId) && senderId !== userId) {
+        // 내가 참여한 채팅방(room_id에 내 id 포함)에 상대방이 보낸 메시지
+        // /chat 페이지에 있으면 이미 읽고 있으므로 카운트 증가 안 함
+        if (roomId.includes(userId) && senderId !== userId && window.location.pathname !== '/chat') {
           setUnreadChatCount(prev => prev + 1);
           playDingDong();
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
+  }, [user?.id, playDingDong]);
+
+  // 채팅 미읽음 카운트 폴링 폴백 (Supabase Realtime이 비활성화된 환경 대비, 15초마다 체크)
+  useEffect(() => {
+    if (!user?.id) return;
+    const userId = user.id;
+    const poll = async () => {
+      if (window.location.pathname === '/chat') return;
+      try {
+        const lastReadKey = `chat_last_read_${userId}`;
+        const lastRead = localStorage.getItem(lastReadKey) || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { count, error } = await supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .or(`room_id.like.${userId}_%,room_id.like.%_${userId}`)
+          .neq('sender_id', userId)
+          .gt('created_at', lastRead);
+        if (error) return;
+        const newCount = count ?? 0;
+        setUnreadChatCount(prev => {
+          if (newCount > prev) playDingDong();
+          return newCount;
+        });
+      } catch { /* ignore */ }
+    };
+    const interval = setInterval(poll, 15000);
+    return () => clearInterval(interval);
   }, [user?.id, playDingDong]);
 
   // 전역 presence 추적 - 사이트에 로그인해 있으면 온라인으로 표시 (ChatPage에서만이 아니라 전체 사이트에서)
