@@ -180,7 +180,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif, onl
         setActiveChatId(roomId);
       } else {
         setChatRooms(rooms);
-        setActiveChatId(prev => (prev && rooms.some(r => r.id === prev)) ? prev : (rooms.length > 0 ? rooms[0].id : null));
+        setActiveChatId(prev => (prev && rooms.some(r => r.id === prev)) ? prev : null);
       }
     } catch {
       setUseSupabase(false);
@@ -197,7 +197,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif, onl
         setActiveChatId(roomId);
       } else {
         setChatRooms(rooms);
-        setActiveChatId(rooms.length > 0 ? rooms[0].id : null);
+        setActiveChatId(null);
       }
       try {
         localStorage.setItem(CHAT_ROOMS_FALLBACK_KEY(user.id), JSON.stringify(rooms));

@@ -698,18 +698,18 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
             <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 italic block">계약 진행 방식</label><select value={projectForm.channel} onChange={e => setProjectForm({...projectForm, channel: e.target.value})} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-xl sm:rounded-[32px] font-black text-gray-900 shadow-inner outline-none appearance-none cursor-pointer focus:ring-4 focus:ring-blue-50 text-sm sm:text-base">{CHANNEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select></div>
             <div className="space-y-2 sm:space-y-3"><label className="text-[11px] sm:text-[12px] font-black text-gray-400 px-2 italic block">진행 차수 (ROUND)</label><input type="number" value={projectForm.round} onChange={e => setProjectForm({...projectForm, round: Number(e.target.value)})} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-xl sm:rounded-[32px] font-black text-gray-900 text-center shadow-inner text-sm sm:text-base" /></div>
           </div>
-          <div className="bg-blue-600 p-6 sm:p-12 lg:p-16 rounded-2xl sm:rounded-[60px] text-white shadow-2xl space-y-8 sm:space-y-12 relative overflow-hidden">
-             <h4 className="text-xl sm:text-2xl font-black italic tracking-tighter flex items-center gap-3">🗓 기간 및 마감 설정</h4>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-16">
-                <div className="space-y-6 sm:space-y-8">
-                   <div className="space-y-2 sm:space-y-3"><label className="text-[10px] sm:text-[11px] font-black text-blue-200 uppercase tracking-widest px-2 block">시작일</label><input type="date" value={projectForm.startDate} onChange={e => setProjectForm({...projectForm, startDate: e.target.value})} className="w-full p-4 sm:p-6 bg-white/10 border-2 border-white/20 rounded-xl sm:rounded-[32px] font-black outline-none text-sm sm:text-base min-w-0" /><p className="lg:hidden text-[11px] font-bold text-blue-200">{projectForm.startDate}</p></div>
-                   <div className="space-y-4 sm:space-y-6">
-                      <label className="flex flex-wrap items-center gap-2 sm:gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'weekday'} onChange={() => setProjectForm({...projectForm, deadlineType: 'weekday'})} className="w-5 h-5 sm:w-6 sm:h-6 accent-white shrink-0" /><span className="font-black text-base sm:text-xl italic">평일 기준 소요</span><input type="number" value={projectForm.duration} onChange={e => setProjectForm({...projectForm, duration: Number(e.target.value)})} className="w-16 sm:w-24 p-2 bg-white/20 rounded-xl text-center font-black text-sm sm:text-base" /><span className="text-blue-100 text-xs sm:text-sm">일</span></label>
-                      <label className="flex flex-wrap items-center gap-2 sm:gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'fixed'} onChange={() => setProjectForm({...projectForm, deadlineType: 'fixed'})} className="w-5 h-5 sm:w-6 sm:h-6 accent-white shrink-0" /><span className="font-black text-base sm:text-xl italic">고정일 마감 (당/익월)</span><input type="number" value={projectForm.fixedDay || 25} onChange={e => setProjectForm({...projectForm, fixedDay: Number(e.target.value)})} className="w-14 sm:w-20 p-2 bg-white/20 rounded-xl text-center font-black text-sm sm:text-base" /><span className="text-blue-100 text-xs sm:text-sm">일</span></label>
-                      <label className="flex flex-wrap items-center gap-2 sm:gap-4 cursor-pointer py-2 group"><input type="radio" checked={projectForm.deadlineType === 'specific'} onChange={() => setProjectForm({...projectForm, deadlineType: 'specific'})} className="w-5 h-5 sm:w-6 sm:h-6 accent-white shrink-0" /><span className="font-black text-base sm:text-xl italic">특정일 직접 지정</span><input type="date" value={projectForm.endDate} onChange={e => setProjectForm({...projectForm, endDate: e.target.value})} className="p-2 sm:p-3 bg-white/20 rounded-xl font-black text-xs min-w-0" /><p className="lg:hidden text-[11px] text-blue-200">{projectForm.endDate}</p></label>
+          <div className="bg-blue-600 p-5 sm:p-8 rounded-2xl sm:rounded-[40px] text-white shadow-2xl space-y-5 sm:space-y-8 relative overflow-hidden">
+             <h4 className="text-base sm:text-xl font-black italic tracking-tighter flex items-center gap-2">🗓 기간 및 마감 설정</h4>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
+                <div className="space-y-4 sm:space-y-6">
+                   <div className="space-y-2"><label className="text-[10px] font-black text-blue-200 uppercase tracking-widest px-1 block">시작일</label><input type="date" value={projectForm.startDate} onChange={e => setProjectForm({...projectForm, startDate: e.target.value})} className="w-full p-3 sm:p-4 bg-white/10 border border-white/20 rounded-xl font-black outline-none text-sm min-w-0" /></div>
+                   <div className="space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer py-1.5"><input type="radio" checked={projectForm.deadlineType === 'weekday'} onChange={() => setProjectForm({...projectForm, deadlineType: 'weekday'})} className="w-4 h-4 accent-white shrink-0" /><span className="font-black text-sm sm:text-base">평일 기준 소요</span><input type="number" value={projectForm.duration} onChange={e => setProjectForm({...projectForm, duration: Number(e.target.value)})} className="w-16 p-2 bg-white/20 rounded-lg text-center font-black text-sm" /><span className="text-blue-100 text-sm">일</span></label>
+                      <label className="flex items-center gap-3 cursor-pointer py-1.5"><input type="radio" checked={projectForm.deadlineType === 'fixed'} onChange={() => setProjectForm({...projectForm, deadlineType: 'fixed'})} className="w-4 h-4 accent-white shrink-0" /><span className="font-black text-sm sm:text-base">고정일 마감 (당/익월)</span><input type="number" value={projectForm.fixedDay || 25} onChange={e => setProjectForm({...projectForm, fixedDay: Number(e.target.value)})} className="w-14 p-2 bg-white/20 rounded-lg text-center font-black text-sm" /><span className="text-blue-100 text-sm">일</span></label>
+                      <label className="flex items-center gap-3 cursor-pointer py-1.5"><input type="radio" checked={projectForm.deadlineType === 'specific'} onChange={() => setProjectForm({...projectForm, deadlineType: 'specific'})} className="w-4 h-4 accent-white shrink-0" /><span className="font-black text-sm sm:text-base">특정일 직접 지정</span><input type="date" value={projectForm.endDate} onChange={e => setProjectForm({...projectForm, endDate: e.target.value})} className="flex-1 p-2 bg-white/20 rounded-lg font-black text-xs min-w-0" /></label>
                    </div>
                 </div>
-                <div className="flex flex-col items-center justify-center bg-white/5 border-2 border-white/10 rounded-2xl sm:rounded-[48px] p-6 sm:p-10"><span className="text-blue-200 font-black text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4 italic">최종 마감 예정일</span><p className="text-4xl sm:text-7xl font-black tracking-tighter italic">{finalDeadline}</p><p className="mt-4 sm:mt-8 text-blue-100 font-bold text-xs sm:text-sm text-center leading-relaxed">계산된 마감일은 주말을 고려한<br className="hidden sm:block"/>가장 정확한 비즈니스 스케줄입니다.</p></div>
+                <div className="flex flex-col items-center justify-center bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-8 text-center"><span className="text-blue-200 font-black text-xs uppercase tracking-widest mb-2">최종 마감 예정일</span><p className="text-3xl sm:text-5xl font-black tracking-tighter">{finalDeadline}</p><p className="mt-3 text-blue-100 font-bold text-xs leading-relaxed">계산된 마감일은 주말을 고려한<br/>가장 정확한 비즈니스 스케줄입니다.</p></div>
              </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
@@ -805,31 +805,40 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
       />
 
       {showCompanyModal && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
-          <div className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-3xl md:rounded-[64px] p-6 sm:p-10 md:p-16 shadow-2xl space-y-8 sm:space-y-12 animate-in zoom-in-95 relative overflow-y-auto max-h-[90vh] no-scrollbar border-4 border-blue-50">
-            <button onClick={() => setShowCompanyModal(false)} className="absolute top-6 right-6 sm:top-12 sm:right-12 text-gray-300 hover:text-gray-900 text-2xl sm:text-3xl font-black">✕</button>
-            <div className="flex items-center gap-4 sm:gap-6"><span className="text-3xl sm:text-5xl">🏢</span><h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-blue-500 underline-offset-8">내 회사 관리</h3></div>
-            <div className="space-y-6">
-               <label className="text-[11px] font-black text-gray-400 px-4 uppercase tracking-[0.4em] italic block">등록된 운영사 목록</label>
-               <div className="grid grid-cols-1 gap-4">
-                 {companies.map(c => (
-                   <div key={c.id} className="bg-gray-50 p-8 rounded-[40px] flex justify-between items-center group hover:bg-blue-50 transition-all border-2 border-transparent hover:border-blue-200">
-                      <div><p className="font-black text-gray-900 text-xl italic">{c.name}</p><p className="text-[11px] font-bold text-blue-400 mt-1 uppercase tracking-widest italic">{c.type} / 개업일: {c.openingDate}</p></div>
-                      <div className="flex gap-3"><button onClick={() => startEditCompany(c)} className="w-12 h-12 bg-white text-orange-400 rounded-2xl shadow-sm flex items-center justify-center text-xl hover:bg-orange-50 transition-colors">✏️</button><button onClick={() => handleDeleteCompany(c.id)} className="w-12 h-12 bg-white text-red-300 rounded-2xl shadow-sm flex items-center justify-center text-xl hover:bg-red-50 transition-colors">✕</button></div>
-                   </div>
-                 ))}
-               </div>
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl animate-in zoom-in-95 relative overflow-y-auto max-h-[85vh] no-scrollbar">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-3"><span className="text-2xl">🏢</span><h3 className="text-lg font-black text-gray-900">내회사 관리</h3></div>
+              <button onClick={() => setShowCompanyModal(false)} className="text-gray-400 hover:text-gray-900 text-xl font-black w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">✕</button>
             </div>
-            <div className="pt-16 border-t border-gray-100 space-y-10">
-               <h4 className="text-blue-600 font-black text-lg italic tracking-tighter uppercase underline decoration-blue-100 underline-offset-4">{editingCompanyId ? '운영사 정보 수정' : '새 운영사 정보 등록'}</h4>
-               <div className="space-y-6">
-                  <input value={newCompany.name || ''} onChange={e => setNewCompany({...newCompany, name: e.target.value})} placeholder="회사명(운영사명) 입력" className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-lg outline-none shadow-inner" />
-                  <div className="grid grid-cols-2 gap-6">
-                     <input type="date" value={newCompany.openingDate || ''} onChange={e => setNewCompany({...newCompany, openingDate: e.target.value})} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black outline-none shadow-inner" />
-                     <select value={newCompany.type || '개인사업자'} onChange={e => setNewCompany({...newCompany, type: e.target.value as any})} className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black outline-none shadow-inner"><option>개인사업자</option><option>법인사업자</option><option>기타</option></select>
+            <div className="p-5 space-y-4">
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">등록된 운영사 목록</p>
+              <div className="space-y-2">
+                {companies.map(c => (
+                  <div key={c.id} className="bg-gray-50 px-4 py-3 rounded-xl flex justify-between items-center group hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-black text-gray-900 text-sm truncate">{c.name}</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">{c.type} / 개업일: {c.openingDate}</p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => startEditCompany(c)} className="w-8 h-8 bg-white text-orange-400 rounded-lg shadow-sm flex items-center justify-center text-sm hover:bg-orange-50 transition-colors">✏️</button>
+                      <button onClick={() => handleDeleteCompany(c.id)} className="w-8 h-8 bg-white text-red-300 rounded-lg shadow-sm flex items-center justify-center text-sm hover:bg-red-50 transition-colors">✕</button>
+                    </div>
                   </div>
-               </div>
-               <button onClick={handleCompanySubmit} className="w-full py-8 bg-black text-white rounded-[40px] font-black text-2xl shadow-2xl hover:bg-blue-600 transition-all italic uppercase tracking-[0.2em]">{editingCompanyId ? '수정 완료' : '신규 운영사 등록 완료'}</button>
+                ))}
+                {companies.length === 0 && <p className="text-center text-gray-300 text-sm py-4">등록된 운영사가 없습니다.</p>}
+              </div>
+            </div>
+            <div className="p-5 border-t border-gray-100 space-y-4">
+              <h4 className="text-blue-600 font-black text-sm">{editingCompanyId ? '운영사 정보 수정' : '새 운영사 정보 등록'}</h4>
+              <div className="space-y-3">
+                <input value={newCompany.name || ''} onChange={e => setNewCompany({...newCompany, name: e.target.value})} placeholder="회사명(운영사명) 입력" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-black text-sm outline-none focus:border-blue-300" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="date" value={newCompany.openingDate || ''} onChange={e => setNewCompany({...newCompany, openingDate: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-black text-sm outline-none focus:border-blue-300 min-w-0" />
+                  <select value={newCompany.type || '개인사업자'} onChange={e => setNewCompany({...newCompany, type: e.target.value as any})} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-black text-sm outline-none focus:border-blue-300"><option>개인사업자</option><option>법인사업자</option><option>기타</option></select>
+                </div>
+              </div>
+              <button onClick={handleCompanySubmit} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-sm shadow-lg hover:bg-black transition-all">{editingCompanyId ? '수정 완료' : '신규 운영사 등록'}</button>
             </div>
           </div>
         </div>

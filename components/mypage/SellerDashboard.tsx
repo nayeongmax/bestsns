@@ -169,18 +169,18 @@ const SellerDashboard: React.FC<Props> = ({
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div onClick={() => navigate('/profit-mgmt')} className="bg-gray-900 p-8 rounded-[40px] shadow-xl text-white relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
-          <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest italic mb-2 relative z-10">누적 수익금 (구매확정 기준)</p>
-          <h4 className="text-4xl font-black italic tracking-tighter relative z-10">₩{stats.annualRevenue.toLocaleString()}</h4>
-          <div className="absolute top-0 right-0 p-8 opacity-10"><svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+        <div onClick={() => navigate('/profit-mgmt')} className="col-span-2 md:col-span-1 bg-gray-900 p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-xl text-white relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
+          <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest italic mb-1.5 relative z-10">누적 수익금 (구매확정 기준)</p>
+          <h4 className="text-2xl sm:text-4xl font-black italic tracking-tighter relative z-10">₩{stats.annualRevenue.toLocaleString()}</h4>
+          <div className="absolute top-0 right-0 p-6 opacity-10"><svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg></div>
         </div>
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 space-y-2"><p className="text-[11px] font-black text-gray-400 uppercase tracking-widest italic">진행 중인 주문</p><h4 className="text-3xl font-black text-gray-900 italic tracking-tighter">{stats.activeOrders} <span className="text-sm font-bold text-gray-300">건</span></h4></div>
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 space-y-2"><p className="text-[11px] font-black text-gray-400 uppercase tracking-widest italic">내 등록 상품</p><h4 className="text-3xl font-black text-gray-900 italic tracking-tighter">{stats.productCount} <span className="text-sm font-bold text-gray-300">개</span></h4></div>
-        <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 space-y-2">
-           <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest italic">전문가 만족도</p>
+        <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1.5"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">진행 중인 주문</p><h4 className="text-2xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.activeOrders} <span className="text-sm font-bold text-gray-300">건</span></h4></div>
+        <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1.5"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">내 등록 상품</p><h4 className="text-2xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.productCount} <span className="text-sm font-bold text-gray-300">개</span></h4></div>
+        <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1.5">
+           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">전문가 만족도</p>
            <div className="flex items-center gap-2">
-              <h4 className="text-3xl font-black text-gray-900 italic tracking-tighter">{stats.avgRating}</h4>
+              <h4 className="text-2xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.avgRating}</h4>
               <div className="flex text-yellow-400 text-sm">
                 {Array.from({length: 5}).map((_, i) => (
                   <span key={i}>{i < Math.floor(Number(stats.avgRating)) ? '★' : '☆'}</span>
@@ -214,32 +214,34 @@ const SellerDashboard: React.FC<Props> = ({
                <button onClick={() => navigate('/profit-mgmt')} className="bg-blue-600 text-white px-8 py-3.5 rounded-[20px] font-black text-[13px] shadow-xl hover:bg-black transition-all italic uppercase tracking-widest">수익 분석 및 정산 관리 ↗</button>
             </div>
 
-            <div className="flex flex-col md:flex-row justify-between items-center px-4 gap-4">
-              <div className="flex bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm gap-1">
-                 {isAdmin && <button onClick={() => setActiveOrderCategory('sns')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${effectiveOrderCategory === 'sns' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>SNS 판매</button>}
-                 {isAdmin && <button onClick={() => setActiveOrderCategory('channel')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${effectiveOrderCategory === 'channel' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>채널 판매</button>}
-                 <button onClick={() => setActiveOrderCategory('store')} className={`px-6 py-2 rounded-xl text-[12px] font-black transition-all ${effectiveOrderCategory === 'store' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>스토어 판매</button>
-              </div>
-              <div className="flex gap-2">
-                <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="px-6 py-2.5 rounded-xl text-[13px] font-black bg-white border border-gray-100 outline-none shadow-sm cursor-pointer">
+            <div className="flex flex-col gap-3 px-2 sm:px-4">
+              <div className="flex flex-wrap gap-2">
+                <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm gap-1">
+                  {isAdmin && <button onClick={() => setActiveOrderCategory('sns')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all ${effectiveOrderCategory === 'sns' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>SNS 판매</button>}
+                  {isAdmin && <button onClick={() => setActiveOrderCategory('channel')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all ${effectiveOrderCategory === 'channel' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>채널 판매</button>}
+                  <button onClick={() => setActiveOrderCategory('store')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all ${effectiveOrderCategory === 'store' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>스토어 판매</button>
+                </div>
+                <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="px-3 sm:px-5 py-2 rounded-xl text-[12px] font-black bg-white border border-gray-100 outline-none shadow-sm cursor-pointer">
                   <option>전체</option>
                   {availableMonths.map(m => <option key={m} value={m}>{m}월</option>)}
                 </select>
-                {['all', 'trading', 'done'].map((f) => (
-                  <button key={f} onClick={() => setOrderFilter(f as any)} className={`px-6 py-2.5 rounded-xl text-[13px] font-black transition-all border ${orderFilter === f ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-white text-gray-400 border-gray-100'}`}>{f === 'all' ? '전체 내역' : f === 'trading' ? '거래 중' : '거래 완료'}</button>
-                ))}
+                <div className="flex gap-1">
+                  {['all', 'trading', 'done'].map((f) => (
+                    <button key={f} onClick={() => setOrderFilter(f as any)} className={`px-3 sm:px-5 py-2 rounded-xl text-[12px] font-black transition-all border whitespace-nowrap ${orderFilter === f ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-white text-gray-400 border-gray-100'}`}>{f === 'all' ? '전체내역' : f === 'trading' ? '거래중' : '거래완료'}</button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50/50 text-[12px] font-black text-gray-400 uppercase border-b border-gray-100 italic">
+            <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-x-auto">
+              <table className="w-full text-left min-w-[600px]">
+                <thead className="bg-gray-50/50 text-[11px] font-black text-gray-400 uppercase border-b border-gray-100 italic">
                   <tr>
-                    <th className="px-10 py-8 w-[35%]">주문 상품 / 구매자</th>
-                    <th className="px-10 py-8 text-center">주문 / 확정 일시</th>
-                    <th className="px-10 py-8 text-right">금액</th>
-                    <th className="px-10 py-8 text-center">상태</th>
-                    <th className="px-10 py-8 text-center">관리</th>
+                    <th className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 w-[35%] whitespace-nowrap">주문 상품 / 구매자</th>
+                    <th className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center whitespace-nowrap">주문 / 확정 일시</th>
+                    <th className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-right whitespace-nowrap">금액</th>
+                    <th className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center whitespace-nowrap">상태</th>
+                    <th className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center whitespace-nowrap">관리</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -251,30 +253,30 @@ const SellerDashboard: React.FC<Props> = ({
                       const isCancelled = order.status === '주문취소';
                       return (
                         <tr key={order.id} className={`transition-colors group ${isCancelled ? 'opacity-50 grayscale bg-gray-50' : 'hover:bg-blue-50/10'}`}>
-                          <td className="px-10 py-10">
-                            <div className="flex items-center gap-8">
-                              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm">📈</div>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8">
+                            <div className="flex items-center gap-3 sm:gap-5">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-xl flex items-center justify-center text-lg shadow-sm shrink-0">📈</div>
                               <div className="min-w-0">
-                                <p className="text-[12px] font-black text-blue-600 uppercase italic mb-1 tracking-tighter">#{order.id}</p>
-                                <p className="text-[17px] font-black text-gray-900 truncate mb-1 italic tracking-tight">[{order.platform}] {order.productName}</p>
-                                <span className="text-[11px] text-gray-400 font-bold uppercase italic">구매자: @{order.userNickname}</span>
+                                <p className="text-[11px] font-black text-blue-600 uppercase italic mb-0.5 tracking-tighter">#{order.id}</p>
+                                <p className="text-[13px] font-black text-gray-900 truncate mb-0.5 italic">[{order.platform}] {order.productName}</p>
+                                <span className="text-[11px] text-gray-400 font-bold">구매자: @{order.userNickname}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-10 py-10 text-center">
-                            <p className="text-[12px] font-bold text-gray-400 italic">주문: {formatKoreanDateTime(order.orderTime)}</p>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center">
+                            <p className="text-[11px] font-bold text-gray-400 whitespace-nowrap">주문: {formatKoreanDateTime(order.orderTime)}</p>
                           </td>
-                          <td className="px-10 py-10 text-right">
-                            <p className="text-2xl font-black text-gray-900 italic tracking-tighter mb-1">₩{order.sellingPrice.toLocaleString()}</p>
-                            <p className="text-[10px] text-green-500 font-bold">수익 ₩{order.profit.toLocaleString()}</p>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-right">
+                            <p className="text-base sm:text-lg font-black text-gray-900 italic whitespace-nowrap">₩{order.sellingPrice.toLocaleString()}</p>
+                            <p className="text-[10px] text-green-500 font-bold whitespace-nowrap">수익 ₩{order.profit.toLocaleString()}</p>
                           </td>
-                          <td className="px-10 py-10 text-center">
-                            <span className={`px-6 py-2 rounded-full text-[11px] font-black italic shadow-sm transition-all ${
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center">
+                            <span className={`px-3 py-1.5 rounded-full text-[11px] font-black italic shadow-sm transition-all whitespace-nowrap ${
                               order.status === '완료' ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100'
                               : order.status === '처리중' ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400'
                             }`}>{order.status}</span>
                           </td>
-                          <td className="px-10 py-10 text-center"><span className="text-[11px] text-gray-300 font-bold italic">-</span></td>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center"><span className="text-[11px] text-gray-300 font-bold italic">-</span></td>
                         </tr>
                       );
                     })
@@ -288,31 +290,31 @@ const SellerDashboard: React.FC<Props> = ({
                       const isCancelled = order.status === '취소' || order.status === 'refunded';
                       return (
                         <tr key={order.id} className={`transition-colors group ${isCancelled ? 'opacity-50 grayscale bg-gray-50' : 'hover:bg-blue-50/10'}`}>
-                          <td className="px-10 py-10">
-                            <div className="flex items-center gap-8">
-                              <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm">📺</div>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8">
+                            <div className="flex items-center gap-3 sm:gap-5">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-50 rounded-xl flex items-center justify-center text-lg shadow-sm shrink-0">📺</div>
                               <div className="min-w-0">
-                                <p className="text-[12px] font-black text-blue-600 uppercase italic mb-1 tracking-tighter">#{order.id}</p>
-                                <p className="text-[17px] font-black text-gray-900 truncate mb-1 italic tracking-tight">{order.productName}</p>
-                                <span className="text-[11px] text-gray-400 font-bold uppercase italic">구매자: @{order.userNickname}</span>
-                                {order.buyerAccount && <span className="ml-2 text-[11px] text-blue-500 font-bold italic">({order.buyerAccount})</span>}
+                                <p className="text-[11px] font-black text-blue-600 uppercase italic mb-0.5 tracking-tighter">#{order.id}</p>
+                                <p className="text-[13px] font-black text-gray-900 truncate mb-0.5 italic">{order.productName}</p>
+                                <span className="text-[11px] text-gray-400 font-bold">구매자: @{order.userNickname}</span>
+                                {order.buyerAccount && <span className="ml-1 text-[11px] text-blue-500 font-bold">({order.buyerAccount})</span>}
                               </div>
                             </div>
                           </td>
-                          <td className="px-10 py-10 text-center">
-                            <p className="text-[12px] font-bold text-gray-400 italic">주문: {formatKoreanDateTime(order.orderTime)}</p>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center">
+                            <p className="text-[11px] font-bold text-gray-400 whitespace-nowrap">주문: {formatKoreanDateTime(order.orderTime)}</p>
                           </td>
-                          <td className="px-10 py-10 text-right">
-                            <p className="text-2xl font-black text-gray-900 italic tracking-tighter mb-1">₩{order.price.toLocaleString()}</p>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-right">
+                            <p className="text-base sm:text-lg font-black text-gray-900 italic whitespace-nowrap">₩{order.price.toLocaleString()}</p>
                             <p className="text-[10px] text-gray-300 font-bold uppercase">{order.platform}</p>
                           </td>
-                          <td className="px-10 py-10 text-center">
-                            <span className={`px-6 py-2 rounded-full text-[11px] font-black italic shadow-sm transition-all ${
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center">
+                            <span className={`px-3 py-1.5 rounded-full text-[11px] font-black italic shadow-sm transition-all whitespace-nowrap ${
                               order.status === '구매확정' ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100'
                               : order.status === '결제완료' ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400'
                             }`}>{order.status}</span>
                           </td>
-                          <td className="px-10 py-10 text-center"><span className="text-[11px] text-gray-300 font-bold italic">-</span></td>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center"><span className="text-[11px] text-gray-300 font-bold italic">-</span></td>
                         </tr>
                       );
                     })
@@ -328,25 +330,25 @@ const SellerDashboard: React.FC<Props> = ({
                       const showTaxBtn = !isCancelled && isCashPayment;
                       return (
                         <tr key={order.id} className={`transition-colors group ${isCancelled ? 'opacity-50 grayscale bg-gray-50' : 'hover:bg-blue-50/10'}`}>
-                          <td className="px-10 py-10">
-                            <div className="flex items-center gap-8">
-                              <img src={`https://picsum.photos/seed/${order.productId}/200/200`} className="w-16 h-16 bg-gray-100 rounded-2xl object-cover shadow-sm" alt="p" />
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8">
+                            <div className="flex items-center gap-3 sm:gap-5">
+                              <img src={`https://picsum.photos/seed/${order.productId}/200/200`} className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-xl object-cover shadow-sm shrink-0" alt="p" />
                               <div className="min-w-0">
-                                <p className="text-[12px] font-black text-blue-600 uppercase italic mb-1 tracking-tighter">#{order.id}</p>
-                                <p className="text-[17px] font-black text-gray-900 truncate mb-1 italic tracking-tight">{order.productName}</p>
-                                <span className="text-[11px] text-gray-400 font-bold uppercase italic">구매자: @{order.userNickname}</span>
+                                <p className="text-[11px] font-black text-blue-600 uppercase italic mb-0.5 tracking-tighter">#{order.id}</p>
+                                <p className="text-[13px] font-black text-gray-900 truncate mb-0.5 italic">{order.productName}</p>
+                                <span className="text-[11px] text-gray-400 font-bold">구매자: @{order.userNickname}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-10 py-10 text-center">
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center">
                             <div className="space-y-1">
-                              <p className="text-[12px] font-bold text-gray-400 italic">주문: {formatKoreanDateTime(order.orderTime)}</p>
-                              {order.confirmedAt && <p className="text-[12px] font-black text-blue-500 italic">확정: {formatKoreanDateTime(order.confirmedAt)}</p>}
+                              <p className="text-[11px] font-bold text-gray-400 whitespace-nowrap">주문: {formatKoreanDateTime(order.orderTime)}</p>
+                              {order.confirmedAt && <p className="text-[11px] font-black text-blue-500 whitespace-nowrap">확정: {formatKoreanDateTime(order.confirmedAt)}</p>}
                             </div>
                           </td>
-                          <td className="px-10 py-10 text-right"><p className="text-2xl font-black text-gray-900 italic tracking-tighter mb-1">₩{order.price.toLocaleString()}</p><p className="text-[10px] text-gray-300 font-bold uppercase">{order.tierName}</p></td>
-                          <td className="px-10 py-10 text-center">
-                            <span className={`px-6 py-2 rounded-full text-[11px] font-black italic shadow-sm transition-all ${
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-right"><p className="text-base sm:text-lg font-black text-gray-900 italic whitespace-nowrap">₩{order.price.toLocaleString()}</p><p className="text-[10px] text-gray-300 font-bold uppercase">{order.tierName}</p></td>
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center">
+                            <span className={`px-3 py-1.5 rounded-full text-[11px] font-black italic shadow-sm transition-all whitespace-nowrap ${
                               order.status === '구매확정'
                               ? 'bg-[#00B06B] text-white shadow-lg shadow-green-100'
                               : order.status === '작업중' ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-100 text-gray-400'
@@ -354,17 +356,17 @@ const SellerDashboard: React.FC<Props> = ({
                               {order.status}
                             </span>
                           </td>
-                          <td className="px-10 py-10 text-center">
-                            <div className="flex flex-col gap-2 items-center">
-                              {showTaxBtn && <button onClick={() => setShowTaxModal(order)} className="px-5 py-2 bg-orange-50 text-orange-600 rounded-xl font-black text-[11px] hover:bg-black hover:text-white transition-all shadow-sm italic">세금계산서</button>}
-                              {order.reviewId && <button onClick={() => handleReviewManage(order)} className="px-5 py-2 bg-black text-white rounded-xl font-black text-[11px] shadow-lg hover:bg-blue-600 transition-all italic">리뷰관리</button>}
+                          <td className="px-4 py-4 sm:px-8 sm:py-6 md:px-10 md:py-8 text-center">
+                            <div className="flex flex-col gap-1.5 items-center">
+                              {showTaxBtn && <button onClick={() => setShowTaxModal(order)} className="px-3 py-1.5 bg-orange-50 text-orange-600 rounded-xl font-black text-[11px] hover:bg-black hover:text-white transition-all shadow-sm whitespace-nowrap">세금계산서</button>}
+                              {order.reviewId && <button onClick={() => handleReviewManage(order)} className="px-3 py-1.5 bg-black text-white rounded-xl font-black text-[11px] shadow-lg hover:bg-blue-600 transition-all whitespace-nowrap">리뷰관리</button>}
                               {(() => {
                                 const buyer = members.find(m => m.nickname === order.userNickname);
                                 if (!buyer || buyer.id === user.id) return null;
                                 return (
                                   <button
                                     onClick={() => navigate('/chat', { state: { targetUser: { id: buyer.id, nickname: buyer.nickname, profileImage: buyer.profileImage } } })}
-                                    className="px-5 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-black text-[11px] hover:bg-emerald-600 hover:text-white transition-all shadow-sm italic"
+                                    className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl font-black text-[11px] hover:bg-emerald-600 hover:text-white transition-all shadow-sm whitespace-nowrap"
                                   >
                                     💬 구매자 채팅
                                   </button>
