@@ -64,7 +64,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
           <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px]">
             <div className="flex items-center gap-6 flex-shrink-0">
               <Link to="/" className="text-2xl font-black flex items-center tracking-tighter select-none focus:outline-none">
-                <span className="text-gray-900 uppercase">THEBEST</span>
+                <span className="text-gray-900 uppercase">BEST</span>
                 <span className="text-blue-600 uppercase">SNS</span>
               </Link>
             </div>
@@ -209,7 +209,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             </div>
             <div className="flex-1 flex justify-center min-w-0">
               <Link to="/" className="text-xl font-black tracking-tighter">
-                <span className="text-gray-900 uppercase">THEBEST</span>
+                <span className="text-gray-900 uppercase">BEST</span>
                 <span className="text-blue-600 uppercase">SNS</span>
               </Link>
             </div>
