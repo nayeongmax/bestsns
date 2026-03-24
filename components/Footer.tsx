@@ -8,7 +8,7 @@ const Footer: React.FC = () => {
       <footer className="hidden xl:block mt-auto border-t border-gray-200 bg-gray-50">
         <div className="w-full max-w-4xl mx-auto px-8 md:px-12 py-8">
           <div className="flex justify-center mb-8">
-            <p className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">THEBEST<span className="text-blue-600">SNS</span></p>
+            <p className="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">BEST<span className="text-blue-600">SNS</span></p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-8 items-start justify-items-center md:justify-items-stretch text-center md:text-left">
             <div className="space-y-2">
@@ -50,7 +50,7 @@ const Footer: React.FC = () => {
       <footer className="xl:hidden fixed bottom-0 left-0 right-0 z-10 border-t border-gray-200 bg-gray-50/95 backdrop-blur-sm">
         <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-6">
-            <p className="text-base sm:text-lg font-black text-gray-800 tracking-tight order-2 sm:order-1">THEBEST<span className="text-blue-600">SNS</span></p>
+            <p className="text-base sm:text-lg font-black text-gray-800 tracking-tight order-2 sm:order-1">BEST<span className="text-blue-600">SNS</span></p>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-center order-1 sm:order-2">
               <div className="text-[11px] sm:text-xs text-gray-600 space-x-3 sm:space-x-4 inline-flex flex-wrap justify-center">
                 <span><strong className="text-gray-500">상호</strong> 더베스트[THEBEST]</span>
