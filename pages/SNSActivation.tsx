@@ -36,7 +36,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const userPoints = user.points || 0;
 
   const [mainIdx, setMainIdx] = useState(0);
-  const mainSequence = ["대한민국", "SMM 대표 마케팅", "대행사 12,000곳이", "사용하는", "마케팅 원천 사이트", "더베스트SNS"];
+  const mainSequence = ["대한민국", "SMM 대표 마케팅", "대행사 12,000곳이", "사용하는", "마케팅 원천 사이트", "BESTSNS"];
 
   useEffect(() => {
     const mainInterval = setInterval(() => setMainIdx(prev => (prev + 1) % mainSequence.length), 1200);

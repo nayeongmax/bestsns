@@ -176,7 +176,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
         <div className="hidden lg:block mt-8">
           <div className="bg-[#f4f9ff] p-8 md:p-10 rounded-[36px] border border-[#dce9ff] relative overflow-hidden">
             <div className="absolute right-0 top-0 opacity-5"><svg className="w-64 h-64 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></div>
-            <p className="text-[#2b6cb0] text-xl font-black italic tracking-tight uppercase">THEBESTSNS Escrow Protection 가동 중</p>
+            <p className="text-[#2b6cb0] text-xl font-black italic tracking-tight uppercase">BESTSNS Escrow Protection 가동 중</p>
             <ul className="mt-3 space-y-2 text-[#4a5568] text-[15px] font-bold italic">
               <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 7일 후, 판매자는 에스크로 대리인에게 주요 소유권을 양도합니다.</li>
               <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 에스크로 대리인 확인 후 매수인에게 소유권을 양도합니다.</li>
@@ -215,7 +215,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
 
           <div className="bg-[#f4f9ff] p-4 sm:p-6 rounded-2xl border border-[#dce9ff] mt-6 relative overflow-hidden">
             <div className="absolute right-0 top-0 opacity-5"><svg className="w-24 h-24 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></div>
-            <p className="text-[#2b6cb0] text-sm font-black uppercase tracking-tight">THEBESTSNS Escrow Protection 가동 중</p>
+            <p className="text-[#2b6cb0] text-sm font-black uppercase tracking-tight">BESTSNS Escrow Protection 가동 중</p>
             <ul className="mt-2 space-y-1.5 text-[#4a5568] text-xs sm:text-sm font-medium">
               <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 7일 후 판매자가 에스크로 대리인에게 소유권 양도</li>
               <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 에스크로 대리인 확인 후 매수인에게 양도</li>

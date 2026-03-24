@@ -38,7 +38,7 @@ const PrivacyPolicy: React.FC = () => {
       <div className="mb-12 flex justify-between items-end">
         <div>
           <h2 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">Privacy Policy</h2>
-          <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.2em]">더베스트SNS 개인정보처리방침</p>
+          <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.2em]">BESTSNS 개인정보처리방침</p>
         </div>
         <button onClick={() => navigate(-1)} className="text-sm font-black text-gray-400 hover:text-gray-900 italic uppercase transition-colors">Back</button>
       </div>
@@ -47,7 +47,7 @@ const PrivacyPolicy: React.FC = () => {
         <div className="p-10 md:p-16 space-y-16">
           <div className="bg-blue-50 p-8 rounded-[32px] border border-blue-100 italic">
             <p className="text-blue-700 font-bold leading-relaxed text-[15px]">
-              "THEBESTSNS는 사용자의 개인정보를 최우선 가치로 생각하며, 관련 법령을 준수하고 최첨단 보안 솔루션(Supabase & PortOne)을 통해 안전하게 보호하고 있습니다. 본 방침은 서비스 이용자가 신뢰할 수 있는 환경을 제공하기 위해 마련되었습니다."
+              "BESTSNS는 사용자의 개인정보를 최우선 가치로 생각하며, 관련 법령을 준수하고 최첨단 보안 솔루션(Supabase & PortOne)을 통해 안전하게 보호하고 있습니다. 본 방침은 서비스 이용자가 신뢰할 수 있는 환경을 제공하기 위해 마련되었습니다."
             </p>
           </div>
 
@@ -69,7 +69,7 @@ const PrivacyPolicy: React.FC = () => {
 
           <div className="pt-16 border-t border-gray-50 text-center">
             <p className="text-[11px] text-gray-300 font-bold uppercase tracking-widest mb-2">Last Updated: 2026. 01. 20</p>
-            <p className="text-[11px] text-gray-300 font-bold uppercase tracking-widest italic">THEBESTSNS Security Compliance Team</p>
+            <p className="text-[11px] text-gray-300 font-bold uppercase tracking-widest italic">BESTSNS Security Compliance Team</p>
           </div>
         </div>
       </div>

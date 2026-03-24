@@ -464,7 +464,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                             <span className="bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded-full italic">LIVE</span>
                          </div>
                          <p className="text-[13.5px] text-blue-700 font-bold leading-relaxed">
-                            {user.nickname}님은 현재 THEBESTSNS의 소중한 {user.role === 'admin' ? '관리자' : '회원'}님이십니다.
+                            {user.nickname}님은 현재 BESTSNS의 소중한 {user.role === 'admin' ? '관리자' : '회원'}님이십니다.
                             가입일: {user.joinDate || '정보 없음'}
                          </p>
                       </div>
@@ -689,7 +689,7 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
         {activeTab === 'quit' && (
           <div className="animate-in fade-in duration-300 space-y-12">
              <div className="space-y-8">
-                <h4 className="text-[20px] font-black text-gray-900">THEBESTSNS를 떠나는 이유를 알려주세요.</h4>
+                <h4 className="text-[20px] font-black text-gray-900">BESTSNS를 떠나는 이유를 알려주세요.</h4>
                 <div className="space-y-4">
                    {[ '이용하고 싶은 서비스가 없어요', '서비스 퀄리티가 낮아요', '비매너 회원을 만났어요', '잦은 오류가 발생해요', '대체할 만한 서비스를 찾았어요', '쿠폰·적립금 등 혜택이 적어요', '기타' ].map((reason, idx) => (
                      <label key={idx} className="flex items-center gap-4 cursor-pointer group">
@@ -710,8 +710,8 @@ const UserInfoSection: React.FC<Props> = ({ user, onUpdate, forcedTab, onTabChan
                 <ul className="space-y-4 text-[13.5px] font-bold text-gray-500 leading-relaxed list-none">
                    <li className="flex items-start gap-2">• 현재 사용중인 계정 정보는 회원 탈퇴 후 복구가 불가합니다.</li>
                    <li className="flex items-start gap-2 text-red-500 font-black">• 진행 중인 거래건이 있거나 패널티 조치 중인 경우 탈퇴 신청이 불가합니다.</li>
-                   <li className="flex items-start gap-2">• 탈퇴 후 회원님의 정보는 전자상거래 소비자보호법에 의거한 THEBESTSNS 개인정보처리방침에 따라 관리됩니다.</li>
-                   <li className="flex items-start gap-2">• 현재 보유 중인 쿠폰 및 THEBESTSNS 포인트는 모두 자동 소멸됩니다.</li>
+                   <li className="flex items-start gap-2">• 탈퇴 후 회원님의 정보는 전자상거래 소비자보호법에 의거한 BESTSNS 개인정보처리방침에 따라 관리됩니다.</li>
+                   <li className="flex items-start gap-2">• 현재 보유 중인 쿠폰 및 BESTSNS 포인트는 모두 자동 소멸됩니다.</li>
                 </ul>
              </div>
              <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6">

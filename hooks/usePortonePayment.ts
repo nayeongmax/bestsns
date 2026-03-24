@@ -55,7 +55,7 @@ export function usePortonePayment() {
     }
 
     const paymentId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const buyerEmail = params.userEmail || `user_${params.userId.slice(0, 8)}@thebestsns.com`;
+    const buyerEmail = params.userEmail || `user_${params.userId.slice(0, 8)}@bestsns.com`;
 
     try {
       const response = await PortOne.requestPayment({

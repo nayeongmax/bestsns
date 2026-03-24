@@ -9,7 +9,7 @@ const TermsPage: React.FC = () => {
       <div className="mb-12 flex justify-between items-end">
         <div>
           <h2 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">이용약관</h2>
-          <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.2em]">THEBESTSNS 서비스 이용약관 (통합본)</p>
+          <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.2em]">BESTSNS 서비스 이용약관 (통합본)</p>
         </div>
         <button onClick={() => navigate(-1)} className="text-sm font-black text-gray-400 hover:text-gray-900 italic uppercase transition-colors">닫기</button>
       </div>
@@ -20,7 +20,7 @@ const TermsPage: React.FC = () => {
           {/* 1조 */}
           <div>
             <p className="font-black text-gray-900 text-lg">제1조 (목적)</p>
-            <p className="mt-2">이 약관은 더베스트[THEBEST]가 운영하는 THEBESTSNS 플랫폼에서 제공하는 디지털 마케팅 서비스, 채널 거래, 디지털 콘텐츠 판매, 작업 매칭 서비스 등의 이용과 관련하여 회사와 회원 간의 권리, 의무 및 책임사항을 규정함을 목적으로 한다.</p>
+            <p className="mt-2">이 약관은 더베스트[THEBEST]가 운영하는 BESTSNS 플랫폼에서 제공하는 디지털 마케팅 서비스, 채널 거래, 디지털 콘텐츠 판매, 작업 매칭 서비스 등의 이용과 관련하여 회사와 회원 간의 권리, 의무 및 책임사항을 규정함을 목적으로 한다.</p>
             <p className="mt-2">본 약관은 플랫폼 이용에 관한 기본 원칙과 서비스별 운영 정책을 포함하며, 회원은 서비스를 이용함으로써 본 약관에 동의한 것으로 간주된다.</p>
           </div>
 
@@ -28,8 +28,8 @@ const TermsPage: React.FC = () => {
           <div>
             <p className="font-black text-gray-900 text-lg">제2조 (정의)</p>
             <ul className="mt-2 space-y-2 pl-2">
-              <li>1. THEBESTSNS란 더베스트[THEBEST]가 운영하는 온라인 플랫폼으로서 회원이 디지털 마케팅 서비스, 채널 거래, 디지털 콘텐츠 판매 및 작업 매칭 서비스를 이용할 수 있도록 제공되는 전자적 시스템을 의미한다.</li>
-              <li>2. 회원이란 THEBESTSNS에 가입하여 회사가 제공하는 서비스를 이용하는 자를 의미하며 광고주, 구매자, 판매자, 프리랜서, 의뢰인 등 서비스 성격에 따라 다양한 역할을 수행할 수 있다.</li>
+              <li>1. BESTSNS란 더베스트[THEBEST]가 운영하는 온라인 플랫폼으로서 회원이 디지털 마케팅 서비스, 채널 거래, 디지털 콘텐츠 판매 및 작업 매칭 서비스를 이용할 수 있도록 제공되는 전자적 시스템을 의미한다.</li>
+              <li>2. 회원이란 BESTSNS에 가입하여 회사가 제공하는 서비스를 이용하는 자를 의미하며 광고주, 구매자, 판매자, 프리랜서, 의뢰인 등 서비스 성격에 따라 다양한 역할을 수행할 수 있다.</li>
               <li>3. 직거래란 플랫폼의 결제 시스템을 통하지 않고 회원 상호 간에 직접 거래하거나 거래를 시도하는 모든 행위를 의미한다.</li>
               <li>4. 포인트 또는 충전 포인트란 회원이 플랫폼에서 서비스 이용을 위해 충전하거나 지급받은 예치성 금액을 의미하며 1포인트는 1원과 동일한 가치를 가진다.</li>
               <li>5. 서비스란 플랫폼을 통해 제공되는 디지털 마케팅 서비스, 채널 거래 서비스, 디지털 콘텐츠 판매 서비스, 작업 매칭 서비스 등 회사가 제공하는 모든 기능을 의미한다.</li>
@@ -73,7 +73,7 @@ const TermsPage: React.FC = () => {
               <li>2. 회원아이디는 다음의 경우에 한하여 이용자의 요청 또는 회사의 판단에 의하여 변경 및 회원탈퇴할 수 있습니다.
                 <ul className="mt-1 pl-4 space-y-1 text-sm text-gray-600">
                   <li>가. 아이디가 회원의 전화번호나 주민등록번호 등으로 되어 있어서 사생활 및 정보침해의 우려가 있는 경우.</li>
-                  <li>나. THEBESTSNS 운영자, 직원 또는 관계자로 오인할 수 있는 경우.</li>
+                  <li>나. BESTSNS 운영자, 직원 또는 관계자로 오인할 수 있는 경우.</li>
                   <li>다. 상식적으로 합리적인 사유가 있는 경우.</li>
                 </ul>
               </li>
@@ -115,7 +115,7 @@ const TermsPage: React.FC = () => {
               <li>2. 기술상의 장애 등 특별한 사유가 있을 경우, 회사가 제공하는 서비스의 주문이행은 다소 지연 혹은 취소 후 환불이 될 수 있습니다.</li>
               <li>3. 회사는 상황에 따라 언제든지 제공하는 서비스의 이용을 변경 및 제한하고 가격을 변경 할 수 있습니다.</li>
               <li>4. 본 서비스 사용에 동의한 회원에 한하여 더 나은 서비스 사용환경 제공을 목적으로 회원의 네트워크 및 PC 자원을 부분적으로 활용할 수 있습니다.</li>
-              <li>5. 회사는 봇계정, 실명계정 또는 유령계정 등 계정생성 작업을 직접하지 않으며, 공개적으로 누구나 이용할 수 있는 제3자의 서비스를 되판매하는 더베스트에서 운영하는 THEBESTSNS 입니다.</li>
+              <li>5. 회사는 봇계정, 실명계정 또는 유령계정 등 계정생성 작업을 직접하지 않으며, 공개적으로 누구나 이용할 수 있는 제3자의 서비스를 되판매하는 더베스트에서 운영하는 BESTSNS 입니다.</li>
             </ul>
           </div>
 
@@ -135,7 +135,7 @@ const TermsPage: React.FC = () => {
           {/* 10조 */}
           <div>
             <p className="font-black text-gray-900 text-lg">제10조 (서비스별 이용 규정)</p>
-            <p className="mt-2">THEBESTSNS는 서비스 특성에 따라 다음과 같은 개별 규정을 적용한다.</p>
+            <p className="mt-2">BESTSNS는 서비스 특성에 따라 다음과 같은 개별 규정을 적용한다.</p>
             <ul className="mt-3 space-y-3 pl-2">
               <li><strong>디지털 마케팅 서비스</strong>
                 <p className="mt-1 text-sm text-gray-600">작업이 시작된 이후에는 중도 취소가 불가능하다. 상품에 명시된 기간 동안 수량 이탈에 대한 복구 서비스가 제공될 수 있다.</p>
@@ -182,7 +182,7 @@ const TermsPage: React.FC = () => {
           <div>
             <p className="font-black text-gray-900 text-lg">제13조 (예치금 [충전 포인트])</p>
             <ul className="mt-2 space-y-2 pl-2">
-              <li>1. 회원은 사이트에 예치금(1예치금 = 1원)을 충전함으로써 'THEBESTSNS'의 모든 서비스를 기재된 가격으로 이용할 수 있습니다.</li>
+              <li>1. 회원은 사이트에 예치금(1예치금 = 1원)을 충전함으로써 'BESTSNS'의 모든 서비스를 기재된 가격으로 이용할 수 있습니다.</li>
               <li>2. 무상으로 적립된 포인트를 통해 서비스를 구매한 경우, 현금영수증 또는 세금계산서가 발행되지 않습니다.</li>
               <li>3. 무상으로 지급받은 포인트는 유상으로 충전한 캐시(실제로 회원이 결제한 금액)를 모두 소진한 이후부터 사용되어집니다.</li>
               <li>4. 회원이 부당 또는 부정하게 포인트를 취득한 경우 회원은 해당 잔액을 사용할 수 없으며 회사는 이를 회수할 수 있습니다.</li>
@@ -236,8 +236,8 @@ const TermsPage: React.FC = () => {
           <div>
             <p className="font-black text-gray-900 text-lg">제17조 (저작권의 귀속 및 이용제한)</p>
             <ul className="mt-2 space-y-2 pl-2">
-              <li>1. 'THEBESTSNS'가 작성한 저작물에 대한 저작권 기타 지적재산권은 'THEBESTSNS'에 귀속합니다.</li>
-              <li>2. 회원은 'THEBESTSNS'를 이용함으로써 얻은 정보 중 'THEBESTSNS'에게 지적재산권이 귀속된 정보를 'THEBESTSNS'의 사전 승낙 없이 복제, 송신, 출판, 배포, 방송 기타 방법에 의하여 영리목적으로 이용하거나 제3자에게 이용하게 하여서는 안됩니다.</li>
+              <li>1. 'BESTSNS'가 작성한 저작물에 대한 저작권 기타 지적재산권은 'BESTSNS'에 귀속합니다.</li>
+              <li>2. 회원은 'BESTSNS'를 이용함으로써 얻은 정보 중 'BESTSNS'에게 지적재산권이 귀속된 정보를 'BESTSNS'의 사전 승낙 없이 복제, 송신, 출판, 배포, 방송 기타 방법에 의하여 영리목적으로 이용하거나 제3자에게 이용하게 하여서는 안됩니다.</li>
               <li>3. 플랫폼을 통해 제공되는 디지털 콘텐츠 및 자료에 대한 저작권은 판매자 또는 회사에게 귀속된다.</li>
               <li>4. 회원은 구매한 자료를 무단으로 복제하거나 재판매 또는 배포할 수 없으며, 이를 위반할 경우 법적 책임 및 손해배상 책임이 발생할 수 있다.</li>
             </ul>

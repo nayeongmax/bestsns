@@ -224,11 +224,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
                 updated_at: new Date().toISOString()
               }, { onConflict: 'id' });
               if (profileErr) {
-                console.error('[THEBESTSNS] 소셜 로그인 후 profiles 저장 실패:', profileErr);
-                console.error('[THEBESTSNS] 저장 시도한 profile.id:', profile.id, 'email:', profile.email);
+                console.error('[BESTSNS] 소셜 로그인 후 profiles 저장 실패:', profileErr);
+                console.error('[BESTSNS] 저장 시도한 profile.id:', profile.id, 'email:', profile.email);
                 alert('로그인은 완료되었지만, 회원 목록 저장에 실패했습니다.\n\nDEPLOY.md 5-2절 "방법 A(트리거)"를 적용해 보세요. supabase-auth-profiles-trigger.sql 을 SQL Editor에서 실행하면, 다음부터 구글/카카오 가입 시 테이블에 자동으로 추가됩니다.');
               } else {
-                console.info('[THEBESTSNS] 소셜 로그인 후 profiles 저장 성공, id:', profile.id);
+                console.info('[BESTSNS] 소셜 로그인 후 profiles 저장 성공, id:', profile.id);
               }
               // 소셜 회원가입 시 가입 축하 5,000원 웰컴 쿠폰 발급
               if (intent === 'signup') {
@@ -306,7 +306,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
             nickname: '마케터김',
             profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=admin`,
             role: 'admin',
-            email: 'admin@thebestsns.com',
+            email: 'admin@bestsns.com',
             phone: '010-0000-0000',
             points: 999999,
             joinDate: '2024-01-01',
@@ -526,7 +526,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
             };
             await updateProfile(id, { coupons: [welcomeCoupon] }).catch((e) => console.warn('가입 쿠폰 DB 반영 실패:', e));
             onLoginSuccess(newUser);
-            alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
+            alert('회원가입이 완료되었습니다! BESTSNS에 오신 것을 환영합니다.');
             navigate('/sns');
             setLoading(false);
             return;
@@ -582,7 +582,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       await updateProfile(id, { coupons: [welcomeCoupon] }).catch((e) => console.warn('가입 쿠폰 DB 반영 실패:', e));
 
       onLoginSuccess(newUser);
-      alert('회원가입이 완료되었습니다! 더베스트SNS에 오신 것을 환영합니다.');
+      alert('회원가입이 완료되었습니다! BESTSNS에 오신 것을 환영합니다.');
       navigate('/sns');
     } catch (err: any) {
       const msg = err?.message || '';
@@ -701,7 +701,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           <div className="absolute w-[120px] h-[120px] rounded-full border border-white/5 bottom-[130px] -left-[30px]" />
           <div className="flex items-center gap-2.5 relative z-10 shrink-0">
             <div className="w-9 h-9 rounded-lg bg-white/20 border border-white/20 flex items-center justify-center text-[17px]">✦</div>
-            <span className="font-['Plus_Jakarta_Sans',sans-serif] text-[17px] font-extrabold text-white tracking-wide">THEBESTSNS</span>
+            <span className="font-['Plus_Jakarta_Sans',sans-serif] text-[17px] font-extrabold text-white tracking-wide">BESTSNS</span>
           </div>
           {/* 로켓: 상단 가로 중앙 */}
           <div className="relative z-10 flex justify-center w-full py-4 shrink-0">
@@ -716,12 +716,12 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
             <div className="text-[13px] text-white/65 tracking-wider font-semibold uppercase mb-5 font-['Plus_Jakarta_Sans',sans-serif]">ONE-STOP PLATFORM MARKETING</div>
             <p className="text-[13.5px] text-white/80 leading-relaxed mt-12">
               아직도 마케팅 회사에 돈 주고 맡기시나요?<br />
-              <span className="text-white font-bold">마케팅 회사들이 이용하는 THEBESTSNS!</span><br />
+              <span className="text-white font-bold">마케팅 회사들이 이용하는 BESTSNS!</span><br />
               네이버 블로그·카페, 유튜브, 인스타그램 등<br />
               마케팅을 직접 저렴하게 진행하세요!
             </p>
           </div>
-          <div className="relative z-10 text-[11px] text-white/35 shrink-0 pt-4">© 2025 THEBESTSNS. All rights reserved.</div>
+          <div className="relative z-10 text-[11px] text-white/35 shrink-0 pt-4">© 2025 BESTSNS. All rights reserved.</div>
         </div>
 
         {/* ─── RIGHT PANEL (폼) ─── 모바일: 푸터 안 겹치게 스크롤, 하단 여유 확보 */}
