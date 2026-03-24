@@ -529,7 +529,7 @@ const SellerDashboard: React.FC<Props> = ({
               </button>
             </div>
             <p className="mt-12 text-[11px] font-bold text-gray-300 uppercase tracking-[0.4em] italic">
-              THEBESTSNS ADVERTISING & EXPOSURE PLATFORM
+              BESTSNS ADVERTISING & EXPOSURE PLATFORM
             </p>
           </div>
         )}

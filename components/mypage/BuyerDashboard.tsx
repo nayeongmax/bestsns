@@ -112,7 +112,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
       .filter(o => o.userId === user.id)
       .map(o => ({
         id: o.id, type: 'sns', orderTime: o.orderTime, productName: o.productName,
-        thumbnail: '', productId: 'sns', sellerName: 'THEBESTSNS',
+        thumbnail: '', productId: 'sns', sellerName: 'BESTSNS',
         price: o.sellingPrice, quantity: o.quantity, totalPrice: o.sellingPrice * o.quantity,
         status: o.status, link: o.link, initialCount: o.initialCount, remains: o.remains
       }));

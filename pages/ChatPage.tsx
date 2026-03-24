@@ -291,7 +291,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif, onl
         addNotif(user.id, 'prohibited', '🚨 금지 키워드 감지 경고', DIRECT_TRADE_WARNING);
         alert(DIRECT_TRADE_WARNING);
         const warningMsg: ChatMessageExtended = {
-          id: `warn_${Date.now()}`, senderId: 'system', senderNickname: 'THEBESTSNS 보안팀', senderImage: '',
+          id: `warn_${Date.now()}`, senderId: 'system', senderNickname: 'BESTSNS 보안팀', senderImage: '',
           content: `🚨 ${DIRECT_TRADE_WARNING}\n(감지된 키워드: [${detected.join(', ')}])\n(현재 누적 위반: ${newCount}회)`,
           timestamp, dateStr: todayStr, type: 'warning',
         };
@@ -433,7 +433,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif, onl
         <div className="p-3 sm:p-4 xl:p-4 border-b border-gray-200 flex flex-col items-center bg-[#F9FBFF]">
           <div className="text-[12px] text-gray-500 font-black flex items-center gap-1.5 mb-1.5 uppercase italic">
             <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm9.496 3.036a1 1 0 00-1.414-1.414l-4.828 4.828-1.764-1.764a1 1 0 00-1.414 1.414l2.47 2.47a1 1 0 001.415 0l5.535-5.534z" clipRule="evenodd" /></svg>
-            THEBESTSNS 안전결제 시스템 가동 중
+            BESTSNS 안전결제 시스템 가동 중
           </div>
           <p className="text-[11px] text-gray-400 font-bold">상대방이 계좌이체 등 외부 결제를 유도하면 즉시 신고해주세요.</p>
         </div>

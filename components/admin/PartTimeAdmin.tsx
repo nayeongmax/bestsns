@@ -918,9 +918,9 @@ th{background:#ecfdf5;font-weight:bold;font-size:11px}
 .tc{text-align:center;white-space:nowrap}.tr{text-align:right}.b{font-weight:bold}
 .total{font-size:16px;font-weight:bold;color:#059669}
 </style></head><body>
-<h2>THEBEST<span style="color:#2563eb">SNS</span> 견적서</h2>
+<h2>BESTSNS 견적서</h2>
 <p class="meta">견적일자: ${new Date(est.sentAt!).toLocaleDateString('ko-KR')}${est.workName ? ' · ' + est.workName : ''}</p>
-<div class="grid"><div class="section"><div class="label">공급처</div><p><strong>상호</strong> THEBESTSNS<br><strong>대표자</strong> 김나영<br><strong>주소</strong> 대구광역시 달성군 현풍로6길 5<br><strong>사업자번호</strong> 409-30-51469</p></div>
+<div class="grid"><div class="section"><div class="label">공급처</div><p><strong>상호</strong> BESTSNS<br><strong>대표자</strong> 김나영<br><strong>주소</strong> 대구광역시 달성군 현풍로6길 5<br><strong>사업자번호</strong> 409-30-51469</p></div>
 <div class="section"><div class="label">수신처</div><p><strong>${est.recipientName || '광고주'}</strong><br>${est.recipientContact || estimateViewJr.contact}</p></div></div>
 ${est.workPeriod ? `<p class="label">작업기간 : ${est.workPeriod}</p>` : ''}
 <table><thead><tr><th class="tc">순번</th><th>내용</th><th class="tr">단가</th><th class="tc">수량</th><th class="tr">금액</th><th>비고</th></tr></thead><tbody>${itemsHtml}</tbody></table>
@@ -945,11 +945,11 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
               </div>
               <div className="p-8 space-y-6">
                 <div className="text-center border-b border-gray-200 pb-4">
-                  <p className="text-2xl font-black text-gray-900">THEBEST<span className="text-blue-600">SNS</span> 견적서</p>
+                  <p className="text-2xl font-black text-gray-900">BESTSNS 견적서</p>
                   <p className="text-xs text-gray-500 mt-1">견적일자: {new Date(est.sentAt!).toLocaleDateString('ko-KR')}{est.workName && ` · ${est.workName}`}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-8 border-b border-gray-200 pb-6">
-                  <div><p className="text-xs font-black text-gray-500 uppercase mb-2">공급처</p><div className="text-sm text-gray-700 space-y-1"><p><strong>상호</strong> THEBESTSNS</p><p><strong>대표자</strong> 김나영</p><p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p><p><strong>사업자번호</strong> 409-30-51469</p></div></div>
+                  <div><p className="text-xs font-black text-gray-500 uppercase mb-2">공급처</p><div className="text-sm text-gray-700 space-y-1"><p><strong>상호</strong> BESTSNS</p><p><strong>대표자</strong> 김나영</p><p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p><p><strong>사업자번호</strong> 409-30-51469</p></div></div>
                   <div><p className="text-xs font-black text-gray-500 uppercase mb-2">수신처</p><div className="text-sm text-gray-700 space-y-1"><p><strong>{est.recipientName || '광고주'}</strong></p><p>{est.recipientContact || estimateViewJr.contact}</p></div></div>
                 </div>
                 {est.workPeriod && <p className="text-sm font-black text-gray-600">작업기간 : {est.workPeriod}</p>}
@@ -975,7 +975,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                   </div>
                   {est.note && <p className="mt-3 text-gray-600 text-sm">추가 안내: {est.note}</p>}
                 </div>
-                <div className="pt-4 border-t border-gray-200 text-center"><p className="text-xl font-black text-gray-800">THEBEST<span className="text-blue-600">SNS</span></p></div>
+                <div className="pt-4 border-t border-gray-200 text-center"><p className="text-xl font-black text-gray-800">BESTSNS</p></div>
                 <div className="flex gap-3 justify-center pt-2">
                   <button onClick={() => setEstimateViewJr(null)} className="px-8 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">닫기</button>
                   <button onClick={handlePdfDownload} className="px-8 py-3 rounded-xl bg-slate-600 text-white font-black hover:bg-slate-700">내려받기</button>
@@ -1187,7 +1187,7 @@ ${est.note ? `<p style="margin-top:12px;font-size:12px;color:#6b7280">추가 안
                   <div>
                     <p className="text-xs font-black text-gray-500 uppercase mb-2">공급처</p>
                     <div className="text-sm text-gray-700 space-y-1 bg-gray-50 p-4 rounded-xl">
-                      <p><strong>상호</strong> THEBESTSNS</p>
+                      <p><strong>상호</strong> BESTSNS</p>
                       <p><strong>대표자</strong> 김나영</p>
                       <p><strong>주소</strong> 대구광역시 달성군 현풍로6길 5</p>
                       <p><strong>사업자번호</strong> 409-30-51469</p>

@@ -9,7 +9,7 @@ const MarketingConsentPage: React.FC = () => {
       <div className="mb-12 flex justify-between items-end">
         <div>
           <h2 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">마케팅 정보 수신 동의</h2>
-          <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.2em]">THEBESTSNS 마케팅 정보 수신 동의서</p>
+          <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.2em]">BESTSNS 마케팅 정보 수신 동의서</p>
         </div>
         <button onClick={() => navigate(-1)} className="text-sm font-black text-gray-400 hover:text-gray-900 italic uppercase transition-colors">닫기</button>
       </div>

@@ -442,7 +442,7 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
                 <div className="space-y-10">
                    <div className="text-center space-y-3">
                       <h3 className="text-3xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8">최종 출금 신청 확인</h3>
-                      <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest italic">TheBestSns Professional Settlement Center</p>
+                      <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest italic">BestSns Professional Settlement Center</p>
                    </div>
                    
                    <div className="bg-gray-50 p-8 rounded-[40px] space-y-6 shadow-inner">

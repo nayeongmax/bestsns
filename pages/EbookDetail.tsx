@@ -456,7 +456,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                        <tr className="flex flex-col md:table-row">
                           <td className="bg-gray-50/80 px-6 py-4 font-bold text-gray-600 text-[13px] uppercase tracking-wide">고객센터</td>
                           <td className="px-6 py-4 font-medium text-gray-900" colSpan={3}>
-                             <p className="font-bold">THEBESTSNS 고객센터</p>
+                             <p className="font-bold">BESTSNS 고객센터</p>
                              <p className="text-[13px] text-gray-500 mt-1">상담 시간: 평일 10:00 - 18:00 (점심시간 제외)</p>
                           </td>
                        </tr>

@@ -107,7 +107,7 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
         customer: {
           fullName: user.nickname,
           phoneNumber: "01000000000",
-          email: "user@thebestsns.com",
+          email: "user@bestsns.com",
         },
       };
 
