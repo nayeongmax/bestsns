@@ -253,7 +253,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     return (
       <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 italic">프리랜서 워크페이스</h3>
+          <h3 className="text-2xl font-black text-gray-900 italic">프리랜서 워크스페이스</h3>
           <p className="text-sm text-gray-500 mt-1">프리랜서 등록 신청이 접수되었습니다.</p>
         </div>
         <div className="flex flex-col items-center justify-center py-16 bg-amber-50 rounded-[24px] border border-amber-200">
@@ -268,7 +268,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 italic">프리랜서 워크페이스</h3>
+          <h3 className="text-2xl font-black text-gray-900 italic">프리랜서 워크스페이스</h3>
           <p className="text-sm text-gray-500 mt-1">누구나알바에서 작업한 수익을 관리하세요.</p>
         </div>
         <Link
@@ -279,16 +279,16 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         </Link>
       </div>
 
-      <div className="flex gap-2 p-2 bg-gray-100/50 rounded-[32px] w-full shadow-inner">
+      <div className="flex gap-1.5 p-1.5 bg-gray-100/50 rounded-[24px] w-full shadow-inner">
         {[
           { id: 'tasks' as const, label: '작업내역' },
           { id: 'settlement' as const, label: '정산내역' },
-          { id: 'alba' as const, label: '알바의뢰 (광고주전용)' },
+          { id: 'alba' as const, label: '알바의뢰' },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setFreelancerTab(tab.id)}
-            className={`flex-1 py-4 rounded-[24px] text-[15px] font-black transition-all duration-300 ${freelancerTab === tab.id ? 'bg-white text-emerald-600 shadow-md scale-100' : 'text-gray-400 hover:text-gray-600 hover:bg-white/30'}`}
+            className={`flex-1 py-3 rounded-[18px] text-[13px] sm:text-[14px] font-black transition-all duration-300 ${freelancerTab === tab.id ? 'bg-white text-emerald-600 shadow-md' : 'text-gray-400 hover:text-gray-600 hover:bg-white/30'}`}
           >
             {tab.label}
           </button>

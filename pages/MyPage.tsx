@@ -167,22 +167,22 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:flex md:flex-row gap-3 w-full md:w-auto">
-          <div className="bg-gray-50 p-4 sm:p-6 rounded-[20px] sm:rounded-[32px] flex items-center gap-3 sm:gap-6">
-            <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl shadow-sm shrink-0">💰</div>
-            <div className="min-w-0">
-              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic truncate">Points<span className="text-red-500 normal-case not-italic font-black"> (SNS전용)</span></p>
-              <h3 className="text-base sm:text-xl font-black text-gray-900 italic">{(effectiveUser.points || 0).toLocaleString()} P</h3>
+        <div className="flex flex-row gap-3 w-full md:w-auto">
+          <div className="bg-gray-50 p-3 sm:p-5 rounded-[20px] sm:rounded-[32px] flex items-center gap-2 sm:gap-4 flex-1">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-sm shrink-0">💰</div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic leading-tight">Points<span className="text-red-500 normal-case not-italic font-black hidden sm:inline"> (SNS전용)</span></p>
+              <h3 className="text-sm sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{(effectiveUser.points || 0).toLocaleString()} P</h3>
             </div>
-            <Link to="/payment/point" className="ml-auto bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-black transition-all shrink-0">충전</Link>
+            <Link to="/payment/point" className="bg-blue-600 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-black transition-all shrink-0">충전</Link>
           </div>
-          <div className="bg-gray-50 p-4 sm:p-6 rounded-[20px] sm:rounded-[32px] flex items-center gap-3 sm:gap-6">
-            <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl shadow-sm shrink-0">🎫</div>
-            <div className="min-w-0">
-              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic">Coupons</p>
-              <h3 className="text-base sm:text-xl font-black text-gray-900 italic">{availableCouponCount} 장</h3>
+          <div className="bg-gray-50 p-3 sm:p-5 rounded-[20px] sm:rounded-[32px] flex items-center gap-2 sm:gap-4 flex-1">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-sm shrink-0">🎫</div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic leading-tight">Coupons</p>
+              <h3 className="text-sm sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{availableCouponCount} 장</h3>
             </div>
-            <Link to="/coupons" className="ml-auto bg-gray-900 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-blue-600 transition-all shrink-0">내역</Link>
+            <Link to="/coupons" className="bg-gray-900 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-blue-600 transition-all shrink-0">내역</Link>
           </div>
         </div>
       </div>
@@ -190,8 +190,8 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
       <div className="bg-gray-100/50 p-1.5 sm:p-2 rounded-[20px] sm:rounded-[32px] grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 w-full max-w-5xl mx-auto shadow-inner">
         {[
           { id: 'buyer', label: '🖥️ 구매자 대시보드', color: 'text-blue-600' },
-          { id: 'seller', label: '👨‍🏫 판매자 워크페이스', color: 'text-orange-600' },
-          { id: 'freelancer', label: '👷 프리랜서 워크페이스', color: 'text-emerald-600' },
+          { id: 'seller', label: '👨‍🏫 판매자 워크스페이스', color: 'text-orange-600' },
+          { id: 'freelancer', label: '👷 프리랜서 워크스페이스', color: 'text-emerald-600' },
           { id: 'settings', label: '⚙️ 계정 및 정보 관리', color: 'text-gray-900' }
         ].map(mode => (
           <button
