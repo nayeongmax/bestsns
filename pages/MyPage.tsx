@@ -131,63 +131,63 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
   return (
     <div className="max-w-[1400px] mx-auto pb-32 px-4 lg:px-8 space-y-10 animate-in fade-in duration-500">
       {/* 1. 상단 프로필 영역 */}
-      <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-8">
-        <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="relative group w-28 h-28 cursor-pointer shrink-0" onClick={() => fileInputRef.current?.click()}>
-            <img src={effectiveUser.profileImage} className="w-full h-full rounded-[36px] object-cover border-4 border-blue-50 shadow-xl" alt="profile" />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-[36px] transition-all">
+      <div className="bg-white p-5 sm:p-8 md:p-10 rounded-[32px] sm:rounded-[48px] shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-8">
+        <div className="flex flex-row md:flex-row items-center gap-4 sm:gap-8 w-full md:w-auto">
+          <div className="relative group w-20 h-20 sm:w-28 sm:h-28 cursor-pointer shrink-0" onClick={() => fileInputRef.current?.click()}>
+            <img src={effectiveUser.profileImage} className="w-full h-full rounded-[24px] sm:rounded-[36px] object-cover border-4 border-blue-50 shadow-xl" alt="profile" />
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-[24px] sm:rounded-[36px] transition-all">
               <span className="text-white text-xs font-black">변경</span>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleProfileImageChange} />
           </div>
-          
-          <div className="text-center md:text-left space-y-2">
+
+          <div className="text-left space-y-1.5 sm:space-y-2 flex-1">
             {isEditingNickname ? (
               <div className="space-y-2">
-                <input value={editNicknameValue} onChange={(e) => { setEditNicknameValue(e.target.value); setNicknameStatus('idle'); }} className="w-full p-3 bg-gray-50 rounded-xl font-black text-center md:text-left outline-none border border-blue-100" autoFocus />
+                <input value={editNicknameValue} onChange={(e) => { setEditNicknameValue(e.target.value); setNicknameStatus('idle'); }} className="w-full p-2.5 sm:p-3 bg-gray-50 rounded-xl font-black text-left outline-none border border-blue-100 text-sm sm:text-base" autoFocus />
                 <div className="flex gap-2">
-                  <button type="button" onClick={checkNicknameDuplicate} className={`px-4 py-2 rounded-lg text-[11px] font-black transition-all ${ nicknameStatus === 'available' ? 'bg-green-500 text-white' : nicknameStatus === 'unavailable' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-500' }`}> 중복확인 </button>
-                  <button type="button" onClick={handleNicknameUpdate} disabled={nicknameStatus !== 'available'} className={`px-4 py-2 rounded-lg text-[11px] font-black transition-all ${ nicknameStatus === 'available' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-300 cursor-not-allowed' }`}> 변경 </button>
-                  <button type="button" onClick={() => { setIsEditingNickname(false); setEditNicknameValue(effectiveUser.nickname); setNicknameStatus('idle'); }} className="px-3 py-2 bg-gray-50 text-gray-400 rounded-lg text-[11px] font-black">X</button>
+                  <button type="button" onClick={checkNicknameDuplicate} className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${ nicknameStatus === 'available' ? 'bg-green-500 text-white' : nicknameStatus === 'unavailable' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-500' }`}> 중복확인 </button>
+                  <button type="button" onClick={handleNicknameUpdate} disabled={nicknameStatus !== 'available'} className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${ nicknameStatus === 'available' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-300 cursor-not-allowed' }`}> 변경 </button>
+                  <button type="button" onClick={() => { setIsEditingNickname(false); setEditNicknameValue(effectiveUser.nickname); setNicknameStatus('idle'); }} className="px-2.5 py-1.5 bg-gray-50 text-gray-400 rounded-lg text-[11px] font-black">X</button>
                 </div>
               </div>
             ) : (
-              <button onClick={() => setIsEditingNickname(true)} className="group flex flex-col items-center md:items-start gap-1">
+              <button onClick={() => setIsEditingNickname(true)} className="group flex flex-col items-start gap-1">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-black text-gray-900 group-hover:text-blue-600 transition-colors italic">{effectiveUser.nickname}</h2>
+                  <h2 className="text-lg sm:text-2xl font-black text-gray-900 group-hover:text-blue-600 transition-colors italic">{effectiveUser.nickname}</h2>
                   <span className="text-[14px] opacity-30 group-hover:opacity-100 transition-opacity">✏️</span>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                   {(() => { const g = getUserGrade(effectiveUser, gradeConfigs); return g ? <span className={`${g.color} text-white text-[10px] font-black px-2.5 py-0.5 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
-                   {(!gradeConfigs.length || !getUserGrade(effectiveUser, gradeConfigs)) && <span className="text-[11px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Standard Member</span>}
-                   {effectiveUser.sellerStatus === 'approved' && <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Expert ✓</span>}
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                   {(() => { const g = getUserGrade(effectiveUser, gradeConfigs); return g ? <span className={`${g.color} text-white text-[10px] font-black px-2 py-0.5 rounded-full italic uppercase tracking-wider`}>{g.name}</span> : null; })()}
+                   {(!gradeConfigs.length || !getUserGrade(effectiveUser, gradeConfigs)) && <span className="text-[10px] sm:text-[11px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Standard</span>}
+                   {effectiveUser.sellerStatus === 'approved' && <span className="text-[10px] sm:text-[11px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded italic uppercase tracking-widest">Expert ✓</span>}
                 </div>
               </button>
             )}
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-          <div className="bg-gray-50 p-6 rounded-[32px] flex items-center gap-6 min-w-[200px]">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xl shadow-sm">💰</div>
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase italic">Points <span className="text-red-500 normal-case not-italic font-black text-[9px]">(SNS활성화 전용)</span></p>
-              <h3 className="text-xl font-black text-gray-900 italic">{(effectiveUser.points || 0).toLocaleString()} P</h3>
+        <div className="grid grid-cols-2 md:flex md:flex-row gap-3 w-full md:w-auto">
+          <div className="bg-gray-50 p-4 sm:p-6 rounded-[20px] sm:rounded-[32px] flex items-center gap-3 sm:gap-6">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl shadow-sm shrink-0">💰</div>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic truncate">Points<span className="text-red-500 normal-case not-italic font-black"> (SNS전용)</span></p>
+              <h3 className="text-base sm:text-xl font-black text-gray-900 italic">{(effectiveUser.points || 0).toLocaleString()} P</h3>
             </div>
-            <Link to="/payment/point" className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[11px] shadow-lg hover:bg-black transition-all">충전</Link>
+            <Link to="/payment/point" className="ml-auto bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-black transition-all shrink-0">충전</Link>
           </div>
-          <div className="bg-gray-50 p-6 rounded-[32px] flex items-center gap-6 min-w-[200px]">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xl shadow-sm">🎫</div>
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase italic">Coupons</p>
-              <h3 className="text-xl font-black text-gray-900 italic">{availableCouponCount} 장</h3>
+          <div className="bg-gray-50 p-4 sm:p-6 rounded-[20px] sm:rounded-[32px] flex items-center gap-3 sm:gap-6">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl shadow-sm shrink-0">🎫</div>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic">Coupons</p>
+              <h3 className="text-base sm:text-xl font-black text-gray-900 italic">{availableCouponCount} 장</h3>
             </div>
-            <Link to="/coupons" className="ml-auto bg-gray-900 text-white px-4 py-2 rounded-xl font-black text-[11px] shadow-lg hover:bg-blue-600 transition-all">내역</Link>
+            <Link to="/coupons" className="ml-auto bg-gray-900 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-blue-600 transition-all shrink-0">내역</Link>
           </div>
         </div>
       </div>
 
-      <div className="bg-gray-100/50 p-2 rounded-[32px] flex flex-wrap gap-2 w-full max-w-5xl mx-auto shadow-inner">
+      <div className="bg-gray-100/50 p-1.5 sm:p-2 rounded-[20px] sm:rounded-[32px] grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 w-full max-w-5xl mx-auto shadow-inner">
         {[
           { id: 'buyer', label: '🖥️ 구매자 대시보드', color: 'text-blue-600' },
           { id: 'seller', label: '👨‍🏫 판매자 워크페이스', color: 'text-orange-600' },
@@ -197,14 +197,14 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
           <button
             key={mode.id}
             onClick={() => setActiveMainTab(mode.id as MainTab)}
-            className={`flex-1 min-w-[140px] py-5 rounded-[24px] font-black text-[14px] md:text-[16px] transition-all duration-300 relative ${
-              activeMainTab === mode.id 
-              ? 'bg-white shadow-xl scale-[1.02] ' + mode.color 
+            className={`flex-1 py-3 sm:py-5 rounded-[16px] sm:rounded-[24px] font-black text-[12px] sm:text-[14px] md:text-[16px] transition-all duration-300 relative leading-snug ${
+              activeMainTab === mode.id
+              ? 'bg-white shadow-xl scale-[1.02] ' + mode.color
               : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             {mode.label}
-            {mode.id === 'seller' && effectiveUser.sellerStatus !== 'approved' && <span className="ml-2 opacity-50">🔒</span>}
+            {mode.id === 'seller' && effectiveUser.sellerStatus !== 'approved' && <span className="ml-1 opacity-50">🔒</span>}
           </button>
         ))}
       </div>

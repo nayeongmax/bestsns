@@ -65,21 +65,21 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
 
   return (
     <div className="max-w-4xl mx-auto pb-20 px-4 md:px-6 xl:px-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8 xl:mb-12">
-        <h2 className="text-2xl sm:text-3xl xl:text-3xl font-black text-gray-900 flex items-center gap-4 italic tracking-tighter">
-          <span className="w-2.5 h-7 sm:h-8 xl:h-8 bg-blue-600 rounded-full"></span> 활동 알림 센터
-        </h2>
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 sm:mb-10">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-xl sm:text-3xl font-black text-gray-900 flex items-center gap-3 italic tracking-tighter">
+            <span className="w-2 h-6 sm:h-8 bg-blue-600 rounded-full"></span> 활동 알림 센터
+          </h2>
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="px-5 py-2.5 bg-blue-600 text-white text-[11px] font-black rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm uppercase italic tracking-wide"
+              className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white text-[10px] sm:text-[11px] font-black rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm uppercase italic tracking-wide"
             >
               모두 읽음 ({unreadCount})
             </button>
           )}
-          <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest italic">Personal notification updates</p>
         </div>
+        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest italic">Personal notification updates</p>
       </div>
 
       {myNotifications.length === 0 ? (
@@ -93,28 +93,25 @@ const NotificationsPage: React.FC<Props> = ({ notifications, setNotifications, u
            {myNotifications.map(n => {
              const style = getBadgeStyle(n.type);
              return (
-               <div 
-                 key={n.id} 
+               <div
+                 key={n.id}
                  onClick={() => handleOpenNotif(n)}
-                 className={`bg-white p-5 sm:p-6 md:p-8 xl:p-8 rounded-[24px] sm:rounded-[32px] xl:rounded-[32px] shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-md cursor-pointer transition-all group relative overflow-hidden ${!n.isRead ? 'ring-2 ring-blue-50' : 'opacity-70'}`}
+                 className={`bg-white p-4 sm:p-5 rounded-[16px] sm:rounded-[24px] shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-md cursor-pointer transition-all group relative overflow-hidden ${!n.isRead ? 'ring-2 ring-blue-50' : 'opacity-70'}`}
                >
                   {!n.isRead && (
                     <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
                   )}
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-2 mb-3 xl:mb-4">
-                     <div className="flex items-center gap-3 flex-wrap min-w-0">
-                        <span className={`${style.color} text-white text-[10px] font-black px-2.5 sm:px-3 py-1 rounded-lg italic shadow-sm uppercase tracking-tighter flex items-center gap-1.5 shrink-0`}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                     <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className={`${style.color} text-white text-[10px] font-black px-2.5 py-0.5 rounded-lg italic shadow-sm uppercase tracking-tighter flex items-center gap-1 shrink-0`}>
                           <span>{style.icon}</span>
                           <span>{style.label}</span>
                         </span>
-                        <h3 className="font-black text-[15px] sm:text-[16px] xl:text-[16px] text-gray-900 group-hover:text-blue-600 transition-colors break-words">{n.title}</h3>
+                        <h3 className="font-black text-[14px] sm:text-[15px] text-gray-900 group-hover:text-blue-600 transition-colors break-words">{n.title}</h3>
                      </div>
                      <span className="text-[10px] text-gray-300 font-black italic uppercase shrink-0">{new Date(n.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <p className="text-[13px] sm:text-[14px] xl:text-[14px] font-bold text-gray-600 leading-relaxed pl-1 whitespace-pre-wrap line-clamp-1">{n.message}</p>
-                  <div className="mt-4 flex justify-end">
-                    <span className="text-[11px] font-black text-blue-500 italic uppercase opacity-0 group-hover:opacity-100 transition-opacity">클릭하여 자세히 보기 →</span>
-                  </div>
+                  <p className="text-[12px] sm:text-[13px] font-bold text-gray-500 leading-relaxed pl-1 whitespace-pre-wrap line-clamp-2">{n.message}</p>
                </div>
              );
            })}
