@@ -173,8 +173,59 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         )}
       </div>
 
-      {/* 상품 리스트 그리드 복구: lg(4열) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
+      {/* 모바일/태블릿: 목록형 (채널판매 스타일) */}
+      <div className="lg:hidden space-y-2 sm:space-y-3">
+        {filteredEbooks.length === 0 ? (
+          <div className="py-16 sm:py-24 text-center bg-white rounded-2xl border-2 border-dashed border-gray-100">
+            <span className="text-4xl mb-4 block grayscale">📭</span>
+            <p className="text-gray-400 font-bold text-sm sm:text-base">조건에 맞는 상품이 없습니다.</p>
+          </div>
+        ) : filteredEbooks.map((ebook, idx) => (
+          <div key={ebook.id || `ebook-${idx}`} className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:border-gray-200 transition-all flex items-stretch min-h-[100px] sm:min-h-[120px]">
+            <Link
+              to={ebook.isPaused ? '#' : `/ebooks/${ebook.id}`}
+              onClick={(e) => ebook.isPaused && e.preventDefault()}
+              className={`flex flex-1 min-w-0 items-center gap-3 sm:gap-4 p-3 sm:p-4 ${ebook.isPaused ? 'cursor-default' : ''}`}
+            >
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                <img src={ebook.thumbnail || ''} className="w-full h-full object-cover" alt="" />
+                {ebook.isPaused && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <span className="text-white text-[9px] font-black uppercase">PAUSED</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">{STORE_TABS.find(t => t.id === (ebook.storeType || 'ebook'))?.label || '전자책'}</span>
+                  {ebook.isPrime && <span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded uppercase">PRIME</span>}
+                  {ebook.isHot && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">HOT</span>}
+                  {ebook.isNew && <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">NEW</span>}
+                </div>
+                <h3 className={`font-bold text-gray-900 mt-0.5 line-clamp-2 text-sm sm:text-base leading-snug ${!ebook.isPaused && 'hover:text-blue-600'}`}>{ebook.title}</h3>
+                <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+                  <span>{ebook.author}</span>
+                  <span className="font-bold text-blue-600">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
+                </div>
+              </div>
+            </Link>
+            <div className="flex items-center pr-3 sm:pr-4 py-3 flex-shrink-0">
+              <button
+                onClick={(e) => { e.preventDefault(); onToggleWishlist({ type: 'ebook', data: ebook }); }}
+                className={`p-2.5 rounded-full transition-all ${isWishlisted(ebook.id) ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-400 hover:text-red-500'}`}
+                aria-label="찜하기"
+              >
+                <svg className="w-4 h-4" fill={isWishlisted(ebook.id) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 데스크톱: 그리드 카드 */}
+      <div className="hidden lg:grid grid-cols-2 xl:grid-cols-4 gap-6 px-2">
         {filteredEbooks.length === 0 ? (
           <div className="col-span-full py-40 text-center bg-white rounded-[60px] border border-dashed border-gray-100">
             <span className="text-6xl mb-6 block grayscale">📭</span>
@@ -183,32 +234,24 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         ) : (
           filteredEbooks.map((ebook, idx) => (
             <div key={ebook.id || `ebook-${idx}`} className="bg-white rounded-[24px] overflow-hidden shadow-sm group border border-gray-100 relative transition-all hover:-translate-y-1">
-              <Link 
-                to={ebook.isPaused ? '#' : `/ebooks/${ebook.id}`} 
+              <Link
+                to={ebook.isPaused ? '#' : `/ebooks/${ebook.id}`}
                 onClick={(e) => ebook.isPaused && e.preventDefault()}
                 className={`block ${ebook.isPaused ? 'cursor-default' : ''}`}
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-gray-50">
                   <img src={ebook.thumbnail || ''} alt="" className={`w-full h-full object-cover transition-transform duration-700 ${!ebook.isPaused && 'group-hover:scale-105'}`} />
-                  
                   <div className="absolute top-4 left-4 flex flex-col gap-2">
                     {ebook.isPrime && (
-                      <span className="bg-[#FFD600] text-gray-900 text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
-                        PRIME
-                      </span>
+                      <span className="bg-[#FFD600] text-gray-900 text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">PRIME</span>
                     )}
                     {ebook.isHot && (
-                      <span className="bg-[#FF4D4D] text-white text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
-                        HOT
-                      </span>
+                      <span className="bg-[#FF4D4D] text-white text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">HOT</span>
                     )}
                     {ebook.isNew && (
-                      <span className="bg-[#3B82F6] text-white text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">
-                        NEW
-                      </span>
+                      <span className="bg-[#3B82F6] text-white text-[12px] font-black px-2.5 py-0.5 rounded-lg italic uppercase flex items-center justify-center">NEW</span>
                     )}
                   </div>
-
                   {ebook.isPaused && (
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex items-center justify-center z-10">
                       <span className="text-white text-sm font-black italic tracking-widest border-2 border-white px-3 py-0.5 rotate-[-12deg] shadow-2xl uppercase">PAUSED</span>
@@ -241,11 +284,11 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                   </div>
                 </div>
               </Link>
-              <button 
-                onClick={(e) => { e.preventDefault(); onToggleWishlist({ type: 'ebook', data: ebook }); }} 
+              <button
+                onClick={(e) => { e.preventDefault(); onToggleWishlist({ type: 'ebook', data: ebook }); }}
                 className={`absolute top-3 right-3 p-1.5 rounded-full transition-all shadow-md active:scale-90 z-20 ${
-                  isWishlisted(ebook.id) 
-                  ? 'bg-red-500 text-white' 
+                  isWishlisted(ebook.id)
+                  ? 'bg-red-500 text-white'
                   : 'bg-white/80 backdrop-blur-md text-gray-400 hover:text-red-500'
                 }`}
               >
