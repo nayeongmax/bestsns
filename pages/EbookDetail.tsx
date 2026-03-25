@@ -192,7 +192,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                   </div>
                   <span className="text-2xl font-black text-gray-900 leading-none">{reviewStats.avg}</span>
                </div>
-               <span onClick={scrollToReviews} className="text-[15px] font-bold text-gray-400 underline underline-offset-4 cursor-pointer hover:text-blue-500 italic">({reviewStats.total}개의 검증된 리뷰 보기)</span>
+               <span onClick={scrollToReviews} className="text-[11px] sm:text-[15px] font-bold text-gray-400 underline underline-offset-4 cursor-pointer hover:text-blue-500 italic whitespace-nowrap">({reviewStats.total}개의 검증된 리뷰 보기)</span>
             </div>
           </section>
 

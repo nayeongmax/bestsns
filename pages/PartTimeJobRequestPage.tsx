@@ -185,27 +185,28 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-12 px-4 md:px-6">
-      <div className="flex items-center justify-between mb-8">
-        <button onClick={handleBack} className="flex items-center gap-2 text-gray-500 font-bold text-base hover:text-gray-900 transition-colors">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+    <div className="max-w-5xl mx-auto py-8 sm:py-12 px-4 md:px-6">
+      <div className="flex items-center gap-3 mb-6 sm:mb-8">
+        <button onClick={handleBack} className="flex items-center gap-1.5 text-gray-500 font-bold text-sm sm:text-base hover:text-gray-900 transition-colors shrink-0">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           돌아가기
         </button>
-        <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-emerald-500 underline-offset-8">
+        <h2 className="flex-1 text-center text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-emerald-500 underline-offset-8">
           {editRequest ? '작업의뢰 수정' : '작업의뢰 신청'}
         </h2>
-        <div className="flex gap-2">
-          {editRequest && (
-            <button type="button" onClick={handleDelete} className="px-4 py-2 rounded-xl bg-red-100 text-red-700 font-black text-sm hover:bg-red-200">
+        <div className="shrink-0">
+          {editRequest ? (
+            <button type="button" onClick={handleDelete} className="px-3 py-2 rounded-xl bg-red-100 text-red-700 font-black text-sm hover:bg-red-200">
               삭제
             </button>
+          ) : (
+            <div className="w-16" />
           )}
-          <div className="w-16" />
         </div>
       </div>
 
-      <form id="job-request-form" onSubmit={handleSubmit} noValidate className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-8">
-        <p className="text-slate-700 text-xl md:text-2xl font-bold tracking-tight text-center pt-2 pb-4">
+      <form id="job-request-form" onSubmit={handleSubmit} noValidate className="bg-white rounded-2xl sm:rounded-[48px] p-5 sm:p-8 md:p-12 shadow-xl border border-gray-100 space-y-6 sm:space-y-8">
+        <p className="text-slate-700 text-base sm:text-xl md:text-2xl font-bold tracking-tight text-center pt-1 pb-2 sm:pt-2 sm:pb-4">
           최고의 전문가 프리랜서로 선별 매칭해드립니다!
         </p>
 
