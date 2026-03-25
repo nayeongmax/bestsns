@@ -658,9 +658,9 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
 
   const renderProjectForm = () => (
     <div className="max-w-[1600px] mx-auto animate-in zoom-in-95 duration-500">
-      <div className="bg-white rounded-2xl sm:rounded-[60px] p-4 sm:p-8 lg:p-24 shadow-2xl border border-gray-100 space-y-8 sm:space-y-16">
+      <div className="bg-white rounded-2xl sm:rounded-[40px] p-4 sm:p-8 lg:p-12 shadow-2xl border border-gray-100 space-y-6 sm:space-y-10">
         <h3 className="text-xl sm:text-3xl font-black text-gray-900 flex items-center gap-3 sm:gap-4 mb-8 sm:mb-16 italic tracking-tighter"><span className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-2xl sm:rounded-3xl flex items-center justify-center text-lg sm:text-xl shadow-lg">✍</span> {editingProjectId ? '프로젝트 정보 수정' : '신규 프로젝트 등록'}</h3>
-        <form onSubmit={handleProjectSubmit} className="space-y-8 sm:space-y-16">
+        <form onSubmit={handleProjectSubmit} className="space-y-6 sm:space-y-10">
           <div className="space-y-4 sm:space-y-6">
             <label className="text-[11px] sm:text-[12px] font-black text-gray-400 uppercase tracking-widest px-2 italic block">운영사 선택</label>
             <div className="flex flex-wrap gap-2 sm:gap-4">
@@ -713,8 +713,8 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
              </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-             <button type="button" onClick={() => { setActiveTab('dashboard'); setEditingProjectId(null); }} className="flex-1 py-6 sm:py-8 bg-gray-100 text-gray-400 rounded-xl sm:rounded-[40px] font-black text-base sm:text-xl hover:bg-gray-200 transition-all italic uppercase">취소 / 돌아가기</button>
-             <button type="submit" className="flex-[2] py-6 sm:py-8 bg-black text-white rounded-xl sm:rounded-[40px] font-black text-xl sm:text-2xl shadow-2xl hover:bg-blue-600 transition-all italic uppercase tracking-widest">{(editingProjectId ? '정보 수정 완료' : '신규 등록 완료')}</button>
+             <button type="button" onClick={() => { setActiveTab('dashboard'); setEditingProjectId(null); }} className="flex-1 py-4 sm:py-6 bg-gray-100 text-gray-400 rounded-xl sm:rounded-[28px] font-black text-base sm:text-lg hover:bg-gray-200 transition-all italic uppercase">취소 / 돌아가기</button>
+             <button type="submit" className="flex-[2] py-4 sm:py-6 bg-black text-white rounded-xl sm:rounded-[28px] font-black text-lg sm:text-xl shadow-2xl hover:bg-blue-600 transition-all italic uppercase tracking-widest">{(editingProjectId ? '정보 수정 완료' : '신규 등록 완료')}</button>
           </div>
         </form>
       </div>

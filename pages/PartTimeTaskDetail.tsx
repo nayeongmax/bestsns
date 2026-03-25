@@ -125,7 +125,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     if (!user || !task) return;
     const effectiveUser = displayUser || user;
     if (effectiveUser.freelancerStatus !== 'approved') {
-      if (window.confirm('누구나알바에 신청하려면 프리랜서 등록이 필요합니다.\n프리랜서 워크페이스에서 등록을 먼저 진행해 주세요.\n\n마이페이지로 이동할까요?')) {
+      if (window.confirm('누구나알바에 신청하려면 프리랜서 등록이 필요합니다.\n프리랜서 워크스페이스에서 등록을 먼저 진행해 주세요.\n\n마이페이지로 이동할까요?')) {
         navigate('/mypage', { state: { activeTab: 'freelancer' } as any });
       }
       return;
