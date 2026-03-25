@@ -169,7 +169,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
   const isServiceType = ['marketing', 'lecture', 'consulting'].includes(currentStoreType);
 
   return (
-    <div className="max-w-[1400px] mx-auto pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
+    <div className="max-w-[1400px] mx-auto pb-36 lg:pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
       <button onClick={() => navigate(-1)} className="mb-8 flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 transition-colors group">
         <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         뒤로가기
@@ -182,9 +182,9 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                <span className={`${typeColor} text-white text-[11px] font-black px-4 py-1.5 rounded-full shadow-sm uppercase italic tracking-widest`}>{typeLabel}</span>
                <span className="bg-[#e8f5e9] text-[#2e7d32] text-[11px] font-black px-4 py-1.5 rounded-full shadow-sm border border-green-100 uppercase italic tracking-widest">오리지널</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-8 leading-[1.1] italic tracking-tighter">{ebook.title}</h1>
-            <div className="flex items-center gap-6">
-               <div className="flex items-center gap-2 bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100">
+            <h1 className="text-lg sm:text-2xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4 sm:mb-8 leading-[1.2] italic tracking-tighter line-clamp-2 sm:line-clamp-none">{ebook.title}</h1>
+            <div className="flex items-center gap-3 sm:gap-6">
+               <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-50 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl border border-gray-100">
                   <div className="flex text-yellow-400">
                     {Array.from({length: 5}).map((_, i) => (
                       <svg key={i} className={`w-6 h-6 fill-current ${i < Math.round(Number(reviewStats.avg)) ? 'text-yellow-400' : 'text-gray-200'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
@@ -196,9 +196,9 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             </div>
           </section>
 
-          {/* 전문가 요약 정보 (데스크톱 복구: 아바타+이름+등급+문의하기+4칸 스탯) */}
-          <section className="bg-white border border-gray-100 rounded-[28px] p-5 md:p-6 shadow-sm space-y-4">
-             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* 전문가 요약 정보 */}
+          <section className="bg-white border border-gray-100 rounded-[20px] sm:rounded-[28px] p-4 sm:p-5 md:p-6 shadow-sm space-y-3 sm:space-y-4">
+             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
                 <div className="flex items-center gap-3">
                    <div className="relative shrink-0">
                       <img src={displayProfileImg} className="w-12 h-12 md:w-14 md:h-14 rounded-[16px] object-cover shadow-lg border border-white" alt="expert" />
@@ -213,120 +213,120 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                 </div>
                 <button onClick={openInquiry} className="bg-gray-900 text-white px-5 py-2.5 rounded-[20px] font-black text-sm hover:bg-blue-600 transition-all shadow italic uppercase tracking-wider active:scale-95 shrink-0">전문가 문의하기</button>
              </div>
-             <div className="bg-gray-50/80 rounded-[16px] p-2 flex flex-wrap lg:flex-nowrap gap-2 shadow-inner border border-gray-100">
+             <div className="bg-gray-50/80 rounded-[12px] sm:rounded-[16px] p-1.5 sm:p-2 grid grid-cols-2 sm:flex sm:flex-wrap lg:flex-nowrap gap-1.5 sm:gap-2 shadow-inner border border-gray-100">
                 {[
                   { label: '총 거래 건수', value: `${totalTransactions}건`, icon: '📊' },
                   { label: '만족도 점수', value: expertAvgRating, icon: '⭐' },
                   { label: '회원 구분', value: expertTypeInfo.label, icon: '👤' },
                   { label: '세금계산서', value: expertTypeInfo.tax, icon: '🧾' }
                 ].map((item, i) => (
-                  <div key={i} className="flex-1 min-w-[72px] bg-white rounded-[12px] py-3.5 px-2.5 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
-                    <span className="text-2xl mb-1.5 group-hover:scale-105 transition-transform">{item.icon}</span>
-                    <p className="text-sm font-black text-gray-400 mb-1 uppercase tracking-wider italic leading-tight">{item.label}</p>
-                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-lg leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
+                  <div key={i} className="flex-1 min-w-0 bg-white rounded-[10px] sm:rounded-[12px] py-2.5 sm:py-3.5 px-2 flex flex-col items-center justify-center border border-gray-50 group hover:border-blue-200 transition-all">
+                    <span className="text-xl sm:text-2xl mb-1 group-hover:scale-105 transition-transform">{item.icon}</span>
+                    <p className="text-[9px] sm:text-sm font-black text-gray-400 mb-0.5 sm:mb-1 uppercase tracking-wider italic leading-tight text-center">{item.label}</p>
+                    <p className={`font-black text-gray-900 italic tracking-tighter text-center text-sm sm:text-lg leading-tight ${item.label === '회원 구분' ? 'whitespace-nowrap' : ''}`}>{item.value}</p>
                   </div>
                 ))}
              </div>
           </section>
 
-          <div className="space-y-12">
+          <div className="space-y-6 sm:space-y-12">
             {!isServiceType && ebook.index && (
-              <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
-                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-                    <span className="w-1.5 h-8 bg-yellow-400 rounded-full shrink-0" aria-hidden></span>
+              <section className="scroll-mt-24 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 bg-gray-50/50">
+                  <h3 className="text-base sm:text-xl font-black text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                    <span className="w-1.5 h-6 sm:h-8 bg-yellow-400 rounded-full shrink-0" aria-hidden></span>
                     목차
                   </h3>
                 </div>
-                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left">
+                <div className="px-4 py-4 sm:p-8 text-[15px] sm:text-[17px] text-gray-700 font-medium leading-relaxed sm:leading-[1.85] whitespace-pre-wrap text-left">
                   {ebook.index}
                 </div>
               </section>
             )}
 
-            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
-                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-                  <span className="w-1.5 h-8 bg-blue-600 rounded-full shrink-0" aria-hidden></span>
+            <section className="scroll-mt-24 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-base sm:text-xl font-black text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                  <span className="w-1.5 h-6 sm:h-8 bg-blue-600 rounded-full shrink-0" aria-hidden></span>
                   서비스 상세설명
                 </h3>
               </div>
-              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left">
+              <div className="px-4 py-4 sm:p-8 text-[15px] sm:text-[17px] text-gray-700 font-medium leading-relaxed sm:leading-[1.85] whitespace-pre-wrap text-left">
                 {ebook.description || "상세 설명이 등록되지 않았습니다."}
               </div>
             </section>
 
-            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
-                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-                  <span className="w-1.5 h-8 bg-teal-500 rounded-full shrink-0" aria-hidden></span>
+            <section className="scroll-mt-24 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-base sm:text-xl font-black text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                  <span className="w-1.5 h-6 sm:h-8 bg-teal-500 rounded-full shrink-0" aria-hidden></span>
                   제공 서비스 상세내용
                 </h3>
               </div>
               {tiers.length > 1 && (
-                <div className="px-8 pt-4 flex border-b border-gray-100 gap-2">
+                <div className="px-4 sm:px-8 pt-3 sm:pt-4 flex border-b border-gray-100 gap-2">
                   {tiers.map((tier, idx) => (
-                    <button key={tier.name} type="button" onClick={() => setSelectedTierIdx(idx)} className={`py-2.5 px-4 rounded-xl text-sm font-black transition-all ${activeTierIdx === idx ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                    <button key={tier.name} type="button" onClick={() => setSelectedTierIdx(idx)} className={`py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-sm font-black transition-all ${activeTierIdx === idx ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
                       {tier.name}
                     </button>
                   ))}
                 </div>
               )}
-              <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left">
+              <div className="px-4 py-4 sm:p-8 text-[15px] sm:text-[17px] text-gray-700 font-medium leading-relaxed sm:leading-[1.85] whitespace-pre-wrap text-left">
                 {tiers[activeTierIdx].description?.trim() || "해당 옵션에 대한 제공 서비스 상세가 등록되지 않았습니다."}
               </div>
             </section>
 
             {isServiceType && ebook.serviceMethod && (
-              <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
-                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-                    <span className="w-1.5 h-8 bg-orange-500 rounded-full shrink-0" aria-hidden></span>
+              <section className="scroll-mt-24 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 bg-gray-50/50">
+                  <h3 className="text-base sm:text-xl font-black text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                    <span className="w-1.5 h-6 sm:h-8 bg-orange-500 rounded-full shrink-0" aria-hidden></span>
                     서비스 제공방법 및 절차
                   </h3>
                 </div>
-                <div className="p-8 text-[17px] text-gray-700 font-medium leading-[1.85] whitespace-pre-wrap text-left">
+                <div className="px-4 py-4 sm:p-8 text-[15px] sm:text-[17px] text-gray-700 font-medium leading-relaxed sm:leading-[1.85] whitespace-pre-wrap text-left">
                   {ebook.serviceMethod}
                 </div>
               </section>
             )}
 
             {ebook.attachedImages && ebook.attachedImages.length > 0 && (
-              <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
-                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-                    <span className="w-1.5 h-8 bg-indigo-500 rounded-full shrink-0" aria-hidden></span>
+              <section className="scroll-mt-24 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 bg-gray-50/50">
+                  <h3 className="text-base sm:text-xl font-black text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                    <span className="w-1.5 h-6 sm:h-8 bg-indigo-500 rounded-full shrink-0" aria-hidden></span>
                     상세이미지
                   </h3>
                 </div>
-                <div className="p-8 space-y-6">
+                <div className="p-4 sm:p-8 space-y-4 sm:space-y-6">
                   {ebook.attachedImages.map((img, i) => (
-                    <img key={i} src={img} className="w-full rounded-2xl shadow-md border border-gray-100" alt={`상세 이미지 ${i + 1}`} />
+                    <img key={i} src={img} className="w-full rounded-xl sm:rounded-2xl shadow-md border border-gray-100" alt={`상세 이미지 ${i + 1}`} />
                   ))}
                 </div>
               </section>
             )}
 
-            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
-                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-                  <span className="w-1.5 h-8 bg-amber-400 rounded-full shrink-0" aria-hidden></span>
+            <section className="scroll-mt-24 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-base sm:text-xl font-black text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                  <span className="w-1.5 h-6 sm:h-8 bg-amber-400 rounded-full shrink-0" aria-hidden></span>
                   자주 묻는 질문
                 </h3>
               </div>
-              <div className="p-6 space-y-3">
+              <div className="p-3 sm:p-6 space-y-2 sm:space-y-3">
                 {faqs.map((faq, idx) => (
-                  <div key={idx} className="border border-gray-100 rounded-2xl overflow-hidden bg-gray-50/30 transition-all hover:border-gray-200">
-                    <button 
+                  <div key={idx} className="border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden bg-gray-50/30 transition-all hover:border-gray-200">
+                    <button
                       onClick={() => setOpenFaqIdx(openFaqIdx === idx ? null : idx)}
-                      className="w-full px-6 py-5 flex justify-between items-center text-left gap-4"
+                      className="w-full px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center text-left gap-3 sm:gap-4"
                     >
-                      <span className="font-bold text-gray-800 text-base pr-2">Q. {faq.question}</span>
-                      <svg className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${openFaqIdx === idx ? 'rotate-180 text-blue-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+                      <span className="font-bold text-gray-800 text-sm sm:text-base pr-2">Q. {faq.question}</span>
+                      <svg className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-400 shrink-0 transition-transform ${openFaqIdx === idx ? 'rotate-180 text-blue-500' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     {openFaqIdx === idx && (
-                      <div className="px-6 pb-6 pt-0 animate-in slide-in-from-top-2">
-                        <p className="text-[15px] text-gray-600 font-medium leading-relaxed pl-1 text-left">A. {faq.answer}</p>
+                      <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 animate-in slide-in-from-top-2">
+                        <p className="text-sm sm:text-[15px] text-gray-600 font-medium leading-relaxed pl-1 text-left">A. {faq.answer}</p>
                       </div>
                     )}
                   </div>
@@ -334,22 +334,22 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               </div>
             </section>
 
-            <section ref={reviewRef} className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50 flex flex-wrap justify-between items-end gap-4">
-                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-                      <span className="w-1.5 h-8 bg-yellow-400 rounded-full shrink-0" aria-hidden></span>
+            <section ref={reviewRef} className="scroll-mt-24 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 bg-gray-50/50 flex flex-wrap justify-between items-center gap-3 sm:gap-4">
+                  <h3 className="text-base sm:text-xl font-black text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                      <span className="w-1.5 h-6 sm:h-8 bg-yellow-400 rounded-full shrink-0" aria-hidden></span>
                       실제 구매 고객 만족도
                   </h3>
-                  <div className="flex items-center gap-4 bg-gray-900 text-white px-6 py-4 rounded-2xl">
-                      <span className="text-4xl font-black text-yellow-400">{reviewStats.avg}</span>
+                  <div className="flex items-center gap-3 sm:gap-4 bg-gray-900 text-white px-4 sm:px-6 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl">
+                      <span className="text-2xl sm:text-4xl font-black text-yellow-400">{reviewStats.avg}</span>
                       <div className="space-y-0.5">
-                        <div className="flex text-yellow-400">{Array.from({length: 5}).map((_, i) => (<svg key={i} className={`w-5 h-5 fill-current ${i < Math.round(Number(reviewStats.avg)) ? 'text-yellow-400' : 'text-gray-600'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>))}</div>
+                        <div className="flex text-yellow-400">{Array.from({length: 5}).map((_, i) => (<svg key={i} className={`w-4 h-4 sm:w-5 sm:h-5 fill-current ${i < Math.round(Number(reviewStats.avg)) ? 'text-yellow-400' : 'text-gray-600'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>))}</div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{reviewStats.total}개 리뷰</p>
                       </div>
                   </div>
               </div>
 
-              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {filteredReviews.length === 0 ? (
                       <div className="col-span-full py-16 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
                           <p className="text-gray-400 font-bold">아직 작성된 리뷰가 없습니다</p>
@@ -386,15 +386,15 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               </div>
             </section>
 
-            <section className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/50">
-                <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
-                  <span className="w-1.5 h-8 bg-rose-500 rounded-full shrink-0" aria-hidden></span>
+            <section className="scroll-mt-24 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-50 bg-gray-50/50">
+                <h3 className="text-base sm:text-xl font-black text-gray-900 flex items-center gap-2 sm:gap-3 tracking-tight">
+                  <span className="w-1.5 h-6 sm:h-8 bg-rose-500 rounded-full shrink-0" aria-hidden></span>
                   취소 및 환불 규정
                 </h3>
               </div>
               {isServiceType ? (
-                <div className="p-8 text-[15px] text-gray-600 font-medium space-y-6 leading-relaxed text-left">
+                <div className="px-4 py-4 sm:p-8 text-sm sm:text-[15px] text-gray-600 font-medium space-y-4 sm:space-y-6 leading-relaxed text-left">
                   <div className="space-y-2">
                     <p className="font-bold text-gray-900 text-base mb-2">기본 정책</p>
                     <p>1. 용역 제공이 개시되기 전: 취소 및 환불 가능</p>
@@ -464,6 +464,22 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
                  </table>
               </div>
             </section>
+          </div>
+        </div>
+
+        {/* 모바일 전용: 하단 고정 구매/문의 버튼 바 */}
+        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-[90] px-3 py-2.5 bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-black text-gray-400 truncate">{ebook.title}</p>
+              <p className="text-base font-black text-gray-900">₩{tiers[activeTierIdx].price.toLocaleString()}</p>
+            </div>
+            <button onClick={openInquiry} className="shrink-0 py-2.5 px-4 bg-white border-2 border-gray-900 text-gray-900 rounded-xl font-black text-sm active:scale-95 transition-all">
+              문의하기
+            </button>
+            <button onClick={handleBuyNow} disabled={isProcessing} className={`shrink-0 py-2.5 px-5 ${typeColor} text-white rounded-xl font-black text-sm shadow-lg active:scale-95 transition-all ${isProcessing ? 'opacity-60 cursor-not-allowed' : ''}`}>
+              {isProcessing ? '처리중...' : '구매하기'}
+            </button>
           </div>
         </div>
 

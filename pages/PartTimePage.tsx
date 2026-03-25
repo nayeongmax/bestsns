@@ -158,9 +158,9 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         </div>
 
         <div className="grid gap-6">
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors" aria-label="이전 주">←</button>
-            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0" aria-label="이전 주">←</button>
+            <div className="flex-1 grid grid-cols-7 gap-1 sm:gap-3">
             {weekDates.map((d) => {
               const c = dateCounts[d] || { total: 0, done: 0 };
               const isSelected = effectiveDate === d;
@@ -170,20 +170,20 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                   key={d}
                   type="button"
                   onClick={() => setSelectedDate(d)}
-                  className={`p-5 rounded-xl border text-left transition-all duration-200 ${
+                  className={`p-2 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 min-w-0 ${
                     isSelected
                       ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
                       : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
                   }`}
                 >
-                  <p className="text-sm font-black text-gray-600">{dayLabel}</p>
-                  <p className="text-xs text-gray-500 mt-2 font-semibold">작업 {c.total}건</p>
-                  <p className="text-xs text-emerald-600 font-semibold">완료 {c.done}건</p>
+                  <p className="text-[10px] sm:text-sm font-black text-gray-600 truncate">{dayLabel}</p>
+                  <p className="text-[9px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-semibold leading-tight">작업 {c.total}건</p>
+                  <p className="text-[9px] sm:text-xs text-emerald-600 font-semibold leading-tight">완료 {c.done}건</p>
                 </button>
               );
             })}
             </div>
-            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors" aria-label="다음 주">→</button>
+            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0" aria-label="다음 주">→</button>
           </div>
 
           <h3 className="text-xl font-black text-gray-800">작업목록</h3>

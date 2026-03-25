@@ -3,9 +3,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, StoreOrder } from '@/types';
 import { fetchSellerWithdrawalBatches, addSellerWithdrawalBatch } from '../storeDb';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, Cell 
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell, LabelList
 } from 'recharts';
 
 interface WithdrawalBatch {
@@ -200,21 +200,26 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
         <div className="h-[200px] sm:h-[300px] lg:h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             {chartTab === 'daily' ? (
-              <AreaChart data={chartData}>
+              <AreaChart data={chartData} margin={{ left: 0, right: 8, top: 24, bottom: 0 }}>
                 <defs><linearGradient id="colorAmount" x1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900, fill: '#cbd5e1' }} />
-                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 11, fontWeight: 900, fill: '#cbd5e1' }} />
+                <YAxis hide />
                 <Tooltip formatter={(val: number) => [`₩${val.toLocaleString()}`, '확정 금액']} contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 900 }} />
-                <Area type="monotone" dataKey="금액" stroke="#3b82f6" strokeWidth={5} fillOpacity={1} fill="url(#colorAmount)" />
+                <Area type="monotone" dataKey="금액" stroke="#3b82f6" strokeWidth={5} fillOpacity={1} fill="url(#colorAmount)">
+                  <LabelList dataKey="금액" position="top" style={{ fontSize: 9, fontWeight: 900, fill: '#3b82f6' }} formatter={(v: number) => v > 0 ? `₩${v.toLocaleString()}` : ''} />
+                </Area>
               </AreaChart>
             ) : (
-              <BarChart data={chartData}>
+              <BarChart data={chartData} barCategoryGap="30%" margin={{ left: 0, right: 8, top: 24, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900, fill: '#cbd5e1' }} />
-                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => val.toLocaleString()} tick={{ fontSize: 11, fontWeight: 900, fill: '#cbd5e1' }} />
+                <YAxis hide />
                 <Tooltip cursor={{ fill: '#f8fafc', radius: 12 }} formatter={(val: number) => [`₩${val.toLocaleString()}`, '월간 확정']} contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 900 }} />
-                <Bar dataKey="금액" radius={[12, 12, 0, 0]}>{chartData.map((_, index) => (<Cell key={`cell-${index}`} fill={index === new Date().getMonth() ? '#3b82f6' : '#e2e8f0'} />))}</Bar>
+                <Bar dataKey="금액" radius={[8, 8, 0, 0]}>
+                  {chartData.map((_, index) => (<Cell key={`cell-${index}`} fill={index === new Date().getMonth() ? '#3b82f6' : '#e2e8f0'} />))}
+                  <LabelList dataKey="금액" position="top" style={{ fontSize: 9, fontWeight: 900, fill: '#6b7280' }} formatter={(v: number) => v > 0 ? `₩${v.toLocaleString()}` : ''} />
+                </Bar>
               </BarChart>
             )}
           </ResponsiveContainer>
@@ -356,47 +361,65 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
 
       {/* 모달: 정산 정책 안내 (레이아웃 개편 및 250만 원 예시 포함) */}
       {showSettlementGuideModal && (
-        <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
-           <div className="bg-white w-full max-w-4xl rounded-[64px] p-12 lg:p-16 shadow-2xl space-y-12 border-8 border-blue-50 overflow-y-auto max-h-[90vh] no-scrollbar">
-              <div className="text-center space-y-3">
-                 <h3 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">수익금 정산 정책 가이드</h3>
+        <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
+           <div className="bg-white w-full max-w-4xl rounded-[24px] sm:rounded-[48px] lg:rounded-[64px] p-5 sm:p-10 lg:p-16 shadow-2xl space-y-6 sm:space-y-10 border-4 sm:border-8 border-blue-50 overflow-y-auto max-h-[90vh] no-scrollbar">
+              <div className="text-center space-y-2">
+                 <h3 className="text-xl sm:text-3xl lg:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-4 sm:underline-offset-8">수익금 정산 정책 가이드</h3>
               </div>
-              <div className="space-y-12">
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-gray-50 p-8 rounded-[40px] text-center space-y-3 shadow-inner"><span className="text-4xl">🏢</span><p className="text-[13px] font-black text-gray-400 uppercase italic leading-none">플랫폼 이용료</p><p className="text-2xl font-black text-gray-800 italic">2% ~ 13%</p></div>
-                    <div className="bg-gray-50 p-8 rounded-[40px] text-center space-y-3 shadow-inner"><span className="text-4xl">💳</span><p className="text-[13px] font-black text-gray-400 uppercase italic leading-none">전자결제수수료</p><p className="text-2xl font-black text-gray-800 italic">3.3% 고정</p></div>
-                    <div className="bg-gray-50 p-8 rounded-[40px] text-center space-y-3 shadow-inner"><span className="text-4xl">🏛️</span><p className="text-[13px] font-black text-gray-400 uppercase italic leading-none">수수료 부가세</p><p className="text-2xl font-black text-gray-800 italic">10%</p></div>
-                 </div>
-                 
-                 <div className="space-y-12">
-                    <div className="bg-[#fcfdff] border-4 border-blue-50 rounded-[48px] p-12 shadow-sm">
-                        <h5 className="text-3xl font-black text-gray-900 italic mb-8 pb-4 border-b border-dashed border-blue-100">예시 1: 500,000원 상품 판매 시</h5>
-                        <div className="space-y-6 font-mono text-[18px]">
-                           <div className="flex justify-between items-center text-gray-600"><span>• 플랫폼 이용료 (1구간 13% 단일 적용)</span><span className="font-black text-rose-500">- ₩65,000</span></div>
-                           <div className="flex justify-between items-center text-gray-600"><span>• PG 결제망 시스템 수수료 (3.3%)</span><span className="font-black text-rose-500">- ₩16,500</span></div>
-                           <div className="flex justify-between items-center text-gray-600"><span>• 공제 수수료액에 대한 부가세 (10%)</span><span className="font-black text-rose-500">- ₩8,150</span></div>
-                           <div className="pt-8 mt-6 border-t-4 border-double border-gray-100 flex justify-between items-baseline"><span className="text-blue-500 font-black text-2xl uppercase">최종 통장 실 입금액</span><span className="text-6xl font-black text-blue-600 tracking-tighter">₩410,350</span></div>
-                        </div>
+              <div className="space-y-6 sm:space-y-10">
+                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                    <div className="bg-gray-50 p-3 sm:p-6 lg:p-8 rounded-[16px] sm:rounded-[28px] lg:rounded-[40px] text-center space-y-1.5 sm:space-y-3 shadow-inner">
+                      <span className="text-2xl sm:text-4xl">🏢</span>
+                      <p className="text-[10px] sm:text-[13px] font-black text-gray-400 uppercase italic leading-none">플랫폼 이용료</p>
+                      <p className="text-sm sm:text-xl lg:text-2xl font-black text-gray-800 italic">2% ~ 13%</p>
                     </div>
-                    
-                    <div className="bg-[#fcfdff] border-4 border-rose-50 rounded-[48px] p-12 shadow-sm">
-                        <h5 className="text-3xl font-black text-gray-900 italic mb-8 pb-4 border-b border-dashed border-rose-100">예시 2: 2,500,000원 상품 판매 시</h5>
-                        <div className="space-y-6 font-mono text-[18px]">
-                           <div className="bg-gray-50/50 p-8 rounded-3xl space-y-4 mb-4 border border-gray-100">
-                             <p className="text-[16px] font-black text-gray-400 uppercase italic tracking-widest border-b border-gray-200 pb-2">• 누적 매출 구간별 이용료 계산식</p>
-                             <div className="flex justify-between text-lg font-black text-gray-700 italic"><span>1구간 (~50만): 50만 * 13%</span><span>65,000원</span></div>
-                             <div className="flex justify-between text-lg font-black text-gray-700 italic"><span>2구간 (50~200만): 150만 * 7%</span><span>105,000원</span></div>
-                             <div className="flex justify-between text-lg font-black text-gray-700 italic"><span>3구간 (200만~): 50만 * 2%</span><span>10,000원</span></div>
+                    <div className="bg-gray-50 p-3 sm:p-6 lg:p-8 rounded-[16px] sm:rounded-[28px] lg:rounded-[40px] text-center space-y-1.5 sm:space-y-3 shadow-inner">
+                      <span className="text-2xl sm:text-4xl">💳</span>
+                      <p className="text-[10px] sm:text-[13px] font-black text-gray-400 uppercase italic leading-none">전자결제수수료</p>
+                      <p className="text-sm sm:text-xl lg:text-2xl font-black text-gray-800 italic">3.3% 고정</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 sm:p-6 lg:p-8 rounded-[16px] sm:rounded-[28px] lg:rounded-[40px] text-center space-y-1.5 sm:space-y-3 shadow-inner">
+                      <span className="text-2xl sm:text-4xl">🏛️</span>
+                      <p className="text-[10px] sm:text-[13px] font-black text-gray-400 uppercase italic leading-none">수수료 부가세</p>
+                      <p className="text-sm sm:text-xl lg:text-2xl font-black text-gray-800 italic">10%</p>
+                    </div>
+                 </div>
+
+                 <div className="space-y-4 sm:space-y-8">
+                    <div className="bg-[#fcfdff] border-2 sm:border-4 border-blue-50 rounded-[16px] sm:rounded-[32px] lg:rounded-[48px] p-4 sm:p-8 lg:p-12 shadow-sm">
+                        <h5 className="text-base sm:text-2xl lg:text-3xl font-black text-gray-900 italic mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-dashed border-blue-100">예시 1: 500,000원 판매 시</h5>
+                        <div className="space-y-3 sm:space-y-5 text-sm sm:text-base lg:text-[18px]">
+                           <div className="flex justify-between items-center text-gray-600 gap-2"><span className="leading-tight">플랫폼 이용료 (13%)</span><span className="font-black text-rose-500 shrink-0">- ₩65,000</span></div>
+                           <div className="flex justify-between items-center text-gray-600 gap-2"><span className="leading-tight">PG 결제 수수료 (3.3%)</span><span className="font-black text-rose-500 shrink-0">- ₩16,500</span></div>
+                           <div className="flex justify-between items-center text-gray-600 gap-2"><span className="leading-tight">수수료 부가세 (10%)</span><span className="font-black text-rose-500 shrink-0">- ₩8,150</span></div>
+                           <div className="pt-4 sm:pt-6 mt-2 sm:mt-4 border-t-4 border-double border-gray-100 flex justify-between items-center gap-2">
+                             <span className="text-blue-500 font-black text-sm sm:text-lg lg:text-2xl uppercase leading-tight">최종 입금액</span>
+                             <span className="text-2xl sm:text-4xl lg:text-6xl font-black text-blue-600 tracking-tighter">₩410,350</span>
                            </div>
-                           <div className="flex justify-between items-center text-gray-600"><span>• 플랫폼 이용료 합계</span><span className="font-black text-rose-500">- ₩180,000</span></div>
-                           <div className="flex justify-between items-center text-gray-600"><span>• PG 결제망 시스템 수수료 (3.3%)</span><span className="font-black text-rose-500">- ₩82,500</span></div>
-                           <div className="flex justify-between items-center text-gray-600"><span>• 공제 수수료액에 대한 부가세 (10%)</span><span className="font-black text-rose-500">- ₩26,250</span></div>
-                           <div className="pt-8 mt-6 border-t-4 border-double border-gray-100 flex justify-between items-baseline"><span className="text-blue-500 font-black text-2xl uppercase">최종 통장 실 입금액</span><span className="text-6xl font-black text-blue-600 tracking-tighter">₩2,211,250</span></div>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#fcfdff] border-2 sm:border-4 border-rose-50 rounded-[16px] sm:rounded-[32px] lg:rounded-[48px] p-4 sm:p-8 lg:p-12 shadow-sm">
+                        <h5 className="text-base sm:text-2xl lg:text-3xl font-black text-gray-900 italic mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-dashed border-rose-100">예시 2: 2,500,000원 판매 시</h5>
+                        <div className="space-y-3 sm:space-y-5 text-sm sm:text-base lg:text-[18px]">
+                           <div className="bg-gray-50/80 p-3 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl lg:rounded-3xl space-y-2 sm:space-y-3 mb-2 sm:mb-3 border border-gray-100">
+                             <p className="text-[10px] sm:text-[13px] font-black text-gray-400 uppercase italic border-b border-gray-200 pb-1.5 sm:pb-2">구간별 이용료</p>
+                             <div className="flex justify-between text-xs sm:text-base font-black text-gray-700 italic"><span>1구간 (~50만): 13%</span><span>₩65,000</span></div>
+                             <div className="flex justify-between text-xs sm:text-base font-black text-gray-700 italic"><span>2구간 (50~200만): 7%</span><span>₩105,000</span></div>
+                             <div className="flex justify-between text-xs sm:text-base font-black text-gray-700 italic"><span>3구간 (200만~): 2%</span><span>₩10,000</span></div>
+                           </div>
+                           <div className="flex justify-between items-center text-gray-600 gap-2"><span className="leading-tight">플랫폼 이용료 합계</span><span className="font-black text-rose-500 shrink-0">- ₩180,000</span></div>
+                           <div className="flex justify-between items-center text-gray-600 gap-2"><span className="leading-tight">PG 결제 수수료 (3.3%)</span><span className="font-black text-rose-500 shrink-0">- ₩82,500</span></div>
+                           <div className="flex justify-between items-center text-gray-600 gap-2"><span className="leading-tight">수수료 부가세 (10%)</span><span className="font-black text-rose-500 shrink-0">- ₩26,250</span></div>
+                           <div className="pt-4 sm:pt-6 mt-2 sm:mt-4 border-t-4 border-double border-gray-100 flex justify-between items-center gap-2">
+                             <span className="text-blue-500 font-black text-sm sm:text-lg lg:text-2xl uppercase leading-tight">최종 입금액</span>
+                             <span className="text-2xl sm:text-4xl lg:text-6xl font-black text-blue-600 tracking-tighter">₩2,211,250</span>
+                           </div>
                         </div>
                     </div>
                  </div>
               </div>
-              <button onClick={() => setShowSettlementGuideModal(false)} className="w-full py-8 bg-gray-900 text-white rounded-[40px] font-black text-2xl shadow-xl hover:bg-blue-600 transition-all uppercase italic">내용을 모두 확인했습니다</button>
+              <button onClick={() => setShowSettlementGuideModal(false)} className="w-full py-4 sm:py-6 lg:py-8 bg-gray-900 text-white rounded-[20px] sm:rounded-[32px] lg:rounded-[40px] font-black text-base sm:text-xl lg:text-2xl shadow-xl hover:bg-blue-600 transition-all uppercase italic">내용을 모두 확인했습니다</button>
            </div>
         </div>
       )}

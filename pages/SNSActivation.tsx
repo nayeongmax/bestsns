@@ -345,7 +345,10 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       </div>
 
       {/* 업체 배너 광고: 히어로 바로 아래 */}
-      <BannerRotator cols={2} mode="sequential" location="sns" height={130} />
+      {/* 모바일: 자유게시판과 동일한 높이 80 */}
+      <BannerRotator cols={2} mode="sequential" location="sns" height={80} className="lg:hidden" />
+      {/* 데스크톱: 기존 높이 유지 */}
+      <BannerRotator cols={2} mode="sequential" location="sns" height={130} className="hidden lg:block" />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-10">
         {/* 우측 사이드바 */}
