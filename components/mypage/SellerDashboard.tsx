@@ -170,9 +170,9 @@ const SellerDashboard: React.FC<Props> = ({
     <div className="space-y-10 animate-in fade-in duration-500">
       {/* 통계 카드 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
-        <div onClick={() => navigate('/profit-mgmt')} className="col-span-2 md:col-span-1 bg-gray-900 p-4 sm:p-8 rounded-[20px] sm:rounded-[40px] shadow-xl text-white relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
-          <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest italic mb-1 relative z-10">누적 수익금 (구매확정 기준)</p>
-          <h4 className="text-xl sm:text-4xl font-black italic tracking-tighter relative z-10">₩{stats.annualRevenue.toLocaleString()}</h4>
+        <div onClick={() => navigate('/profit-mgmt')} className="col-span-1 md:col-span-1 bg-gray-900 p-4 sm:p-8 rounded-[20px] sm:rounded-[40px] shadow-xl text-white relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
+          <p className="text-[9px] sm:text-[10px] font-black text-orange-400 uppercase tracking-widest italic mb-1 relative z-10">누적 수익금 (구매확정 기준)</p>
+          <h4 className="text-sm sm:text-4xl font-black italic tracking-tighter relative z-10 truncate">₩{stats.annualRevenue.toLocaleString()}</h4>
           <div className="absolute top-0 right-0 p-6 opacity-10"><svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg></div>
         </div>
         <div className="bg-white p-4 sm:p-8 rounded-[20px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1"><p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest italic">진행 중인 주문</p><h4 className="text-xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.activeOrders} <span className="text-xs sm:text-sm font-bold text-gray-300">건</span></h4></div>

@@ -265,7 +265,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   }
 
   return (
-    <div className="bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-gray-100 space-y-10 animate-in fade-in duration-300">
+    <div className="bg-white rounded-[32px] p-4 sm:p-8 md:p-12 shadow-sm border border-gray-100 space-y-6 sm:space-y-10 animate-in fade-in duration-300">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <h3 className="text-2xl font-black text-gray-900 italic">프리랜서 워크스페이스</h3>
@@ -415,7 +415,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
           <div>
             <h5 className="font-black text-gray-800 mb-3">알바비 관리</h5>
-            <div className="bg-white p-6 rounded-[24px] border border-gray-100 mb-6">
+            <div className="bg-white p-3 sm:p-6 rounded-[24px] border border-gray-100 mb-6">
               <div className="flex p-1.5 bg-gray-100 rounded-full w-fit mb-4">
                 <button type="button" onClick={() => setChartTab('daily')} className={`px-5 py-2 rounded-full text-xs font-black ${chartTab === 'daily' ? 'bg-emerald-600 text-white' : 'text-gray-400'}`}>일별</button>
                 <button type="button" onClick={() => setChartTab('monthly')} className={`px-5 py-2 rounded-full text-xs font-black ${chartTab === 'monthly' ? 'bg-emerald-600 text-white' : 'text-gray-400'}`}>월별</button>
@@ -457,11 +457,11 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                 })}
               </select>
             </div>
-            <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white">
+            <div className="rounded-2xl border border-gray-100 overflow-x-auto bg-white">
               {depositEntries.filter((e) => e.at.startsWith(settlementMonth)).length === 0 ? (
                 <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 입금 내역이 없습니다.</div>
               ) : (
-                <table className="w-full text-left text-sm">
+                <table className="w-full text-left text-sm min-w-[320px]">
                   <thead className="bg-gray-50 text-xs font-black text-gray-500 uppercase">
                     <tr><th className="px-5 py-3">날짜</th><th className="px-5 py-3">작업내역</th><th className="px-5 py-3 text-right">금액</th></tr>
                   </thead>
