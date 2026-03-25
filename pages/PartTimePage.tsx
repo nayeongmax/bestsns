@@ -170,6 +170,20 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
 
         <div className="grid gap-6">
           <div className="space-y-2">
+            <div className="hidden md:flex items-center justify-end gap-2 mb-1">
+              <button
+                type="button"
+                onClick={() => handleCalendarSwipe('prev')}
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 bg-white hover:bg-emerald-50 hover:border-emerald-400 text-gray-500 hover:text-emerald-600 transition-all text-sm"
+                aria-label="이전 주"
+              >‹</button>
+              <button
+                type="button"
+                onClick={() => handleCalendarSwipe('next')}
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 bg-white hover:bg-emerald-50 hover:border-emerald-400 text-gray-500 hover:text-emerald-600 transition-all text-sm"
+                aria-label="다음 주"
+              >›</button>
+            </div>
             <div
               className="overflow-hidden"
               onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
