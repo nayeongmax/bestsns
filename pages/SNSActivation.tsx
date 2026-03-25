@@ -484,13 +484,27 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             {categoriesForPlatform.length > 0 && (
               <div>
                 <h3 className="text-[10px] sm:text-[11px] font-black text-gray-300 uppercase italic tracking-[0.2em] px-1 sm:px-2 mb-4 sm:mb-6">카테고리</h3>
-                <div className="grid gap-3 sm:gap-4" style={{ gridTemplateColumns: `repeat(${categoriesForPlatform.length}, 1fr)` }}>
+                {/* 모바일: 가로 스크롤 한 줄 */}
+                <div className="flex sm:hidden overflow-x-auto gap-2 pb-1">
                   {categoriesForPlatform.map((cat) => (
                     <button
                       key={cat}
                       type="button"
                       onClick={() => { setSelectedCategory(cat); setSelectedProductId(''); }}
-                      className={`w-full py-2.5 sm:py-3.5 rounded-2xl font-black text-[13px] sm:text-[14px] italic uppercase tracking-wide transition-all duration-200 ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] scale-[1.03]' : 'bg-white text-gray-400 border border-gray-200 hover:border-blue-300 hover:text-blue-500 hover:shadow-sm'}`}
+                      className={`shrink-0 py-2.5 px-4 rounded-2xl font-black text-[12px] italic uppercase tracking-wide whitespace-nowrap transition-all duration-200 ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] scale-[1.03]' : 'bg-white text-gray-400 border border-gray-200 hover:border-blue-300 hover:text-blue-500 hover:shadow-sm'}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                {/* 데스크탑: 기존 그리드 */}
+                <div className="hidden sm:grid gap-4" style={{ gridTemplateColumns: `repeat(${categoriesForPlatform.length}, 1fr)` }}>
+                  {categoriesForPlatform.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => { setSelectedCategory(cat); setSelectedProductId(''); }}
+                      className={`w-full py-3.5 rounded-2xl font-black text-[14px] italic uppercase tracking-wide transition-all duration-200 ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] scale-[1.03]' : 'bg-white text-gray-400 border border-gray-200 hover:border-blue-300 hover:text-blue-500 hover:shadow-sm'}`}
                     >
                       {cat}
                     </button>

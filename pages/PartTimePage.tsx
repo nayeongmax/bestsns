@@ -70,8 +70,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
     const day = base.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
     const monday = new Date(base);
     monday.setDate(base.getDate() - (day === 0 ? 6 : day - 1));
-    // 월~금 5일만 반환
-    for (let i = 0; i < 5; i++) {
+    // 월~일 7일 반환
+    for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       arr.push(
@@ -130,8 +130,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             <h2 className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
               누구나<span className="text-emerald-600">알바</span>
             </h2>
-            <p className="text-gray-700 font-semibold text-sm mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
-            <p className="text-gray-700 font-semibold text-sm mt-1">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
+            <p className="text-gray-700 font-semibold text-xs md:text-sm mt-2 whitespace-nowrap">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
+            <p className="text-gray-700 font-semibold text-xs md:text-sm mt-1 whitespace-nowrap">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(user?.role === 'admin' || user?.role === 'manager') && (
                 <button
@@ -182,7 +182,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                 touchStartX.current = null;
               }}
             >
-              <div className="grid grid-cols-5 gap-1 sm:gap-3">
+              <div className="grid grid-cols-7 gap-1 sm:gap-3">
               {weekDates.map((d) => {
                 const c = dateCounts[d] || { total: 0, done: 0 };
                 const isSelected = effectiveDate === d;

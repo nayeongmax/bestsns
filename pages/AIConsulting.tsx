@@ -113,10 +113,10 @@ const AIConsulting: React.FC<Props> = ({ user }) => {
   };
 
   const suggestions = [
-    '인스타그램 릴스 조회수 올리는 법',
+    'BESTSNS로 매출 500 만드는 법',
+    '인스타그램 인플루언서 되는 법',
     '유튜브 채널 초기 성장 전략',
-    '틱톡 바이럴 영상 특징',
-    '효과적인 마케팅 문구 작성'
+    '효과적인 마케팅 문구 추천'
   ];
 
   return (
@@ -148,12 +148,12 @@ const AIConsulting: React.FC<Props> = ({ user }) => {
             </div>
             <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3 sm:mb-4 italic tracking-tight">무엇이든 물어보세요!</h3>
             <p className="text-xs sm:text-sm text-gray-400 font-bold mb-8 sm:mb-12 leading-relaxed px-2">콘텐츠 기획, 플랫폼 성장 전략, 광고 카피 작성 등<br/>마케팅과 관련한 최고의 솔루션을 제안해 드립니다.</p>
-            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center sm:gap-3 w-full sm:w-auto">
               {suggestions.map(s => (
                 <button
                   key={s}
                   onClick={() => setInput(s)}
-                  className="px-4 py-2.5 sm:px-6 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-black text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm hover:shadow-md"
+                  className="px-3 py-3 sm:px-6 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-black text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm hover:shadow-md text-center leading-snug"
                 >
                   {s}
                 </button>
