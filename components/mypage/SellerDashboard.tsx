@@ -385,21 +385,68 @@ const SellerDashboard: React.FC<Props> = ({
         )}
 
         {activeTab === 'my-products' && (
-          <div className="space-y-10 animate-in fade-in duration-700">
-            <div className="flex justify-between items-center px-4">
+          <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-700">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 px-1">
               <div>
-                <h3 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-12">내 서비스 인벤토리</h3>
-                <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.3em]">등록된 상품 내역 ({myProducts.length}개)</p>
+                <h3 className="text-xl sm:text-3xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">내 서비스 인벤토리</h3>
+                <p className="text-[11px] font-bold text-gray-400 mt-1 sm:mt-4 uppercase tracking-widest">등록된 상품 내역 ({myProducts.length}개)</p>
               </div>
-              <button 
+              <button
                 onClick={() => navigate('/ebooks/register')}
-                className="bg-blue-600 text-white px-10 py-5 rounded-[28px] font-black text-lg shadow-2xl hover:bg-black transition-all italic uppercase tracking-widest active:scale-95"
+                className="bg-blue-600 text-white px-5 py-3 sm:px-10 sm:py-5 rounded-[20px] sm:rounded-[28px] font-black text-sm sm:text-lg shadow-2xl hover:bg-black transition-all italic uppercase tracking-widest active:scale-95 shrink-0 self-start sm:self-auto"
               >
                 + 신규 서비스 등록 🚀
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* 모바일: 리스트형 */}
+            <div className="lg:hidden space-y-2 sm:space-y-3">
+              {myProducts.length === 0 ? (
+                <div className="py-20 bg-white rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center">
+                   <span className="text-5xl mb-4 grayscale opacity-30">📦</span>
+                   <p className="text-gray-300 font-black italic text-lg uppercase tracking-widest">등록된 서비스가 없습니다.</p>
+                </div>
+              ) : myProducts.map(eb => {
+                const status = getProductStatusLabel(eb);
+                return (
+                  <div key={eb.id} className={`bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm border transition-all flex items-stretch min-h-[96px] ${eb.isPaused ? 'border-gray-200 opacity-70' : 'border-gray-100 hover:border-blue-200'}`}>
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 self-center ml-3 my-3 rounded-xl overflow-hidden bg-gray-100">
+                      <img src={eb.thumbnail} className="w-full h-full object-cover" alt="" />
+                      <div className="absolute top-1.5 left-1.5">
+                        <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase shadow-sm ${status.color}`}>{status.label}</span>
+                      </div>
+                      {eb.isPaused && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <span className="text-white text-[8px] font-black italic">일시정지</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 p-3 sm:p-4 flex flex-col justify-between">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                          <span className="text-[9px] font-black text-blue-500 uppercase italic">{eb.storeType}</span>
+                          <span className="text-[9px] text-gray-300 font-bold">ID: {eb.id.slice(-6)}</span>
+                          {eb.status === 'revision' && <span className="bg-red-50 text-red-500 px-1.5 py-0.5 rounded text-[8px] font-black italic animate-bounce">보완요청</span>}
+                        </div>
+                        <h4 className="text-sm font-black text-gray-900 line-clamp-2 leading-snug italic">{eb.title}</h4>
+                        <p className="text-[10px] text-gray-400 mt-0.5">등록일: {eb.createdAt.split('T')[0]}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-2">
+                        <p className="text-base font-black text-gray-900 italic tracking-tighter">₩{eb.price.toLocaleString()}</p>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })} className="py-1.5 px-3 bg-gray-900 text-white rounded-xl font-black text-[10px] hover:bg-blue-600 transition-all">수정하기</button>
+                          <button onClick={() => setEbooks(prev => prev.map(item => item.id === eb.id ? { ...item, isPaused: !item.isPaused } : item))} className={`py-1.5 px-3 rounded-xl font-black text-[10px] text-white transition-all ${eb.isPaused ? 'bg-green-500' : 'bg-orange-500'}`}>{eb.isPaused ? '판매재개' : '일시정지'}</button>
+                          <button onClick={() => { showConfirm({ title: '상품 삭제', description: '정말 이 상품을 영구 삭제하시겠습니까?', dangerLine: '등록된 주문·리뷰 데이터에 영향을 줄 수 있으며, 삭제 후에는 복구할 수 없습니다.', confirmLabel: '삭제하기', cancelLabel: '취소', danger: true, onConfirm: async () => { try { await deleteStoreProduct(eb.id); setEbooks(prev => prev.filter(item => item.id !== eb.id)); showAlert({ description: '상품이 삭제되었습니다.' }); } catch (e) { console.error(e); showAlert({ description: '삭제에 실패했습니다. 다시 시도해 주세요.' }); } }, }); }} className="py-1.5 px-2 text-gray-300 hover:text-red-500 text-[11px] font-black transition-colors">✕</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 데스크톱: 카드 그리드 */}
+            <div className="hidden lg:grid grid-cols-2 xl:grid-cols-4 gap-8">
               {myProducts.length === 0 ? (
                 <div className="col-span-full py-40 bg-white rounded-[60px] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center">
                    <span className="text-6xl mb-6 grayscale opacity-30">📦</span>
@@ -412,9 +459,7 @@ const SellerDashboard: React.FC<Props> = ({
                     <div className="relative aspect-video overflow-hidden bg-gray-100">
                       <img src={eb.thumbnail} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700" alt="t" />
                       <div className="absolute top-4 left-4">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic uppercase shadow-md ${status.color} border border-white/20`}>
-                          {status.label}
-                        </span>
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic uppercase shadow-md ${status.color} border border-white/20`}>{status.label}</span>
                       </div>
                       {eb.isPaused && (
                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
@@ -431,7 +476,6 @@ const SellerDashboard: React.FC<Props> = ({
                         <h4 className="text-lg font-black text-gray-900 truncate leading-tight italic">{eb.title}</h4>
                         <p className="text-[11px] font-bold text-gray-400 italic">등록일: {eb.createdAt.split('T')[0]}</p>
                       </div>
-
                       <div className="flex justify-between items-end border-t border-gray-50 pt-4">
                         <div className="space-y-1">
                            <span className="text-[9px] font-black text-gray-300 uppercase italic tracking-widest">Base Price</span>
@@ -441,96 +485,56 @@ const SellerDashboard: React.FC<Props> = ({
                            <span className="bg-red-50 text-red-500 px-2.5 py-1 rounded-lg text-[9px] font-black italic shadow-sm animate-bounce">보완요청</span>
                         )}
                       </div>
-
                       <div className="grid grid-cols-1 gap-2 pt-2">
                         <div className="grid grid-cols-2 gap-2">
-                          <button 
-                            onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })}
-                            className="py-3.5 bg-gray-900 text-white rounded-2xl font-black text-[11px] hover:bg-blue-600 transition-all shadow-sm italic uppercase tracking-tighter"
-                          >
-                            수정하기
-                          </button>
-                          <button 
-                            onClick={() => setEbooks(prev => prev.map(item => item.id === eb.id ? { ...item, isPaused: !item.isPaused } : item))}
-                            className={`py-3.5 rounded-2xl font-black text-[11px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-orange-500'}`}
-                          >
-                            {eb.isPaused ? '판매재개' : '일시정지'}
-                          </button>
+                          <button onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })} className="py-3.5 bg-gray-900 text-white rounded-2xl font-black text-[11px] hover:bg-blue-600 transition-all shadow-sm italic uppercase tracking-tighter">수정하기</button>
+                          <button onClick={() => setEbooks(prev => prev.map(item => item.id === eb.id ? { ...item, isPaused: !item.isPaused } : item))} className={`py-3.5 rounded-2xl font-black text-[11px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-orange-500'}`}>{eb.isPaused ? '판매재개' : '일시정지'}</button>
                         </div>
-                        <button 
-                          onClick={() => {
-                            showConfirm({
-                              title: '상품 삭제',
-                              description: '정말 이 상품을 영구 삭제하시겠습니까?',
-                              dangerLine: '등록된 주문·리뷰 데이터에 영향을 줄 수 있으며, 삭제 후에는 복구할 수 없습니다.',
-                              confirmLabel: '삭제하기',
-                              cancelLabel: '취소',
-                              danger: true,
-                              onConfirm: async () => {
-                                try {
-                                  await deleteStoreProduct(eb.id);
-                                  setEbooks(prev => prev.filter(item => item.id !== eb.id));
-                                  showAlert({ description: '상품이 삭제되었습니다.' });
-                                } catch (e) {
-                                  console.error(e);
-                                  showAlert({ description: '삭제에 실패했습니다. 다시 시도해 주세요.' });
-                                }
-                              },
-                            });
-                          }}
-                          className="w-full py-2.5 text-gray-300 hover:text-red-500 text-[10px] font-black uppercase italic transition-colors"
-                        >
-                          상품 영구 삭제 ✕
-                        </button>
+                        <button onClick={() => { showConfirm({ title: '상품 삭제', description: '정말 이 상품을 영구 삭제하시겠습니까?', dangerLine: '등록된 주문·리뷰 데이터에 영향을 줄 수 있으며, 삭제 후에는 복구할 수 없습니다.', confirmLabel: '삭제하기', cancelLabel: '취소', danger: true, onConfirm: async () => { try { await deleteStoreProduct(eb.id); setEbooks(prev => prev.filter(item => item.id !== eb.id)); showAlert({ description: '상품이 삭제되었습니다.' }); } catch (e) { console.error(e); showAlert({ description: '삭제에 실패했습니다. 다시 시도해 주세요.' }); } }, }); }} className="w-full py-2.5 text-gray-300 hover:text-red-500 text-[10px] font-black uppercase italic transition-colors">상품 영구 삭제 ✕</button>
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
         )}
 
         {activeTab === 'ads' && (
-          <div className="max-w-4xl mx-auto py-10 text-center animate-in fade-in duration-700">
-            <div className="bg-white rounded-[60px] p-12 md:p-20 shadow-2xl border border-gray-100 space-y-10 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600"></div>
-              
-              <div className="w-32 h-32 bg-gray-50 rounded-[40px] flex items-center justify-center text-6xl mx-auto shadow-inner border border-gray-100 transform -rotate-6 hover:rotate-0 transition-transform duration-500">
+          <div className="max-w-xl mx-auto py-4 text-center animate-in fade-in duration-700">
+            <div className="bg-white rounded-[32px] p-6 sm:p-10 shadow-sm border border-gray-100 space-y-5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600"></div>
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-[24px] flex items-center justify-center text-4xl mx-auto shadow-inner border border-gray-100 transform -rotate-6 hover:rotate-0 transition-transform duration-500">
                 🚧
               </div>
-
-              <div className="space-y-6">
-                <h2 className="text-4xl md:text-5xl font-black text-gray-900 italic tracking-tighter uppercase">
+              <div className="space-y-3">
+                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 italic tracking-tighter uppercase">
                   광고<span className="text-blue-600">/노출</span> 신청
                 </h2>
-                <div className="h-1 w-24 bg-blue-600 mx-auto rounded-full"></div>
+                <div className="h-0.5 w-16 bg-blue-600 mx-auto rounded-full"></div>
               </div>
-
-              <div className="space-y-4">
-                <h3 className="text-2xl md:text-3xl font-black text-gray-800">
+              <div className="space-y-2">
+                <h3 className="text-base sm:text-lg font-black text-gray-800">
                   광고 및 상단 노출 서비스 오픈 준비중
                 </h3>
-                <p className="text-lg md:text-xl font-bold text-gray-400 italic leading-relaxed">
+                <p className="text-sm font-bold text-gray-400 italic leading-relaxed">
                   전문가님의 상품을 더 많은 고객에게 노출시키기 위한<br/>
                   최적의 광고 시스템 고도화 작업이 진행 중입니다.
                 </p>
               </div>
-
-              <div className="bg-blue-50/50 p-8 rounded-[32px] border border-blue-100">
-                 <p className="text-blue-600 font-black text-xl italic animate-pulse">
-                   " 빠른 시일내에 돌아오겠습니다 "
-                 </p>
+              <div className="bg-blue-50/50 p-4 rounded-[20px] border border-blue-100">
+                <p className="text-blue-600 font-black text-sm sm:text-base italic animate-pulse">
+                  " 빠른 시일내에 돌아오겠습니다 "
+                </p>
               </div>
-
-              <button 
+              <button
                 onClick={() => setActiveTab('orders')}
-                className="bg-gray-900 text-white px-14 py-6 rounded-[30px] font-black text-xl hover:bg-blue-600 transition-all shadow-xl active:scale-95 italic uppercase tracking-widest"
+                className="bg-gray-900 text-white px-8 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 transition-all shadow-lg active:scale-95 italic uppercase tracking-wider"
               >
                 판매현황으로 돌아가기
               </button>
             </div>
-            <p className="mt-12 text-[11px] font-bold text-gray-300 uppercase tracking-[0.4em] italic">
+            <p className="mt-6 text-[10px] font-bold text-gray-300 uppercase tracking-[0.3em] italic">
               BESTSNS ADVERTISING & EXPOSURE PLATFORM
             </p>
           </div>
