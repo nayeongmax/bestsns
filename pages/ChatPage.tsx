@@ -180,7 +180,7 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif, onl
         setActiveChatId(roomId);
       } else {
         setChatRooms(rooms);
-        setActiveChatId(prev => (prev && rooms.some(r => r.id === prev)) ? prev : null);
+        setActiveChatId(null);
       }
     } catch {
       setUseSupabase(false);
