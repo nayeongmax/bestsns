@@ -225,7 +225,7 @@ const SellerDashboard: React.FC<Props> = ({
                   <option>전체</option>
                   {availableMonths.map(m => <option key={m} value={m}>{m}월</option>)}
                 </select>
-                <div className="flex gap-1 shrink-0">
+                <div className="flex gap-1 shrink-0 ml-auto">
                   {['all', 'trading', 'done'].map((f) => (
                     <button key={f} onClick={() => setOrderFilter(f as any)} className={`px-3 sm:px-5 py-2 rounded-xl text-[12px] font-black transition-all border whitespace-nowrap ${orderFilter === f ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-white text-gray-400 border-gray-100'}`}>{f === 'all' ? '전체내역' : f === 'trading' ? '거래중' : '거래완료'}</button>
                   ))}
@@ -514,12 +514,10 @@ const SellerDashboard: React.FC<Props> = ({
                 <div className="h-0.5 w-16 bg-blue-600 mx-auto rounded-full"></div>
               </div>
               <div className="space-y-2">
-                <h3 className="text-base sm:text-lg font-black text-gray-800">
-                  광고 및 상단 노출 서비스 오픈 준비중
-                </h3>
                 <p className="text-sm font-bold text-gray-400 italic leading-relaxed">
-                  전문가님의 상품을 더 많은 고객에게 노출시키기 위한<br/>
-                  최적의 광고 시스템 고도화 작업이 진행 중입니다.
+                  전문가님의 상품을 더 많은 고객에게<br/>
+                  노출시키기 위한 최적의 광고 시스템<br/>
+                  고도화 작업이 진행 중입니다.
                 </p>
               </div>
               <div className="bg-blue-50/50 p-4 rounded-[20px] border border-blue-100">
