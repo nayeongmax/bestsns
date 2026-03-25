@@ -158,10 +158,10 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         </div>
 
         <div className="grid gap-6">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0" aria-label="이전 주">←</button>
-            <div className="flex-1 overflow-x-auto">
-              <div className="grid grid-cols-7 gap-1 sm:gap-3 min-w-[350px]">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0 text-sm" aria-label="이전 주">←</button>
+            <div className="flex-1 min-w-0 overflow-x-auto">
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-3">
               {weekDates.map((d) => {
                 const c = dateCounts[d] || { total: 0, done: 0 };
                 const isSelected = effectiveDate === d;
@@ -171,7 +171,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                     key={d}
                     type="button"
                     onClick={() => setSelectedDate(d)}
-                    className={`p-2 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 min-w-0 ${
+                    className={`p-1 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 min-w-0 ${
                       isSelected
                         ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
                         : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
@@ -185,7 +185,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
               })}
               </div>
             </div>
-            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0" aria-label="다음 주">→</button>
+            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0 text-sm" aria-label="다음 주">→</button>
           </div>
 
           <h3 className="text-xl font-black text-gray-800">작업목록</h3>
@@ -227,10 +227,12 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
           )}
         </div>
 
-        <div className="bg-blue-50/80 p-6 rounded-2xl border border-blue-100">
-          <p className="text-blue-800 font-bold text-base">
-            💡 작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.
-            <br />
+        <div className="bg-blue-50/80 p-4 sm:p-6 rounded-2xl border border-blue-100 space-y-2">
+          <p className="text-blue-800 font-bold text-sm sm:text-base flex gap-2">
+            <span className="shrink-0">💡</span>
+            <span>작업을 클릭하면 상세 내용(제목, 내용, 댓글, 키워드, 이미지 등)을 확인하고 신청할 수 있습니다.</span>
+          </p>
+          <p className="text-blue-700 font-semibold text-sm sm:text-base pl-6">
             수익통장은 <strong>{MIN_WITHDRAW_FREELANCER.toLocaleString()}원</strong> 이상일 때 마이페이지에서 출금할 수 있습니다.
           </p>
         </div>
@@ -484,15 +486,15 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
 
   return (
     <div className="max-w-4xl mx-auto pb-32 px-4">
-      <div className="flex items-center justify-between mb-10">
-        <button onClick={() => navigate('/part-time')} className="flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 transition-colors">
+      <div className="flex items-center gap-3 mb-8 sm:mb-10">
+        <button onClick={() => navigate('/part-time')} className="flex items-center gap-1.5 text-gray-400 font-bold hover:text-gray-900 transition-colors shrink-0 text-sm sm:text-base">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           돌아가기
         </button>
-        <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-emerald-500 underline-offset-8">프리랜서 작업 등록</h2>
-        <div className="w-20" />
+        <h2 className="flex-1 text-center text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-emerald-500 underline-offset-8">프리랜서 작업 등록</h2>
+        <div className="w-16 sm:w-20 shrink-0" />
       </div>
-      <form onSubmit={handleSubmit} formNoValidate className="bg-white p-8 md:p-12 rounded-[48px] shadow-xl border border-gray-100 space-y-12">
+      <form onSubmit={handleSubmit} formNoValidate className="bg-white p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-[48px] shadow-xl border border-gray-100 space-y-8 sm:space-y-12">
         <section className="space-y-6">
           <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">1. 포인트 금액 · 게시글 제목 · 내용</h3></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -528,15 +530,15 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
             </select>
             <p className="text-xs text-gray-500 mt-1">선택 후 프리랜서를 선정하면 해당 견적과 연결됩니다. (프리랜서 선정 완료 표시)</p>
           </div>
-          <div className="flex flex-wrap gap-4">
-            <div className="min-w-[120px]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div>
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">모집 인원</label>
-              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
+              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
             </div>
-            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
-            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
-            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
-            <div className="min-w-[200px] shrink-0"><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm [color-scheme:light]" /></div>
           </div>
         </section>
         <section className="space-y-6">

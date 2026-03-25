@@ -158,63 +158,61 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
 
   return (
     <div className="max-w-4xl mx-auto pb-32 animate-in slide-in-from-bottom-4 duration-700 px-4">
-      <div className="mb-10 flex items-center justify-between">
-        <h2 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">
+      <div className="mb-6 sm:mb-10 flex items-center justify-between">
+        <h2 className="text-2xl sm:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">
           {editPost ? '게시글 수정' : '새로운 글 작성'}
         </h2>
         <button onClick={() => navigate(-1)} className="text-sm font-black text-gray-400 hover:text-gray-900 uppercase italic">취소하기</button>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 md:p-12 rounded-[56px] shadow-2xl border border-gray-100 space-y-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
-             <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4">카테고리 선택</label>
-             <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="w-full p-5 bg-gray-50 border-none rounded-[24px] font-black text-gray-700 outline-none shadow-inner cursor-pointer"
-             >
-               {user.role === 'admin' && <option value="공지">공지사항 (운영자 전용)</option>}
-               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-             </select>
-          </div>
+      <form onSubmit={handleSubmit} className="bg-white p-5 sm:p-8 md:p-12 rounded-3xl sm:rounded-[56px] shadow-2xl border border-gray-100 space-y-6 sm:space-y-12">
+        <div className="space-y-3">
+           <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1 sm:px-4">카테고리 선택</label>
+           <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            className="w-full p-4 sm:p-5 bg-gray-50 border-none rounded-2xl sm:rounded-[24px] font-black text-gray-700 outline-none shadow-inner cursor-pointer text-sm sm:text-base"
+           >
+             {user.role === 'admin' && <option value="공지">공지사항 (운영자 전용)</option>}
+             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+           </select>
         </div>
 
-        <div className="space-y-4">
-           <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4">글 제목</label>
+        <div className="space-y-3">
+           <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1 sm:px-4">글 제목</label>
            <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="제목을 입력하세요"
-            className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-900 text-xl outline-none shadow-inner focus:ring-4 focus:ring-blue-50 transition-all"
+            className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-900 text-base sm:text-xl outline-none shadow-inner focus:ring-4 focus:ring-blue-50 transition-all"
+           />
+        </div>
+
+        <div className="space-y-3">
+           <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1 sm:px-4">본문 내용</label>
+           <textarea
+            rows={10}
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            placeholder="당신의 지식과 질문을 자유롭게 공유해 주세요."
+            className="w-full p-4 sm:p-8 bg-gray-50 border-none rounded-2xl sm:rounded-[40px] font-bold text-gray-700 text-sm sm:text-lg outline-none shadow-inner focus:bg-white transition-all leading-relaxed no-scrollbar"
            />
         </div>
 
         <div className="space-y-4">
-           <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest px-4">본문 내용</label>
-           <textarea
-            rows={12}
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            placeholder="당신의 지식과 질문을 자유롭게 공유해 주세요."
-            className="w-full p-8 bg-gray-50 border-none rounded-[40px] font-bold text-gray-700 text-lg outline-none shadow-inner focus:bg-white transition-all leading-relaxed no-scrollbar"
-           />
-        </div>
-
-        <div className="space-y-6">
-           <div className="flex justify-between items-center px-4">
-              <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest italic text-sm">
-                미디어 첨부 <span className="text-blue-500 font-black ml-1">(이미지, gif 가능)</span>
+           <div className="flex justify-between items-center px-1 sm:px-4">
+              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest italic">
+                미디어 첨부 <span className="text-blue-500 font-black ml-1">(이미지, gif)</span>
                 {isUploading && <span className="text-blue-500 animate-pulse ml-2">처리 중...</span>}
               </label>
               <button
                 type="button"
                 disabled={isUploading}
                 onClick={() => fileInputRef.current?.click()}
-                className={`bg-white border border-gray-200 text-gray-400 px-6 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${isUploading ? 'opacity-50' : 'hover:bg-blue-50 hover:text-blue-500'}`}
+                className={`bg-white border border-gray-200 text-gray-400 px-4 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${isUploading ? 'opacity-50' : 'hover:bg-blue-50 hover:text-blue-500'}`}
               >
-                + 미디어 추가
+                + 추가
               </button>
            </div>
            <input type="file" ref={fileInputRef} className="hidden" accept="image/png, image/jpeg, image/gif" multiple onChange={handleMediaChange} />
@@ -250,7 +248,7 @@ const FreeBoardWrite: React.FC<Props> = ({ user, posts, setPosts }) => {
         <button
           type="submit"
           disabled={isUploading}
-          className={`w-full py-8 text-white rounded-[40px] font-black text-2xl italic uppercase tracking-widest shadow-2xl transition-all active:scale-95 ${isUploading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-black shadow-blue-200'}`}
+          className={`w-full py-5 sm:py-8 text-white rounded-2xl sm:rounded-[40px] font-black text-lg sm:text-2xl italic uppercase tracking-widest shadow-2xl transition-all active:scale-95 ${isUploading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-black shadow-blue-200'}`}
         >
           {isUploading ? '파일 처리 중...' : editPost ? '게시글 수정 완료' : '게시글 등록하기'}
         </button>
