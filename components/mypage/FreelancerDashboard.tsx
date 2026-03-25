@@ -56,6 +56,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const [withdrawing, setWithdrawing] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
   const [chartTab, setChartTab] = useState<'daily' | 'monthly'>('daily');
+  const [chartWeekOffset, setChartWeekOffset] = useState(0);
   const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean; step?: 'check' | 'confirmed' } | null>(null);
   const [advertiserRevisionModal, setAdvertiserRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string } | null>(null);
   const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
@@ -119,15 +120,18 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     if (chartTab === 'daily') {
       const data: { name: string; 금액: number }[] = [];
       const now = new Date();
-      for (let i = 13; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
+      // 당일 기준 이전 6일 포함 총 7일, chartWeekOffset으로 이전 주 탐색
+      const baseDay = new Date(now);
+      baseDay.setDate(baseDay.getDate() + chartWeekOffset * 7);
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(baseDay);
+        d.setDate(baseDay.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
         const daySum = depositEntries
           .filter((e) => e.at.startsWith(dateStr))
           .reduce((sum, e) => sum + getNetAmount(e), 0);
         data.push({
-          name: `${d.getMonth() + 1}/${d.getDate()}`,
+          name: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`,
           금액: daySum,
         });
       }
@@ -144,7 +148,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       }
       return data;
     }
-  }, [chartTab, depositEntries]);
+  }, [chartTab, depositEntries, chartWeekOffset]);
 
   const refresh = async () => {
     try {
@@ -420,22 +424,29 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                 <button type="button" onClick={() => setChartTab('daily')} className={`px-5 py-2 rounded-full text-xs font-black ${chartTab === 'daily' ? 'bg-emerald-600 text-white' : 'text-gray-400'}`}>일별</button>
                 <button type="button" onClick={() => setChartTab('monthly')} className={`px-5 py-2 rounded-full text-xs font-black ${chartTab === 'monthly' ? 'bg-emerald-600 text-white' : 'text-gray-400'}`}>월별</button>
               </div>
+              {chartTab === 'daily' && (
+                <div className="flex items-center gap-2 mb-2">
+                  <button onClick={() => setChartWeekOffset((o) => o - 1)} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-black text-xs transition-colors" aria-label="이전 주">←</button>
+                  <span className="text-xs font-bold text-gray-400 flex-1 text-center">{chartWeekOffset === 0 ? '최근 7일' : `${Math.abs(chartWeekOffset)}주 전`}</span>
+                  <button onClick={() => setChartWeekOffset((o) => Math.min(0, o + 1))} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-black text-xs transition-colors disabled:opacity-30" disabled={chartWeekOffset === 0} aria-label="다음 주">→</button>
+                </div>
+              )}
               <div className="h-[220px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   {chartTab === 'daily' ? (
                     <AreaChart data={chartData}>
                       <defs><linearGradient id="colorAlbaAmount" x1="0" x2="0" y2="1"><stop offset="5%" stopColor="#059669" stopOpacity={0.3} /><stop offset="95%" stopColor="#059669" stopOpacity={0} /></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
-                      <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => v.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                      <YAxis hide />
                       <Tooltip formatter={(v: number) => [`${v.toLocaleString()}원`, '알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
                       <Area type="monotone" dataKey="금액" stroke="#059669" strokeWidth={3} fillOpacity={1} fill="url(#colorAlbaAmount)" />
                     </AreaChart>
                   ) : (
                     <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
-                      <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => v.toLocaleString()} tick={{ fontSize: 10, fontWeight: 900, fill: '#cbd5e1' }} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} tick={{ fontSize: 9, fontWeight: 900, fill: '#cbd5e1' }} />
+                      <YAxis hide />
                       <Tooltip cursor={{ fill: '#f8fafc', radius: 8 }} formatter={(v: number) => [`${v.toLocaleString()}원`, '월간 알바비']} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.08)', fontWeight: 900 }} />
                       <Bar dataKey="금액" radius={[8, 8, 0, 0]}>{chartData.map((_, i) => <Cell key={i} fill={i === new Date().getMonth() ? '#059669' : '#d1fae5'} />)}</Bar>
                     </BarChart>

@@ -33,6 +33,7 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
   const [withdrawalFilter, setWithdrawalFilter] = useState<'전체' | '지급 완료' | '지급 예정' | '신청 가능'>('전체');
   const [monthFilter, setMonthFilter] = useState<string>('전체 기간');
   const [chartTab, setChartTab] = useState<'daily' | 'monthly'>('daily');
+  const [chartWeekOffset, setChartWeekOffset] = useState(0);
 
   // 계좌 정보 등록 여부 확인
   const isBankInfoRegistered = useMemo(() => {
@@ -108,11 +109,14 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
     if (chartTab === 'daily') {
       const data = [];
       const now = new Date();
-      for (let i = 13; i >= 0; i--) {
-        const d = new Date(now); d.setDate(d.getDate() - i);
+      // 당일 기준 이전 6일 포함 총 7일, weekOffset으로 이전 주 탐색
+      const baseDay = new Date(now);
+      baseDay.setDate(baseDay.getDate() + chartWeekOffset * 7);
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(baseDay); d.setDate(baseDay.getDate() - i);
         const searchStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
         const daySales = confirmedOrders.filter(o => o.confirmedAt?.startsWith(searchStr)).reduce((sum, o) => sum + o.price, 0);
-        data.push({ name: `${d.getMonth() + 1}/${d.getDate()}`, 금액: daySales });
+        data.push({ name: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`, 금액: daySales });
       }
       return data;
     } else {
@@ -125,7 +129,7 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
       }
       return data;
     }
-  }, [confirmedOrders, chartTab]);
+  }, [confirmedOrders, chartTab, chartWeekOffset]);
 
   const monthlyInvoices = useMemo(() => {
     const groups: Record<string, { sales: number, profit: number, fee: number, orders: StoreOrder[] }> = {};
@@ -197,13 +201,22 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
               <button onClick={() => setChartTab('monthly')} className={`px-5 sm:px-10 py-2 sm:py-3 rounded-full text-[12px] font-black transition-all ${chartTab === 'monthly' ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400'}`}>월별</button>
            </div>
         </div>
+        {chartTab === 'daily' && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => setChartWeekOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0" aria-label="이전 주">←</button>
+            <span className="text-xs font-bold text-gray-400 flex-1 text-center">
+              {chartWeekOffset === 0 ? '최근 7일' : `${Math.abs(chartWeekOffset)}주 전`}
+            </span>
+            <button onClick={() => setChartWeekOffset((o) => Math.min(0, o + 1))} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0 disabled:opacity-30" disabled={chartWeekOffset === 0} aria-label="다음 주">→</button>
+          </div>
+        )}
         <div className="h-[200px] sm:h-[300px] lg:h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             {chartTab === 'daily' ? (
               <AreaChart data={chartData} margin={{ left: 0, right: 8, top: 24, bottom: 0 }}>
                 <defs><linearGradient id="colorAmount" x1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900, fill: '#cbd5e1' }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} tick={{ fontSize: 11, fontWeight: 900, fill: '#cbd5e1' }} />
                 <YAxis hide />
                 <Tooltip formatter={(val: number) => [`₩${val.toLocaleString()}`, '확정 금액']} contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 900 }} />
                 <Area type="monotone" dataKey="금액" stroke="#3b82f6" strokeWidth={5} fillOpacity={1} fill="url(#colorAmount)">
@@ -213,7 +226,7 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
             ) : (
               <BarChart data={chartData} barCategoryGap="30%" margin={{ left: 0, right: 8, top: 24, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900, fill: '#cbd5e1' }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} tick={{ fontSize: 9, fontWeight: 900, fill: '#cbd5e1' }} />
                 <YAxis hide />
                 <Tooltip cursor={{ fill: '#f8fafc', radius: 12 }} formatter={(val: number) => [`₩${val.toLocaleString()}`, '월간 확정']} contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 900 }} />
                 <Bar dataKey="금액" radius={[8, 8, 0, 0]}>
