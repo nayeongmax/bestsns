@@ -63,8 +63,8 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
   return (
     <div className="max-w-6xl mx-auto pb-20">
       {/* 초거대 대분류 탭 섹션 - 6개 탭 한 줄 배치 */}
-      <div className="mb-12">
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4">
+      <div className="mb-4 sm:mb-8 md:mb-12">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4">
           {STORE_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -73,7 +73,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                 setActiveCategory('전체');
                 setActiveSubCategory('전체');
               }}
-              className={`relative flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-[24px] md:rounded-[32px] transition-all duration-300 border-2 overflow-hidden group ${
+              className={`relative flex flex-col items-center justify-center p-2.5 sm:p-5 md:p-6 rounded-[16px] md:rounded-[32px] transition-all duration-300 border-2 overflow-hidden group ${
                 activeStoreType === tab.id
                 ? tab.id === 'all'
                   ? 'bg-white border-gray-400 shadow-2xl shadow-gray-100 scale-[1.02]'
@@ -81,10 +81,10 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                 : 'bg-white border-transparent grayscale hover:grayscale-0 hover:border-gray-100 hover:bg-gray-50 opacity-60 hover:opacity-100'
               }`}
             >
-              <div className={`text-3xl md:text-4xl mb-3 transition-transform duration-500 ${activeStoreType === tab.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
+              <div className={`text-2xl sm:text-3xl md:text-4xl mb-1.5 sm:mb-3 transition-transform duration-500 ${activeStoreType === tab.id ? 'scale-110 rotate-3' : 'group-hover:scale-110'}`}>
                 {tab.icon}
               </div>
-              <span className={`text-base md:text-lg font-black italic tracking-tighter ${activeStoreType === tab.id ? (tab.id === 'all' ? 'text-gray-700' : `text-${tab.color}-600`) : 'text-gray-400'}`}>
+              <span className={`text-xs sm:text-base md:text-lg font-black italic tracking-tighter ${activeStoreType === tab.id ? (tab.id === 'all' ? 'text-gray-700' : `text-${tab.color}-600`) : 'text-gray-400'}`}>
                 {tab.label}
               </span>
               {activeStoreType === tab.id && (
@@ -96,24 +96,24 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
       </div>
 
       {/* 필터 바: 검색창 + 상품등록 버튼 한 줄, 전체~전자책 공통 */}
-      <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm mb-12 relative border border-gray-100 space-y-6">
+      <div className="bg-white p-3 sm:p-6 md:p-10 rounded-[20px] md:rounded-[48px] shadow-sm mb-4 sm:mb-8 md:mb-12 relative border border-gray-100 space-y-3 sm:space-y-6">
         {/* 검색창 + 상품 등록 버튼 한 줄 */}
-        <div className="flex flex-nowrap items-center gap-3 md:gap-4">
+        <div className="flex flex-nowrap items-center gap-2 sm:gap-3 md:gap-4">
           <div className="relative flex-1 min-w-0">
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeStoreType === 'all' ? '상품 제목이나 전문가를 검색해보세요' : `${STORE_TABS.find(t => t.id === activeStoreType)?.label} 제목이나 전문가를 검색해보세요`} 
-              className="w-full pl-12 md:pl-16 pr-6 py-4 md:py-5 bg-gray-50 rounded-[24px] md:rounded-[32px] border-none focus:ring-4 focus:ring-blue-50 text-base md:text-lg font-bold outline-none transition-all shadow-inner" 
+              placeholder={activeStoreType === 'all' ? '상품 제목이나 전문가를 검색해보세요' : `${STORE_TABS.find(t => t.id === activeStoreType)?.label} 제목이나 전문가를 검색해보세요`}
+              className="w-full pl-9 sm:pl-12 md:pl-16 pr-3 sm:pr-6 py-2.5 sm:py-4 md:py-5 bg-gray-50 rounded-[14px] md:rounded-[32px] border-none focus:ring-4 focus:ring-blue-50 text-sm sm:text-base md:text-lg font-bold outline-none transition-all shadow-inner"
             />
-            <svg className="w-5 h-5 md:w-6 md:h-6 text-gray-300 absolute left-6 md:left-8 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-300 absolute left-3 sm:left-6 md:left-8 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
           </div>
-          <button 
-            onClick={handleRegisterClick} 
-            className="shrink-0 bg-blue-600 text-white px-6 md:px-8 py-3.5 md:py-4 rounded-2xl font-black text-[13px] flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95 whitespace-nowrap"
+          <button
+            onClick={handleRegisterClick}
+            className="shrink-0 bg-blue-600 text-white px-3 sm:px-6 md:px-8 py-2 sm:py-3.5 md:py-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-[13px] flex items-center justify-center gap-1.5 sm:gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 active:scale-95 whitespace-nowrap"
           >
             <span className="text-xl">+</span> {activeStoreType === 'all' ? '상품 등록' : STORE_TABS.find(t => t.id === activeStoreType)?.label + ' 등록'}
           </button>
