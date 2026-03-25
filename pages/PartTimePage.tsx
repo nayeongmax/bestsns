@@ -119,8 +119,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             <h2 className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
               누구나<span className="text-emerald-600">알바</span>
             </h2>
-            <p className="text-gray-700 font-semibold text-sm mt-2 whitespace-nowrap">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
-            <p className="text-gray-700 font-semibold text-sm mt-1 whitespace-nowrap">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
+            <p className="text-gray-700 font-semibold text-sm mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
+            <p className="text-gray-700 font-semibold text-sm mt-1">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(user?.role === 'admin' || user?.role === 'manager') && (
                 <button
@@ -158,10 +158,13 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         </div>
 
         <div className="grid gap-6">
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0 text-sm" aria-label="이전 주">←</button>
-            <div className="flex-1 min-w-0 overflow-x-auto">
-              <div className="grid grid-cols-7 gap-0.5 sm:gap-3">
+          <div className="space-y-2">
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm" aria-label="이전 주">← 이전</button>
+              <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm" aria-label="다음 주">다음 →</button>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-7 gap-1 sm:gap-3 min-w-[280px]">
               {weekDates.map((d) => {
                 const c = dateCounts[d] || { total: 0, done: 0 };
                 const isSelected = effectiveDate === d;
@@ -171,21 +174,20 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                     key={d}
                     type="button"
                     onClick={() => setSelectedDate(d)}
-                    className={`p-1 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 min-w-0 ${
+                    className={`p-2 sm:p-4 rounded-lg sm:rounded-xl border text-left transition-all duration-200 min-w-0 ${
                       isSelected
                         ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
                         : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
                     }`}
                   >
-                    <p className="text-[10px] sm:text-sm font-black text-gray-600">{dayLabel}</p>
-                    <p className="text-[9px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-semibold leading-tight whitespace-nowrap">작업 {c.total}건</p>
-                    <p className="text-[9px] sm:text-xs text-emerald-600 font-semibold leading-tight whitespace-nowrap">완료 {c.done}건</p>
+                    <p className="text-[11px] sm:text-sm font-black text-gray-600">{dayLabel}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-600 font-semibold leading-tight">완료 {c.done}</p>
                   </button>
                 );
               })}
               </div>
             </div>
-            <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0 text-sm" aria-label="다음 주">→</button>
           </div>
 
           <h3 className="text-xl font-black text-gray-800">작업목록</h3>
@@ -496,7 +498,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
       </div>
       <form onSubmit={handleSubmit} formNoValidate className="bg-white p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-[48px] shadow-xl border border-gray-100 space-y-8 sm:space-y-12">
         <section className="space-y-6">
-          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">1. 포인트 금액 · 게시글 제목 · 내용</h3></div>
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full shrink-0" /><h3 className="text-sm sm:text-base md:text-lg font-black text-gray-900 italic whitespace-nowrap">1. 포인트 금액 · 게시글 제목 · 내용</h3></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">보상 금액 (원)</label>
@@ -519,7 +521,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           </div>
         </section>
         <section className="space-y-6">
-          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">2. 모집 인원 · 신청기간 · 작업기간</h3></div>
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full shrink-0" /><h3 className="text-sm sm:text-base md:text-lg font-black text-gray-900 italic whitespace-nowrap">2. 모집 인원 · 신청기간 · 작업기간</h3></div>
           <div>
             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">결제 완료된 광고주 (견적서 결제 건에서 선택)</label>
             <select value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} className="w-full max-w-md px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-bold">
@@ -544,13 +546,13 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
         <section className="space-y-6">
           <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용</h3></div>
           <p className="text-sm text-gray-500">아래 항목을 클릭하면 순서대로 섹션이 추가됩니다. 원하는 만큼 추가하고 위치를 이동할 수 있습니다.</p>
-          <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100">
             {SECTION_TYPES.map(({ key, label }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => addSection(key)}
-                className="px-4 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 font-black text-sm hover:bg-emerald-50 hover:border-emerald-400 transition-all"
+                className="px-4 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 font-black text-sm hover:bg-emerald-50 hover:border-emerald-400 transition-all text-center"
               >
                 + {label}
               </button>

@@ -206,7 +206,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
       </div>
 
       <form id="job-request-form" onSubmit={handleSubmit} noValidate className="bg-white rounded-2xl sm:rounded-[48px] p-5 sm:p-8 md:p-12 shadow-xl border border-gray-100 space-y-6 sm:space-y-8">
-        <p className="text-slate-700 text-base sm:text-xl md:text-2xl font-bold tracking-tight text-center pt-1 pb-2 sm:pt-2 sm:pb-4">
+        <p className="text-slate-700 text-sm sm:text-base font-bold tracking-tight text-center pt-1 pb-2 sm:pt-2 sm:pb-4 whitespace-nowrap overflow-hidden text-ellipsis">
           최고의 전문가 프리랜서로 선별 매칭해드립니다!
         </p>
 
@@ -292,8 +292,8 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           </div>
         </div>
 
-        <p className="text-emerald-700 font-bold text-lg text-center py-3 px-4 rounded-xl bg-emerald-50 border border-emerald-100">
-          최고의 전문가를 선별 매칭하고, 거품 없는 합리적인 견적을 제안드리겠습니다!
+        <p className="text-emerald-700 font-bold text-sm sm:text-base text-center py-3 px-4 rounded-xl bg-emerald-50 border border-emerald-100">
+          최고의 전문가를 선별 매칭하고,<br />거품 없는 합리적인 견적을 제안드리겠습니다!
         </p>
 
         <div>
