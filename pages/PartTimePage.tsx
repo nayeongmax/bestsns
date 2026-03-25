@@ -119,8 +119,8 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             <h2 className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
               누구나<span className="text-emerald-600">알바</span>
             </h2>
-            <p className="text-gray-700 font-black mt-2">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
-            <p className="text-gray-700 font-black mt-1">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
+            <p className="text-gray-700 font-semibold text-sm mt-2 whitespace-nowrap">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
+            <p className="text-gray-700 font-semibold text-sm mt-1 whitespace-nowrap">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(user?.role === 'admin' || user?.role === 'manager') && (
                 <button
@@ -140,13 +140,13 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
             </div>
           </div>
           {user ? (
-            <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 min-w-[200px]">
-              <p className="text-[11px] font-black text-gray-500 uppercase italic">수익통장</p>
-              <p className="text-2xl font-black text-emerald-700 italic">{balance.toLocaleString()}원</p>
-              <p className="text-[11px] text-gray-500 mt-1">
+            <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+              <p className="text-[10px] font-black text-gray-500 uppercase italic">수익통장</p>
+              <p className="text-lg font-black text-emerald-700 italic">{balance.toLocaleString()}원</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">
                 {balance >= MIN_WITHDRAW_FREELANCER ? '출금 가능' : `${(MIN_WITHDRAW_FREELANCER - balance).toLocaleString()}원 더 모으면 출금 가능`}
               </p>
-              <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-3 text-emerald-600 font-black text-sm hover:underline">
+              <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-2 text-emerald-600 font-black text-xs hover:underline">
                 마이페이지에서 출금하기 →
               </Link>
             </div>
@@ -165,7 +165,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
               {weekDates.map((d) => {
                 const c = dateCounts[d] || { total: 0, done: 0 };
                 const isSelected = effectiveDate === d;
-                const dayLabel = d.slice(5);
+                const dayLabel = `${d.slice(5, 7)}/${d.slice(8)}`;
                 return (
                   <button
                     key={d}
@@ -177,7 +177,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                         : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
                     }`}
                   >
-                    <p className="text-[10px] sm:text-sm font-black text-gray-600 truncate">{dayLabel}</p>
+                    <p className="text-[10px] sm:text-sm font-black text-gray-600">{dayLabel}</p>
                     <p className="text-[9px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-semibold leading-tight whitespace-nowrap">작업 {c.total}건</p>
                     <p className="text-[9px] sm:text-xs text-emerald-600 font-semibold leading-tight whitespace-nowrap">완료 {c.done}건</p>
                   </button>
