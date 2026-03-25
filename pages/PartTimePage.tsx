@@ -160,28 +160,30 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
         <div className="grid gap-6">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0" aria-label="이전 주">←</button>
-            <div className="flex-1 grid grid-cols-7 gap-1 sm:gap-3">
-            {weekDates.map((d) => {
-              const c = dateCounts[d] || { total: 0, done: 0 };
-              const isSelected = effectiveDate === d;
-              const dayLabel = d.slice(5);
-              return (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setSelectedDate(d)}
-                  className={`p-2 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 min-w-0 ${
-                    isSelected
-                      ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
-                      : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
-                  }`}
-                >
-                  <p className="text-[10px] sm:text-sm font-black text-gray-600 truncate">{dayLabel}</p>
-                  <p className="text-[9px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-semibold leading-tight">작업 {c.total}건</p>
-                  <p className="text-[9px] sm:text-xs text-emerald-600 font-semibold leading-tight">완료 {c.done}건</p>
-                </button>
-              );
-            })}
+            <div className="flex-1 overflow-x-auto">
+              <div className="grid grid-cols-7 gap-1 sm:gap-3 min-w-[350px]">
+              {weekDates.map((d) => {
+                const c = dateCounts[d] || { total: 0, done: 0 };
+                const isSelected = effectiveDate === d;
+                const dayLabel = d.slice(5);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setSelectedDate(d)}
+                    className={`p-2 sm:p-5 rounded-lg sm:rounded-xl border text-left transition-all duration-200 min-w-0 ${
+                      isSelected
+                        ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
+                        : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
+                    }`}
+                  >
+                    <p className="text-[10px] sm:text-sm font-black text-gray-600 truncate">{dayLabel}</p>
+                    <p className="text-[9px] sm:text-xs text-gray-500 mt-1 sm:mt-2 font-semibold leading-tight whitespace-nowrap">작업 {c.total}건</p>
+                    <p className="text-[9px] sm:text-xs text-emerald-600 font-semibold leading-tight whitespace-nowrap">완료 {c.done}건</p>
+                  </button>
+                );
+              })}
+              </div>
             </div>
             <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors shrink-0" aria-label="다음 주">→</button>
           </div>
