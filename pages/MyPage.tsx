@@ -171,7 +171,9 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
           <div className="bg-gray-50 p-2 sm:p-5 rounded-[20px] sm:rounded-[32px] flex items-center gap-1.5 sm:gap-4 flex-1 min-w-0">
             <div className="w-7 h-7 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-sm sm:text-lg shadow-sm shrink-0">💰</div>
             <div className="flex-1 min-w-0">
-              <p className="hidden sm:block text-[10px] font-black text-gray-400 uppercase italic leading-tight">Points<span className="text-red-500 normal-case not-italic font-black"> (SNS전용)</span></p>
+              <p className="text-[10px] font-black text-gray-400 uppercase italic leading-tight">Points</p>
+              <p className="block sm:hidden text-[9px] font-black text-red-500 leading-tight">(SNS 활성화 전용)</p>
+              <p className="hidden sm:block text-[10px] font-black text-gray-400 uppercase italic leading-tight"><span className="text-red-500 normal-case not-italic font-black">(SNS전용)</span></p>
               <h3 className="text-[11px] sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{(effectiveUser.points || 0).toLocaleString()} P</h3>
             </div>
             <Link to="/payment/point" className="bg-blue-600 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-black transition-all shrink-0">충전</Link>

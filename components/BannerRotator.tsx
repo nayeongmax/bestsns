@@ -12,7 +12,7 @@ interface Props {
   className?: string;
 }
 
-const gridClass: Record<number, string> = { 2: 'grid-cols-2', 3: 'grid-cols-3' };
+const gridClass: Record<number, string> = { 2: 'grid-cols-1 sm:grid-cols-2', 3: 'grid-cols-1 sm:grid-cols-3' };
 const ROTATION_KEY = 'banner_rotation_idx';
 
 const EmptySlot: React.FC<{ height: number }> = ({ height }) => (
