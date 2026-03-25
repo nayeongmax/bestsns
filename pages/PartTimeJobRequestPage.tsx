@@ -292,7 +292,7 @@ const PartTimeJobRequestPage: React.FC<Props> = ({ user }) => {
           </div>
         </div>
 
-        <p className="text-emerald-700 font-bold text-sm sm:text-base text-center py-3 px-4 rounded-xl bg-emerald-50 border border-emerald-100">
+        <p className="text-emerald-700 font-bold text-xs sm:text-sm text-center py-3 px-2 sm:px-4 rounded-xl bg-emerald-50 border border-emerald-100 leading-relaxed">
           최고의 전문가를 선별 매칭하고,<br />거품 없는 합리적인 견적을 제안드리겠습니다!
         </p>
 
