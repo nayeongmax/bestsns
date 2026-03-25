@@ -191,7 +191,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
 
         {/* 모바일/태블릿(lg 미만): 컴팩트 1열 + 상단 문의·구매 버튼 */}
         <div className="lg:hidden">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-6 border-b border-gray-100">
+          <div className="flex items-start gap-3 pb-6 border-b border-gray-100">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">{channel.platform}</span>
@@ -205,6 +205,16 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
               </div>
               <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-3 whitespace-nowrap">₩ {channel.price.toLocaleString()}</p>
             </div>
+            {/* 채널 썸네일: 어떤 채널인지 이미지로 바로 파악 */}
+            {channel.thumbnail && (
+              <div className="shrink-0">
+                <img
+                  src={channel.thumbnail}
+                  alt={channel.title}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border border-gray-100 shadow-sm"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-4 py-4 sm:py-6 border-b border-gray-50">
