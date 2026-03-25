@@ -26,6 +26,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState('');
   const [weekOffset, setWeekOffset] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,15 +66,25 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
     const arr: string[] = [];
     const base = new Date(todayStrVal);
     base.setDate(base.getDate() + weekOffset * 7);
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(base);
-      d.setDate(base.getDate() + i);
+    // 해당 주의 월요일 찾기
+    const day = base.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const monday = new Date(base);
+    monday.setDate(base.getDate() - (day === 0 ? 6 : day - 1));
+    // 월~금 5일만 반환
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
       arr.push(
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       );
     }
     return arr;
   }, [todayStrVal, weekOffset]);
+
+  const handleCalendarSwipe = (direction: 'prev' | 'next') => {
+    setWeekOffset((o) => direction === 'next' ? o + 1 : o - 1);
+    setSelectedDate('');
+  };
 
   const dateCounts = useMemo(() => {
     const map: Record<string, { total: number; done: number }> = {};
@@ -90,7 +101,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
     return map;
   }, [tasks, weekDates]);
 
-  const effectiveDate = selectedDate || todayStrVal;
+  const effectiveDate = selectedDate || weekDates[0] || todayStrVal;
   const tasksForDate = useMemo(() => {
     return tasks.filter((t) => (t.workPeriod?.start || t.applicationPeriod?.start) === effectiveDate);
   }, [tasks, effectiveDate]);
@@ -159,12 +170,19 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
 
         <div className="grid gap-6">
           <div className="space-y-2">
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setWeekOffset((o) => o - 1)} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm" aria-label="이전 주">← 이전</button>
-              <button type="button" onClick={() => setWeekOffset((o) => o + 1)} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 font-black transition-colors text-sm" aria-label="다음 주">다음 →</button>
-            </div>
-            <div className="overflow-x-auto">
-              <div className="grid grid-cols-7 gap-1 sm:gap-3 min-w-[280px]">
+            <div
+              className="overflow-hidden"
+              onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                if (touchStartX.current === null) return;
+                const diff = e.changedTouches[0].clientX - touchStartX.current;
+                if (Math.abs(diff) > 50) {
+                  handleCalendarSwipe(diff < 0 ? 'next' : 'prev');
+                }
+                touchStartX.current = null;
+              }}
+            >
+              <div className="grid grid-cols-5 gap-1 sm:gap-3">
               {weekDates.map((d) => {
                 const c = dateCounts[d] || { total: 0, done: 0 };
                 const isSelected = effectiveDate === d;
