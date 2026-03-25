@@ -107,7 +107,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       await upsertPartTimeJobRequest(updated);
       setJobRequests((prev) => prev.map((r) => (r.id === jr.id ? updated : r)));
       if (jr.applicantUserId && addNotif) {
-        addNotif(jr.applicantUserId, 'approval', '작업의뢰 승인', `[${jr.title}] 작업의뢰가 승인되었습니다. 프리랜서 워크페이스 → 알바의뢰 (광고주한정) 탭에서 결제를 진행해 주세요.`, '프리랜서 워크페이스 → 알바의뢰 탭에서 결제를 진행해 주세요.');
+        addNotif(jr.applicantUserId, 'approval', '작업의뢰 승인', `[${jr.title}] 작업의뢰가 승인되었습니다. 프리랜서 워크스페이스 → 알바의뢰 (광고주한정) 탭에서 결제를 진행해 주세요.`, '프리랜서 워크스페이스 → 알바의뢰 탭에서 결제를 진행해 주세요.');
       }
       alert('승인되었습니다. 신청자에게 알림이 전송되었습니다.');
     } catch (e) {
