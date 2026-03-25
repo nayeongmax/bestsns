@@ -167,22 +167,22 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
           </div>
         </div>
 
-        <div className="flex flex-row gap-3 w-full md:w-auto">
-          <div className="bg-gray-50 p-3 sm:p-5 rounded-[20px] sm:rounded-[32px] flex items-center gap-2 sm:gap-4 flex-1">
-            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-sm shrink-0">💰</div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic leading-tight">Points<span className="text-red-500 normal-case not-italic font-black hidden sm:inline"> (SNS전용)</span></p>
-              <h3 className="text-sm sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{(effectiveUser.points || 0).toLocaleString()} P</h3>
+        <div className="flex flex-row gap-2 sm:gap-3 w-full md:w-auto">
+          <div className="bg-gray-50 p-2.5 sm:p-5 rounded-[20px] sm:rounded-[32px] flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-sm sm:text-lg shadow-sm shrink-0">💰</div>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p className="hidden sm:block text-[10px] font-black text-gray-400 uppercase italic leading-tight">Points<span className="text-red-500 normal-case not-italic font-black"> (SNS전용)</span></p>
+              <h3 className="text-xs sm:text-lg font-black text-gray-900 italic truncate">{(effectiveUser.points || 0).toLocaleString()} P</h3>
             </div>
-            <Link to="/payment/point" className="bg-blue-600 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-black transition-all shrink-0">충전</Link>
+            <Link to="/payment/point" className="bg-blue-600 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-black transition-all shrink-0">충전</Link>
           </div>
-          <div className="bg-gray-50 p-3 sm:p-5 rounded-[20px] sm:rounded-[32px] flex items-center gap-2 sm:gap-4 flex-1">
-            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shadow-sm shrink-0">🎫</div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase italic leading-tight">Coupons</p>
-              <h3 className="text-sm sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{availableCouponCount} 장</h3>
+          <div className="bg-gray-50 p-2.5 sm:p-5 rounded-[20px] sm:rounded-[32px] flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-sm sm:text-lg shadow-sm shrink-0">🎫</div>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p className="hidden sm:block text-[10px] font-black text-gray-400 uppercase italic leading-tight">Coupons</p>
+              <h3 className="text-xs sm:text-lg font-black text-gray-900 italic truncate">{availableCouponCount} 장</h3>
             </div>
-            <Link to="/coupons" className="bg-gray-900 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-blue-600 transition-all shrink-0">내역</Link>
+            <Link to="/coupons" className="bg-gray-900 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-blue-600 transition-all shrink-0">내역</Link>
           </div>
         </div>
       </div>
@@ -197,7 +197,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
           <button
             key={mode.id}
             onClick={() => setActiveMainTab(mode.id as MainTab)}
-            className={`flex-1 py-3 sm:py-5 rounded-[16px] sm:rounded-[24px] font-black text-[12px] sm:text-[14px] md:text-[16px] transition-all duration-300 relative leading-snug ${
+            className={`flex-1 py-2 sm:py-5 rounded-[16px] sm:rounded-[24px] font-black text-[11px] sm:text-[14px] md:text-[16px] transition-all duration-300 relative leading-snug ${
               activeMainTab === mode.id
               ? 'bg-white shadow-xl scale-[1.02] ' + mode.color
               : 'text-gray-400 hover:text-gray-600'

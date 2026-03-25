@@ -170,17 +170,17 @@ const SellerDashboard: React.FC<Props> = ({
     <div className="space-y-10 animate-in fade-in duration-500">
       {/* 통계 카드 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
-        <div onClick={() => navigate('/profit-mgmt')} className="col-span-2 md:col-span-1 bg-gray-900 p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-xl text-white relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
-          <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest italic mb-1.5 relative z-10">누적 수익금 (구매확정 기준)</p>
-          <h4 className="text-2xl sm:text-4xl font-black italic tracking-tighter relative z-10">₩{stats.annualRevenue.toLocaleString()}</h4>
+        <div onClick={() => navigate('/profit-mgmt')} className="col-span-2 md:col-span-1 bg-gray-900 p-4 sm:p-8 rounded-[20px] sm:rounded-[40px] shadow-xl text-white relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
+          <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest italic mb-1 relative z-10">누적 수익금 (구매확정 기준)</p>
+          <h4 className="text-xl sm:text-4xl font-black italic tracking-tighter relative z-10">₩{stats.annualRevenue.toLocaleString()}</h4>
           <div className="absolute top-0 right-0 p-6 opacity-10"><svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg></div>
         </div>
-        <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1.5"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">진행 중인 주문</p><h4 className="text-2xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.activeOrders} <span className="text-sm font-bold text-gray-300">건</span></h4></div>
-        <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1.5"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">내 등록 상품</p><h4 className="text-2xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.productCount} <span className="text-sm font-bold text-gray-300">개</span></h4></div>
-        <div className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1.5">
-           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">전문가 만족도</p>
+        <div className="bg-white p-4 sm:p-8 rounded-[20px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1"><p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest italic">진행 중인 주문</p><h4 className="text-xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.activeOrders} <span className="text-xs sm:text-sm font-bold text-gray-300">건</span></h4></div>
+        <div className="bg-white p-4 sm:p-8 rounded-[20px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1"><p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest italic">내 등록 상품</p><h4 className="text-xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.productCount} <span className="text-xs sm:text-sm font-bold text-gray-300">개</span></h4></div>
+        <div className="bg-white p-4 sm:p-8 rounded-[20px] sm:rounded-[40px] shadow-sm border border-gray-100 space-y-1">
+           <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest italic">전문가 만족도</p>
            <div className="flex items-center gap-2">
-              <h4 className="text-2xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.avgRating}</h4>
+              <h4 className="text-xl sm:text-3xl font-black text-gray-900 italic tracking-tighter">{stats.avgRating}</h4>
               <div className="flex text-yellow-400 text-sm">
                 {Array.from({length: 5}).map((_, i) => (
                   <span key={i}>{i < Math.floor(Number(stats.avgRating)) ? '★' : '☆'}</span>
@@ -196,7 +196,7 @@ const SellerDashboard: React.FC<Props> = ({
           { id: 'my-products', label: '📦 내 판매 상품 관리', icon: '💎' }, 
           { id: 'ads', label: '🚀 광고/노출 신청', icon: '⚡' } 
         ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 py-5 rounded-[24px] text-[16px] font-black transition-all ${activeTab === tab.id ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400 hover:text-gray-900'}`}>{tab.label}</button>
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 py-2.5 sm:py-5 rounded-[18px] sm:rounded-[24px] text-[11px] sm:text-[14px] md:text-[16px] font-black transition-all leading-snug ${activeTab === tab.id ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400 hover:text-gray-900'}`}>{tab.label}</button>
         ))}
       </div>
 
@@ -215,17 +215,17 @@ const SellerDashboard: React.FC<Props> = ({
             </div>
 
             <div className="flex flex-col gap-3 px-2 sm:px-4">
-              <div className="flex flex-wrap gap-2">
-                <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm gap-1">
-                  {isAdmin && <button onClick={() => setActiveOrderCategory('sns')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all ${effectiveOrderCategory === 'sns' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>SNS 판매</button>}
-                  {isAdmin && <button onClick={() => setActiveOrderCategory('channel')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all ${effectiveOrderCategory === 'channel' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>채널 판매</button>}
-                  <button onClick={() => setActiveOrderCategory('store')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all ${effectiveOrderCategory === 'store' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>스토어 판매</button>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm gap-1 shrink-0">
+                  {isAdmin && <button onClick={() => setActiveOrderCategory('sns')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all whitespace-nowrap ${effectiveOrderCategory === 'sns' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>SNS 판매</button>}
+                  {isAdmin && <button onClick={() => setActiveOrderCategory('channel')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all whitespace-nowrap ${effectiveOrderCategory === 'channel' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>채널 판매</button>}
+                  <button onClick={() => setActiveOrderCategory('store')} className={`px-3 sm:px-5 py-2 rounded-lg text-[12px] font-black transition-all whitespace-nowrap ${effectiveOrderCategory === 'store' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}>스토어 판매</button>
                 </div>
-                <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="px-3 sm:px-5 py-2 rounded-xl text-[12px] font-black bg-white border border-gray-100 outline-none shadow-sm cursor-pointer">
+                <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="px-3 sm:px-5 py-2 rounded-xl text-[12px] font-black bg-white border border-gray-100 outline-none shadow-sm cursor-pointer shrink-0">
                   <option>전체</option>
                   {availableMonths.map(m => <option key={m} value={m}>{m}월</option>)}
                 </select>
-                <div className="flex gap-1">
+                <div className="flex gap-1 shrink-0">
                   {['all', 'trading', 'done'].map((f) => (
                     <button key={f} onClick={() => setOrderFilter(f as any)} className={`px-3 sm:px-5 py-2 rounded-xl text-[12px] font-black transition-all border whitespace-nowrap ${orderFilter === f ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'bg-white text-gray-400 border-gray-100'}`}>{f === 'all' ? '전체내역' : f === 'trading' ? '거래중' : '거래완료'}</button>
                   ))}
