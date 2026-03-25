@@ -169,35 +169,35 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
 
   return (
     <div className="max-w-[1400px] mx-auto pb-32 space-y-10 px-4 animate-in fade-in duration-500">
-      <div className="flex flex-col lg:flex-row justify-between items-center bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 gap-8">
-        <div className="space-y-3 w-full lg:w-auto text-center lg:text-left">
-           <h2 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">수익 관리</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 sm:p-8 lg:p-10 rounded-[32px] sm:rounded-[48px] shadow-sm border border-gray-100 gap-4 sm:gap-8">
+        <div className="space-y-1">
+           <h2 className="text-2xl sm:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8">수익 관리</h2>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-6 w-full lg:w-auto">
-           <div className="text-right shrink-0">
-              <p className="text-[11px] font-black text-gray-400 uppercase italic leading-none mb-1">실제 출금 가능 순수익</p>
-              <h3 className="text-4xl font-black text-blue-600 italic tracking-tighter">₩ {stats.availableOrders.reduce((sum, o) => sum + calculateDetailedProfit(o.price).netProfit, 0).toLocaleString()}</h3>
+        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 w-full sm:w-auto">
+           <div className="text-left sm:text-right shrink-0">
+              <p className="text-[10px] font-black text-gray-400 uppercase italic leading-none mb-1">출금 가능 순수익</p>
+              <h3 className="text-xl sm:text-3xl font-black text-blue-600 italic tracking-tighter">₩{stats.availableOrders.reduce((sum, o) => sum + calculateDetailedProfit(o.price).netProfit, 0).toLocaleString()}</h3>
            </div>
-           <button onClick={() => { if(stats.availablePrice > 0) setShowApplyModal(true); else alert('신청 가능한 금액이 없습니다.'); }} className="w-full sm:w-auto bg-gray-900 text-white px-12 py-5 rounded-[24px] font-black text-[15px] shadow-2xl hover:bg-blue-600 transition-all italic uppercase tracking-widest active:scale-95">수익금 출금 신청 🚀</button>
+           <button onClick={() => { if(stats.availablePrice > 0) setShowApplyModal(true); else alert('신청 가능한 금액이 없습니다.'); }} className="shrink-0 bg-gray-900 text-white px-4 py-2.5 sm:px-12 sm:py-5 rounded-[16px] sm:rounded-[24px] font-black text-[12px] sm:text-[15px] shadow-xl hover:bg-blue-600 transition-all italic uppercase tracking-widest active:scale-95 whitespace-nowrap">출금 신청 🚀</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 relative group overflow-hidden"><p className="text-[11px] font-black text-gray-400 uppercase italic mb-3">누적판매액 (확정기준)</p><h4 className="text-3xl font-black text-gray-900 italic tracking-tighter">₩{stats.cumulativePrice.toLocaleString()}</h4></div>
-        <div className="bg-gray-50 p-8 rounded-[48px] border border-gray-200"><p className="text-[11px] font-black text-gray-400 uppercase italic mb-3">지급완료 (판매금액)</p><h4 className="text-3xl font-black text-gray-400 italic tracking-tighter">₩{stats.withdrawnPrice.toLocaleString()}</h4></div>
-        <div className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 group hover:border-orange-100 transition-all"><p className="text-[11px] font-black text-orange-400 uppercase italic mb-3">지급예정 (구매확정+신청O)</p><h4 className="text-3xl font-black text-gray-900 italic tracking-tighter">₩{stats.pendingPrice.toLocaleString()}</h4></div>
-        <div className="bg-blue-600 p-8 rounded-[48px] shadow-2xl text-white relative overflow-hidden"><p className="text-[11px] font-black text-blue-200 uppercase italic mb-3">신청가능 (구매확정+신청X)</p><h4 className="text-4xl font-black italic tracking-tighter">₩{stats.availablePrice.toLocaleString()}</h4></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+        <div className="bg-white p-4 sm:p-8 rounded-[24px] sm:rounded-[48px] shadow-sm border border-gray-100 relative group overflow-hidden"><p className="text-[9px] sm:text-[11px] font-black text-gray-400 uppercase italic mb-1.5 sm:mb-3">누적판매액</p><h4 className="text-lg sm:text-3xl font-black text-gray-900 italic tracking-tighter">₩{stats.cumulativePrice.toLocaleString()}</h4></div>
+        <div className="bg-gray-50 p-4 sm:p-8 rounded-[24px] sm:rounded-[48px] border border-gray-200"><p className="text-[9px] sm:text-[11px] font-black text-gray-400 uppercase italic mb-1.5 sm:mb-3">지급완료</p><h4 className="text-lg sm:text-3xl font-black text-gray-400 italic tracking-tighter">₩{stats.withdrawnPrice.toLocaleString()}</h4></div>
+        <div className="bg-white p-4 sm:p-8 rounded-[24px] sm:rounded-[48px] shadow-sm border border-gray-100 group hover:border-orange-100 transition-all"><p className="text-[9px] sm:text-[11px] font-black text-orange-400 uppercase italic mb-1.5 sm:mb-3">지급예정</p><h4 className="text-lg sm:text-3xl font-black text-gray-900 italic tracking-tighter">₩{stats.pendingPrice.toLocaleString()}</h4></div>
+        <div className="bg-blue-600 p-4 sm:p-8 rounded-[24px] sm:rounded-[48px] shadow-2xl text-white relative overflow-hidden"><p className="text-[9px] sm:text-[11px] font-black text-blue-200 uppercase italic mb-1.5 sm:mb-3">신청가능</p><h4 className="text-lg sm:text-4xl font-black italic tracking-tighter">₩{stats.availablePrice.toLocaleString()}</h4></div>
       </div>
 
-      <div className="bg-white p-10 rounded-[64px] border border-gray-100 shadow-sm space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6 px-4">
-           <div><h3 className="text-2xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-200 underline-offset-4">수수료 분석 리포트</h3><p className="text-[11px] font-bold text-gray-400 uppercase mt-1 italic">구매 확정 일자 기준 매출 분석 그래프</p></div>
+      <div className="bg-white p-4 sm:p-8 lg:p-10 rounded-[28px] sm:rounded-[48px] lg:rounded-[64px] border border-gray-100 shadow-sm space-y-4 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-6">
+           <div><h3 className="text-lg sm:text-2xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-200 underline-offset-4">수수료 분석 리포트</h3><p className="text-[10px] font-bold text-gray-400 uppercase mt-1 italic">구매 확정 일자 기준 매출 분석 그래프</p></div>
            <div className="flex p-1.5 bg-gray-100 rounded-full shadow-inner border border-gray-200/50">
-              <button onClick={() => setChartTab('daily')} className={`px-10 py-3 rounded-full text-[12px] font-black transition-all ${chartTab === 'daily' ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400'}`}>일별</button>
-              <button onClick={() => setChartTab('monthly')} className={`px-10 py-3 rounded-full text-[12px] font-black transition-all ${chartTab === 'monthly' ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400'}`}>월별</button>
+              <button onClick={() => setChartTab('daily')} className={`px-5 sm:px-10 py-2 sm:py-3 rounded-full text-[12px] font-black transition-all ${chartTab === 'daily' ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400'}`}>일별</button>
+              <button onClick={() => setChartTab('monthly')} className={`px-5 sm:px-10 py-2 sm:py-3 rounded-full text-[12px] font-black transition-all ${chartTab === 'monthly' ? 'bg-white text-blue-600 shadow-md' : 'text-gray-400'}`}>월별</button>
            </div>
         </div>
-        <div className="h-[400px] w-full pt-10 px-4">
+        <div className="h-[200px] sm:h-[300px] lg:h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             {chartTab === 'daily' ? (
               <AreaChart data={chartData}>
@@ -221,31 +221,31 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
         </div>
       </div>
 
-      <div className="space-y-6">
-         <div className="flex flex-col md:flex-row justify-between items-center gap-4 px-4">
-            <div className="flex bg-white p-2 rounded-[32px] border border-gray-100 shadow-sm w-fit">
-               <button onClick={() => setActiveBottomTab('withdrawals')} className={`px-10 py-4 rounded-[24px] text-[15px] font-black transition-all ${activeBottomTab === 'withdrawals' ? 'bg-gray-900 text-white shadow-xl' : 'text-gray-400 hover:text-gray-900'}`}>📜 출금 신청 히스토리</button>
-               <button onClick={() => setActiveBottomTab('invoices')} className={`px-10 py-4 rounded-[24px] text-[15px] font-black transition-all ${activeBottomTab === 'invoices' ? 'bg-gray-900 text-white shadow-xl' : 'text-gray-400 hover:text-gray-900'}`}>🧾 월별 수수료 매출 증빙</button>
+      <div className="space-y-4 sm:space-y-6">
+         <div className="flex flex-col gap-3 px-1">
+            <div className="flex bg-white p-1.5 sm:p-2 rounded-[24px] sm:rounded-[32px] border border-gray-100 shadow-sm w-full sm:w-fit">
+               <button onClick={() => setActiveBottomTab('withdrawals')} className={`flex-1 sm:flex-none px-3 sm:px-10 py-2.5 sm:py-4 rounded-[18px] sm:rounded-[24px] text-[11px] sm:text-[15px] font-black transition-all ${activeBottomTab === 'withdrawals' ? 'bg-gray-900 text-white shadow-xl' : 'text-gray-400 hover:text-gray-900'}`}>📜 출금 히스토리</button>
+               <button onClick={() => setActiveBottomTab('invoices')} className={`flex-1 sm:flex-none px-3 sm:px-10 py-2.5 sm:py-4 rounded-[18px] sm:rounded-[24px] text-[11px] sm:text-[15px] font-black transition-all ${activeBottomTab === 'invoices' ? 'bg-gray-900 text-white shadow-xl' : 'text-gray-400 hover:text-gray-900'}`}>🧾 수수료 매출 증빙</button>
             </div>
             <div className="flex gap-2">
-               <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="px-6 py-4 bg-white border border-gray-100 rounded-2xl font-black text-sm shadow-sm outline-none cursor-pointer">
+               <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-4 bg-white border border-gray-100 rounded-xl sm:rounded-2xl font-black text-sm shadow-sm outline-none cursor-pointer">
                   <option>전체 기간</option>
                   {availableMonths.map(m => <option key={m} value={m}>{m}월</option>)}
                </select>
-               <button onClick={() => setShowSettlementGuideModal(true)} className="bg-blue-50 text-blue-600 px-8 py-4 rounded-[24px] text-[14px] font-black italic hover:bg-blue-600 hover:text-white transition-all shadow-sm border border-blue-100">정산 정책 안내 ⓘ</button>
+               <button onClick={() => setShowSettlementGuideModal(true)} className="shrink-0 bg-blue-50 text-blue-600 px-3 sm:px-8 py-2.5 sm:py-4 rounded-xl sm:rounded-[24px] text-[11px] sm:text-[14px] font-black italic hover:bg-blue-600 hover:text-white transition-all shadow-sm border border-blue-100">정산 정책 ⓘ</button>
             </div>
          </div>
 
-         <div className="bg-white rounded-[60px] shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
+         <div className="bg-white rounded-[32px] sm:rounded-[60px] shadow-sm border border-gray-100 overflow-hidden min-h-[300px] sm:min-h-[500px]">
             {activeBottomTab === 'withdrawals' ? (
               <div className="flex flex-col">
-                <div className="p-10 bg-gray-50/30 border-b border-gray-100 flex gap-4 overflow-x-auto no-scrollbar">
+                <div className="p-4 sm:p-10 bg-gray-50/30 border-b border-gray-100 flex gap-2 sm:gap-4 overflow-x-auto no-scrollbar">
                   {['전체', '신청 가능', '지급 예정', '지급 완료'].map(f => (
-                    <button key={f} onClick={() => setWithdrawalFilter(f as any)} className={`px-8 py-3 rounded-full text-[13px] font-black transition-all border shrink-0 ${withdrawalFilter === f ? 'bg-black text-white border-black shadow-lg scale-105' : 'bg-white text-gray-400 border-gray-200'}`}>{f}</button>
+                    <button key={f} onClick={() => setWithdrawalFilter(f as any)} className={`px-4 sm:px-8 py-2 sm:py-3 rounded-full text-[11px] sm:text-[13px] font-black transition-all border shrink-0 ${withdrawalFilter === f ? 'bg-black text-white border-black shadow-lg scale-105' : 'bg-white text-gray-400 border-gray-200'}`}>{f}</button>
                   ))}
                 </div>
-                
-                <div className="px-10 py-5 bg-gray-50 border-b border-gray-100 flex items-center text-[11px] font-black text-gray-400 italic">
+
+                <div className="hidden sm:flex px-10 py-5 bg-gray-50 border-b border-gray-100 items-center text-[11px] font-black text-gray-400 italic">
                   <div className="w-[12%] text-center">진행상태</div>
                   <div className="flex-1 px-10">상품정보 및 주문 고유번호</div>
                   <div className="w-[15%] text-right">판매 금액</div>
@@ -281,20 +281,38 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
                       const statusColor = isCan ? 'bg-orange-50 text-orange-500' : (item.statusLabel === '지급 완료' ? 'bg-green-50 text-green-500' : 'bg-blue-600 text-white animate-pulse');
                       
                       return (
-                        <div key={idx} className="p-10 flex items-center hover:bg-gray-50/50 transition-all group">
-                          <div className="w-[12%] flex justify-center">
-                            <span className={`w-28 text-center py-2.5 rounded-xl text-[11px] font-black italic uppercase shadow-sm ${statusColor}`}>{item.statusLabel}</span>
+                        <div key={idx} className="hover:bg-gray-50/50 transition-all group">
+                          {/* 모바일 카드 */}
+                          <div className="sm:hidden p-4 flex gap-3">
+                            <span className={`shrink-0 px-2.5 py-1.5 rounded-xl text-[10px] font-black italic uppercase shadow-sm h-fit ${statusColor}`}>{item.statusLabel}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] text-gray-400 font-bold italic">#{item.id}</p>
+                              <h4 className="text-sm font-black text-gray-800 truncate italic">{item.productName}</h4>
+                              <p className="text-[11px] text-gray-400 mt-0.5">{item.confirmedAt}</p>
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-sm font-black text-gray-500">₩{item.price.toLocaleString()}</span>
+                                <div onClick={() => setShowReceiptOrder(item)} className="cursor-pointer bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 hover:bg-blue-600 hover:text-white transition-all">
+                                  <p className="text-[10px] font-black text-blue-400">순수익: ₩{calculateDetailedProfit(item.price).netProfit.toLocaleString()}원</p>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1 px-10 min-w-0">
-                            <p className="text-[15px] text-gray-900 font-black mb-1 italic tracking-tight underline underline-offset-4 decoration-gray-900">#{item.id}</p>
-                            <h4 className="text-[17px] font-black text-gray-800 truncate group-hover:text-blue-600 transition-colors italic">{item.productName}</h4>
-                          </div>
-                          <div className="w-[15%] text-right"><p className="text-[15px] font-black text-gray-400 italic">₩{item.price.toLocaleString()}</p></div>
-                          <div className="w-[18%] text-center"><p className="text-[13px] font-bold text-gray-400 italic">{item.confirmedAt}</p></div>
-                          <div className="w-[15%] text-right">
-                            <div onClick={() => setShowReceiptOrder(item)} className="cursor-pointer bg-blue-50/30 px-6 py-4 rounded-[24px] border border-transparent hover:border-blue-200 hover:bg-white transition-all shadow-sm">
-                               <p className="text-[10px] font-black text-blue-400 uppercase italic text-right mb-1">정산 영수증 ⓘ</p>
-                               <p className="text-2xl font-black text-blue-600 italic tracking-tighter text-right">₩{calculateDetailedProfit(item.price).netProfit.toLocaleString()}원</p>
+                          {/* 데스크톱 행 */}
+                          <div className="hidden sm:flex p-10 items-center">
+                            <div className="w-[12%] flex justify-center">
+                              <span className={`w-28 text-center py-2.5 rounded-xl text-[11px] font-black italic uppercase shadow-sm ${statusColor}`}>{item.statusLabel}</span>
+                            </div>
+                            <div className="flex-1 px-10 min-w-0">
+                              <p className="text-[15px] text-gray-900 font-black mb-1 italic tracking-tight underline underline-offset-4 decoration-gray-900">#{item.id}</p>
+                              <h4 className="text-[17px] font-black text-gray-800 truncate group-hover:text-blue-600 transition-colors italic">{item.productName}</h4>
+                            </div>
+                            <div className="w-[15%] text-right"><p className="text-[15px] font-black text-gray-400 italic">₩{item.price.toLocaleString()}</p></div>
+                            <div className="w-[18%] text-center"><p className="text-[13px] font-bold text-gray-400 italic">{item.confirmedAt}</p></div>
+                            <div className="w-[15%] text-right">
+                              <div onClick={() => setShowReceiptOrder(item)} className="cursor-pointer bg-blue-50/30 px-6 py-4 rounded-[24px] border border-transparent hover:border-blue-200 hover:bg-white transition-all shadow-sm">
+                                 <p className="text-[10px] font-black text-blue-400 uppercase italic text-right mb-1">정산 영수증 ⓘ</p>
+                                 <p className="text-2xl font-black text-blue-600 italic tracking-tighter text-right">₩{calculateDetailedProfit(item.price).netProfit.toLocaleString()}원</p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -308,24 +326,23 @@ const ProfitManagement: React.FC<Props> = ({ user, storeOrders }) => {
                  {monthlyInvoices.length === 0 ? (
                     <div className="py-40 text-center text-gray-300 font-black italic text-xl opacity-50">확정된 매출 데이터가 없습니다.</div>
                  ) : monthlyInvoices.map(([month, data]) => (
-                   <div key={month} className="p-10 flex flex-col lg:flex-row justify-between items-center hover:bg-gray-50/50 transition-all gap-8">
-                      <div className="flex items-center gap-16 w-full lg:w-auto">
-                        <div className="bg-gray-900 text-white w-28 h-28 rounded-3xl flex flex-col items-center justify-center shadow-2xl shrink-0 border-4 border-white">
-                           <span className="text-[10px] font-black uppercase opacity-50">{month.split('년')[0]}</span>
-                           <span className="text-3xl font-black italic tracking-tighter">{month.split('년')[1].trim()}</span>
+                   <div key={month} className="p-4 sm:p-10 flex flex-col gap-4 hover:bg-gray-50/50 transition-all">
+                      <div className="flex items-center gap-4 sm:gap-16">
+                        <div className="bg-gray-900 text-white w-16 h-16 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center shadow-xl shrink-0">
+                           <span className="text-[9px] font-black uppercase opacity-50">{month.split('년')[0]}</span>
+                           <span className="text-lg sm:text-3xl font-black italic tracking-tighter">{month.split('년')[1].trim()}</span>
                         </div>
-                        <div className="space-y-2">
-                          <p className="text-[19px] font-black text-gray-800 mb-1 italic">수수료 세금계산서 발행 합계 <span className="text-rose-500 text-3xl ml-3 tracking-tighter">₩{data.fee.toLocaleString()}원</span></p>
-                          <div className="flex gap-6 text-[13px] font-bold text-gray-400 italic">
-                            <span>해당 월 확정 매출: ₩{data.sales.toLocaleString()}</span>
-                            <span className="opacity-20">|</span>
-                            <span>정산 순수익 합계: ₩{data.profit.toLocaleString()}</span>
+                        <div className="space-y-1.5 min-w-0">
+                          <p className="text-sm sm:text-[19px] font-black text-gray-800 italic">수수료 합계 <span className="text-rose-500 text-base sm:text-3xl ml-1 sm:ml-3 tracking-tighter">₩{data.fee.toLocaleString()}원</span></p>
+                          <div className="flex flex-wrap gap-2 sm:gap-6 text-[11px] sm:text-[13px] font-bold text-gray-400 italic">
+                            <span>확정 매출: ₩{data.sales.toLocaleString()}</span>
+                            <span>순수익: ₩{data.profit.toLocaleString()}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-2 justify-end w-full lg:max-w-xl">
+                      <div className="flex flex-wrap gap-2">
                         {data.orders.map(o => (
-                          <button key={o.id} onClick={() => setShowReceiptOrder(o)} className="px-5 py-2.5 bg-white border border-gray-100 text-gray-900 rounded-2xl text-[12px] font-black hover:bg-rose-500 hover:text-white transition-all shadow-sm italic">
+                          <button key={o.id} onClick={() => setShowReceiptOrder(o)} className="px-3 sm:px-5 py-1.5 sm:py-2.5 bg-white border border-gray-100 text-gray-900 rounded-xl sm:rounded-2xl text-[11px] sm:text-[12px] font-black hover:bg-rose-500 hover:text-white transition-all shadow-sm italic">
                             #{o.id.slice(-8)} | ₩{o.price.toLocaleString()}
                           </button>
                         ))}
