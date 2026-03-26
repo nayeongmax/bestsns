@@ -384,7 +384,46 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                 <button onClick={() => startEditChannel(null)} className="bg-blue-600 text-white px-10 py-4 rounded-[24px] font-black text-sm shadow-xl hover:bg-black transition-all italic tracking-widest uppercase">+ 신규 채널 매물 등록</button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {/* 모바일: 가로형 리스트 카드 */}
+              <div className="sm:hidden space-y-2">
+                {channels.map(ch => (
+                  <div key={ch.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
+                    <div className="flex items-stretch min-h-[96px]">
+                      <div className="relative w-24 flex-shrink-0 bg-gray-50">
+                        <img src={ch.thumbnail} className="w-full h-full object-cover" alt="thumb" />
+                        <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
+                          {ch.isApproved && <span className="bg-[#FFD600] text-gray-900 text-[8px] font-black px-1.5 py-0.5 rounded italic uppercase shadow">승인</span>}
+                          {ch.isHot && <span className="bg-[#FF4D4D] text-white text-[8px] font-black px-1.5 py-0.5 rounded italic uppercase shadow">HOT</span>}
+                        </div>
+                        {ch.isSoldOut && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="text-white text-[9px] font-black italic">완료</span></div>}
+                      </div>
+                      <div className="flex-1 min-w-0 px-3 py-2.5 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">{ch.platform}</span>
+                            <span className="text-[8px] font-bold text-gray-300">#번호.{ch.id.slice(-4).toUpperCase()}</span>
+                          </div>
+                          <p className="font-black text-gray-900 text-[13px] leading-tight line-clamp-2">{ch.title}</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] text-gray-500 font-bold">구독 {ch.subscribers.toLocaleString()}명</span>
+                          <span className="text-[13px] font-black text-blue-600 italic">₩{(ch.price / 10000).toLocaleString()}만</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 border-t border-gray-50">
+                      <button onClick={() => startEditChannel(ch)} className="py-2.5 bg-gray-900 text-white font-black text-[10px] hover:bg-blue-600 transition-all italic uppercase tracking-tighter">수정하기</button>
+                      <button onClick={() => setChannels(prev => prev.map(c => c.id === ch.id ? {...c, isSoldOut: !c.isSoldOut} : c))} className={`py-2.5 font-black text-[10px] text-white transition-all italic uppercase tracking-tighter ${ch.isSoldOut ? 'bg-green-500' : 'bg-orange-500'}`}>
+                        {ch.isSoldOut ? '판매중' : '판매완료'}
+                      </button>
+                      <button onClick={() => { showConfirm({ title: '채널 삭제', description: '정말 삭제하시겠습니까?', dangerLine: '삭제 후에는 복구할 수 없습니다.', confirmLabel: '삭제하기', cancelLabel: '취소', danger: true, onConfirm: async () => { try { await deleteChannelProduct(ch.id); setChannels(prev => prev.filter(c => c.id !== ch.id)); } catch (e) { console.error(e); showAlert({ description: '삭제에 실패했습니다.' }); } } }); }} className="py-2.5 bg-red-50 text-red-500 font-black text-[10px] hover:bg-red-100 transition-all italic uppercase">삭제</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 태블릿/데스크톱: 그리드 카드 */}
+              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {channels.map(ch => (
                   <div key={ch.id} className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-gray-100 group hover:-translate-y-2 transition-all relative">
                      <div className="relative aspect-[4/3] overflow-hidden bg-gray-50">
@@ -401,7 +440,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                            <span className="text-[9px] font-bold text-gray-300">#번호.{ch.id.slice(-4).toUpperCase()}</span>
                         </div>
                         <h3 className="font-black text-gray-900 mb-6 line-clamp-2 h-10 text-[15px] leading-tight group-hover:text-blue-600 transition-colors">{ch.title}</h3>
-                        
+
                         <div className="flex justify-between items-end border-t border-gray-50 pt-4 mb-6">
                            <div className="flex flex-col"><span className="text-[9px] text-gray-300 font-black uppercase tracking-widest italic mb-1">구독자</span><span className="text-[13px] font-black text-gray-700">{ch.subscribers.toLocaleString()}명</span></div>
                            <div className="flex flex-col items-end"><span className="text-[9px] text-gray-300 font-black uppercase tracking-widest italic mb-1">매매가</span><span className="text-lg font-black text-blue-600 italic tracking-tighter">₩{(ch.price / 10000).toLocaleString()}만</span></div>
@@ -414,7 +453,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                            </button>
                         </div>
                      </div>
-                     <button 
+                     <button
                       onClick={() => {
                         showConfirm({
                           title: '채널 삭제',
