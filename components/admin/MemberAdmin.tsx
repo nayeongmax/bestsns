@@ -206,28 +206,65 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-white p-2 rounded-[24px] flex gap-2 w-fit border border-gray-100 shadow-sm mx-4">
-        <button onClick={() => setActiveSubTab('list')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'list' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>전체 회원 데이터</button>
-        <button onClick={() => setActiveSubTab('seller')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'seller' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>판매자 승인 대기 ({pendingRequests.length})</button>
-        <button onClick={() => setActiveSubTab('freelancer')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'freelancer' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>프리랜서 승인 대기 ({pendingFreelancers.length})</button>
-        <button onClick={() => setActiveSubTab('grades')} className={`px-8 py-3 rounded-[18px] text-[12px] font-black transition-all ${activeSubTab === 'grades' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>등급 관리</button>
+      <div className="overflow-x-auto mx-0 md:mx-4" style={{WebkitOverflowScrolling: 'touch'}}>
+        <div className="bg-white p-1.5 rounded-2xl md:rounded-[24px] flex gap-1 w-max border border-gray-100 shadow-sm">
+          <button onClick={() => setActiveSubTab('list')} className={`shrink-0 whitespace-nowrap px-3 py-2 md:px-8 md:py-3 rounded-xl md:rounded-[18px] text-[10px] md:text-[12px] font-black transition-all ${activeSubTab === 'list' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>
+            <span className="md:hidden">회원</span>
+            <span className="hidden md:inline">전체 회원 데이터</span>
+          </button>
+          <button onClick={() => setActiveSubTab('seller')} className={`shrink-0 whitespace-nowrap px-3 py-2 md:px-8 md:py-3 rounded-xl md:rounded-[18px] text-[10px] md:text-[12px] font-black transition-all ${activeSubTab === 'seller' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>
+            <span className="md:hidden">판매자({pendingRequests.length})</span>
+            <span className="hidden md:inline">판매자 승인 대기 ({pendingRequests.length})</span>
+          </button>
+          <button onClick={() => setActiveSubTab('freelancer')} className={`shrink-0 whitespace-nowrap px-3 py-2 md:px-8 md:py-3 rounded-xl md:rounded-[18px] text-[10px] md:text-[12px] font-black transition-all ${activeSubTab === 'freelancer' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>
+            <span className="md:hidden">프리랜서({pendingFreelancers.length})</span>
+            <span className="hidden md:inline">프리랜서 승인 대기 ({pendingFreelancers.length})</span>
+          </button>
+          <button onClick={() => setActiveSubTab('grades')} className={`shrink-0 whitespace-nowrap px-3 py-2 md:px-8 md:py-3 rounded-xl md:rounded-[18px] text-[10px] md:text-[12px] font-black transition-all ${activeSubTab === 'grades' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}>
+            <span className="md:hidden">등급</span>
+            <span className="hidden md:inline">등급 관리</span>
+          </button>
+        </div>
       </div>
 
       {activeSubTab === 'list' && (
         <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex gap-2">
+          <div className="p-4 md:p-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-6">
+            <div className="flex gap-1 md:gap-2 w-full md:w-auto">
                {(['all', 'buyer', 'seller', 'freelancer'] as const).map(type => (
-                 <button key={type} onClick={() => setUserTypeFilter(type)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all border ${userTypeFilter === type ? 'bg-gray-900 text-white' : 'bg-white text-gray-400 border-gray-100'}`}>
+                 <button key={type} onClick={() => setUserTypeFilter(type)} className={`flex-1 md:flex-none px-2 md:px-5 py-1.5 md:py-2 rounded-xl text-[10px] md:text-[11px] font-black transition-all border ${userTypeFilter === type ? 'bg-gray-900 text-white' : 'bg-white text-gray-400 border-gray-100'}`}>
                    {type === 'all' ? '전체' : type === 'buyer' ? '구매자' : type === 'seller' ? '판매자' : '프리랜서'}
                  </button>
                ))}
             </div>
-            <div className="flex items-center gap-3">
-               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="회원 검색" className="px-6 py-2 bg-gray-50 rounded-full font-bold text-xs outline-none w-64" />
+            <div className="flex items-center gap-3 w-full md:w-auto">
+               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="회원 검색" className="flex-1 md:w-64 px-4 py-2 bg-gray-50 rounded-full font-bold text-xs outline-none" />
             </div>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* 모바일: 컴팩트 카드 리스트 */}
+          <div className="md:hidden divide-y divide-gray-50">
+            {filteredMembers.map(m => (
+              <div key={m.id} className="flex items-center gap-2 px-3 py-2.5 hover:bg-blue-50/20">
+                <img src={m.profileImage} className="w-9 h-9 rounded-xl object-cover flex-shrink-0" alt="p" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[12px] font-black text-gray-900 truncate">{m.nickname}</p>
+                    <span className={`${resolveGrade(m)?.color || 'bg-gray-400'} text-white text-[8px] font-black px-1.5 py-0.5 rounded-full`}>{resolveGrade(m)?.name || '-'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 text-[9px] font-bold flex-wrap">
+                    <span className="text-blue-500">구매 ₩{(realTimeAmounts[m.id]?.purchase || 0).toLocaleString()}</span>
+                    <span className="text-orange-500">판매 ₩{(realTimeAmounts[m.id]?.sales || 0).toLocaleString()}</span>
+                    <span className="text-gray-400">{(m.points || 0).toLocaleString()}P</span>
+                  </div>
+                </div>
+                <button onClick={() => setEditingMember({ ...m })} className="shrink-0 px-3 py-1.5 bg-blue-600 text-white rounded-xl text-[10px] font-black">관리</button>
+              </div>
+            ))}
+          </div>
+
+          {/* 데스크톱: 테이블 */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
                <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase">
                  <tr>

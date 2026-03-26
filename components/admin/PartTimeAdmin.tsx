@@ -418,20 +418,20 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   return (
     <div className="space-y-10">
       {/* 누구나알바 서브 탭 */}
-      <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-2xl">
-        <button type="button" onClick={() => setAdminTab('estimate')} className={`px-6 py-3 rounded-xl font-black text-sm transition-all ${adminTab === 'estimate' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>
+      <div className="flex gap-1 p-1.5 bg-gray-900 rounded-2xl">
+        <button type="button" onClick={() => setAdminTab('estimate')} className={`flex-1 px-3 py-2.5 md:px-6 md:py-3 rounded-xl font-black text-[10px] md:text-sm transition-all whitespace-nowrap ${adminTab === 'estimate' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200'}`}>
           견적진행
         </button>
-        <button type="button" onClick={() => setAdminTab('freelancer')} className={`px-6 py-3 rounded-xl font-black text-sm transition-all ${adminTab === 'freelancer' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>
-          프리랜서모집
+        <button type="button" onClick={() => setAdminTab('freelancer')} className={`flex-1 px-3 py-2.5 md:px-6 md:py-3 rounded-xl font-black text-[10px] md:text-sm transition-all whitespace-nowrap ${adminTab === 'freelancer' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200'}`}>
+          프리랜서
           {needsSelectionTasks.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs">{needsSelectionTasks.length}</span>
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[9px]">{needsSelectionTasks.length}</span>
           )}
         </button>
-        <button type="button" onClick={() => setAdminTab('revenue')} className={`px-6 py-3 rounded-xl font-black text-sm transition-all ${adminTab === 'revenue' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>
-          수익탭
+        <button type="button" onClick={() => setAdminTab('revenue')} className={`flex-1 px-3 py-2.5 md:px-6 md:py-3 rounded-xl font-black text-[10px] md:text-sm transition-all whitespace-nowrap ${adminTab === 'revenue' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200'}`}>
+          수익
           {pendingWithdrawals.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs">{pendingWithdrawals.length}</span>
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[9px]">{pendingWithdrawals.length}</span>
           )}
         </button>
       </div>
