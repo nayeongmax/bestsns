@@ -170,6 +170,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
 
         <div className="grid gap-6">
           <div className="space-y-2">
+            {/* 데스크탑: 우측 이전/다음 버튼 */}
             <div className="hidden md:flex items-center justify-end gap-2 mb-1">
               <button
                 type="button"
@@ -184,6 +185,26 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                 aria-label="다음 주"
               >›</button>
             </div>
+
+            {/* 모바일: 이전/다음 화살표 + 주간 범위 표시 */}
+            <div className="flex md:hidden items-center justify-between mb-1">
+              <button
+                type="button"
+                onClick={() => handleCalendarSwipe('prev')}
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-white active:bg-emerald-50 active:border-emerald-400 text-gray-500 text-lg font-black"
+                aria-label="이전 주"
+              >‹</button>
+              <span className="text-xs font-bold text-gray-500">
+                {weekDates[0] ? `${weekDates[0].slice(5, 7)}/${weekDates[0].slice(8)}` : ''} – {weekDates[6] ? `${weekDates[6].slice(5, 7)}/${weekDates[6].slice(8)}` : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleCalendarSwipe('next')}
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-white active:bg-emerald-50 active:border-emerald-400 text-gray-500 text-lg font-black"
+                aria-label="다음 주"
+              >›</button>
+            </div>
+
             <div
               className="overflow-hidden"
               onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
@@ -196,7 +217,58 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                 touchStartX.current = null;
               }}
             >
-              <div className="grid grid-cols-7 gap-1 sm:gap-3">
+              {/* 모바일: 월~금 5칸 + 토·일 2칸 2행 레이아웃 */}
+              <div className="md:hidden space-y-1">
+                <div className="grid grid-cols-5 gap-1">
+                  {weekDates.slice(0, 5).map((d) => {
+                    const c = dateCounts[d] || { total: 0, done: 0 };
+                    const isSelected = effectiveDate === d;
+                    const dayLabel = `${d.slice(5, 7)}/${d.slice(8)}`;
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setSelectedDate(d)}
+                        className={`p-2 rounded-lg border text-left transition-all duration-200 min-w-0 ${
+                          isSelected
+                            ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
+                            : 'border-gray-200/80 bg-white'
+                        }`}
+                      >
+                        <p className="text-[11px] font-black text-gray-600">{dayLabel}</p>
+                        <p className="text-[10px] text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
+                        <p className="text-[10px] text-emerald-600 font-semibold leading-tight">완료 {c.done}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  {weekDates.slice(5, 7).map((d) => {
+                    const c = dateCounts[d] || { total: 0, done: 0 };
+                    const isSelected = effectiveDate === d;
+                    const dayLabel = `${d.slice(5, 7)}/${d.slice(8)}`;
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setSelectedDate(d)}
+                        className={`p-2 rounded-lg border text-left transition-all duration-200 min-w-0 ${
+                          isSelected
+                            ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
+                            : 'border-gray-200/80 bg-white'
+                        }`}
+                      >
+                        <p className="text-[11px] font-black text-gray-600">{dayLabel}</p>
+                        <p className="text-[10px] text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
+                        <p className="text-[10px] text-emerald-600 font-semibold leading-tight">완료 {c.done}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 데스크탑: 7칸 1행 레이아웃 (기존 유지) */}
+              <div className="hidden md:grid grid-cols-7 gap-3">
               {weekDates.map((d) => {
                 const c = dateCounts[d] || { total: 0, done: 0 };
                 const isSelected = effectiveDate === d;
@@ -206,15 +278,15 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                     key={d}
                     type="button"
                     onClick={() => setSelectedDate(d)}
-                    className={`p-2 sm:p-4 rounded-lg sm:rounded-xl border text-left transition-all duration-200 min-w-0 ${
+                    className={`p-4 rounded-xl border text-left transition-all duration-200 min-w-0 ${
                       isSelected
                         ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
                         : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
                     }`}
                   >
-                    <p className="text-[11px] sm:text-sm font-black text-gray-600">{dayLabel}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
-                    <p className="text-[10px] sm:text-xs text-emerald-600 font-semibold leading-tight">완료 {c.done}</p>
+                    <p className="text-sm font-black text-gray-600">{dayLabel}</p>
+                    <p className="text-xs text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
+                    <p className="text-xs text-emerald-600 font-semibold leading-tight">완료 {c.done}</p>
                   </button>
                 );
               })}
