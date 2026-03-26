@@ -121,54 +121,54 @@ const AiConsultAdmin: React.FC = () => {
   }, [sessions, allUserMessages]);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
-        <h3 className="text-3xl font-black text-gray-900 italic uppercase underline decoration-purple-500 underline-offset-8">
+        <h3 className="text-lg md:text-3xl font-black text-gray-900 italic uppercase underline decoration-purple-500 underline-offset-8">
           🤖 AI 상담 이력 및 통계
         </h3>
-        <button onClick={() => { loadSessions(); loadAllUserMessages(); }} className="px-6 py-3 bg-purple-600 text-white rounded-2xl font-black text-sm hover:bg-purple-700 transition-all">
+        <button onClick={() => { loadSessions(); loadAllUserMessages(); }} className="px-4 py-2 md:px-6 md:py-3 bg-purple-600 text-white rounded-2xl font-black text-xs md:text-sm hover:bg-purple-700 transition-all">
           새로고침
         </button>
       </div>
 
       {/* 필터 */}
-      <div className="bg-white p-6 rounded-[32px] border border-gray-100 flex flex-wrap gap-4">
+      <div className="bg-white p-4 md:p-6 rounded-xl md:rounded-[32px] border border-gray-100 flex flex-wrap gap-2 md:gap-4">
         <input
           type="text"
           placeholder="닉네임/ID 검색"
           value={filterUser}
           onChange={e => setFilterUser(e.target.value)}
-          className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-sm"
+          className="px-3 py-2 rounded-xl border border-gray-200 font-bold text-xs md:text-sm flex-1 min-w-[120px]"
         />
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-sm" />
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-sm" />
-        <button onClick={loadSessions} className="px-6 py-2 bg-gray-900 text-white rounded-xl font-black text-sm">적용</button>
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 font-bold text-xs md:text-sm" />
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 font-bold text-xs md:text-sm" />
+        <button onClick={loadSessions} className="px-4 py-2 bg-gray-900 text-white rounded-xl font-black text-xs md:text-sm">적용</button>
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-purple-50 p-8 rounded-[40px] border border-purple-100">
-          <p className="text-[11px] font-black text-purple-500 uppercase italic mb-2">총 상담 세션</p>
-          <p className="text-3xl font-black text-purple-700 italic">{stats.totalSessions.toLocaleString()}회</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+        <div className="bg-purple-50 p-4 md:p-8 rounded-2xl md:rounded-[40px] border border-purple-100">
+          <p className="text-[9px] md:text-[11px] font-black text-purple-500 uppercase italic mb-1 md:mb-2">총 상담 세션</p>
+          <p className="text-xl md:text-3xl font-black text-purple-700 italic">{stats.totalSessions.toLocaleString()}회</p>
         </div>
-        <div className="bg-white p-8 rounded-[40px] border border-gray-100">
-          <p className="text-[11px] font-black text-gray-400 uppercase italic mb-2">총 메시지</p>
-          <p className="text-3xl font-black text-gray-900 italic">{stats.totalMessages.toLocaleString()}건</p>
+        <div className="bg-white p-4 md:p-8 rounded-2xl md:rounded-[40px] border border-gray-100">
+          <p className="text-[9px] md:text-[11px] font-black text-gray-400 uppercase italic mb-1 md:mb-2">총 메시지</p>
+          <p className="text-xl md:text-3xl font-black text-gray-900 italic">{stats.totalMessages.toLocaleString()}건</p>
         </div>
-        <div className="bg-white p-8 rounded-[40px] border border-gray-100">
-          <p className="text-[11px] font-black text-gray-400 uppercase italic mb-2">참여 회원 수</p>
-          <p className="text-3xl font-black text-gray-900 italic">{stats.userCount}명</p>
+        <div className="bg-white p-4 md:p-8 rounded-2xl md:rounded-[40px] border border-gray-100">
+          <p className="text-[9px] md:text-[11px] font-black text-gray-400 uppercase italic mb-1 md:mb-2">참여 회원 수</p>
+          <p className="text-xl md:text-3xl font-black text-gray-900 italic">{stats.userCount}명</p>
         </div>
-        <div className="bg-white p-8 rounded-[40px] border border-gray-100">
-          <p className="text-[11px] font-black text-gray-400 uppercase italic mb-2">비로그인 세션</p>
-          <p className="text-3xl font-black text-gray-900 italic">{stats.guestCount}회</p>
+        <div className="bg-white p-4 md:p-8 rounded-2xl md:rounded-[40px] border border-gray-100">
+          <p className="text-[9px] md:text-[11px] font-black text-gray-400 uppercase italic mb-1 md:mb-2">비로그인 세션</p>
+          <p className="text-xl md:text-3xl font-black text-gray-900 italic">{stats.guestCount}회</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
         {/* 인기 질문 Top 10 */}
-        <div className="bg-white rounded-[48px] p-8 border border-gray-100 shadow-sm">
-          <h4 className="text-lg font-black text-gray-900 mb-6 italic">📊 인기 질문 Top 10</h4>
+        <div className="bg-white rounded-2xl md:rounded-[48px] p-4 md:p-8 border border-gray-100 shadow-sm">
+          <h4 className="text-sm md:text-lg font-black text-gray-900 mb-4 md:mb-6 italic">📊 인기 질문 Top 10</h4>
           {stats.topQuestions.length === 0 ? (
             <p className="text-gray-400 font-bold italic">데이터 없음</p>
           ) : (
@@ -187,8 +187,8 @@ const AiConsultAdmin: React.FC = () => {
         </div>
 
         {/* 상담 많은 회원 Top 10 */}
-        <div className="bg-white rounded-[48px] p-8 border border-gray-100 shadow-sm">
-          <h4 className="text-lg font-black text-gray-900 mb-6 italic">👤 상담 이용 회원 Top 10</h4>
+        <div className="bg-white rounded-2xl md:rounded-[48px] p-4 md:p-8 border border-gray-100 shadow-sm">
+          <h4 className="text-sm md:text-lg font-black text-gray-900 mb-4 md:mb-6 italic">👤 상담 이용 회원 Top 10</h4>
           {stats.topUsers.length === 0 ? (
             <p className="text-gray-400 font-bold italic">데이터 없음</p>
           ) : (
@@ -205,9 +205,9 @@ const AiConsultAdmin: React.FC = () => {
       </div>
 
       {/* 상담 이력 목록 */}
-      <div className="bg-white rounded-[48px] border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-8 border-b border-gray-100">
-          <h4 className="text-xl font-black text-gray-900 italic">📜 상담 이력 목록</h4>
+      <div className="bg-white rounded-2xl md:rounded-[48px] border border-gray-100 overflow-hidden shadow-sm">
+        <div className="p-4 md:p-8 border-b border-gray-100">
+          <h4 className="text-base md:text-xl font-black text-gray-900 italic">📜 상담 이력 목록</h4>
         </div>
         {loading ? (
           <div className="py-20 text-center text-gray-400 font-black">로딩 중...</div>
@@ -216,17 +216,17 @@ const AiConsultAdmin: React.FC = () => {
         ) : (
           <div className="divide-y divide-gray-50">
             {sessions.map(s => (
-              <div key={s.id} className="p-6 hover:bg-purple-50/30 transition-colors">
+              <div key={s.id} className="p-3 md:p-6 hover:bg-purple-50/30 transition-colors">
                 <div
                   className="flex justify-between items-center cursor-pointer"
                   onClick={() => setExpandedSessionId(expandedSessionId === s.id ? null : s.id)}
                 >
-                  <div className="flex items-center gap-4">
-                    <span className="text-gray-400 font-black text-sm">{new Date(s.started_at).toLocaleString()}</span>
-                    <span className="font-black text-gray-900">{s.user_nickname || s.user_id || '(비로그인)'}</span>
-                    <span className="text-purple-500 font-black text-sm">{s.message_count}개 메시지</span>
+                  <div className="flex items-center gap-2 md:gap-4 flex-wrap">
+                    <span className="text-gray-400 font-black text-xs md:text-sm">{new Date(s.started_at).toLocaleString()}</span>
+                    <span className="font-black text-gray-900 text-sm">{s.user_nickname || s.user_id || '(비로그인)'}</span>
+                    <span className="text-purple-500 font-black text-xs md:text-sm">{s.message_count}개</span>
                   </div>
-                  <span className="text-2xl text-gray-300">{expandedSessionId === s.id ? '▲' : '▼'}</span>
+                  <span className="text-xl md:text-2xl text-gray-300 ml-2">{expandedSessionId === s.id ? '▲' : '▼'}</span>
                 </div>
                 {expandedSessionId === s.id && messagesBySession[s.id] && (
                   <div className="mt-6 pl-8 space-y-4 bg-gray-50/50 rounded-2xl p-6 border border-gray-100">

@@ -240,9 +240,9 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
       {activeSubTab === 'manage' ? (
         <>
           {(editingChannel || isRegisteringChannel) ? (
-            <div className="bg-white p-10 md:p-16 rounded-[60px] shadow-2xl border border-gray-100">
-              <div className="flex justify-between items-center mb-10 pb-8 border-b border-gray-100">
-                <h3 className="text-3xl font-black text-gray-900 italic tracking-tighter underline decoration-blue-500 underline-offset-8">
+            <div className="bg-white p-4 md:p-16 rounded-2xl md:rounded-[60px] shadow-2xl border border-gray-100">
+              <div className="flex justify-between items-center mb-5 md:mb-10 pb-4 md:pb-8 border-b border-gray-100">
+                <h3 className="text-lg md:text-3xl font-black text-gray-900 italic tracking-tighter underline decoration-blue-500 underline-offset-8">
                    {editingChannel ? '💎 매물 정보 상세 수정' : '💎 새로운 채널 매물 등록'}
                 </h3>
                 <button onClick={() => { setEditingChannel(null); setIsRegisteringChannel(false); }} className="w-12 h-12 bg-gray-50 text-gray-400 rounded-2xl font-black text-xl hover:bg-red-50 hover:text-red-500 transition-colors shadow-sm">✕</button>
@@ -386,8 +386,8 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
               </form>
             </div>
           ) : (
-            <div className="space-y-10">
-              <div className="flex justify-between items-center px-4 md:px-6 gap-3">
+            <div className="space-y-5 md:space-y-10">
+              <div className="flex justify-between items-center px-2 md:px-6 gap-3">
                 <div className="min-w-0">
                   <h3 className="text-xl md:text-3xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-4 md:underline-offset-12 line-clamp-1">채널 매물 통합 관리 센터</h3>
                   <p className="text-[11px] md:text-[12px] font-bold text-gray-400 mt-1 md:mt-4 uppercase tracking-wider md:tracking-[0.3em] line-clamp-1">실시간 매물 현황 ({channels.length}개)</p>
@@ -495,13 +495,13 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
           )}
         </>
       ) : (
-        <div className="space-y-6">
-           <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 p-8 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex items-center gap-6 flex-1 w-full">
-                 <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center text-3xl shadow-inner">📺</div>
-                 <div>
-                    <h3 className="text-2xl font-black text-gray-900 italic uppercase tracking-tighter">채널 매매 거래 관리 시스템</h3>
-                    <p className="text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-widest leading-none">모든 채널 거래 건에 대한 진행 상태 및 계약 추적</p>
+        <div className="space-y-4 md:space-y-6">
+           <div className="bg-white rounded-2xl md:rounded-[40px] shadow-sm border border-gray-100 p-4 md:p-8 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
+              <div className="flex items-center gap-3 md:gap-6 flex-1 w-full flex-wrap">
+                 <div className="w-10 h-10 md:w-16 md:h-16 bg-indigo-50 text-indigo-600 rounded-2xl md:rounded-3xl flex items-center justify-center text-xl md:text-3xl shadow-inner flex-shrink-0">📺</div>
+                 <div className="min-w-0">
+                    <h3 className="text-sm md:text-2xl font-black text-gray-900 italic uppercase tracking-tighter">채널 매매 거래 관리 시스템</h3>
+                    <p className="text-[10px] md:text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-widest leading-none">모든 채널 거래 건에 대한 진행 상태 및 계약 추적</p>
                  </div>
                  
                  <div className="flex-1 max-w-2xl flex gap-3 ml-6">
@@ -550,7 +550,7 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
               </div>
            </div>
 
-           <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
+           <div className="bg-white rounded-2xl md:rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
                  <table className="w-full text-left">
                     <thead className="bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest italic">

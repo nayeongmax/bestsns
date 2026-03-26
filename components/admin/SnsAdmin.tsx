@@ -723,26 +723,26 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-32">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
-         <div className="bg-white border-2 border-blue-50 p-5 md:p-8 rounded-3xl md:rounded-[48px] shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-all">
-            <span className="text-[11px] font-black text-blue-500 uppercase tracking-widest italic mb-1 md:mb-2 line-clamp-1">Total Orders ({orderMonthFilter})</span>
-            <div className="flex items-baseline gap-2">
-               <span className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">{orderStats.count.toLocaleString()}</span>
-               <span className="text-base md:text-lg font-bold text-gray-300">건</span>
+      <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-6">
+         <div className="bg-white border-2 border-blue-50 p-3 md:p-8 rounded-xl md:rounded-[48px] shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-all">
+            <span className="text-[9px] md:text-[11px] font-black text-blue-500 uppercase tracking-widest italic mb-1 md:mb-2 line-clamp-2">Total Orders ({orderMonthFilter})</span>
+            <div className="flex items-baseline gap-1 md:gap-2">
+               <span className="text-lg md:text-4xl font-black text-gray-900 italic tracking-tighter">{orderStats.count.toLocaleString()}</span>
+               <span className="text-xs md:text-lg font-bold text-gray-300">건</span>
             </div>
          </div>
-         <div className="bg-white border-2 border-blue-50 p-5 md:p-8 rounded-3xl md:rounded-[48px] shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-all">
-            <span className="text-[11px] font-black text-green-500 uppercase tracking-widest italic mb-1 md:mb-2 line-clamp-1">Total Revenue ({orderMonthFilter})</span>
-            <div className="flex items-baseline gap-2">
-               <span className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">{orderStats.revenue.toLocaleString()}</span>
-               <span className="text-base md:text-lg font-bold text-gray-300">P</span>
+         <div className="bg-white border-2 border-blue-50 p-3 md:p-8 rounded-xl md:rounded-[48px] shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-all">
+            <span className="text-[9px] md:text-[11px] font-black text-green-500 uppercase tracking-widest italic mb-1 md:mb-2 line-clamp-2">Total Revenue ({orderMonthFilter})</span>
+            <div className="flex items-baseline gap-1 md:gap-2">
+               <span className="text-lg md:text-4xl font-black text-gray-900 italic tracking-tighter">{orderStats.revenue.toLocaleString()}</span>
+               <span className="text-xs md:text-lg font-bold text-gray-300">P</span>
             </div>
          </div>
-         <div className="bg-gray-900 p-5 md:p-8 rounded-3xl md:rounded-[48px] shadow-2xl flex flex-col justify-between text-white relative overflow-hidden group hover:scale-[1.02] transition-all">
-            <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest italic mb-1 md:mb-2 relative z-10 line-clamp-1">Real-time Net Profit ({orderMonthFilter})</span>
-            <div className="flex items-baseline gap-2 relative z-10">
-               <span className="text-3xl md:text-4xl font-black text-blue-400 italic tracking-tighter">{orderStats.profit.toLocaleString()}</span>
-               <span className="text-base md:text-lg font-bold text-blue-900">P</span>
+         <div className="bg-gray-900 p-3 md:p-8 rounded-xl md:rounded-[48px] shadow-2xl flex flex-col justify-between text-white relative overflow-hidden group hover:scale-[1.02] transition-all">
+            <span className="text-[9px] md:text-[11px] font-black text-blue-400 uppercase tracking-widest italic mb-1 md:mb-2 relative z-10 line-clamp-2">Real-time Net Profit ({orderMonthFilter})</span>
+            <div className="flex items-baseline gap-1 md:gap-2 relative z-10">
+               <span className="text-lg md:text-4xl font-black text-blue-400 italic tracking-tighter">{orderStats.profit.toLocaleString()}</span>
+               <span className="text-xs md:text-lg font-bold text-blue-900">P</span>
             </div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 blur-[60px]"></div>
          </div>
@@ -774,42 +774,42 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       </div>
 
       {activeTab === 'provider' && (
-        <div className="space-y-12 animate-in slide-in-from-bottom-4">
-          <div className="bg-white p-12 md:p-16 rounded-[60px] shadow-sm border border-gray-100 space-y-12">
-             <h3 className="text-2xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8">공급처(Provider) 신규 시스템 등록</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-              <div className="space-y-3">
+        <div className="space-y-8 md:space-y-12 animate-in slide-in-from-bottom-4">
+          <div className="bg-white p-5 md:p-16 rounded-2xl md:rounded-[60px] shadow-sm border border-gray-100 space-y-6 md:space-y-12">
+             <h3 className="text-lg md:text-2xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8">공급처(Provider) 신규 시스템 등록</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-10">
+              <div className="space-y-2 md:space-y-3">
                  <label className="text-[11px] font-black text-gray-400 px-4 uppercase italic">공급처 ID (Key매칭용)</label>
-                 <input value={providerForm.id} onChange={e => setProviderForm({...providerForm, id: e.target.value})} placeholder="p1, p2 등" className="w-full p-6 bg-gray-50 rounded-[32px] font-black outline-none shadow-inner" disabled={!!editingProviderId} />
+                 <input value={providerForm.id} onChange={e => setProviderForm({...providerForm, id: e.target.value})} placeholder="p1, p2 등" className="w-full p-4 md:p-6 bg-gray-50 rounded-2xl md:rounded-[32px] font-black outline-none shadow-inner" disabled={!!editingProviderId} />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                  <label className="text-[11px] font-black text-gray-400 px-4 uppercase italic">공급처 별칭</label>
-                 <input value={providerForm.name} onChange={e => setProviderForm({...providerForm, name: e.target.value})} placeholder="예: JAP 메인서버" className="w-full p-6 bg-gray-50 rounded-[32px] font-black outline-none shadow-inner" />
+                 <input value={providerForm.name} onChange={e => setProviderForm({...providerForm, name: e.target.value})} placeholder="예: JAP 메인서버" className="w-full p-4 md:p-6 bg-gray-50 rounded-2xl md:rounded-[32px] font-black outline-none shadow-inner" />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                  <label className="text-[11px] font-black text-gray-400 px-4 uppercase italic">API URL</label>
-                 <input value={providerForm.apiUrl} onChange={e => setProviderForm({...providerForm, apiUrl: e.target.value})} placeholder="https://api-endpoint.com" className="w-full p-6 bg-gray-50 rounded-[32px] font-black outline-none shadow-inner" />
+                 <input value={providerForm.apiUrl} onChange={e => setProviderForm({...providerForm, apiUrl: e.target.value})} placeholder="https://api-endpoint.com" className="w-full p-4 md:p-6 bg-gray-50 rounded-2xl md:rounded-[32px] font-black outline-none shadow-inner" />
               </div>
             </div>
-            <button onClick={handleSaveProvider} className="w-full py-8 bg-gray-900 text-white rounded-[40px] font-black text-xl hover:bg-blue-600 transition-all uppercase italic">
+            <button onClick={handleSaveProvider} className="w-full py-4 md:py-8 bg-gray-900 text-white rounded-2xl md:rounded-[40px] font-black text-base md:text-xl hover:bg-blue-600 transition-all uppercase italic">
               {editingProviderId ? '공급처 정보 업데이트' : '신규 공급처 시스템 등록하기'}
             </button>
           </div>
-          <div className="space-y-6 px-4">
-             <h4 className="text-xl font-black text-gray-900 italic uppercase">시스템 등록 공급처 목록 ({smmProviders.length})</h4>
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="space-y-4 md:space-y-6 px-2 md:px-4">
+             <h4 className="text-base md:text-xl font-black text-gray-900 italic uppercase">시스템 등록 공급처 목록 ({smmProviders.length})</h4>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
                 {smmProviders.map(p => (
-                  <div key={p.id} className={`bg-white p-8 rounded-[40px] shadow-sm border-2 transition-all group ${p.isHidden ? 'grayscale opacity-50 bg-gray-50 border-gray-300' : 'border-gray-100 hover:border-blue-200'}`}>
-                     <div className="flex justify-between items-start mb-6">
+                  <div key={p.id} className={`bg-white p-4 md:p-8 rounded-2xl md:rounded-[40px] shadow-sm border-2 transition-all group ${p.isHidden ? 'grayscale opacity-50 bg-gray-50 border-gray-300' : 'border-gray-100 hover:border-blue-200'}`}>
+                     <div className="flex justify-between items-start mb-4 md:mb-6">
                         <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase italic ${p.isHidden ? 'bg-gray-200 text-gray-400' : 'bg-blue-50 text-blue-600'}`}>ID: {p.id}</span>
                         <div className="flex gap-2">
                            {!p.isHidden && <button onClick={() => startEditProvider(p)} className="text-gray-300 hover:text-blue-500 font-black text-sm">수정</button>}
                            <button onClick={() => handleDeleteProvider(p.id)} className="text-gray-300 hover:text-red-500 font-black text-sm">삭제</button>
                         </div>
                      </div>
-                     <h5 className="text-2xl font-black text-gray-900 mb-2 italic">{p.name}</h5>
-                     <p className="text-[11px] font-bold text-gray-400 truncate opacity-60 mb-6">{p.apiUrl}</p>
-                     <button onClick={() => setSmmProviders(prev => prev.map(item => item.id === p.id ? { ...item, isHidden: !item.isHidden } : item))} className={`w-full py-3 rounded-2xl font-black text-[11px] transition-all italic uppercase ${p.isHidden ? 'bg-red-500 text-white shadow-lg' : 'bg-gray-900 text-white'}`}>
+                     <h5 className="text-lg md:text-2xl font-black text-gray-900 mb-1 md:mb-2 italic">{p.name}</h5>
+                     <p className="text-[11px] font-bold text-gray-400 truncate opacity-60 mb-3 md:mb-6">{p.apiUrl}</p>
+                     <button onClick={() => setSmmProviders(prev => prev.map(item => item.id === p.id ? { ...item, isHidden: !item.isHidden } : item))} className={`w-full py-2 md:py-3 rounded-2xl font-black text-[11px] transition-all italic uppercase ${p.isHidden ? 'bg-red-500 text-white shadow-lg' : 'bg-gray-900 text-white'}`}>
                         {p.isHidden ? '⚠️ 시스템 중지됨 (재가동)' : '현재 정상 운영 중 (중지)'}
                      </button>
                   </div>
@@ -820,10 +820,10 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       )}
 
       {activeTab === 'manage' && (
-        <div className="bg-white p-12 md:p-20 rounded-[80px] shadow-sm border border-gray-100 space-y-20 animate-in zoom-in-95">
-           <div className="flex justify-between items-center pb-10 border-b border-gray-100">
-             <h3 className="text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-[16px]">
-               <span className="mr-4">💎</span>마스터 상품 통합 데이터 등록
+        <div className="bg-white p-4 md:p-20 rounded-2xl md:rounded-[80px] shadow-sm border border-gray-100 space-y-8 md:space-y-20 animate-in zoom-in-95">
+           <div className="flex justify-between items-center pb-4 md:pb-10 border-b border-gray-100">
+             <h3 className="text-lg md:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-[16px]">
+               <span className="mr-2 md:mr-4">💎</span>마스터 상품 통합 데이터 등록
              </h3>
              {editingProductId && <button onClick={() => { setEditingProductId(null); setProductForm(initialProductState); }} className="text-sm font-black text-gray-400 hover:text-red-500">취소</button>}
           </div>
@@ -943,28 +943,28 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                 </div>
              </div>
           </div>
-          <button onClick={handleSaveProduct} className="w-full py-12 bg-gray-900 text-white rounded-[50px] font-black text-4xl shadow-2xl hover:bg-blue-600 transition-all italic tracking-[0.3em] uppercase">마스터 상품 통합 데이터 저장 완료 💾</button>
+          <button onClick={handleSaveProduct} className="w-full py-5 md:py-12 bg-gray-900 text-white rounded-2xl md:rounded-[50px] font-black text-base md:text-4xl shadow-2xl hover:bg-blue-600 transition-all italic md:tracking-[0.3em] uppercase">마스터 상품 통합 데이터 저장 완료 💾</button>
         </div>
       )}
 
       {activeTab === 'list' && (
-        <div className="space-y-10 animate-in fade-in max-w-[1600px] mx-auto">
-           <div className="bg-white p-10 rounded-[56px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-10">
-              <h3 className="text-3xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8 px-6">통합 상품 인벤토리 리얼타임 대시보드</h3>
-              <div className="flex gap-4 items-center flex-wrap">
-                 <div className="flex gap-4 bg-gray-50 p-2 rounded-[32px] shadow-inner">
-                    <select value={filterPlatform} onChange={e => setFilterPlatform(e.target.value)} className="p-4 bg-white border-none rounded-[24px] font-black text-sm shadow-sm outline-none cursor-pointer">
+        <div className="space-y-4 md:space-y-10 animate-in fade-in max-w-[1600px] mx-auto">
+           <div className="bg-white p-4 md:p-10 rounded-2xl md:rounded-[56px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-10">
+              <h3 className="text-sm md:text-3xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8 px-2 md:px-6">통합 상품 인벤토리 리얼타임 대시보드</h3>
+              <div className="flex gap-3 md:gap-4 items-center flex-wrap w-full md:w-auto">
+                 <div className="flex gap-2 md:gap-4 bg-gray-50 p-2 rounded-2xl md:rounded-[32px] shadow-inner w-full md:w-auto">
+                    <select value={filterPlatform} onChange={e => setFilterPlatform(e.target.value)} className="p-3 md:p-4 bg-white border-none rounded-xl md:rounded-[24px] font-black text-xs md:text-sm shadow-sm outline-none cursor-pointer flex-shrink-0">
                        <option>전체 플랫폼</option>{SNS_PLATFORMS.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                     </select>
-                    <div className="relative">
-                       <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="상품명 검색..." className="pl-8 pr-16 py-4 bg-white border-none rounded-[24px] font-bold text-[15px] shadow-sm outline-none w-80" />
-                       <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300">🔍</span>
+                    <div className="relative flex-1">
+                       <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="상품명 검색..." className="pl-8 pr-4 md:pr-16 py-3 md:py-4 bg-white border-none rounded-xl md:rounded-[24px] font-bold text-sm md:text-[15px] shadow-sm outline-none w-full md:w-80" />
+                       <span className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 text-gray-300">🔍</span>
                     </div>
                  </div>
                  {isSavingOrder && <span className="text-[12px] font-black text-purple-500 italic animate-pulse">저장 중...</span>}
               </div>
            </div>
-           <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
+           <div className="bg-white rounded-2xl md:rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto" style={{WebkitOverflowScrolling: 'touch'}}>
                  <table className="w-full text-left" style={{minWidth: '700px'}}>
                     <thead className="bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest italic">
@@ -1058,13 +1058,13 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       )}
 
       {activeTab === 'monitor' && (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-4 md:space-y-8 animate-in fade-in duration-500">
           {/* 상단 컨트롤 */}
-          <div className="bg-white p-10 rounded-[56px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="bg-white p-4 md:p-10 rounded-2xl md:rounded-[56px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
             <div>
-              <h3 className="text-3xl font-black text-gray-900 italic uppercase underline decoration-orange-500 underline-offset-8">원가 모니터링 센터</h3>
-              <p className="text-[13px] font-bold text-gray-400 mt-2">매일 자정(00:00) · 정오(12:00) 자동 체크 · 변동 시 원가 자동 반영</p>
-              <p className="text-[12px] font-bold text-gray-300 mt-1">마지막 체크: {lastSyncTime}</p>
+              <h3 className="text-lg md:text-3xl font-black text-gray-900 italic uppercase underline decoration-orange-500 underline-offset-8">원가 모니터링 센터</h3>
+              <p className="text-[11px] md:text-[13px] font-bold text-gray-400 mt-1 md:mt-2">매일 자정(00:00) · 정오(12:00) 자동 체크 · 변동 시 원가 자동 반영</p>
+              <p className="text-[10px] md:text-[12px] font-bold text-gray-300 mt-1">마지막 체크: {lastSyncTime}</p>
             </div>
             <div className="flex gap-3 flex-wrap items-center">
               <button
@@ -1099,7 +1099,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
               {priceAlerts.map(alert => (
                 <div
                   key={alert.id}
-                  className={`bg-white rounded-[40px] border-2 p-8 shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center justify-between transition-all ${
+                  className={`bg-white rounded-2xl md:rounded-[40px] border-2 p-4 md:p-8 shadow-sm flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center justify-between transition-all ${
                     !alert.isRead ? (alert.type === 'unavailable' ? 'border-red-300 bg-red-50/30' : 'border-orange-300 bg-orange-50/30') : 'border-gray-100 opacity-60'
                   }`}
                 >
@@ -1142,9 +1142,9 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       )}
 
       {activeTab === 'banner' && (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-4 md:space-y-8 animate-in fade-in duration-500">
           {/* 배너 등록/수정 폼 */}
-          <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 space-y-6">
+          <div className="bg-white p-4 md:p-10 rounded-2xl md:rounded-[48px] shadow-sm border border-gray-100 space-y-4 md:space-y-6">
             <h3 className="text-xl font-black text-gray-900 italic uppercase">{editingBannerId ? '✏️ 배너 수정' : '➕ 배너 광고 등록'}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest">업체명 *</label><input type="text" value={bannerForm.companyName} onChange={e => setBannerForm(p => ({...p, companyName: e.target.value}))} className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-200 text-sm" placeholder="예: 나이키코리아" /></div>
@@ -1225,7 +1225,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
           </div>
 
           {/* 배너 목록 */}
-          <div className="bg-white p-10 rounded-[48px] shadow-sm border border-gray-100 space-y-6">
+          <div className="bg-white p-4 md:p-10 rounded-2xl md:rounded-[48px] shadow-sm border border-gray-100 space-y-4 md:space-y-6">
             <h3 className="text-xl font-black text-gray-900 italic uppercase">등록된 배너 목록 ({bannerAds.length}개)</h3>
             {bannerAds.length === 0 ? (
               <p className="text-gray-300 font-black text-center py-16">등록된 배너가 없습니다.</p>

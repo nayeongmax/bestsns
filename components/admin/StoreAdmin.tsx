@@ -157,13 +157,13 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
       </div>
 
       {activeSubTab === 'inventory' && (
-        <div className="space-y-8 px-4">
-          <div className="bg-white p-8 rounded-[48px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
-             <div className="flex items-center gap-4 flex-1">
-                <select 
-                  value={typeFilter} 
+        <div className="space-y-4 md:space-y-8 px-2 md:px-4">
+          <div className="bg-white p-4 md:p-8 rounded-2xl md:rounded-[48px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
+             <div className="flex items-center gap-2 md:gap-4 flex-1 w-full">
+                <select
+                  value={typeFilter}
                   onChange={e => setTypeFilter(e.target.value)}
-                  className="px-6 py-4 bg-gray-50 rounded-full font-black text-xs outline-none border border-transparent focus:border-purple-200"
+                  className="px-3 py-2.5 md:px-6 md:py-4 bg-gray-50 rounded-full font-black text-xs outline-none border border-transparent focus:border-purple-200 flex-shrink-0"
                 >
                   <option value="전체">전체 유형</option>
                   <option value="marketing">마케팅</option>
@@ -172,20 +172,20 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                   <option value="consulting">컨설팅</option>
                   <option value="template">자료·템플릿</option>
                 </select>
-                <div className="relative flex-1 max-w-md">
-                   <input 
-                    type="text" 
-                    value={searchQuery} 
+                <div className="relative flex-1">
+                   <input
+                    type="text"
+                    value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="상품명 또는 전문가 닉네임 검색..." 
-                    className="w-full pl-12 pr-6 py-4 bg-gray-50 rounded-full font-bold text-sm shadow-inner outline-none" 
+                    placeholder="상품명/닉네임 검색..."
+                    className="w-full pl-10 md:pl-12 pr-4 md:pr-6 py-2.5 md:py-4 bg-gray-50 rounded-full font-bold text-sm shadow-inner outline-none"
                    />
-                   <span className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">🔍</span>
+                   <span className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 opacity-30 text-sm">🔍</span>
                 </div>
              </div>
-             <div className="bg-purple-50 text-purple-600 px-8 py-4 rounded-[24px] text-center shrink-0 border border-purple-100">
+             <div className="bg-purple-50 text-purple-600 px-5 py-3 md:px-8 md:py-4 rounded-2xl md:rounded-[24px] text-center shrink-0 border border-purple-100 w-full md:w-auto">
                 <span className="text-[10px] font-black uppercase italic block mb-1">Total Active Products</span>
-                <span className="text-3xl font-black italic tracking-tighter">{filteredInventory.length} <span className="text-sm not-italic font-bold">개</span></span>
+                <span className="text-xl md:text-3xl font-black italic tracking-tighter">{filteredInventory.length} <span className="text-sm not-italic font-bold">개</span></span>
              </div>
           </div>
 
@@ -290,9 +290,9 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
       )}
 
       {activeSubTab === 'approval' && (
-        <div className="space-y-6 px-4">
+        <div className="space-y-4 md:space-y-6 px-2 md:px-4">
            {pendingProducts.length === 0 ? (
-             <div className="bg-white p-40 rounded-[60px] text-center border-2 border-dashed border-gray-100 shadow-sm">
+             <div className="bg-white p-16 md:p-40 rounded-2xl md:rounded-[60px] text-center border-2 border-dashed border-gray-100 shadow-sm">
                 <p className="text-gray-300 font-black italic text-2xl uppercase tracking-widest opacity-50">심사 대기 건이 없습니다</p>
              </div>
            ) : (
@@ -342,7 +342,7 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
       )}
 
       {activeSubTab === 'orders' && (
-        <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden mx-0 md:mx-4">
+        <div className="bg-white rounded-2xl md:rounded-[48px] shadow-sm border border-gray-100 overflow-hidden mx-0 md:mx-4">
            <div className="p-4 md:p-10 border-b border-gray-50 flex justify-between items-center gap-3">
               <h3 className="text-base md:text-2xl font-black italic tracking-tighter uppercase underline decoration-purple-200 underline-offset-8">Store Sales History</h3>
               <div className="bg-gray-50 px-3 md:px-6 py-1 md:py-2 rounded-full text-[10px] md:text-[11px] font-black text-gray-400 uppercase italic tracking-widest shrink-0">
