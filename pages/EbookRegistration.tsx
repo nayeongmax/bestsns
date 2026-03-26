@@ -227,20 +227,20 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
             <p className="text-sm text-gray-500 mt-0.5">등록할 서비스의 유형을 선택해 주세요</p>
           </div>
           <div className="p-6">
-            <div className="grid grid-cols-5 gap-3">
+            <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-5 md:overflow-visible md:pb-0" style={{scrollbarWidth: 'none'}}>
               {STORE_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setStoreType(tab.id)}
-                  className={`flex flex-col items-center justify-center py-4 px-2 rounded-xl border-2 transition-all duration-200 ${
+                  className={`flex flex-col items-center justify-center py-4 px-4 rounded-xl border-2 transition-all duration-200 flex-shrink-0 min-w-[72px] md:flex-shrink md:min-w-0 ${
                     storeType === tab.id
                       ? 'bg-blue-600 border-blue-600 text-white shadow-md'
                       : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600'
                   }`}
                 >
                   <span className="text-2xl mb-2">{tab.icon}</span>
-                  <span className="font-semibold text-sm">{tab.label}</span>
+                  <span className="font-semibold text-sm whitespace-nowrap">{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -311,20 +311,20 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
 
         {/* 섹션 2: 패키지 및 가격 */}
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-            <div>
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <div className="flex items-center justify-between gap-3">
               <h3 className="font-bold text-gray-800 text-base">패키지 및 가격 설정</h3>
-              <p className="text-sm text-gray-500 mt-0.5">최대 3개의 가격 패키지를 구성할 수 있습니다</p>
+              {tiers.length < 3 && (
+                <button
+                  type="button"
+                  onClick={addTier}
+                  className="bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors whitespace-nowrap flex-shrink-0"
+                >
+                  + 패키지 추가
+                </button>
+              )}
             </div>
-            {tiers.length < 3 && (
-              <button
-                type="button"
-                onClick={addTier}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors"
-              >
-                + 패키지 추가
-              </button>
-            )}
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5 whitespace-nowrap">최대 3개의 가격 패키지를 구성할 수 있습니다</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -450,15 +450,15 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
 
         {/* 섹션 4: FAQ */}
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-            <div>
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <h3 className="font-bold text-gray-800 text-base">자주 묻는 질문 (FAQ)</h3>
-              <p className="text-sm text-gray-500 mt-0.5">구매자가 자주 물어보는 내용을 미리 정리해 주세요</p>
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5">구매자가 자주 물어보는 내용을 미리 정리해 주세요</p>
             </div>
             <button
               type="button"
               onClick={addFaq}
-              className="bg-amber-400 text-gray-900 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-amber-500 transition-colors"
+              className="bg-amber-400 text-gray-900 px-3 md:px-4 py-2 rounded-lg font-semibold text-sm hover:bg-amber-500 transition-colors whitespace-nowrap flex-shrink-0"
             >
               + 질문 추가
             </button>
@@ -499,23 +499,23 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
 
         {/* 섹션 5: 미디어 */}
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-            <div>
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <h3 className="font-bold text-gray-800 text-base">미디어 등록</h3>
-              <p className="text-sm text-gray-500 mt-0.5">대표 썸네일 1장과 상세 이미지를 최대 10장까지 등록할 수 있습니다</p>
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5">대표 썸네일 1장과 상세 이미지를 최대 10장까지 등록할 수 있습니다</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-900 transition-colors"
+                className="bg-gray-800 text-white px-3 md:px-4 py-2 rounded-lg font-semibold text-xs md:text-sm hover:bg-gray-900 transition-colors whitespace-nowrap"
               >
                 썸네일 등록
               </button>
               <button
                 type="button"
                 onClick={() => multiFileInputRef.current?.click()}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg font-semibold text-xs md:text-sm hover:bg-blue-700 transition-colors whitespace-nowrap"
               >
                 상세이미지 추가
               </button>
@@ -531,9 +531,9 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
                 <p className="text-sm font-medium">썸네일과 상세 이미지를 등록해 주세요</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-6 md:overflow-visible md:pb-0" style={{scrollbarWidth: 'none'}}>
                 {thumbnail && (
-                  <div className="relative aspect-[3/4] rounded-xl overflow-hidden border-4 border-blue-500 shadow-md group">
+                  <div className="relative flex-shrink-0 w-24 h-32 md:w-auto md:h-auto md:aspect-[3/4] rounded-xl overflow-hidden border-4 border-blue-500 shadow-md group">
                     <img src={thumbnail} className="w-full h-full object-cover" alt="thumbnail" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                       <button
@@ -548,12 +548,12 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
                   </div>
                 )}
                 {attachedImages.map((img, i) => (
-                  <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
+                  <div key={i} className="relative flex-shrink-0 w-24 h-32 md:w-auto md:h-auto md:aspect-[3/4] rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
                     <img src={img} className="w-full h-full object-cover" alt={`detail-${i}`} />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity">
                       <div className="flex gap-1.5">
-                        <button type="button" onClick={() => moveImage(i, 'up')} className="bg-white text-gray-900 p-1.5 rounded-lg text-xs">▲</button>
-                        <button type="button" onClick={() => moveImage(i, 'down')} className="bg-white text-gray-900 p-1.5 rounded-lg text-xs">▼</button>
+                        <button type="button" onClick={() => moveImage(i, 'up')} className="bg-white text-gray-900 p-1.5 rounded-lg text-xs">◀</button>
+                        <button type="button" onClick={() => moveImage(i, 'down')} className="bg-white text-gray-900 p-1.5 rounded-lg text-xs">▶</button>
                       </div>
                       <button
                         type="button"
