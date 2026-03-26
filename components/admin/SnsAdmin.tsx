@@ -723,49 +723,50 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-32">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <div className="bg-white border-2 border-blue-50 p-8 rounded-[48px] shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-all">
-            <span className="text-[11px] font-black text-blue-500 uppercase tracking-widest italic mb-2">Total Orders ({orderMonthFilter})</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
+         <div className="bg-white border-2 border-blue-50 p-5 md:p-8 rounded-3xl md:rounded-[48px] shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-all">
+            <span className="text-[11px] font-black text-blue-500 uppercase tracking-widest italic mb-1 md:mb-2 line-clamp-1">Total Orders ({orderMonthFilter})</span>
             <div className="flex items-baseline gap-2">
-               <span className="text-4xl font-black text-gray-900 italic tracking-tighter">{orderStats.count.toLocaleString()}</span>
-               <span className="text-lg font-bold text-gray-300">건</span>
+               <span className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">{orderStats.count.toLocaleString()}</span>
+               <span className="text-base md:text-lg font-bold text-gray-300">건</span>
             </div>
          </div>
-         <div className="bg-white border-2 border-blue-50 p-8 rounded-[48px] shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-all">
-            <span className="text-[11px] font-black text-green-500 uppercase tracking-widest italic mb-2">Total Revenue ({orderMonthFilter})</span>
+         <div className="bg-white border-2 border-blue-50 p-5 md:p-8 rounded-3xl md:rounded-[48px] shadow-sm flex flex-col justify-between group hover:border-blue-200 transition-all">
+            <span className="text-[11px] font-black text-green-500 uppercase tracking-widest italic mb-1 md:mb-2 line-clamp-1">Total Revenue ({orderMonthFilter})</span>
             <div className="flex items-baseline gap-2">
-               <span className="text-4xl font-black text-gray-900 italic tracking-tighter">{orderStats.revenue.toLocaleString()}</span>
-               <span className="text-lg font-bold text-gray-300">P</span>
+               <span className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">{orderStats.revenue.toLocaleString()}</span>
+               <span className="text-base md:text-lg font-bold text-gray-300">P</span>
             </div>
          </div>
-         <div className="bg-gray-900 p-8 rounded-[48px] shadow-2xl flex flex-col justify-between text-white relative overflow-hidden group hover:scale-[1.02] transition-all">
-            <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest italic mb-2 relative z-10">Real-time Net Profit ({orderMonthFilter})</span>
+         <div className="bg-gray-900 p-5 md:p-8 rounded-3xl md:rounded-[48px] shadow-2xl flex flex-col justify-between text-white relative overflow-hidden group hover:scale-[1.02] transition-all">
+            <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest italic mb-1 md:mb-2 relative z-10 line-clamp-1">Real-time Net Profit ({orderMonthFilter})</span>
             <div className="flex items-baseline gap-2 relative z-10">
-               <span className="text-4xl font-black text-blue-400 italic tracking-tighter">{orderStats.profit.toLocaleString()}</span>
-               <span className="text-lg font-bold text-blue-900">P</span>
+               <span className="text-3xl md:text-4xl font-black text-blue-400 italic tracking-tighter">{orderStats.profit.toLocaleString()}</span>
+               <span className="text-base md:text-lg font-bold text-blue-900">P</span>
             </div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 blur-[60px]"></div>
          </div>
       </div>
 
       <div className="overflow-x-auto" style={{WebkitOverflowScrolling: 'touch'}}>
-        <div className="bg-gray-900 p-2.5 rounded-[40px] flex gap-2 shadow-2xl w-max min-w-full">
+        <div className="bg-gray-900 p-1.5 md:p-2.5 rounded-3xl md:rounded-[40px] flex gap-1 md:gap-2 shadow-2xl w-max min-w-full">
           {[
-            { id: 'provider', label: '📡 공급처 설정' },
-            { id: 'manage', label: '🛠️ 상품 등록' },
-            { id: 'list', label: '📋 상품 인벤토리' },
-            { id: 'order', label: '📈 주문 분석' },
-            { id: 'monitor', label: `🔔 원가 모니터링${unreadAlertsCount > 0 ? ` (${unreadAlertsCount})` : ''}` },
-            { id: 'banner', label: '🖼️ 배너 광고 관리' },
+            { id: 'provider', label: '📡 공급처 설정', short: '📡 공급처' },
+            { id: 'manage', label: '🛠️ 상품 등록', short: '🛠️ 상품등록' },
+            { id: 'list', label: '📋 상품 인벤토리', short: '📋 인벤토리' },
+            { id: 'order', label: '📈 주문 분석', short: '📈 주문분석' },
+            { id: 'monitor', label: `🔔 원가 모니터링${unreadAlertsCount > 0 ? ` (${unreadAlertsCount})` : ''}`, short: `🔔 원가${unreadAlertsCount > 0 ? `(${unreadAlertsCount})` : ''}` },
+            { id: 'banner', label: '🖼️ 배너 광고 관리', short: '🖼️ 배너광고' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id as SnsTab); if (tab.id !== 'manage') setEditingProductId(null); if (tab.id === 'monitor') setPriceAlerts(prev => prev.map(a => ({ ...a, isRead: true }))); }}
-              className={`shrink-0 whitespace-nowrap px-5 py-4 rounded-[28px] font-black text-[14px] transition-all relative ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+              className={`shrink-0 whitespace-nowrap px-3 py-2 md:px-5 md:py-4 rounded-2xl md:rounded-[28px] font-black text-[11px] md:text-[14px] transition-all relative ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              {tab.label}
+              <span className="md:hidden">{(tab as any).short}</span>
+              <span className="hidden md:inline">{tab.label}</span>
               {tab.id === 'monitor' && unreadAlertsCount > 0 && (
-                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
+                <span className="absolute top-1 right-1 md:top-2 md:right-2 w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse"></span>
               )}
             </button>
           ))}

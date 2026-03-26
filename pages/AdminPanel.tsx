@@ -100,8 +100,31 @@ const AdminPanel: React.FC<Props> = ({
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-12 pb-32 px-8">
-      <div className="flex flex-col md:flex-row justify-between items-center bg-white p-5 rounded-[40px] shadow-sm border border-gray-100 gap-6">
+    <div className="max-w-[1400px] mx-auto pb-32 md:space-y-12 md:px-8">
+
+      {/* 모바일 전용: 헤더 타이틀 + 탭 메뉴 섹션 */}
+      <div className="md:hidden">
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+          <span className="text-xl">🛡️</span>
+          <h2 className="text-sm font-black text-gray-900 uppercase tracking-tight line-clamp-1">운영 총괄 대시보드</h2>
+        </div>
+        <div className="bg-white border-y border-gray-100 shadow-sm sticky top-0 z-10">
+          <div className="overflow-x-auto px-3 py-2" style={{WebkitOverflowScrolling: 'touch'}}>
+            <div className="flex gap-1 w-max">
+              <button onClick={() => setActiveTab('sns')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'sns' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-400'}`}>SNS 활성화</button>
+              <button onClick={() => setActiveTab('channel')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'channel' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-400'}`}>채널 거래</button>
+              <button onClick={() => setActiveTab('ebook')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'ebook' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-400'}`}>N잡 스토어</button>
+              <button onClick={() => setActiveTab('member')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'member' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400'}`}>회원 관리</button>
+              <button onClick={() => setActiveTab('marketing')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'marketing' ? 'bg-rose-600 text-white shadow-sm' : 'text-gray-400'}`}>마케팅</button>
+              <button onClick={() => setActiveTab('parttime')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'parttime' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-400'}`}>누구나알바</button>
+              <button onClick={() => setActiveTab('aiconsult')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'aiconsult' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-400'}`}>AI 상담</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 데스크톱 전용: 원본 헤더 + 탭 */}
+      <div className="hidden md:flex flex-row justify-between items-center bg-white p-5 rounded-[40px] shadow-sm border border-gray-100 gap-6">
          <div className="flex items-center gap-4 px-4">
             <span className="text-3xl">🛡️</span>
             <h2 className="text-2xl font-black text-gray-900 italic uppercase underline decoration-blue-500 underline-offset-8">운영 총괄 대시보드</h2>
@@ -119,7 +142,7 @@ const AdminPanel: React.FC<Props> = ({
          </div>
       </div>
 
-      <main className="min-h-screen">
+      <main className="min-h-screen px-3 md:px-0 mt-3 md:mt-0">
         {activeTab === 'sns' && (
           <SnsAdmin
             smmProviders={smmProviders} setSmmProviders={setSmmProviders}
