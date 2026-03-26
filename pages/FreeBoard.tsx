@@ -82,7 +82,8 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
       {/* 상단 헤더 섹션 */}
       <div className="bg-white p-4 sm:p-6 rounded-[32px] shadow-sm border border-gray-100 space-y-3 sm:space-y-6">
         {/* 모바일: 제목+글쓰기 한 줄, 검색 한 줄 / 데스크톱: 기존 레이아웃 */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+          {/* 모바일: 제목+글쓰기 한 줄 */}
           <div className="flex items-center justify-between gap-3 md:hidden">
             <h2 className="text-xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8 shrink-0">자유게시판</h2>
             <button
@@ -92,7 +93,12 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
               🖋️ 글쓰기
             </button>
           </div>
-          <div className="relative group w-full md:max-w-xl md:flex-1">
+          {/* 데스크톱: 자유게시판 제목 (왼쪽) */}
+          <h2 className="hidden md:block text-2xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8 shrink-0">자유게시판</h2>
+          {/* 스페이서 */}
+          <div className="hidden md:flex flex-1" />
+          {/* 검색창 (모바일: 전체 너비 / 데스크톱: 고정 너비) */}
+          <div className="relative group w-full md:w-80">
             <input
               type="text"
               value={searchQuery}
@@ -104,9 +110,7 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
               <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-6 flex-1">
-            <h2 className="text-2xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8 shrink-0 order-first">자유게시판</h2>
-          </div>
+          {/* 데스크톱: 글쓰기 버튼 (오른쪽 끝) */}
           <button
             onClick={() => navigate('/board/write')}
             className="hidden md:flex bg-[#1e293b] text-white px-10 py-4 rounded-[20px] font-black shadow-xl hover:bg-blue-600 transition-all items-center gap-2 active:scale-95 italic uppercase tracking-tighter shrink-0 text-sm"
