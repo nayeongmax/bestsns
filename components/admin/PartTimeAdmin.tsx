@@ -694,105 +694,152 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                 </select>
               </div>
             </div>
-            <div className="overflow-x-auto border border-gray-100 rounded-xl">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs font-black text-gray-500 uppercase">
-                  <tr>
-                    <th className="px-4 py-3 text-left">상태</th>
-                    <th className="px-4 py-3 text-left">제목 / 안내문구</th>
-                    <th className="px-4 py-3 text-center">내용확인</th>
-                    <th className="px-4 py-3 text-center">채팅하기</th>
-                    <th className="px-4 py-3 text-center">수정요청</th>
-                    <th className="px-4 py-3 text-center">비상 알바비</th>
-                    <th className="px-4 py-3 text-center">관리</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {freelancerFilteredTasks.map((t) => {
-                    const selectedOne = t.applicants.find((a) => a.selected);
-                    const needsSelection = !selectedOne;
-                    const hasWorkLinkSelected = selectedOne && hasWorkLink(selectedOne);
-                    const isPaid = selectedOne && t.paidUserIds?.includes(selectedOne.userId);
-                    const hasReApproval = selectedOne?.reApprovalRequestedAt;
-                    const sentToAdvertiser = !!t.sentToAdvertiserAt;
-                    const status = getTaskStatus(t);
-                    const statusLabels: Record<string, { label: string; msg: string }> = {
-                      프리모집: { label: '프리모집', msg: `${t.applicants.length}명 신청. 프리랜서 선정이 필요합니다.` },
-                      프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨. 작업 링크 제출 대기 중입니다.` },
-                      작업진행: { label: '링크확인', msg: hasReApproval ? '링크를 재제출했습니다. 재승인요청을 했습니다. 확인바랍니다.' : '링크를 제출했습니다. 확인바랍니다.' },
-                      작업완료: { label: '작업완료', msg: '광고주 전송 완료. 구매확정 대기 중입니다.' },
-                      구매확정: { label: '구매확정', msg: '광고주 구매확정 완료. 알바비 지급 대기 중입니다.' },
-                      지급완료: { label: '지급완료', msg: '알바비 지급 완료되었습니다.' },
-                    };
-                    const { label: statusLabel, msg } = statusLabels[status] || { label: status, msg: '' };
-                    return (
-                      <tr key={t.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <span className={`inline-block px-2 py-1 rounded-lg text-xs font-black ${status === '프리모집' ? 'bg-amber-200 text-amber-800' : status === '프리선정' ? 'bg-blue-100 text-blue-700' : status === '작업진행' ? 'bg-blue-100 text-blue-700' : status === '작업완료' ? 'bg-indigo-100 text-indigo-700' : status === '지급완료' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
-                            {statusLabel}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="font-bold text-gray-900">{t.title}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{msg}</p>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true }} className="inline-block px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 font-bold text-xs hover:bg-emerald-200">
-                            내용확인
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {(needsSelection ? t.applicants[0] : selectedOne) && !needsSelection ? (
-                            <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: selectedOne!.userId, nickname: selectedOne!.nickname, profileImage: '' } } })} className="inline-block px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs hover:bg-blue-200">
-                              채팅하기
-                            </button>
-                          ) : needsSelection && t.applicants[0] ? (
-                            <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: t.applicants[0].userId, nickname: t.applicants[0].nickname, profileImage: '' } } })} className="inline-block px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs hover:bg-blue-200">
-                              채팅하기
-                            </button>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {selectedOne && hasWorkLinkSelected && !isPaid ? (
-                            <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="inline-block px-3 py-1.5 rounded-lg bg-orange-100 text-orange-700 font-bold text-xs hover:bg-orange-200">
-                              수정요청
-                            </button>
-                          ) : (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
-                            <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true }} className="inline-block px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 font-bold text-xs hover:bg-amber-200">
-                              수정하기
-                            </Link>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {selectedOne && hasWorkLinkSelected && !isPaid ? (
-                            <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="inline-block px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 font-bold text-xs hover:bg-amber-200">
-                              비상 지급
-                            </button>
-                          ) : isPaid ? (
-                            <span className="text-gray-500 font-bold text-xs">지급완료</span>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <Link to={`/part-time-register?edit=${t.id}`} state={{ editTask: t }} className="inline-block px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100">수정</Link>
-                            <button type="button" onClick={async () => { if (!confirm(`"${t.title}" 작업을 삭제할까요?\n신청자 데이터도 함께 삭제됩니다.`)) return; await deletePartTimeTask(t.id); setTasks(prev => prev.filter(x => x.id !== t.id)); }} className="inline-block px-3 py-1.5 rounded-lg bg-red-50 text-red-500 font-bold text-xs hover:bg-red-100">삭제</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            {/* 모바일: 가로형 리스트 카드 */}
+            <div className="sm:hidden space-y-2">
+              {freelancerFilteredTasks.length === 0 ? (
+                <p className="py-8 text-center text-gray-500 font-bold">해당 조건에 맞는 작업이 없습니다.</p>
+              ) : freelancerFilteredTasks.map((t) => {
+                const selectedOne = t.applicants.find((a) => a.selected);
+                const needsSelection = !selectedOne;
+                const hasWorkLinkSelected = selectedOne && hasWorkLink(selectedOne);
+                const isPaid = selectedOne && t.paidUserIds?.includes(selectedOne.userId);
+                const hasReApproval = selectedOne?.reApprovalRequestedAt;
+                const sentToAdvertiser = !!t.sentToAdvertiserAt;
+                const status = getTaskStatus(t);
+                const statusLabels: Record<string, { label: string; msg: string }> = {
+                  프리모집: { label: '프리모집', msg: `${t.applicants.length}명 신청` },
+                  프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨` },
+                  작업진행: { label: '링크확인', msg: hasReApproval ? '재승인요청' : '링크제출됨' },
+                  작업완료: { label: '작업완료', msg: '구매확정 대기' },
+                  구매확정: { label: '구매확정', msg: '알바비 지급 대기' },
+                  지급완료: { label: '지급완료', msg: '지급 완료' },
+                };
+                const { label: statusLabel, msg } = statusLabels[status] || { label: status, msg: '' };
+                const statusColor = status === '프리모집' ? 'bg-amber-500' : status === '프리선정' ? 'bg-blue-500' : status === '작업진행' ? 'bg-blue-600' : status === '작업완료' ? 'bg-indigo-500' : status === '구매확정' ? 'bg-purple-500' : status === '지급완료' ? 'bg-emerald-500' : 'bg-gray-400';
+                return (
+                  <div key={t.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                    <div className={`${statusColor} px-3 py-1.5 flex items-center justify-between`}>
+                      <span className="text-white text-[10px] font-black uppercase italic tracking-wider">{statusLabel}</span>
+                      <span className="text-white/70 text-[9px] font-bold">{msg}</span>
+                    </div>
+                    <div className="px-3 py-2.5">
+                      <p className="font-black text-gray-900 text-[13px] leading-tight line-clamp-2 mb-1.5">{t.title}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400 font-bold">신청 {t.applicants.length}명</span>
+                          {t.projectNo && <span className="text-[9px] text-gray-300 font-bold">{t.projectNo}</span>}
+                        </div>
+                        <span className="text-[13px] font-black text-emerald-600 italic">₩{t.reward.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 border-t border-gray-50">
+                      <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true }} className="py-2.5 text-center bg-emerald-600 text-white font-black text-[10px] hover:bg-emerald-700 transition-all italic uppercase">내용확인</Link>
+                      {!needsSelection && selectedOne ? (
+                        <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: selectedOne.userId, nickname: selectedOne.nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white font-black text-[10px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
+                      ) : needsSelection && t.applicants[0] ? (
+                        <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: t.applicants[0].userId, nickname: t.applicants[0].nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white font-black text-[10px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
+                      ) : (
+                        <Link to={`/part-time-register?edit=${t.id}`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white font-black text-[10px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 border-t border-gray-50">
+                      {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                        <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="py-2 bg-orange-50 text-orange-600 font-black text-[9px] hover:bg-orange-100 transition-all">수정요청</button>
+                      ) : (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
+                        <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true }} className="py-2 text-center bg-amber-50 text-amber-700 font-black text-[9px] hover:bg-amber-100 transition-all">링크확인</Link>
+                      ) : (
+                        <span className="py-2 text-center bg-gray-50 text-gray-300 font-bold text-[9px]">-</span>
+                      )}
+                      {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                        <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="py-2 bg-amber-50 text-amber-700 font-black text-[9px] hover:bg-amber-100 transition-all">비상지급</button>
+                      ) : isPaid ? (
+                        <span className="py-2 text-center bg-emerald-50 text-emerald-600 font-black text-[9px]">지급완료</span>
+                      ) : (
+                        <span className="py-2 text-center bg-gray-50 text-gray-300 font-bold text-[9px]">-</span>
+                      )}
+                      <button type="button" onClick={async () => { if (!confirm(`"${t.title}" 작업을 삭제할까요?\n신청자 데이터도 함께 삭제됩니다.`)) return; await deletePartTimeTask(t.id); setTasks(prev => prev.filter(x => x.id !== t.id)); }} className="py-2 bg-red-50 text-red-500 font-black text-[9px] hover:bg-red-100 transition-all">삭제</button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            {freelancerFilteredTasks.length === 0 && (
-              <p className="py-8 text-center text-gray-500 font-bold">해당 조건에 맞는 작업이 없습니다.</p>
-            )}
+
+            {/* 태블릿/데스크톱: 그리드 카드 */}
+            <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {freelancerFilteredTasks.length === 0 ? (
+                <p className="col-span-full py-8 text-center text-gray-500 font-bold">해당 조건에 맞는 작업이 없습니다.</p>
+              ) : freelancerFilteredTasks.map((t) => {
+                const selectedOne = t.applicants.find((a) => a.selected);
+                const needsSelection = !selectedOne;
+                const hasWorkLinkSelected = selectedOne && hasWorkLink(selectedOne);
+                const isPaid = selectedOne && t.paidUserIds?.includes(selectedOne.userId);
+                const hasReApproval = selectedOne?.reApprovalRequestedAt;
+                const sentToAdvertiser = !!t.sentToAdvertiserAt;
+                const status = getTaskStatus(t);
+                const statusLabels: Record<string, { label: string; msg: string }> = {
+                  프리모집: { label: '프리모집', msg: `${t.applicants.length}명 신청. 프리랜서 선정이 필요합니다.` },
+                  프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨. 작업 링크 제출 대기 중입니다.` },
+                  작업진행: { label: '링크확인', msg: hasReApproval ? '링크를 재제출했습니다. 재승인요청을 했습니다. 확인바랍니다.' : '링크를 제출했습니다. 확인바랍니다.' },
+                  작업완료: { label: '작업완료', msg: '광고주 전송 완료. 구매확정 대기 중입니다.' },
+                  구매확정: { label: '구매확정', msg: '광고주 구매확정 완료. 알바비 지급 대기 중입니다.' },
+                  지급완료: { label: '지급완료', msg: '알바비 지급 완료되었습니다.' },
+                };
+                const { label: statusLabel, msg } = statusLabels[status] || { label: status, msg: '' };
+                const statusColor = status === '프리모집' ? 'bg-amber-500' : status === '프리선정' ? 'bg-blue-500' : status === '작업진행' ? 'bg-blue-600' : status === '작업완료' ? 'bg-indigo-500' : status === '구매확정' ? 'bg-purple-500' : status === '지급완료' ? 'bg-emerald-500' : 'bg-gray-400';
+                const statusBadge = status === '프리모집' ? 'bg-amber-200 text-amber-800' : status === '프리선정' ? 'bg-blue-100 text-blue-700' : status === '작업진행' ? 'bg-blue-100 text-blue-700' : status === '작업완료' ? 'bg-indigo-100 text-indigo-700' : status === '지급완료' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600';
+                return (
+                  <div key={t.id} className="bg-white rounded-[28px] overflow-hidden shadow-sm border border-gray-100 hover:-translate-y-1 transition-all flex flex-col">
+                    <div className={`${statusColor} px-4 py-3 flex items-center justify-between`}>
+                      <span className="text-white text-[11px] font-black uppercase italic tracking-wider">{statusLabel}</span>
+                      <span className="text-white/80 text-[10px] font-bold truncate ml-2 max-w-[120px]">{msg}</span>
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <h3 className="font-black text-gray-900 text-[14px] leading-tight line-clamp-2 flex-1">{t.title}</h3>
+                        {t.projectNo && <span className="text-[9px] text-gray-300 font-bold shrink-0">{t.projectNo}</span>}
+                      </div>
+                      <div className="flex items-center justify-between border-t border-gray-50 pt-3 mb-4">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-gray-300 font-black uppercase tracking-widest italic mb-0.5">신청자</span>
+                          <span className="text-[12px] font-black text-gray-700">{t.applicants.length}명</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[9px] text-gray-300 font-black uppercase tracking-widest italic mb-0.5">알바비</span>
+                          <span className="text-[16px] font-black text-emerald-600 italic tracking-tighter">₩{t.reward.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-auto">
+                        <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true }} className="py-2.5 text-center bg-emerald-600 text-white rounded-xl font-black text-[11px] hover:bg-emerald-700 transition-all italic uppercase">내용확인</Link>
+                        {!needsSelection && selectedOne ? (
+                          <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: selectedOne.userId, nickname: selectedOne.nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white rounded-xl font-black text-[11px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
+                        ) : needsSelection && t.applicants[0] ? (
+                          <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: t.applicants[0].userId, nickname: t.applicants[0].nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white rounded-xl font-black text-[11px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
+                        ) : (
+                          <Link to={`/part-time-register?edit=${t.id}`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white rounded-xl font-black text-[11px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5 mt-2">
+                        {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                          <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="py-2 rounded-lg bg-orange-100 text-orange-700 font-black text-[10px] hover:bg-orange-200 transition-all">수정요청</button>
+                        ) : (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
+                          <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true }} className="py-2 text-center rounded-lg bg-amber-100 text-amber-700 font-black text-[10px] hover:bg-amber-200 transition-all">링크확인</Link>
+                        ) : (
+                          <span className="py-2 text-center rounded-lg bg-gray-50 text-gray-300 font-bold text-[10px]">-</span>
+                        )}
+                        {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                          <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="py-2 rounded-lg bg-amber-100 text-amber-700 font-black text-[10px] hover:bg-amber-200 transition-all">비상지급</button>
+                        ) : isPaid ? (
+                          <span className="py-2 text-center rounded-lg bg-emerald-50 text-emerald-600 font-black text-[10px]">지급완료</span>
+                        ) : (
+                          <span className="py-2 text-center rounded-lg bg-gray-50 text-gray-300 font-bold text-[10px]">-</span>
+                        )}
+                        <button type="button" onClick={async () => { if (!confirm(`"${t.title}" 작업을 삭제할까요?\n신청자 데이터도 함께 삭제됩니다.`)) return; await deletePartTimeTask(t.id); setTasks(prev => prev.filter(x => x.id !== t.id)); }} className="py-2 rounded-lg bg-red-50 text-red-500 font-black text-[10px] hover:bg-red-100 transition-all">삭제</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
           <div className="py-12 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
