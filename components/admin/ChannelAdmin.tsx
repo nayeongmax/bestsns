@@ -220,18 +220,19 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-500">
-      <div className="bg-gray-900 p-1.5 rounded-[24px] flex gap-1 w-fit mx-4 shadow-xl">
+    <div className="space-y-6 md:space-y-12 animate-in fade-in duration-500">
+      <div className="bg-gray-900 p-1.5 rounded-2xl md:rounded-[24px] flex gap-1 w-full md:w-fit mx-0 md:mx-4 shadow-xl">
         {[
-          { id: 'manage', label: '🛠️ 채널 인벤토리 관리', icon: '📦' },
-          { id: 'order', label: '📊 채널 거래 계약 현황', icon: '📈' }
+          { id: 'manage', label: '🛠️ 채널 인벤토리 관리', short: '📦 인벤토리 관리' },
+          { id: 'order', label: '📊 채널 거래 계약 현황', short: '📊 거래 현황' }
         ].map(tab => (
-          <button 
-            key={tab.id} 
+          <button
+            key={tab.id}
             onClick={() => { setActiveSubTab(tab.id as any); setEditingChannel(null); setIsRegisteringChannel(false); }}
-            className={`px-8 py-3.5 rounded-[20px] text-[13px] font-black transition-all ${activeSubTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`flex-1 md:flex-none px-4 py-2.5 md:px-8 md:py-3.5 rounded-xl md:rounded-[20px] text-[11px] md:text-[13px] font-black transition-all whitespace-nowrap ${activeSubTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
           >
-            {tab.label}
+            <span className="md:hidden">{tab.short}</span>
+            <span className="hidden md:inline">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -351,37 +352,47 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                    <textarea value={tempDescription} onChange={e => setTempDescription(e.target.value)} rows={8} placeholder="수익 구조, 성장 이력, 소유권 이전 절차 등을 명확하게 기술해 주세요." className="w-full p-10 bg-gray-50 border-none rounded-[48px] font-bold text-gray-700 shadow-inner resize-none outline-none focus:ring-4 focus:ring-blue-100 transition-all leading-relaxed no-scrollbar" />
                  </div>
 
-                 <div className="bg-gray-50 p-10 rounded-[48px] flex flex-col md:flex-row gap-12 border-2 border-dashed border-gray-100">
+                 <div className="bg-gray-50 p-5 md:p-10 rounded-3xl md:rounded-[48px] flex flex-col md:flex-row gap-5 md:gap-12 border-2 border-dashed border-gray-100">
                     <label className="flex items-center gap-4 cursor-pointer group">
-                      <div className={`w-8 h-8 rounded-xl border-4 transition-all flex items-center justify-center ${isApprovedTemp ? 'bg-blue-600 border-blue-600 shadow-lg' : 'bg-white border-gray-200'}`}>
+                      {/* 모바일: 토글 스위치 */}
+                      <div className={`md:hidden relative w-11 h-6 rounded-full transition-all flex-shrink-0 ${isApprovedTemp ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                        <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isApprovedTemp ? 'translate-x-5' : ''}`}></div>
+                      </div>
+                      {/* 데스크톱: 체크박스 */}
+                      <div className={`hidden md:flex w-8 h-8 rounded-xl border-4 transition-all items-center justify-center ${isApprovedTemp ? 'bg-blue-600 border-blue-600 shadow-lg' : 'bg-white border-gray-200'}`}>
                         {isApprovedTemp && <span className="text-white text-sm">✓</span>}
                       </div>
                       <input type="checkbox" checked={isApprovedTemp} onChange={e => setIsApprovedTemp(e.target.checked)} className="hidden" />
-                      <span className={`text-[15px] font-black italic tracking-tight transition-colors ${isApprovedTemp ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`}>공식 수익창출 승인 채널</span>
+                      <span className={`text-[13px] md:text-[15px] font-black italic tracking-tight transition-colors line-clamp-1 ${isApprovedTemp ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`}>공식 수익창출 승인 채널</span>
                     </label>
 
                     <label className="flex items-center gap-4 cursor-pointer group">
-                      <div className={`w-8 h-8 rounded-xl border-4 transition-all flex items-center justify-center ${isHotTemp ? 'bg-red-50 border-red-500 shadow-lg' : 'bg-white border-gray-200'}`}>
+                      {/* 모바일: 토글 스위치 */}
+                      <div className={`md:hidden relative w-11 h-6 rounded-full transition-all flex-shrink-0 ${isHotTemp ? 'bg-red-500' : 'bg-gray-200'}`}>
+                        <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isHotTemp ? 'translate-x-5' : ''}`}></div>
+                      </div>
+                      {/* 데스크톱: 체크박스 */}
+                      <div className={`hidden md:flex w-8 h-8 rounded-xl border-4 transition-all items-center justify-center ${isHotTemp ? 'bg-red-50 border-red-500 shadow-lg' : 'bg-white border-gray-200'}`}>
                         {isHotTemp && <span className="text-white text-sm">✓</span>}
                       </div>
                       <input type="checkbox" checked={isHotTemp} onChange={e => setIsHotTemp(e.target.checked)} className="hidden" />
-                      <span className={`text-[15px] font-black italic tracking-tight transition-colors ${isHotTemp ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`}>HOT 프리미엄 매물 추천</span>
+                      <span className={`text-[13px] md:text-[15px] font-black italic tracking-tight transition-colors line-clamp-1 ${isHotTemp ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`}>HOT 프리미엄 매물 추천</span>
                     </label>
                  </div>
 
-                 <button type="submit" className="w-full py-10 bg-gray-900 text-white rounded-[50px] font-black text-3xl shadow-2xl hover:bg-blue-600 transition-all italic tracking-[0.2em] uppercase active:scale-[0.98]">
-                    매물 정보 등록 및 최적화 완료 💾
+                 <button type="submit" className="w-full py-5 md:py-10 bg-gray-900 text-white rounded-3xl md:rounded-[50px] font-black text-lg md:text-3xl shadow-2xl hover:bg-blue-600 transition-all italic tracking-widest md:tracking-[0.2em] uppercase active:scale-[0.98] line-clamp-1">
+                    매물 정보 등록 완료 💾
                  </button>
               </form>
             </div>
           ) : (
             <div className="space-y-10">
-              <div className="flex justify-between items-center px-6">
-                <div>
-                  <h3 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-12">채널 매물 통합 관리 센터</h3>
-                  <p className="text-[12px] font-bold text-gray-400 mt-4 uppercase tracking-[0.3em]">현재 등록된 실시간 매물 현황 ({channels.length}개)</p>
+              <div className="flex justify-between items-center px-4 md:px-6 gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-xl md:text-3xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-4 md:underline-offset-12 line-clamp-1">채널 매물 통합 관리 센터</h3>
+                  <p className="text-[11px] md:text-[12px] font-bold text-gray-400 mt-1 md:mt-4 uppercase tracking-wider md:tracking-[0.3em] line-clamp-1">실시간 매물 현황 ({channels.length}개)</p>
                 </div>
-                <button onClick={() => startEditChannel(null)} className="bg-blue-600 text-white px-10 py-4 rounded-[24px] font-black text-sm shadow-xl hover:bg-black transition-all italic tracking-widest uppercase">+ 신규 채널 매물 등록</button>
+                <button onClick={() => startEditChannel(null)} className="shrink-0 bg-blue-600 text-white px-4 py-2.5 md:px-10 md:py-4 rounded-2xl md:rounded-[24px] font-black text-[11px] md:text-sm shadow-xl hover:bg-black transition-all italic uppercase whitespace-nowrap line-clamp-1">+ 신규 등록</button>
               </div>
 
               {/* 모바일: 가로형 리스트 카드 */}
