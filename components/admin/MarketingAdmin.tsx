@@ -210,8 +210,8 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center px-4">
+    <div className="space-y-6 md:space-y-12 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center px-2 md:px-4">
         <div>
           <h3 className="text-lg md:text-2xl font-black text-gray-900 italic uppercase underline decoration-rose-500 underline-offset-8">쿠폰 및 마케팅 캠페인 관제</h3>
           <p className="text-[10px] md:text-[11px] font-bold text-gray-400 mt-2 md:mt-4 uppercase tracking-widest italic">Advanced Coupon Marketing Engine</p>
@@ -219,7 +219,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-10 p-4">
-        <div className="lg:col-span-5 bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-auto md:h-[800px]">
+        <div className="lg:col-span-5 bg-white rounded-2xl md:rounded-[40px] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-auto md:h-[800px]">
            <div className="p-4 md:p-8 border-b border-gray-50 space-y-4 md:space-y-6">
               <div className="flex justify-between items-end">
                 <div>
@@ -232,7 +232,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
               </div>
 
               {issuanceMode === 'auto' ? (
-                <div className="bg-rose-50 p-8 rounded-[32px] border-2 border-dashed border-rose-200 text-center space-y-4 animate-in zoom-in-95">
+                <div className="bg-rose-50 p-5 md:p-8 rounded-xl md:rounded-[32px] border-2 border-dashed border-rose-200 text-center space-y-4 animate-in zoom-in-95">
                    <div className="text-4xl">🤖</div>
                    <h5 className="font-black text-rose-600 italic">자동 발행 모드 활성화 중</h5>
                    <p className="text-[12px] font-bold text-rose-400 leading-relaxed">
@@ -322,7 +322,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
            )}
         </div>
 
-        <div className="lg:col-span-7 bg-gray-900 rounded-[48px] p-4 md:p-10 text-white space-y-4 md:space-y-8 shadow-2xl flex flex-col h-auto md:h-[800px] relative overflow-hidden">
+        <div className="lg:col-span-7 bg-gray-900 rounded-2xl md:rounded-[48px] p-4 md:p-10 text-white space-y-4 md:space-y-8 shadow-2xl flex flex-col h-auto md:h-[800px] relative overflow-hidden">
            <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 blur-[100px]"></div>
            
            <div className="space-y-10 flex-1 overflow-y-auto no-scrollbar relative z-10">
@@ -429,21 +429,21 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-[48px] p-10 shadow-sm border border-gray-100 space-y-8 mx-4">
-         <div className="flex justify-between items-center px-4">
-            <h4 className="text-xl font-black text-gray-900 italic uppercase">운영 중인 캠페인 및 쿠폰 발행 이력</h4>
-            <span className="text-[11px] font-bold text-gray-400 italic uppercase tracking-widest">Campaign & Blast History</span>
+      <div className="bg-white rounded-2xl md:rounded-[48px] p-4 md:p-10 shadow-sm border border-gray-100 space-y-5 md:space-y-8 mx-2 md:mx-4">
+         <div className="flex justify-between items-center px-1 md:px-4">
+            <h4 className="text-base md:text-xl font-black text-gray-900 italic uppercase">운영 중인 캠페인 및 쿠폰 발행 이력</h4>
+            <span className="hidden md:inline text-[11px] font-bold text-gray-400 italic uppercase tracking-widest">Campaign & Blast History</span>
          </div>
 
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {campaigns.length === 0 ? (
-              <div className="col-span-full py-20 text-center bg-gray-50 rounded-[32px] border-2 border-dashed border-gray-200">
+              <div className="col-span-full py-12 md:py-20 text-center bg-gray-50 rounded-2xl md:rounded-[32px] border-2 border-dashed border-gray-200">
                  <p className="text-gray-300 font-black italic">활성화된 캠페인이 없습니다.</p>
               </div>
             ) : campaigns.map((camp) => (
-              <div key={camp.id} className={`bg-white p-8 rounded-[36px] border shadow-sm hover:shadow-xl transition-all group relative overflow-hidden ${editingCampaignId === camp.id ? 'ring-4 ring-rose-500 border-rose-500' : 'border-gray-100'}`}>
-                 <div className="flex justify-between items-start mb-6">
-                    <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 border-gray-100 shadow-inner ${
+              <div key={camp.id} className={`bg-white p-5 md:p-8 rounded-2xl md:rounded-[36px] border shadow-sm hover:shadow-xl transition-all group relative overflow-hidden ${editingCampaignId === camp.id ? 'ring-4 ring-rose-500 border-rose-500' : 'border-gray-100'}`}>
+                 <div className="flex justify-between items-start mb-4 md:mb-6">
+                    <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex flex-col items-center justify-center border-2 border-gray-100 shadow-inner ${
                       camp.color === 'rose' ? 'bg-rose-50 text-rose-600' : 
                       camp.color === 'blue' ? 'bg-blue-50 text-blue-600' : 
                       camp.color === 'green' ? 'bg-green-50 text-green-600' : 
@@ -468,7 +468,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
                     </p>
                  </div>
 
-                 <div className="mt-6 flex items-center justify-between pt-4 border-t border-gray-50">
+                 <div className="mt-4 md:mt-6 flex items-center justify-between pt-3 md:pt-4 border-t border-gray-50">
                     <span className={`px-2 py-0.5 rounded text-[9px] font-black italic shadow-sm border ${camp.isActive ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
                       {camp.isActive ? 'AUTO CAMPAIGN' : 'MANUAL BLAST'}
                     </span>

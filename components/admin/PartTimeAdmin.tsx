@@ -437,9 +437,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       </div>
 
       {adminTab === 'estimate' && (
-        <div className="space-y-10">
+        <div className="space-y-6 md:space-y-10">
       {/* 견적진행: 검토 대기 */}
-      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-xl font-black text-gray-900 mb-1">견적서 요청 · 검토 대기</h3>
@@ -536,8 +536,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       </div>
 
       {/* 견적서 발송 내역 */}
-      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-black text-gray-900 mb-1">견적서 발송 내역</h3>
+      <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
+        <h3 className="text-base md:text-xl font-black text-gray-900 mb-1">견적서 발송 내역</h3>
         <p className="text-sm text-gray-500 mb-6">날짜별로 발송한 견적서 목록입니다. C/S 응대 시 참고해 주세요.</p>
         {estimateHistory.length === 0 ? (
           <div className="py-8 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">발송된 견적서가 없습니다.</div>
@@ -570,9 +570,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       )}
 
       {adminTab === 'revenue' && (
-      <div className="space-y-10">
+      <div className="space-y-6 md:space-y-10">
       {/* 수익탭: 프리랜서 출금 신청 목록 */}
-      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
         <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
         <p className="text-sm text-gray-500 mb-6">수익통장에서 출금을 신청한 프리랜서 목록입니다. 신청일 기준 익일에 출금됩니다. 전문가정보에 등록된 통장으로 PortOne을 통해 입금 처리해 주세요.</p>
         {pendingWithdrawals.length === 0 ? (
@@ -664,9 +664,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       )}
 
       {adminTab === 'freelancer' && (
-      <div className="space-y-10">
+      <div className="space-y-6 md:space-y-10">
         {(freelancerAllTasks.length > 0) ? (
-          <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div>
                 <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 모집 · 작업 목록</h3>
@@ -850,7 +850,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       )}
 
       {adminTab === 'revenue' && (
-      <div className="space-y-10">
+      <div className="space-y-6 md:space-y-10">
       {/* 수익탭: 거래 목록 (ALBA-상품번호, 광고주/프리랜서, 작업확정서/상세확인) */}
       {(() => {
         const tradeTasksBase = tasks.filter((t) => t.jobRequestId && t.applicantUserId && t.applicants.some((a) => a.selected));
@@ -871,10 +871,10 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
         });
         if (tradeTasksBase.length === 0) return null;
         return (
-          <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4 md:mb-6">
               <div>
-                <h3 className="text-xl font-black text-gray-900 mb-1">거래 목록</h3>
+                <h3 className="text-base md:text-xl font-black text-gray-900 mb-1">거래 목록</h3>
                 <p className="text-sm text-gray-500">월별 확인 · 검색. 상품번호(ALBA), 광고주·프리랜서, 작업확정서·상세 페이지 확인</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
