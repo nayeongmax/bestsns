@@ -252,7 +252,7 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
                         key={d}
                         type="button"
                         onClick={() => setSelectedDate(d)}
-                        className={`p-2 rounded-lg border text-left transition-all duration-200 min-w-0 ${
+                        className={`p-2 rounded-lg border text-center transition-all duration-200 min-w-0 ${
                           isSelected
                             ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
                             : 'border-gray-200/80 bg-white'
