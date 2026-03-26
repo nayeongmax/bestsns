@@ -748,26 +748,28 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
          </div>
       </div>
 
-      <div className="bg-gray-900 p-2.5 rounded-[40px] flex gap-2 shadow-2xl flex-wrap">
-        {[
-          { id: 'provider', label: '📡 공급처 설정' },
-          { id: 'manage', label: '🛠️ 상품 등록' },
-          { id: 'list', label: '📋 상품 인벤토리' },
-          { id: 'order', label: '📈 주문 분석' },
-          { id: 'monitor', label: `🔔 원가 모니터링${unreadAlertsCount > 0 ? ` (${unreadAlertsCount})` : ''}` },
-          { id: 'banner', label: '🖼️ 배너 광고 관리' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id as SnsTab); if (tab.id !== 'manage') setEditingProductId(null); if (tab.id === 'monitor') setPriceAlerts(prev => prev.map(a => ({ ...a, isRead: true }))); }}
-            className={`flex-1 py-5 rounded-[28px] font-black text-[14px] transition-all relative ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
-          >
-            {tab.label}
-            {tab.id === 'monitor' && unreadAlertsCount > 0 && (
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
-            )}
-          </button>
-        ))}
+      <div className="overflow-x-auto" style={{WebkitOverflowScrolling: 'touch'}}>
+        <div className="bg-gray-900 p-2.5 rounded-[40px] flex gap-2 shadow-2xl w-max min-w-full">
+          {[
+            { id: 'provider', label: '📡 공급처 설정' },
+            { id: 'manage', label: '🛠️ 상품 등록' },
+            { id: 'list', label: '📋 상품 인벤토리' },
+            { id: 'order', label: '📈 주문 분석' },
+            { id: 'monitor', label: `🔔 원가 모니터링${unreadAlertsCount > 0 ? ` (${unreadAlertsCount})` : ''}` },
+            { id: 'banner', label: '🖼️ 배너 광고 관리' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id as SnsTab); if (tab.id !== 'manage') setEditingProductId(null); if (tab.id === 'monitor') setPriceAlerts(prev => prev.map(a => ({ ...a, isRead: true }))); }}
+              className={`shrink-0 whitespace-nowrap px-5 py-4 rounded-[28px] font-black text-[14px] transition-all relative ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              {tab.label}
+              {tab.id === 'monitor' && unreadAlertsCount > 0 && (
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === 'provider' && (
