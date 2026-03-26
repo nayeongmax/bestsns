@@ -139,19 +139,19 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
   return (
     <div className="space-y-10 animate-in fade-in duration-500 pb-32">
       {/* 서브 탭 메뉴 */}
-      <div className="bg-white p-2 rounded-[28px] flex gap-2 w-fit border border-gray-100 shadow-sm mx-4">
+      <div className="bg-gray-900 p-1.5 rounded-2xl md:rounded-[28px] flex gap-1 w-full md:w-fit mx-0 md:mx-4 shadow-xl">
         {[
-          { id: 'inventory', label: '📦 인벤토리 마스터', icon: '💎' },
-          { id: 'approval', label: `📝 심사 대기함 (${pendingProducts.length})`, icon: '⚖️' },
-          { id: 'orders', label: '🛒 전체 판매 기록', icon: '📊' }
+          { id: 'inventory', label: '📦 인벤토리 마스터', short: '📦 인벤토리' },
+          { id: 'approval', label: `📝 심사 대기함 (${pendingProducts.length})`, short: `📝 심사(${pendingProducts.length})` },
+          { id: 'orders', label: '🛒 전체 판매 기록', short: '🛒 판매기록' }
         ].map(tab => (
-          <button 
-            key={tab.id} 
-            onClick={() => setActiveSubTab(tab.id as StoreAdminTab)} 
-            className={`px-8 py-3.5 rounded-[22px] text-[13px] font-black transition-all flex items-center gap-2 ${activeSubTab === tab.id ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-50'}`}
+          <button
+            key={tab.id}
+            onClick={() => setActiveSubTab(tab.id as StoreAdminTab)}
+            className={`flex-1 md:flex-none px-3 py-2.5 md:px-8 md:py-3.5 rounded-xl md:rounded-[22px] text-[10px] md:text-[13px] font-black transition-all whitespace-nowrap ${activeSubTab === tab.id ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
           >
-            <span>{tab.icon}</span>
-            {tab.label}
+            <span className="md:hidden">{tab.short}</span>
+            <span className="hidden md:inline">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -189,7 +189,45 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
              </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {/* 모바일: 컴팩트 리스트뷰 */}
+          <div className="sm:hidden space-y-2">
+            {filteredInventory.length === 0 ? (
+              <div className="py-16 text-center text-gray-300 font-black italic text-sm">등록된 상품이 없습니다.</div>
+            ) : filteredInventory.map(eb => (
+              <div key={eb.id} className={`bg-white rounded-2xl overflow-hidden shadow-sm border-2 transition-all ${eb.isPaused ? 'grayscale opacity-50 border-gray-200' : 'border-gray-100'}`}>
+                <div className="flex items-stretch min-h-[80px]">
+                  <div className="relative w-20 flex-shrink-0 bg-gray-100">
+                    <img src={eb.thumbnail} className="w-full h-full object-cover" alt="t" />
+                    {eb.isPaused && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="text-white text-[8px] font-black italic border border-white px-1 rotate-[-12deg]">중지</span></div>}
+                  </div>
+                  <div className="flex-1 min-w-0 px-2.5 py-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-1 mb-0.5 flex-wrap">
+                        <span className="text-[8px] font-black text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded uppercase">{eb.storeType}</span>
+                        <span className={`text-[7px] font-black px-1 py-0.5 rounded italic uppercase ${eb.status === 'approved' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-500'}`}>{eb.status}</span>
+                        {eb.isPrime && <span className="text-[7px] font-black px-1 py-0.5 rounded bg-yellow-100 text-yellow-700">PRIME</span>}
+                        {eb.isHot && <span className="text-[7px] font-black px-1 py-0.5 rounded bg-rose-100 text-rose-600">HOT</span>}
+                        {eb.isNew && <span className="text-[7px] font-black px-1 py-0.5 rounded bg-blue-100 text-blue-600">NEW</span>}
+                      </div>
+                      <p className="font-black text-gray-900 text-[12px] leading-tight line-clamp-2">{eb.title}</p>
+                      <p className="text-[9px] text-gray-400 mt-0.5">by {eb.author}</p>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[11px] font-black text-gray-800 italic">₩{eb.price.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 border-t border-gray-100">
+                  <button onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })} className="py-2 bg-gray-900 text-white font-black text-[9px] italic uppercase tracking-tighter hover:bg-purple-600 transition-all">수정</button>
+                  <button onClick={() => togglePause(eb.id)} className={`py-2 font-black text-[9px] text-white italic uppercase tracking-tighter transition-all ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}>{eb.isPaused ? '판매재개' : '판매중지'}</button>
+                  <button onClick={() => handleDelete(eb.id)} className="py-2 bg-red-50 text-red-500 font-black text-[9px] italic uppercase tracking-tighter hover:bg-red-100 transition-all">삭제</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 태블릿/데스크톱: 그리드 카드뷰 */}
+          <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
              {filteredInventory.map(eb => (
                <div key={eb.id} className={`bg-white rounded-[40px] overflow-hidden shadow-sm border-2 transition-all group relative ${eb.isPaused ? 'grayscale opacity-50 bg-gray-50 border-gray-200' : 'border-gray-100 hover:border-purple-200'}`}>
                   <div className="relative aspect-video overflow-hidden bg-gray-100">
@@ -260,38 +298,38 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
            ) : (
              <div className="grid grid-cols-1 gap-6">
                 {pendingProducts.map(eb => (
-                  <div key={eb.id} className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-8 group hover:border-purple-200 transition-all">
-                     <div className="flex items-center gap-8 flex-1">
-                        <div className="relative">
-                          <img src={eb.thumbnail} className="w-24 h-24 rounded-[32px] object-cover border-4 border-white shadow-xl" alt="p" />
-                          <div className="absolute -top-3 -right-3 flex flex-col gap-1 items-end">
-                            <span className={`px-3 py-1 rounded-full text-[9px] font-black text-white shadow-md border-2 border-white ${eb.status === 'revision' ? 'bg-orange-500' : 'bg-blue-600'}`}>
+                  <div key={eb.id} className="bg-white p-4 md:p-8 rounded-[24px] md:rounded-[40px] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-8 group hover:border-purple-200 transition-all">
+                     <div className="flex items-center gap-4 md:gap-8 flex-1 w-full">
+                        <div className="relative flex-shrink-0">
+                          <img src={eb.thumbnail} className="w-16 h-16 md:w-24 md:h-24 rounded-[20px] md:rounded-[32px] object-cover border-4 border-white shadow-xl" alt="p" />
+                          <div className="absolute -top-2 -right-2 md:-top-3 md:-right-3 flex flex-col gap-1 items-end">
+                            <span className={`px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[8px] md:text-[9px] font-black text-white shadow-md border-2 border-white ${eb.status === 'revision' ? 'bg-orange-500' : 'bg-blue-600'}`}>
                               {eb.status === 'revision' ? 'REVISION' : 'NEW'}
                             </span>
                             {eb.snapshot && (
-                              <span className="bg-rose-600 text-white text-[8px] font-black px-2 py-0.5 rounded shadow-sm border border-white animate-bounce">재심사 요청 건</span>
+                              <span className="bg-rose-600 text-white text-[7px] md:text-[8px] font-black px-1.5 md:px-2 py-0.5 rounded shadow-sm border border-white animate-bounce">재심사</span>
                             )}
                           </div>
                         </div>
-                        <div className="min-w-0">
-                           <div className="flex items-center gap-3 mb-1">
-                              <span className="bg-purple-50 text-purple-600 text-[10px] font-black px-2.5 py-0.5 rounded italic uppercase tracking-widest">{eb.storeType}</span>
-                              <span className="text-[11px] text-gray-300 font-bold italic">신청일: {eb.createdAt.split('T')[0]}</span>
+                        <div className="min-w-0 flex-1">
+                           <div className="flex items-center gap-2 md:gap-3 mb-1 flex-wrap">
+                              <span className="bg-purple-50 text-purple-600 text-[9px] md:text-[10px] font-black px-2 py-0.5 rounded italic uppercase">{eb.storeType}</span>
+                              <span className="text-[10px] md:text-[11px] text-gray-300 font-bold italic">신청일: {eb.createdAt.split('T')[0]}</span>
                            </div>
-                           <h4 className="text-2xl font-black text-gray-900 italic truncate mb-1">{eb.title}</h4>
-                           <p className="text-[13px] font-bold text-gray-400">판매자: <span className="text-gray-700">{eb.author} (@{eb.authorId})</span></p>
+                           <h4 className="text-base md:text-2xl font-black text-gray-900 italic truncate mb-1">{eb.title}</h4>
+                           <p className="text-[11px] md:text-[13px] font-bold text-gray-400">판매자: <span className="text-gray-700">{eb.author}</span></p>
                         </div>
                      </div>
-                     <div className="flex items-center gap-3">
-                       <button 
+                     <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
+                       <button
                          onClick={() => setReviewingEbook(eb)}
-                         className="px-12 py-5 bg-purple-600 text-white rounded-[24px] font-black text-[15px] shadow-xl hover:bg-black transition-all italic uppercase tracking-widest"
+                         className="flex-1 md:flex-none px-4 py-2.5 md:px-12 md:py-5 bg-purple-600 text-white rounded-2xl md:rounded-[24px] font-black text-[11px] md:text-[15px] shadow-xl hover:bg-black transition-all italic uppercase"
                         >
-                          상세 검수 및 승인하기
+                          검수·승인
                         </button>
-                       <button 
+                       <button
                          onClick={() => handleDelete(eb.id)}
-                         className="px-8 py-5 bg-red-100 text-red-600 rounded-[24px] font-black text-[13px] hover:bg-red-500 hover:text-white transition-all italic uppercase tracking-widest"
+                         className="px-4 py-2.5 md:px-8 md:py-5 bg-red-100 text-red-600 rounded-2xl md:rounded-[24px] font-black text-[11px] md:text-[13px] hover:bg-red-500 hover:text-white transition-all italic uppercase"
                         >
                           삭제
                         </button>
@@ -304,53 +342,53 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
       )}
 
       {activeSubTab === 'orders' && (
-        <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden mx-4">
-           <div className="p-10 border-b border-gray-50 flex justify-between items-center">
-              <h3 className="text-2xl font-black italic tracking-tighter uppercase underline decoration-purple-200 underline-offset-8">Store Sales History</h3>
-              <div className="bg-gray-50 px-6 py-2 rounded-full text-[11px] font-black text-gray-400 uppercase italic tracking-widest">
-                전체 거래 데이터: {storeOrders.length}건
+        <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden mx-0 md:mx-4">
+           <div className="p-4 md:p-10 border-b border-gray-50 flex justify-between items-center gap-3">
+              <h3 className="text-base md:text-2xl font-black italic tracking-tighter uppercase underline decoration-purple-200 underline-offset-8">Store Sales History</h3>
+              <div className="bg-gray-50 px-3 md:px-6 py-1 md:py-2 rounded-full text-[10px] md:text-[11px] font-black text-gray-400 uppercase italic tracking-widest shrink-0">
+                전체: {storeOrders.length}건
               </div>
            </div>
-           <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                 <thead className="bg-[#0f172a] text-white text-[11px] font-black uppercase tracking-widest italic">
+           <div className="overflow-x-auto" style={{WebkitOverflowScrolling: 'touch'}}>
+              <table className="w-full text-left" style={{minWidth: '700px'}}>
+                 <thead className="bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest italic">
                     <tr>
-                       <th className="px-10 py-6">주문일시 / ID</th>
-                       <th className="px-10 py-6">고객사 거래번호</th>
-                       <th className="px-10 py-6">구매자 정보</th>
-                       <th className="px-10 py-6">판매자 정보</th>
-                       <th className="px-10 py-6">상품 및 옵션</th>
-                       <th className="px-10 py-6 text-right">결제금액</th>
-                       <th className="px-10 py-6 text-center">진행상태</th>
+                       <th className="px-3 py-3 md:px-10 md:py-6">주문일시 / ID</th>
+                       <th className="px-3 py-3 md:px-10 md:py-6">거래번호</th>
+                       <th className="px-3 py-3 md:px-10 md:py-6">구매자</th>
+                       <th className="px-3 py-3 md:px-10 md:py-6">판매자</th>
+                       <th className="px-3 py-3 md:px-10 md:py-6">상품</th>
+                       <th className="px-3 py-3 md:px-10 md:py-6 text-right">금액</th>
+                       <th className="px-3 py-3 md:px-10 md:py-6 text-center">상태</th>
                     </tr>
                  </thead>
                  <tbody className="divide-y divide-gray-50">
                     {storeOrders.length === 0 ? (
-                      <tr><td colSpan={7} className="py-40 text-center text-gray-300 italic font-black text-lg">기록된 판매 내역이 없습니다.</td></tr>
+                      <tr><td colSpan={7} className="py-20 text-center text-gray-300 italic font-black text-sm">기록된 판매 내역이 없습니다.</td></tr>
                     ) : storeOrders.sort((a,b) => b.orderTime.localeCompare(a.orderTime)).map(o => (
-                      <tr key={o.id} className="hover:bg-purple-50/20 transition-all font-bold text-[14px]">
-                        <td className="px-10 py-6">
-                           <p className="text-gray-800">{o.orderTime}</p>
-                           <p className="text-[11px] text-purple-500 mt-1">#{o.id}</p>
+                      <tr key={o.id} className="hover:bg-purple-50/20 transition-all font-bold text-[12px] md:text-[14px]">
+                        <td className="px-3 py-3 md:px-10 md:py-6">
+                           <p className="text-gray-800 text-[11px] md:text-sm">{o.orderTime}</p>
+                           <p className="text-[10px] text-purple-500 mt-0.5">#{o.id.slice(-6)}</p>
                         </td>
-                        <td className="px-10 py-6">
+                        <td className="px-3 py-3 md:px-10 md:py-6">
                            {o.paymentId
-                             ? <span className="text-[11px] text-blue-600 font-black italic break-all">{o.paymentId}</span>
-                             : <span className="text-[11px] text-gray-300 italic">-</span>
+                             ? <span className="text-[10px] text-blue-600 font-black italic break-all">{o.paymentId}</span>
+                             : <span className="text-[10px] text-gray-300 italic">-</span>
                            }
                         </td>
-                        <td className="px-10 py-6 whitespace-nowrap">
-                           <span className="text-gray-900">@{o.userId}</span>
-                           {o.userNickname && <span className="text-[11px] text-gray-400 font-bold uppercase ml-2">({o.userNickname})</span>}
+                        <td className="px-3 py-3 md:px-10 md:py-6 whitespace-nowrap">
+                           <span className="text-gray-900 text-[11px] md:text-sm">@{o.userId}</span>
+                           {o.userNickname && <span className="text-[10px] text-gray-400 font-bold uppercase block">({o.userNickname})</span>}
                         </td>
-                        <td className="px-10 py-6 text-purple-600 font-black italic whitespace-nowrap">{o.sellerNickname}</td>
-                        <td className="px-10 py-6">
-                           <p className="text-gray-900 whitespace-normal">{o.productName}</p>
-                           <p className="text-[10px] text-gray-400 uppercase italic tracking-tighter mt-1">{o.tierName}</p>
+                        <td className="px-3 py-3 md:px-10 md:py-6 text-purple-600 font-black italic whitespace-nowrap text-[11px] md:text-sm">{o.sellerNickname}</td>
+                        <td className="px-3 py-3 md:px-10 md:py-6">
+                           <p className="text-gray-900 text-[11px] md:text-sm whitespace-normal line-clamp-2">{o.productName}</p>
+                           <p className="text-[9px] text-gray-400 uppercase italic tracking-tighter mt-0.5">{o.tierName}</p>
                         </td>
-                        <td className="px-10 py-6 text-right font-black text-gray-900 italic text-lg">₩{o.price.toLocaleString()}</td>
-                        <td className="px-10 py-6 text-center">
-                           <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm uppercase ${o.status === '구매확정' ? 'bg-green-100 text-green-600' : o.status === '취소' ? 'bg-orange-100 text-orange-500' : 'bg-gray-100 text-gray-400'}`}>
+                        <td className="px-3 py-3 md:px-10 md:py-6 text-right font-black text-gray-900 italic text-sm md:text-lg">₩{o.price.toLocaleString()}</td>
+                        <td className="px-3 py-3 md:px-10 md:py-6 text-center">
+                           <span className={`px-2 py-1 md:px-4 md:py-1.5 rounded-full text-[9px] md:text-[10px] font-black italic shadow-sm uppercase ${o.status === '구매확정' ? 'bg-green-100 text-green-600' : o.status === '취소' ? 'bg-orange-100 text-orange-500' : 'bg-gray-100 text-gray-400'}`}>
                              {o.status === '취소' ? '환불완료' : o.status}
                            </span>
                         </td>

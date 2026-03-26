@@ -965,49 +965,49 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
               </div>
            </div>
            <div className="bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
-              <div className="overflow-x-auto">
-                 <table className="w-full text-left">
-                    <thead className="bg-gray-900 text-white text-[11px] font-black uppercase tracking-widest italic">
+              <div className="overflow-x-auto" style={{WebkitOverflowScrolling: 'touch'}}>
+                 <table className="w-full text-left" style={{minWidth: '700px'}}>
+                    <thead className="bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest italic">
                        <tr>
-                          <th className="px-6 py-6 text-center">순서</th>
-                          <th className="px-10 py-6">플랫폼</th>
-                          <th className="px-10 py-6">노출 상품명 / 연결 ID</th>
-                          <th className="px-10 py-6">카테고리</th>
-                          <th className="px-10 py-6">주문수량(Min/Max)</th>
-                          <th className="px-10 py-6 text-right">최종 판매가</th>
-                          <th className="px-10 py-6 text-center">관리 / 소스</th>
+                          <th className="px-3 py-3 md:px-6 md:py-6 text-center">순서</th>
+                          <th className="px-3 py-3 md:px-10 md:py-6">플랫폼</th>
+                          <th className="px-3 py-3 md:px-10 md:py-6">상품명 / ID</th>
+                          <th className="px-3 py-3 md:px-10 md:py-6">카테고리</th>
+                          <th className="px-3 py-3 md:px-10 md:py-6">수량(Min/Max)</th>
+                          <th className="px-3 py-3 md:px-10 md:py-6 text-right">판매가</th>
+                          <th className="px-3 py-3 md:px-10 md:py-6 text-center">관리</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                        {groupedInventory.length === 0 ? (
-                         <tr><td colSpan={7} className="py-40 text-center text-gray-300 font-black italic">등록된 상품이 없습니다.</td></tr>
+                         <tr><td colSpan={7} className="py-20 text-center text-gray-300 font-black italic text-sm">등록된 상품이 없습니다.</td></tr>
                        ) : groupedInventory.map((p, idx) => {
                          const safeSources = (p.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null);
                          const allSourcesDisabled = safeSources.length > 0 && safeSources.every(s => !activeProviderIds.has(s.providerId));
                          return (
                            <React.Fragment key={p.id}>
                              <tr className={`transition-all hover:bg-blue-50/30 ${expandedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} ${allSourcesDisabled ? 'grayscale opacity-40 bg-gray-50' : ''}`}>
-                                <td className="px-6 py-8 text-center">
+                                <td className="px-3 py-4 md:px-6 md:py-8 text-center">
                                   <div className="flex flex-col items-center gap-1">
                                     <button
                                       onClick={() => moveProduct(idx, 'up')}
                                       disabled={idx === 0 || isSavingOrder}
-                                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-purple-100 hover:text-purple-600 text-gray-400 font-black text-xs disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                      className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-purple-100 hover:text-purple-600 text-gray-400 font-black text-xs disabled:opacity-20 disabled:cursor-not-allowed transition-all"
                                     >▲</button>
-                                    <span className="text-[11px] font-black text-gray-300">{idx + 1}</span>
+                                    <span className="text-[10px] font-black text-gray-300">{idx + 1}</span>
                                     <button
                                       onClick={() => moveProduct(idx, 'down')}
                                       disabled={idx === groupedInventory.length - 1 || isSavingOrder}
-                                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-purple-100 hover:text-purple-600 text-gray-400 font-black text-xs disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                                      className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-purple-100 hover:text-purple-600 text-gray-400 font-black text-xs disabled:opacity-20 disabled:cursor-not-allowed transition-all"
                                     >▼</button>
                                   </div>
                                 </td>
-                                <td className="px-10 py-8 whitespace-nowrap"><span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase italic tracking-tighter shadow-md whitespace-nowrap ${allSourcesDisabled ? 'bg-gray-400 text-white' : 'bg-blue-600 text-white'}`}>{p.platform}</span></td>
-                                <td className="px-10 py-8"><div className="flex items-center gap-3"><p className="font-black text-gray-900 text-xl italic tracking-tight">{p.name}</p>{allSourcesDisabled && <span className="bg-red-500 text-white text-[9px] px-2 py-0.5 rounded font-black italic shadow-sm uppercase animate-pulse">공급중단</span>}</div><div className="flex flex-wrap gap-1 mt-2">{safeSources.map((s, si) => (<span key={si} className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${activeProviderIds.has(s.providerId) ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-red-50 text-red-500 border-red-100'}`}>#{s.serviceId}</span>))}</div></td>
-                                <td className="px-10 py-8"><span className="text-sm font-black text-gray-500 uppercase italic tracking-widest">{p.category}</span></td>
-                                <td className="px-10 py-8"><p className="text-[13px] font-black text-gray-600 italic">{p.minQuantity.toLocaleString()} ~ {p.maxQuantity.toLocaleString()}</p></td>
-                                <td className="px-10 py-8 text-right"><p className="text-2xl font-black text-blue-600 italic tracking-tighter">{p.sellingPrice.toLocaleString()}<span className="text-sm not-italic opacity-40 ml-1">P</span></p></td>
-                                <td className="px-10 py-8 text-center"><div className="flex justify-center gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all shadow-sm ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '상세 닫기 ▲' : `소스(${safeSources.length}) ▼`}</button><button onClick={() => startEditProduct(p)} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[11px] font-black hover:bg-black transition-all shadow-md italic">그룹수정</button><button onClick={() => { if(!window.confirm('정말 삭제하시겠습니까?')) return; const idsToDelete = smmProducts.filter(i => sameProductKey(i, p)).map(i => i.id); if (onDeleteSmmProducts) onDeleteSmmProducts(idsToDelete); else setSmmProducts(prev => prev.filter(i => !sameProductKey(i, p))); }} className="text-red-200 hover:text-red-500 font-black text-xl px-2">✕</button></div></td>
+                                <td className="px-3 py-4 md:px-10 md:py-8 whitespace-nowrap"><span className={`px-2 py-1 md:px-4 md:py-1.5 rounded-full text-[9px] md:text-[10px] font-black uppercase italic tracking-tighter shadow-md whitespace-nowrap ${allSourcesDisabled ? 'bg-gray-400 text-white' : 'bg-blue-600 text-white'}`}>{p.platform}</span></td>
+                                <td className="px-3 py-4 md:px-10 md:py-8"><div className="flex items-center gap-2"><p className="font-black text-gray-900 text-sm md:text-xl italic tracking-tight line-clamp-2">{p.name}</p>{allSourcesDisabled && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded font-black italic shadow-sm uppercase animate-pulse shrink-0">중단</span>}</div><div className="flex flex-wrap gap-1 mt-1">{safeSources.map((s, si) => (<span key={si} className={`text-[8px] font-black px-1 py-0.5 rounded border ${activeProviderIds.has(s.providerId) ? 'bg-blue-50 text-blue-500 border-blue-100' : 'bg-red-50 text-red-500 border-red-100'}`}>#{s.serviceId}</span>))}</div></td>
+                                <td className="px-3 py-4 md:px-10 md:py-8"><span className="text-[11px] md:text-sm font-black text-gray-500 uppercase italic">{p.category}</span></td>
+                                <td className="px-3 py-4 md:px-10 md:py-8"><p className="text-[11px] md:text-[13px] font-black text-gray-600 italic">{p.minQuantity.toLocaleString()}~{p.maxQuantity.toLocaleString()}</p></td>
+                                <td className="px-3 py-4 md:px-10 md:py-8 text-right"><p className="text-base md:text-2xl font-black text-blue-600 italic tracking-tighter">{p.sellingPrice.toLocaleString()}<span className="text-xs not-italic opacity-40 ml-0.5">P</span></p></td>
+                                <td className="px-3 py-4 md:px-10 md:py-8 text-center"><div className="flex flex-col md:flex-row justify-center gap-1 md:gap-3"><button onClick={() => toggleExpand(p.id)} className={`px-2 py-1.5 md:px-5 md:py-2 rounded-xl text-[10px] md:text-[11px] font-black transition-all shadow-sm whitespace-nowrap ${expandedProductIds.includes(p.id) ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{expandedProductIds.includes(p.id) ? '닫기▲' : `소스(${safeSources.length})▼`}</button><button onClick={() => startEditProduct(p)} className="px-2 py-1.5 md:px-5 md:py-2 bg-blue-600 text-white rounded-xl text-[10px] md:text-[11px] font-black hover:bg-black transition-all shadow-md italic whitespace-nowrap">수정</button><button onClick={() => { if(!window.confirm('정말 삭제하시겠습니까?')) return; const idsToDelete = smmProducts.filter(i => sameProductKey(i, p)).map(i => i.id); if (onDeleteSmmProducts) onDeleteSmmProducts(idsToDelete); else setSmmProducts(prev => prev.filter(i => !sameProductKey(i, p))); }} className="text-red-200 hover:text-red-500 font-black text-base md:text-xl px-1 md:px-2">✕</button></div></td>
                              </tr>
                              {expandedProductIds.includes(p.id) && (
                                <tr className="bg-gray-50/50 animate-in slide-in-from-top-2 duration-300">

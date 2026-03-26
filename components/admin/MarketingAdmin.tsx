@@ -213,14 +213,14 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
     <div className="space-y-12 animate-in fade-in duration-500">
       <div className="flex justify-between items-center px-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 italic uppercase underline decoration-rose-500 underline-offset-8">쿠폰 및 마케팅 캠페인 관제</h3>
-          <p className="text-[11px] font-bold text-gray-400 mt-4 uppercase tracking-widest italic">Advanced Coupon Marketing Engine</p>
+          <h3 className="text-lg md:text-2xl font-black text-gray-900 italic uppercase underline decoration-rose-500 underline-offset-8">쿠폰 및 마케팅 캠페인 관제</h3>
+          <p className="text-[10px] md:text-[11px] font-bold text-gray-400 mt-2 md:mt-4 uppercase tracking-widest italic">Advanced Coupon Marketing Engine</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 p-4">
-        <div className="lg:col-span-5 bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[800px]">
-           <div className="p-8 border-b border-gray-50 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-10 p-4">
+        <div className="lg:col-span-5 bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-auto md:h-[800px]">
+           <div className="p-4 md:p-8 border-b border-gray-50 space-y-4 md:space-y-6">
               <div className="flex justify-between items-end">
                 <div>
                   <h4 className="text-lg font-black text-gray-900 italic uppercase flex items-center gap-2">
@@ -247,33 +247,34 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
                 </div>
               ) : (
                 <>
-                  <div className="flex bg-gray-100 p-1.5 rounded-2xl gap-1">
-                     {[ { id: 'all', label: '전체 회원' }, { id: 'buyer', label: '구매자(전문가X)' }, { id: 'seller', label: '판매자(전문가O)' } ].map(btn => (
-                       <button 
+                  <div className="flex bg-gray-100 p-1 rounded-2xl gap-1">
+                     {[ { id: 'all', label: '전체 회원', short: '전체' }, { id: 'buyer', label: '구매자(전문가X)', short: '구매자' }, { id: 'seller', label: '판매자(전문가O)', short: '판매자' } ].map(btn => (
+                       <button
                         key={btn.id}
                         onClick={() => { setTargetFilter(btn.id as TargetType); setSelectedMemberIds([]); setIsAllSelected(false); }}
-                        className={`flex-1 py-3 rounded-xl text-[11px] font-black transition-all ${targetFilter === btn.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                        className={`flex-1 py-2 md:py-3 rounded-xl text-[10px] md:text-[11px] font-black transition-all ${targetFilter === btn.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                        >
-                         {btn.label}
+                         <span className="md:hidden">{btn.short}</span>
+                         <span className="hidden md:inline">{btn.label}</span>
                        </button>
                      ))}
                   </div>
 
                   <div className="flex items-center gap-3">
                      <div className="relative flex-1">
-                        <input 
-                          type="text" 
-                          value={searchQuery} 
+                        <input
+                          type="text"
+                          value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
-                          placeholder="이름 또는 ID로 검색..." 
-                          className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm shadow-inner outline-none focus:ring-4 focus:ring-rose-100 transition-all"
+                          placeholder="이름 또는 ID로 검색..."
+                          className="w-full p-3 md:p-4 bg-gray-50 border-none rounded-2xl font-bold text-xs md:text-sm shadow-inner outline-none focus:ring-4 focus:ring-rose-100 transition-all"
                         />
                      </div>
-                     <button 
+                     <button
                       onClick={() => { setIsAllSelected(!isAllSelected); setSelectedMemberIds([]); }}
-                      className={`px-4 py-4 rounded-2xl text-[11px] font-black transition-all ${isAllSelected ? 'bg-rose-500 text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}
+                      className={`shrink-0 px-3 py-3 md:px-4 md:py-4 rounded-2xl text-[10px] md:text-[11px] font-black transition-all ${isAllSelected ? 'bg-rose-500 text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}
                      >
-                       {isAllSelected ? '전체 해제' : '전체 선택'}
+                       {isAllSelected ? '해제' : '전체'}
                      </button>
                   </div>
                 </>
@@ -289,27 +290,27 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
                   </div>
                 ) : (
                   filteredMembers.map(m => (
-                    <div 
-                      key={m.id} 
-                      onClick={() => toggleSelect(m.id)} 
-                      className={`flex items-center gap-4 p-4 rounded-[24px] cursor-pointer transition-all border-2 ${
-                        selectedMemberIds.includes(m.id) 
-                        ? 'bg-white border-rose-500 shadow-xl scale-[1.02]' 
+                    <div
+                      key={m.id}
+                      onClick={() => toggleSelect(m.id)}
+                      className={`flex items-center gap-2 md:gap-4 p-2.5 md:p-4 rounded-[18px] md:rounded-[24px] cursor-pointer transition-all border-2 ${
+                        selectedMemberIds.includes(m.id)
+                        ? 'bg-white border-rose-500 shadow-xl scale-[1.01]'
                         : 'bg-white border-transparent hover:bg-gray-50 shadow-sm'
                       }`}
                     >
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        selectedMemberIds.includes(m.id) 
-                        ? 'bg-rose-500 border-rose-500 text-white text-[10px] font-black' 
+                      <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                        selectedMemberIds.includes(m.id)
+                        ? 'bg-rose-500 border-rose-500 text-white text-[9px] md:text-[10px] font-black'
                         : 'border-gray-200 bg-white'
                       }`}>
                         {selectedMemberIds.includes(m.id) && '✓'}
                       </div>
-                      <img src={m.profileImage} className="w-10 h-10 rounded-full object-cover border border-gray-100" alt="p" />
+                      <img src={m.profileImage} className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-gray-100 flex-shrink-0" alt="p" />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-black text-gray-900 text-[14px] truncate">{m.nickname}</p>
-                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded italic uppercase ${m.sellerStatus === 'approved' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                        <div className="flex items-center gap-1.5 md:gap-2">
+                          <p className="font-black text-gray-900 text-[12px] md:text-[14px] truncate">{m.nickname}</p>
+                          <span className={`text-[7px] md:text-[8px] font-black px-1 md:px-1.5 py-0.5 rounded italic uppercase ${m.sellerStatus === 'approved' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
                             {m.sellerStatus === 'approved' ? 'Seller' : 'Buyer'}
                           </span>
                         </div>
@@ -321,7 +322,7 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
            )}
         </div>
 
-        <div className="lg:col-span-7 bg-gray-900 rounded-[48px] p-10 text-white space-y-8 shadow-2xl flex flex-col h-[800px] relative overflow-hidden">
+        <div className="lg:col-span-7 bg-gray-900 rounded-[48px] p-4 md:p-10 text-white space-y-4 md:space-y-8 shadow-2xl flex flex-col h-auto md:h-[800px] relative overflow-hidden">
            <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 blur-[100px]"></div>
            
            <div className="space-y-10 flex-1 overflow-y-auto no-scrollbar relative z-10">
@@ -334,22 +335,22 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-rose-400 uppercase italic px-2">쿠폰 공식 명칭</label>
-                    <input 
-                      value={couponForm.title} 
-                      onChange={e => setCouponForm({...couponForm, title: e.target.value})} 
-                      placeholder="예: 가입 축하 5,000원 웰컴 쿠폰" 
-                      className="w-full p-6 bg-white/5 border border-white/10 rounded-3xl text-white font-black text-xl outline-none focus:border-rose-500 transition-all shadow-inner" 
+                    <input
+                      value={couponForm.title}
+                      onChange={e => setCouponForm({...couponForm, title: e.target.value})}
+                      placeholder="예: 가입 축하 5,000원 웰컴 쿠폰"
+                      className="w-full p-3 md:p-6 bg-white/5 border border-white/10 rounded-2xl md:rounded-3xl text-white font-black text-sm md:text-xl outline-none focus:border-rose-500 transition-all shadow-inner"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-3 md:gap-6">
+                    <div className="space-y-1 md:space-y-2">
                         <label className="text-[10px] font-black text-rose-400 uppercase italic px-2">할인액(원)</label>
-                        <input type="number" value={couponForm.discount} onChange={e => setCouponForm({...couponForm, discount: Number(e.target.value)})} className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-lg" />
+                        <input type="number" value={couponForm.discount} onChange={e => setCouponForm({...couponForm, discount: Number(e.target.value)})} className="w-full p-3 md:p-5 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl text-white font-black text-sm md:text-lg" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1 md:space-y-2">
                         <label className="text-[10px] font-black text-rose-400 uppercase italic px-2">디스플레이 라벨</label>
-                        <input value={couponForm.discountLabel} onChange={e => setCouponForm({...couponForm, discountLabel: e.target.value})} className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-lg" />
+                        <input value={couponForm.discountLabel} onChange={e => setCouponForm({...couponForm, discountLabel: e.target.value})} className="w-full p-3 md:p-5 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl text-white font-black text-sm md:text-lg" />
                     </div>
                   </div>
 
@@ -368,14 +369,14 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
                     </div>
                   </div>
 
-                  <div className="space-y-4 pt-4">
+                  <div className="space-y-2 md:space-y-4 pt-2 md:pt-4">
                     <label className="text-[10px] font-black text-rose-400 uppercase italic px-2">테마 색상</label>
-                    <div className="flex gap-4">
+                    <div className="flex gap-2 md:gap-4">
                         {[ 'blue', 'rose', 'green', 'purple', 'gray' ].map(c => (
-                          <button 
+                          <button
                             key={c}
                             onClick={() => setCouponForm({...couponForm, color: c})}
-                            className={`w-12 h-12 rounded-2xl border-4 transition-all ${couponForm.color === c ? 'border-white scale-110 shadow-xl' : 'border-transparent opacity-40'} ${
+                            className={`w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-2xl border-4 transition-all ${couponForm.color === c ? 'border-white scale-110 shadow-xl' : 'border-transparent opacity-40'} ${
                               c === 'blue' ? 'bg-blue-500' : c === 'rose' ? 'bg-rose-500' : c === 'green' ? 'bg-green-500' : c === 'purple' ? 'bg-purple-500' : 'bg-gray-500'
                             }`}
                           />
@@ -385,37 +386,37 @@ const MarketingAdmin: React.FC<Props> = ({ user, members, onIssueCoupons }) => {
                 </div>
               </div>
 
-              <div className="space-y-6 pt-10 border-t border-white/10">
-                <h4 className="text-xl font-black italic uppercase flex items-center gap-2">
+              <div className="space-y-4 md:space-y-6 pt-4 md:pt-10 border-t border-white/10">
+                <h4 className="text-base md:text-xl font-black italic uppercase flex items-center gap-2">
                   <span className="w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center text-[10px] not-italic">3</span>
                   발행 방식 설정
                 </h4>
 
-                <div className="grid grid-cols-2 gap-6">
-                   <div 
+                <div className="grid grid-cols-2 gap-3 md:gap-6">
+                   <div
                     onClick={() => { setIssuanceMode('manual'); setEditingCampaignId(null); }}
-                    className={`p-6 rounded-[32px] border-4 cursor-pointer transition-all ${issuanceMode === 'manual' ? 'bg-white/10 border-rose-500 shadow-xl' : 'bg-white/5 border-transparent opacity-50'}`}
+                    className={`p-3 md:p-6 rounded-2xl md:rounded-[32px] border-4 cursor-pointer transition-all ${issuanceMode === 'manual' ? 'bg-white/10 border-rose-500 shadow-xl' : 'bg-white/5 border-transparent opacity-50'}`}
                    >
-                      <h5 className="font-black text-[15px] mb-1">수동 즉시 발행</h5>
-                      <p className="text-[11px] font-bold text-gray-400">지금 즉시 선택 대상에게 일회성 발송 및 알림을 전송합니다.</p>
+                      <h5 className="font-black text-[12px] md:text-[15px] mb-1">수동 즉시 발행</h5>
+                      <p className="text-[10px] md:text-[11px] font-bold text-gray-400 leading-tight">즉시 선택 대상에게 일회성 발송합니다.</p>
                    </div>
-                   
-                   <div 
+
+                   <div
                     onClick={() => setIssuanceMode('auto')}
-                    className={`p-6 rounded-[32px] border-4 cursor-pointer transition-all ${issuanceMode === 'auto' ? 'bg-white/10 border-rose-500 shadow-xl' : 'bg-white/5 border-transparent opacity-50'}`}
+                    className={`p-3 md:p-6 rounded-2xl md:rounded-[32px] border-4 cursor-pointer transition-all ${issuanceMode === 'auto' ? 'bg-white/10 border-rose-500 shadow-xl' : 'bg-white/5 border-transparent opacity-50'}`}
                    >
-                      <h5 className="font-black text-[15px] mb-1">자동 발행 (웰컴형)</h5>
-                      <p className="text-[11px] font-bold text-gray-400">신규 가입 시 조건에 맞는 유저에게 자동 지급합니다.</p>
+                      <h5 className="font-black text-[12px] md:text-[15px] mb-1">자동 발행 (웰컴형)</h5>
+                      <p className="text-[10px] md:text-[11px] font-bold text-gray-400 leading-tight">신규 가입 시 자동 지급합니다.</p>
                    </div>
                 </div>
               </div>
            </div>
 
-           <div className="pt-8 border-t border-white/10 bg-gray-900 sticky bottom-0">
-             <button 
-              onClick={handleIssueCoupon} 
+           <div className="pt-4 md:pt-8 border-t border-white/10 bg-gray-900 sticky bottom-0">
+             <button
+              onClick={handleIssueCoupon}
               disabled={isProcessing}
-              className={`w-full py-8 rounded-[40px] font-black text-2xl transition-all shadow-2xl uppercase italic tracking-widest ${
+              className={`w-full py-4 md:py-8 rounded-[28px] md:rounded-[40px] font-black text-base md:text-2xl transition-all shadow-2xl uppercase italic tracking-widest ${
                 isProcessing ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-rose-600 text-white hover:bg-white hover:text-rose-600'
               }`}
              >
