@@ -496,61 +496,147 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
         </>
       ) : (
         <div className="space-y-4 md:space-y-6">
-           <div className="bg-white rounded-2xl md:rounded-[40px] shadow-sm border border-gray-100 p-4 md:p-8 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
-              <div className="flex items-center gap-3 md:gap-6 flex-1 w-full flex-wrap">
+           {/* 헤더 카드 - 모바일 최적화 */}
+           <div className="bg-white rounded-2xl md:rounded-[40px] shadow-sm border border-gray-100 p-4 md:p-8">
+              {/* 상단: 아이콘 + 타이틀 + 모바일 실적뱃지 */}
+              <div className="flex items-center gap-3 mb-3 md:mb-0">
                  <div className="w-10 h-10 md:w-16 md:h-16 bg-indigo-50 text-indigo-600 rounded-2xl md:rounded-3xl flex items-center justify-center text-xl md:text-3xl shadow-inner flex-shrink-0">📺</div>
-                 <div className="min-w-0">
+                 <div className="min-w-0 flex-1">
                     <h3 className="text-sm md:text-2xl font-black text-gray-900 italic uppercase tracking-tighter">채널 매매 거래 관리 시스템</h3>
-                    <p className="text-[10px] md:text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-widest leading-none">모든 채널 거래 건에 대한 진행 상태 및 계약 추적</p>
+                    <p className="text-[10px] md:text-[11px] font-bold text-gray-400 mt-0.5 md:mt-1 uppercase tracking-widest leading-none">모든 채널 거래 건에 대한 진행 상태 및 계약 추적</p>
                  </div>
-                 
-                 <div className="flex-1 max-w-2xl flex gap-3 ml-6">
-                    <div className="relative flex-1">
-                       <input 
-                          type="text" 
-                          value={orderSearchQuery}
-                          onChange={(e) => setOrderSearchQuery(e.target.value)}
-                          placeholder="주문번호, 결제ID, 닉네임, 채널명..." 
-                          className="w-full pl-10 pr-6 py-4 bg-gray-50 border-none rounded-full font-bold text-[14px] shadow-inner outline-none focus:ring-4 focus:ring-indigo-50 transition-all"
-                       />
-                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs">🔍</span>
-                    </div>
-
-                    {/* 월별 필터 추가 (요청 사항) */}
-                    <select 
-                       value={orderMonthFilter}
-                       onChange={(e) => setOrderMonthFilter(e.target.value)}
-                       className="px-6 py-4 bg-gray-50 border-none rounded-full font-black text-[13px] shadow-inner outline-none cursor-pointer"
-                    >
-                       <option>전체 기간</option>
-                       {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-
-                    <select
-                       value={orderStatusFilter}
-                       onChange={(e) => setOrderStatusFilter(e.target.value)}
-                       className="px-6 py-4 bg-gray-50 border-none rounded-full font-black text-[13px] shadow-inner outline-none cursor-pointer"
-                    >
-                       <option>전체 상태</option>
-                       <option>입금대기</option>
-                       <option>양도진행중</option>
-                       <option>완료</option>
-                       <option value="refunded">환불완료</option>
-                    </select>
-                    
-                    <button onClick={() => { setOrderSearchQuery(''); setOrderStatusFilter('전체 상태'); setOrderMonthFilter('전체 기간'); }} className="px-5 py-4 bg-gray-100 text-gray-400 rounded-full font-black text-[11px] hover:bg-gray-200 uppercase shrink-0">Reset</button>
+                 {/* 모바일 실적 뱃지 */}
+                 <div className="md:hidden bg-[#F8F9FF] border border-indigo-100 px-3 py-2 rounded-2xl text-center shadow-sm shrink-0">
+                    <span className="text-[9px] font-black text-indigo-400 uppercase italic block leading-tight">
+                      {orderMonthFilter === '전체 기간' ? '총 누적' : orderMonthFilter}
+                    </span>
+                    <span className="text-lg font-black text-indigo-600 italic tracking-tighter leading-tight">{filteredOrders.length.toLocaleString()}<span className="text-[10px] not-italic font-bold ml-0.5">건</span></span>
                  </div>
               </div>
-              
-              <div className="bg-[#F8F9FF] border border-indigo-100 px-8 py-4 rounded-[28px] text-center shadow-sm shrink-0">
-                 <span className="text-[11px] font-black text-indigo-400 uppercase italic block mb-1">
-                   {orderMonthFilter === '전체 기간' ? '총 누적 실적' : `${orderMonthFilter} 실적`}
-                 </span>
-                 <span className="text-3xl font-black text-indigo-600 italic tracking-tighter">{filteredOrders.length.toLocaleString()} <span className="text-sm not-italic font-bold ml-1">건</span></span>
+
+              {/* 검색 + 필터 */}
+              <div className="md:flex md:flex-row md:items-center md:gap-6 md:mt-6">
+                 <div className="flex-1 md:max-w-2xl md:ml-[88px] space-y-2 md:space-y-0 md:flex md:gap-3">
+                    {/* 검색 인풋 */}
+                    <div className="relative flex-1">
+                       <input
+                          type="text"
+                          value={orderSearchQuery}
+                          onChange={(e) => setOrderSearchQuery(e.target.value)}
+                          placeholder="주문번호, 결제ID, 닉네임, 채널명..."
+                          className="w-full pl-9 pr-4 py-3 md:py-4 bg-gray-50 border-none rounded-full font-bold text-[13px] md:text-[14px] shadow-inner outline-none focus:ring-4 focus:ring-indigo-50 transition-all"
+                       />
+                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 text-xs">🔍</span>
+                    </div>
+                    {/* 필터 셀렉트들 */}
+                    <div className="flex gap-2">
+                       <select
+                          value={orderMonthFilter}
+                          onChange={(e) => setOrderMonthFilter(e.target.value)}
+                          className="flex-1 md:flex-none px-3 md:px-6 py-3 md:py-4 bg-gray-50 border-none rounded-full font-black text-[12px] md:text-[13px] shadow-inner outline-none cursor-pointer"
+                       >
+                          <option>전체 기간</option>
+                          {availableMonths.map(m => <option key={m} value={m}>{m}</option>)}
+                       </select>
+                       <select
+                          value={orderStatusFilter}
+                          onChange={(e) => setOrderStatusFilter(e.target.value)}
+                          className="flex-1 md:flex-none px-3 md:px-6 py-3 md:py-4 bg-gray-50 border-none rounded-full font-black text-[12px] md:text-[13px] shadow-inner outline-none cursor-pointer"
+                       >
+                          <option>전체 상태</option>
+                          <option>입금대기</option>
+                          <option>양도진행중</option>
+                          <option>완료</option>
+                          <option value="refunded">환불완료</option>
+                       </select>
+                       <button onClick={() => { setOrderSearchQuery(''); setOrderStatusFilter('전체 상태'); setOrderMonthFilter('전체 기간'); }} className="px-3 md:px-5 py-3 md:py-4 bg-gray-100 text-gray-400 rounded-full font-black text-[11px] hover:bg-gray-200 uppercase shrink-0">Reset</button>
+                    </div>
+                 </div>
+                 {/* 데스크톱 실적 카드 */}
+                 <div className="hidden md:block bg-[#F8F9FF] border border-indigo-100 px-8 py-4 rounded-[28px] text-center shadow-sm shrink-0">
+                    <span className="text-[11px] font-black text-indigo-400 uppercase italic block mb-1">
+                      {orderMonthFilter === '전체 기간' ? '총 누적 실적' : `${orderMonthFilter} 실적`}
+                    </span>
+                    <span className="text-3xl font-black text-indigo-600 italic tracking-tighter">{filteredOrders.length.toLocaleString()} <span className="text-sm not-italic font-bold ml-1">건</span></span>
+                 </div>
               </div>
            </div>
 
-           <div className="bg-white rounded-2xl md:rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
+           {/* 모바일 카드 리스트 */}
+           <div className="md:hidden space-y-3">
+              {filteredOrders.length === 0 ? (
+                <div className="py-16 text-center text-gray-300 font-black italic">기록된 거래 내역이 없습니다.</div>
+              ) : filteredOrders.map(o => (
+                <div key={o.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
+                  {/* 상태 + 날짜 */}
+                  <div className="flex items-center justify-between">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black italic ${
+                      o.status === '완료' ? 'bg-green-500 text-white' :
+                      o.status === '양도진행중' ? 'bg-indigo-600 text-white animate-pulse' :
+                      o.status === 'refunded' ? 'bg-red-100 text-red-500' :
+                      'bg-gray-100 text-gray-400'
+                    }`}>
+                      {o.status === 'refunded' ? '환불완료' : o.status}
+                    </span>
+                    <p className="text-[11px] text-gray-400 font-bold">{o.orderTime ? new Date(o.orderTime).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) : '-'}</p>
+                  </div>
+                  {/* 채널 정보 */}
+                  <div className="border-t border-gray-50 pt-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[9px] font-black italic uppercase">{o.platform}</span>
+                    </div>
+                    <p className="text-[13px] font-black text-gray-900 truncate">{o.productName}</p>
+                    <p className="text-[10px] text-indigo-500 font-bold mt-0.5">#{o.id}</p>
+                  </div>
+                  {/* 구매자 + 금액 */}
+                  <div className="grid grid-cols-2 gap-2 border-t border-gray-50 pt-2">
+                    <div>
+                      <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">구매 희망자</p>
+                      <p className="text-[12px] font-black text-gray-900">@{o.userId}</p>
+                      <p className="text-[10px] text-gray-400">{o.userNickname}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">최종 매매가</p>
+                      <p className="text-[15px] font-black text-gray-900 italic">₩{o.price.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  {/* 구매자 계정 */}
+                  {o.buyerAccount && (
+                    <div className="border-t border-gray-50 pt-2">
+                      <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">구매자 계정</p>
+                      <p className="text-[12px] font-black text-gray-900">{o.buyerAccount}</p>
+                    </div>
+                  )}
+                  {/* 결제 정보 + 환불 버튼 */}
+                  <div className="flex items-center justify-between border-t border-gray-50 pt-2 gap-2">
+                    <div className="min-w-0">
+                      {o.paymentId ? (
+                        <button
+                          onClick={() => setSelectedOrderForPayment(o)}
+                          className="text-[11px] font-black text-blue-600 hover:underline underline-offset-4 decoration-blue-200 truncate max-w-[180px] block"
+                        >
+                          {o.paymentId}
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-gray-300 italic font-bold">결제 정보 없음</span>
+                      )}
+                    </div>
+                    {o.status !== 'refunded' && o.paymentId ? (
+                      <button
+                        onClick={() => handleRefund(o)}
+                        disabled={refundingOrderId === o.id}
+                        className="shrink-0 px-3 py-1.5 bg-red-500 text-white rounded-xl text-[11px] font-black hover:bg-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {refundingOrderId === o.id ? '처리중...' : '결제취소'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+           </div>
+
+           {/* 데스크톱 테이블 */}
+           <div className="hidden md:block bg-white rounded-[48px] shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
                  <table className="w-full text-left">
                     <thead className="bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest italic">
