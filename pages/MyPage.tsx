@@ -72,7 +72,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
 
   const [activeMainTab, setActiveMainTab] = useState<MainTab>(() => {
     const s = location.state as { activeTab?: MainTab } | null;
-    return (s?.activeTab && ['buyer', 'seller', 'freelancer', 'settings'].includes(s.activeTab)) ? s.activeTab : 'settings';
+    return (s?.activeTab && ['buyer', 'seller', 'freelancer', 'settings'].includes(s.activeTab)) ? s.activeTab : 'buyer';
   });
   
   const [settingsSubTab, setSettingsSubTab] = useState<'profile' | 'expert' | 'notif' | 'pw' | 'quit'>(() => {
@@ -168,24 +168,37 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
         </div>
 
         <div className="flex flex-row gap-2 sm:gap-3 w-full md:w-auto">
-          <div className="bg-gray-50 p-2 sm:p-5 rounded-[20px] sm:rounded-[32px] flex flex-col gap-1 flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 sm:gap-4">
-              <div className="w-7 h-7 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-sm sm:text-lg shadow-sm shrink-0">💰</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-black text-gray-400 uppercase italic leading-tight">크레딧</p>
-                <h3 className="text-[11px] sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{(effectiveUser.points || 0).toLocaleString()} C</h3>
+          {/* 크레딧 카드 */}
+          <div className="relative bg-gradient-to-br from-blue-600 to-blue-700 p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] flex-1 min-w-0 overflow-hidden shadow-lg">
+            <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)'}} />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm sm:text-base">💰</span>
+                  <p className="text-[9px] sm:text-[10px] font-black text-blue-100 uppercase tracking-widest">크레딧</p>
+                </div>
+                <span className="text-[8px] sm:text-[9px] font-black text-blue-200 bg-blue-500/40 px-1.5 py-0.5 rounded-full whitespace-nowrap">마케팅 전용</span>
               </div>
-              <Link to="/payment/point" className="bg-blue-600 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-black transition-all shrink-0">충전</Link>
+              <h3 className="text-base sm:text-2xl font-black text-white tracking-tight whitespace-nowrap">
+                {(effectiveUser.points || 0).toLocaleString()}<span className="text-blue-200 text-[10px] sm:text-sm ml-1">C</span>
+              </h3>
+              <div className="mt-2 sm:mt-3">
+                <Link to="/payment/point" className="inline-block bg-white text-blue-600 px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] shadow hover:bg-blue-50 transition-all">충전하기 →</Link>
+              </div>
             </div>
-            <p className="text-[9px] font-black text-red-500 leading-tight">(마케팅 주문 전용)</p>
           </div>
-          <div className="bg-gray-50 p-2 sm:p-5 rounded-[20px] sm:rounded-[32px] flex items-center gap-1.5 sm:gap-4 flex-1 min-w-0">
-            <div className="w-7 h-7 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-sm sm:text-lg shadow-sm shrink-0">🎫</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-black text-gray-400 uppercase italic leading-tight">Coupons</p>
-              <h3 className="text-[11px] sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{availableCouponCount} 장</h3>
+          {/* 쿠폰 카드 */}
+          <div className="bg-gray-50 p-3 sm:p-5 rounded-[20px] sm:rounded-[28px] flex flex-col justify-between flex-1 min-w-0 border border-gray-100">
+            <div className="flex items-center gap-1.5 mb-1.5 sm:mb-2">
+              <span className="text-sm sm:text-base">🎫</span>
+              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">쿠폰</p>
             </div>
-            <Link to="/coupons" className="bg-gray-900 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-blue-600 transition-all shrink-0">내역</Link>
+            <h3 className="text-base sm:text-2xl font-black text-gray-900 whitespace-nowrap">
+              {availableCouponCount}<span className="text-gray-400 text-[10px] sm:text-sm ml-1">장</span>
+            </h3>
+            <div className="mt-2 sm:mt-3">
+              <Link to="/coupons" className="inline-block bg-gray-900 text-white px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] hover:bg-blue-600 transition-all">내역 →</Link>
+            </div>
           </div>
         </div>
       </div>
