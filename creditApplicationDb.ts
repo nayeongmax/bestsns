@@ -1,32 +1,10 @@
 /**
  * 크레딧 충전 신청서 (credit_applications) Supabase 연동
  *
- * 필요한 Supabase 테이블 생성 SQL:
- * ----------------------------------------
- * CREATE TABLE IF NOT EXISTS credit_applications (
- *   id             text        PRIMARY KEY,           -- 신청번호 (e.g. CREDIT-20240327-ABC12)
- *   user_id        text        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
- *   user_nickname  text        NOT NULL,
- *   depositor_name text        NOT NULL,              -- 입금자명
- *   amount         integer     NOT NULL,              -- 신청 크레딧 금액 (원)
- *   status         text        NOT NULL DEFAULT 'pending'
- *                              CHECK (status IN ('pending', 'approved', 'rejected')),
- *   created_at     timestamptz NOT NULL DEFAULT now(),
- *   approved_at    timestamptz,                       -- 관리자 승인 시각
- *   note           text                               -- 관리자 메모
- * );
- * CREATE INDEX IF NOT EXISTS idx_ca_user_id ON credit_applications(user_id);
- * CREATE INDEX IF NOT EXISTS idx_ca_status  ON credit_applications(status);
- * ALTER TABLE credit_applications ENABLE ROW LEVEL SECURITY;
- * -- 본인 신청 조회
- * CREATE POLICY "own_read"   ON credit_applications FOR SELECT USING (auth.uid()::text = user_id);
- * -- 본인 신청 등록
- * CREATE POLICY "own_insert" ON credit_applications FOR INSERT WITH CHECK (auth.uid()::text = user_id);
- * -- 관리자 전체 조회/수정
- * CREATE POLICY "admin_all"  ON credit_applications FOR ALL USING (
- *   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid()::text AND role = 'admin')
- * );
- * ----------------------------------------
+ * RLS 정책 (supabase-credit-applications-setup.sql 참고):
+ *   - anon 키: INSERT만 허용 (사용자 신청 제출)
+ *   - SELECT / UPDATE / DELETE: service_role 키만 허용
+ *     → 관리자 조회/승인은 Supabase 대시보드 또는 service_role 키 사용
  */
 
 import { supabase } from './supabase';
