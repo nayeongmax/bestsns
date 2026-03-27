@@ -62,6 +62,7 @@ import NotificationsPage from '@/pages/NotificationsPage';
 import FreeBoardWrite from '@/pages/FreeBoardWrite';
 import FreeBoardDetail from '@/pages/FreeBoardDetail';
 import PointPayment from '@/pages/PointPayment';
+import CreditApplication from '@/pages/CreditApplication';
 import AlbaPaymentPage from '@/pages/AlbaPaymentPage';
 import CouponBox from '@/pages/CouponBox';
 import NoticePage from '@/pages/NoticePage';
@@ -134,6 +135,7 @@ function ContainerRoutes(props: {
       <Route path="/wishlist" element={<WishlistPage wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channels={props.channels} ebooks={props.ebooks} />} />
       <Route path="/coupons" element={props.user ? <CouponBox user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/payment/point" element={props.user ? <PointPayment user={props.user} ebooks={props.ebooks} channels={props.channels} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} setChannelOrders={props.setChannelOrders} setStoreOrders={props.setStoreOrders} /> : <Navigate to="/login" />} />
+      <Route path="/credit/apply" element={props.user ? <CreditApplication user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/payment/alba" element={props.user ? <AlbaPaymentPage user={props.user} members={props.members} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
       <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} onDeleteSmmProducts={props.onDeleteSmmProducts} smmOrders={props.smmOrders} setSmmOrders={props.setSmmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} setChannelOrders={props.setChannelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} onRefreshMembers={props.onRefreshMembers} /> : <Navigate to="/login" />} />
