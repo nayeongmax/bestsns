@@ -18,9 +18,9 @@ const CREDIT_PACKAGES = [
 
 // 입금 계좌 정보 (실제 계좌번호로 변경 필요)
 const BANK_INFO = {
-  bank: '기업은행',
-  accountNo: '000-000000-00-000',
-  holder: '더베스트',
+  bank: '농협',
+  accountNo: '352-2022-3464-43',
+  holder: '김나영',
 };
 
 const CreditApplication: React.FC<Props> = ({ user }) => {
