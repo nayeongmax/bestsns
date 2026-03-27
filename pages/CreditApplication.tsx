@@ -198,7 +198,7 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
             className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-800 shadow-inner outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all text-base placeholder:font-bold placeholder:text-gray-300"
           />
           <p className="text-[11px] text-gray-400 font-bold px-1">
-            ※ 입금 시 입금자명 또는 메모란에 닉네임(<strong className="text-gray-600">{user.nickname}</strong>)을 기재해주시면 더 빠르게 처리됩니다.
+            ※ 입금 시 입금자명 또는 메모란에 닉네임(예: <strong className="text-gray-600">홍길동</strong>)을 기재해주시면 더 빠르게 처리됩니다.
           </p>
         </div>
 
@@ -292,7 +292,7 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
             )}
           </div>
           <p className="text-[11px] text-gray-500 font-bold leading-relaxed">
-            ※ 입금 시 입금자명 또는 메모란에 닉네임(<strong className="text-gray-300">{user.nickname}</strong>)을 기재해주시면 더 빠르게 처리됩니다.
+            ※ 입금 시 입금자명 또는 메모란에 닉네임(예: <strong className="text-gray-300">홍길동</strong>)을 기재해주시면 더 빠르게 처리됩니다.
           </p>
         </div>
 
