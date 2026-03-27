@@ -303,7 +303,7 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     if (adminPw && loginId === adminId && loginPw === adminPw) {
         const adminUser: UserProfile = {
             id: adminId,
-            nickname: '마케터김',
+            nickname: '홍길동',
             profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=admin`,
             role: 'admin',
             email: 'admin@bestsns.com',
