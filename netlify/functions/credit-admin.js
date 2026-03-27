@@ -108,22 +108,29 @@ exports.handler = async (event) => {
         const currentPoints = profiles[0]?.points || 0;
 
         // 3) 포인트 적립
+        const newPoints = currentPoints + Number(amount);
         const updateRes = await fetch(
           `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`,
           {
             method: 'PATCH',
-            headers: { ...authHeaders, Prefer: 'return=minimal' },
-            body: JSON.stringify({
-              points: currentPoints + Number(amount),
-              updated_at: new Date().toISOString(),
-            }),
+            headers: { ...authHeaders, Prefer: 'return=representation' },
+            body: JSON.stringify({ points: newPoints }),
           }
         );
-        if (!updateRes.ok) throw new Error(await updateRes.text());
+        if (!updateRes.ok) {
+          const errText = await updateRes.text();
+          console.error('[credit-admin] 포인트 업데이트 실패:', errText);
+          throw new Error(`포인트 업데이트 실패: ${errText}`);
+        }
+        const updatedRows = await updateRes.json();
+        if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+          console.error('[credit-admin] 포인트 업데이트: 대상 프로필 없음 userId=', userId);
+          throw new Error(`대상 사용자(${userId}) 프로필을 찾을 수 없습니다.`);
+        }
 
         return resp(200, {
           success: true,
-          newPoints: currentPoints + Number(amount),
+          newPoints,
         });
       }
 

@@ -31,6 +31,7 @@ interface CombinedChargeItem {
   description: string;
   amount: number;
   created_at: string;
+  approved_at?: string;
   status: 'completed' | 'pending' | 'rejected';
   source: 'payment' | 'credit_app';
   payment_method?: string;
@@ -117,7 +118,16 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
     if (!user?.id) return;
     fetch(`/.netlify/functions/user-credit-applications?user_id=${encodeURIComponent(user.id)}`)
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setCreditApplications(data); })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCreditApplications(data);
+          // 승인된 신청이 있으면 프로필(크레딧 잔액) 재조회 트리거
+          const hasApproved = data.some((a: CreditApplication) => a.status === 'approved');
+          if (hasApproved) {
+            window.dispatchEvent(new CustomEvent('credit-refresh-profile'));
+          }
+        }
+      })
       .catch((e) => console.warn('크레딧 신청 내역 로드 실패:', e));
   }, [user?.id]);
 
@@ -528,7 +538,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                                   <div className="flex gap-2"><span>서비스</span> <span className="text-gray-900">{order.productName}</span></div>
                                   <div className="flex gap-2"><span>링크</span> <a href={order.link} target="_blank" rel="noreferrer" className="text-blue-500 underline break-all">{order.link}</a></div>
                                   <div className="flex gap-2"><span>주문시간</span> <span className="text-gray-900">{formatOrderTime(order.orderTime)}</span></div>
-                                  <div className="flex gap-2"><span>비용</span> <span className="text-gray-900">{order.totalPrice.toLocaleString()}P</span></div>
+                                  <div className="flex gap-2"><span>비용</span> <span className="text-gray-900">{order.totalPrice.toLocaleString()}C</span></div>
                                   <div className="flex gap-2"><span>주문수량</span> <span className="text-gray-900">{order.quantity}</span></div>
                                   <div className="flex gap-2"><span>최초수량</span> <span className="text-orange-600">{order.initialCount || 0}</span></div>
                                   <div className="pt-6 flex justify-end">
@@ -565,6 +575,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                 description: `계좌이체 신청 (입금자: ${app.depositor_name})`,
                 amount: app.amount,
                 created_at: app.created_at,
+                approved_at: app.approved_at,
                 status: app.status === 'approved' ? 'completed' as const : app.status === 'rejected' ? 'rejected' as const : 'pending' as const,
                 source: 'credit_app' as const,
                 depositor_name: app.depositor_name,
@@ -584,7 +595,6 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                         <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전금액</th>
                         <th className="py-3 px-5 text-center font-black text-gray-500 text-xs uppercase">진행상태</th>
                         <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전일</th>
-                        <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">결제정보</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -592,7 +602,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                         <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="py-3 px-5 text-gray-400 font-bold">{combined.length - idx}</td>
                           <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
-                          <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
+                          <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}C</td>
                           <td className="py-3 px-5 text-center">
                             {item.status === 'pending' && (
                               <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-yellow-50 text-yellow-600">대기중</span>
@@ -604,33 +614,10 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                               <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-red-50 text-red-500">반려</span>
                             )}
                           </td>
-                          <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{safeFormatDate(item.created_at)}</td>
-                          <td className="py-3 px-5 text-right">
-                            {item.source === 'payment' ? (
-                              <button
-                                onClick={() => setPaymentModalOrder({
-                                  id: item.id,
-                                  type: 'sns',
-                                  orderTime: item.created_at,
-                                  productName: item.description,
-                                  thumbnail: '',
-                                  productId: '',
-                                  sellerName: '',
-                                  price: item.amount,
-                                  quantity: 1,
-                                  totalPrice: item.amount,
-                                  status: '결제완료',
-                                  paymentId: item.id,
-                                  paymentMethod: item.payment_method ?? (item.description.includes('카드') ? 'CARD' : item.description.includes('토스') ? 'EASY_PAY' : item.description.includes('계좌') ? 'TRANSFER' : undefined),
-                                  paymentLog: item.payment_log,
-                                })}
-                                className="text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all whitespace-nowrap"
-                              >
-                                💳 확인
-                              </button>
-                            ) : (
-                              <span className="text-[11px] text-gray-300 font-bold">—</span>
-                            )}
+                          <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">
+                            {item.status === 'completed' && item.approved_at
+                              ? safeFormatDate(item.approved_at)
+                              : safeFormatDate(item.created_at)}
                           </td>
                         </tr>
                       ))}
@@ -660,7 +647,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                       <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="py-3 px-5 text-gray-400 font-bold">{usageItems.length - idx}</td>
                         <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
-                        <td className="py-3 px-5 text-right text-red-500 font-black">-{item.amount.toLocaleString()}P</td>
+                        <td className="py-3 px-5 text-right text-red-500 font-black">-{item.amount.toLocaleString()}C</td>
                         <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{safeFormatDate(item.date)}</td>
                       </tr>
                     ))}

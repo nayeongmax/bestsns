@@ -788,6 +788,12 @@ const App: React.FC = () => {
     return () => window.removeEventListener('site-user-update', handleSync);
   }, [handleGlobalUserUpdate]);
 
+  useEffect(() => {
+    const handleCreditRefresh = () => { refetchCurrentUserProfile(); };
+    window.addEventListener('credit-refresh-profile', handleCreditRefresh);
+    return () => window.removeEventListener('credit-refresh-profile', handleCreditRefresh);
+  }, [refetchCurrentUserProfile]);
+
   const addNotif = useCallback((userId: string, type: NotificationType, title: string, message: string, reason?: string) => {
     const id = `NOTIF_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const newNotif: SiteNotification = {
