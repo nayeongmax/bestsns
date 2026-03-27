@@ -1,5 +1,8 @@
--- credit_applications 테이블 생성 및 RLS 정책 설정
+-- credit_applications 테이블 생성
 -- Supabase SQL Editor에서 실행하세요.
+--
+-- ※ 이 앱은 Supabase Auth 대신 커스텀 로그인을 사용하므로
+--    auth.uid()가 항상 null입니다. 다른 테이블과 동일하게 RLS를 사용하지 않습니다.
 
 CREATE TABLE IF NOT EXISTS credit_applications (
   id             text        PRIMARY KEY,
@@ -17,26 +20,10 @@ CREATE TABLE IF NOT EXISTS credit_applications (
 CREATE INDEX IF NOT EXISTS idx_ca_user_id ON credit_applications(user_id);
 CREATE INDEX IF NOT EXISTS idx_ca_status  ON credit_applications(status);
 
-ALTER TABLE credit_applications ENABLE ROW LEVEL SECURITY;
+-- RLS 비활성화 (다른 테이블과 동일한 방식 — 보안은 애플리케이션 레이어에서 처리)
+ALTER TABLE credit_applications DISABLE ROW LEVEL SECURITY;
 
--- 기존 정책 삭제 (재실행 시 오류 방지)
+-- 기존에 RLS가 활성화되어 있었다면 정책 제거
 DROP POLICY IF EXISTS "own_read"   ON credit_applications;
 DROP POLICY IF EXISTS "own_insert" ON credit_applications;
 DROP POLICY IF EXISTS "admin_all"  ON credit_applications;
-
--- 본인 신청 조회
-CREATE POLICY "own_read" ON credit_applications
-  FOR SELECT USING (auth.uid()::text = user_id);
-
--- 본인 신청 등록
-CREATE POLICY "own_insert" ON credit_applications
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
-
--- 관리자 전체 조회/수정
-CREATE POLICY "admin_all" ON credit_applications
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE id = auth.uid()::text AND role = 'admin'
-    )
-  );
