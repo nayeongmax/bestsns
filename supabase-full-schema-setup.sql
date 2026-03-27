@@ -479,6 +479,40 @@ CREATE INDEX IF NOT EXISTS idx_pt_user_id ON point_transactions (user_id);
 
 
 -- ──────────────────────────────────────────────────────────────
+-- 18. 크레딧 충전 신청
+-- ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS credit_applications (
+  id             TEXT        PRIMARY KEY,
+  user_id        TEXT        NOT NULL,
+  user_nickname  TEXT        NOT NULL,
+  depositor_name TEXT        NOT NULL,
+  amount         INTEGER     NOT NULL,
+  status         TEXT        NOT NULL DEFAULT 'pending'
+                             CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  approved_at    TIMESTAMPTZ,
+  note           TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_ca_user_id ON credit_applications (user_id);
+CREATE INDEX IF NOT EXISTS idx_ca_status  ON credit_applications (status);
+
+-- RLS 활성화 (anon은 INSERT만 허용, SELECT/UPDATE/DELETE는 service_role만)
+ALTER TABLE credit_applications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "allow_insert"  ON credit_applications;
+DROP POLICY IF EXISTS "own_read"      ON credit_applications;
+DROP POLICY IF EXISTS "own_insert"    ON credit_applications;
+DROP POLICY IF EXISTS "admin_all"     ON credit_applications;
+
+CREATE POLICY "allow_insert"
+  ON credit_applications
+  FOR INSERT
+  TO anon
+  WITH CHECK (true);
+
+
+-- ──────────────────────────────────────────────────────────────
 -- 스키마 캐시 갱신 (PostgREST 캐시 반영)
 -- ──────────────────────────────────────────────────────────────
 NOTIFY pgrst, 'reload schema';

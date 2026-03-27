@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert, NotificationType, BannerAd } from '@/types';
 import { SNS_PLATFORMS } from '../../constants.tsx';
-import { upsertSmmOrder } from '../../smmDb';
+import { upsertSmmOrderAdmin } from '../../smmDb';
 import { fetchProfileRow, updateProfile } from '../../profileDb';
 import { fetchBannerAds, upsertBannerAd, deleteBannerAd } from '../../bannerDb';
 
@@ -338,7 +338,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
             ...(shouldUpdateRemains ? { remains: jap.remains } : {}),
           };
           setSmmOrders(prev => prev.map(o => o.id === ourId ? updated : o));
-          upsertSmmOrder(updated).catch(e => console.warn('order 동기화 실패:', e));
+          upsertSmmOrderAdmin(updated).catch(e => console.warn('order 동기화 실패:', e));
         }
       }
 
@@ -356,7 +356,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
           // 상품 정보 없음 → 즉시 취소 + 환불
           const canceledOrder = { ...order, status: '주문취소', externalOrderId: 'FAILED' };
           setSmmOrders(prev => prev.map(o => o.id === ourId ? canceledOrder : o));
-          upsertSmmOrder(canceledOrder).catch(e => console.warn('주문취소 DB 실패:', e));
+          upsertSmmOrderAdmin(canceledOrder).catch(e => console.warn('주문취소 DB 실패:', e));
           const refundAmount = order.sellingPrice * order.quantity;
           fetchProfileRow(order.userId).then(row => {
             const cur = Number(row?.points ?? 0);
@@ -395,7 +395,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
             if (retryResult.status === 'success' && retryResult.orderId) {
               const updatedOrder = { ...order, externalOrderId: retryResult.orderId, status: '진행중', providerName: provider.name, costPrice: source.costPrice || 0 };
               setSmmOrders(prev => prev.map(o => o.id === ourId ? updatedOrder : o));
-              upsertSmmOrder(updatedOrder).catch(e => console.warn('재시도 주문 DB 실패:', e));
+              upsertSmmOrderAdmin(updatedOrder).catch(e => console.warn('재시도 주문 DB 실패:', e));
               next[ourId] = { status: 'In progress', remains: order.quantity };
               addNotif(order.userId, 'sns_activation', '🔄 주문 재시도 성공', `[${order.productName}] 다른 공급처(${provider.name})로 주문이 재접수되었습니다.`);
               retried = true;
@@ -410,7 +410,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
           // 모든 소스 실패 → 주문취소 + 포인트 환불
           const canceledOrder = { ...order, status: '주문취소', externalOrderId: 'FAILED' };
           setSmmOrders(prev => prev.map(o => o.id === ourId ? canceledOrder : o));
-          upsertSmmOrder(canceledOrder).catch(e => console.warn('주문취소 DB 실패:', e));
+          upsertSmmOrderAdmin(canceledOrder).catch(e => console.warn('주문취소 DB 실패:', e));
           const refundAmount = order.sellingPrice * order.quantity;
           fetchProfileRow(order.userId).then(row => {
             const cur = Number(row?.points ?? 0);
@@ -431,7 +431,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const handleMarkComplete = useCallback((order: SMMOrder) => {
     const completed = { ...order, status: '작업완료', remains: 0 };
     setSmmOrders(prev => prev.map(o => o.id === order.id ? completed : o));
-    upsertSmmOrder(completed).catch(e => console.warn('작업완료 DB 실패:', e));
+    upsertSmmOrderAdmin(completed).catch(e => console.warn('작업완료 DB 실패:', e));
     addNotif(order.userId, 'sns_activation', '✅ 작업 완료', `[${order.productName}] 주문하신 작업이 완료되었습니다. 링크를 확인해주세요.`);
     setJapStatuses(prev => { const n = { ...prev }; delete n[order.id]; return n; });
   }, [setSmmOrders, addNotif]);
@@ -712,8 +712,8 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     setSmmProducts(updated);
     setIsSavingOrder(true);
     try {
-      const { upsertSmmProducts } = await import('../../smmDb');
-      await upsertSmmProducts(updated);
+      const { upsertSmmProductsAdmin } = await import('../../smmDb');
+      await upsertSmmProductsAdmin(updated);
     } catch (e) {
       console.error(e);
     } finally {
