@@ -5,6 +5,7 @@ import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, upsertStoreOrder, type Orde
 import { upsertChannelOrder } from '../../channelDb';
 import { fetchPointTransactions, type PointTransaction } from '../../pointDb';
 import { supabase } from '../../supabase';
+import type { CreditApplication } from '../../creditApplicationDb';
 
 interface Props {
   user: UserProfile;
@@ -24,6 +25,18 @@ type BuyerSubTab = 'sns' | 'channel' | 'store';
 type SnsSubTab = 'orders' | 'charge' | 'usage';
 
 type PointChargeItem = PointTransaction;
+
+interface CombinedChargeItem {
+  id: string;
+  description: string;
+  amount: number;
+  created_at: string;
+  status: 'completed' | 'pending' | 'rejected';
+  source: 'payment' | 'credit_app';
+  payment_method?: string;
+  payment_log?: string;
+  depositor_name?: string;
+}
 
 interface PointUsageItem {
   id: string;
@@ -96,6 +109,16 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
   useEffect(() => {
     if (!user?.id) return;
     fetchPointTransactions(user.id, 'charge').then(setChargeItems).catch((e) => console.warn('충전 내역 로드 실패:', e));
+  }, [user?.id]);
+
+  // 크레딧 신청 내역 (Netlify 함수 경유)
+  const [creditApplications, setCreditApplications] = useState<CreditApplication[]>([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`/.netlify/functions/user-credit-applications?user_id=${encodeURIComponent(user.id)}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setCreditApplications(data); })
+      .catch((e) => console.warn('크레딧 신청 내역 로드 실패:', e));
   }, [user?.id]);
 
   // 포인트 사용 내역 (SNS 활성화 주문만 표시 - N잡스토어/채널판매는 카드결제로 포인트 차감 아님)
@@ -524,58 +547,99 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
             </div>
           )}
 
-          {snsSubTab === 'charge' && (
-            <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
-              {chargeItems.length === 0 ? (
-                <div className="py-16 text-center text-gray-300 font-black italic">충전 내역이 없습니다.</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
-                      <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">충전유형</th>
-                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전금액</th>
-                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전일</th>
-                      <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">결제정보</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {chargeItems.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-3 px-5 text-gray-400 font-bold">{chargeItems.length - idx}</td>
-                        <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
-                        <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
-                        <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{safeFormatDate(item.created_at)}</td>
-                        <td className="py-3 px-5 text-right">
-                          <button
-                            onClick={() => setPaymentModalOrder({
-                              id: item.id,
-                              type: 'sns',
-                              orderTime: item.created_at,
-                              productName: item.description,
-                              thumbnail: '',
-                              productId: '',
-                              sellerName: '',
-                              price: item.amount,
-                              quantity: 1,
-                              totalPrice: item.amount,
-                              status: '결제완료',
-                              paymentId: item.id,
-                              paymentMethod: item.payment_method ?? (item.description.includes('카드') ? 'CARD' : item.description.includes('토스') ? 'EASY_PAY' : item.description.includes('계좌') ? 'TRANSFER' : undefined),
-                              paymentLog: item.payment_log,
-                            })}
-                            className="text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all whitespace-nowrap"
-                          >
-                            💳 확인
-                          </button>
-                        </td>
+          {snsSubTab === 'charge' && (() => {
+            // 결제 내역 + 크레딧 신청 내역 합산 (최신순)
+            const combined: CombinedChargeItem[] = [
+              ...chargeItems.map(item => ({
+                id: item.id,
+                description: item.description,
+                amount: item.amount,
+                created_at: item.created_at,
+                status: 'completed' as const,
+                source: 'payment' as const,
+                payment_method: item.payment_method,
+                payment_log: item.payment_log,
+              })),
+              ...creditApplications.map(app => ({
+                id: app.id,
+                description: `계좌이체 신청 (입금자: ${app.depositor_name})`,
+                amount: app.amount,
+                created_at: app.created_at,
+                status: app.status === 'approved' ? 'completed' as const : app.status === 'rejected' ? 'rejected' as const : 'pending' as const,
+                source: 'credit_app' as const,
+                depositor_name: app.depositor_name,
+              })),
+            ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            return (
+              <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">
+                {combined.length === 0 ? (
+                  <div className="py-16 text-center text-gray-300 font-black italic">충전 내역이 없습니다.</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">No</th>
+                        <th className="py-3 px-5 text-left font-black text-gray-500 text-xs uppercase">충전유형</th>
+                        <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전금액</th>
+                        <th className="py-3 px-5 text-center font-black text-gray-500 text-xs uppercase">진행상태</th>
+                        <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">충전일</th>
+                        <th className="py-3 px-5 text-right font-black text-gray-500 text-xs uppercase">결제정보</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {combined.map((item, idx) => (
+                        <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="py-3 px-5 text-gray-400 font-bold">{combined.length - idx}</td>
+                          <td className="py-3 px-5 text-gray-700 font-bold">{item.description}</td>
+                          <td className="py-3 px-5 text-right text-blue-600 font-black">+{item.amount.toLocaleString()}P</td>
+                          <td className="py-3 px-5 text-center">
+                            {item.status === 'pending' && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-yellow-50 text-yellow-600">대기중</span>
+                            )}
+                            {item.status === 'completed' && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-green-50 text-green-600">충전완료</span>
+                            )}
+                            {item.status === 'rejected' && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-red-50 text-red-500">반려</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">{safeFormatDate(item.created_at)}</td>
+                          <td className="py-3 px-5 text-right">
+                            {item.source === 'payment' ? (
+                              <button
+                                onClick={() => setPaymentModalOrder({
+                                  id: item.id,
+                                  type: 'sns',
+                                  orderTime: item.created_at,
+                                  productName: item.description,
+                                  thumbnail: '',
+                                  productId: '',
+                                  sellerName: '',
+                                  price: item.amount,
+                                  quantity: 1,
+                                  totalPrice: item.amount,
+                                  status: '결제완료',
+                                  paymentId: item.id,
+                                  paymentMethod: item.payment_method ?? (item.description.includes('카드') ? 'CARD' : item.description.includes('토스') ? 'EASY_PAY' : item.description.includes('계좌') ? 'TRANSFER' : undefined),
+                                  paymentLog: item.payment_log,
+                                })}
+                                className="text-[11px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-all whitespace-nowrap"
+                              >
+                                💳 확인
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-gray-300 font-bold">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            );
+          })()}
 
           {snsSubTab === 'usage' && (
             <div className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-sm">

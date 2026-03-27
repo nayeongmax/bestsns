@@ -172,8 +172,8 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
             <div className="flex items-center gap-1.5 sm:gap-4">
               <div className="w-7 h-7 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center text-sm sm:text-lg shadow-sm shrink-0">💰</div>
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-black text-gray-400 uppercase italic leading-tight">POINTS</p>
-                <h3 className="text-[11px] sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{(effectiveUser.points || 0).toLocaleString()} P</h3>
+                <p className="text-[9px] font-black text-gray-400 uppercase italic leading-tight">크레딧</p>
+                <h3 className="text-[11px] sm:text-lg font-black text-gray-900 italic whitespace-nowrap">{(effectiveUser.points || 0).toLocaleString()} C</h3>
               </div>
               <Link to="/payment/point" className="bg-blue-600 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-[11px] shadow-lg hover:bg-black transition-all shrink-0">충전</Link>
             </div>
