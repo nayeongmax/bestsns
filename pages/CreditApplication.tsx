@@ -143,8 +143,8 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
             <p className="text-[12px] font-black text-yellow-700 mb-2">⚠️ 입금 시 꼭 확인하세요</p>
             <ul className="space-y-1 text-[12px] text-yellow-600 font-bold leading-relaxed">
               <li>• 입금자명을 반드시 <strong>{depositorName}</strong>으로 입력해주세요.</li>
-              <li>• 또는 입금 메모란에 신청번호 <strong>{submittedId}</strong>를 기재해주세요.</li>
               <li>• 입금 확인 후 영업일 기준 1~2일 내 크레딧이 지급됩니다.</li>
+              <li>• 빠른 크레딧 충전을 원하시면 상담채팅방으로 문의남겨주세요.</li>
             </ul>
           </div>
 
