@@ -8,7 +8,12 @@ import {
 import { supabase } from './supabase';
 import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from './storeDb';
 import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from './channelDb';
-import { fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, upsertSmmOrders, upsertSmmProviders, upsertSmmProducts, deleteSmmProductsByIds } from './smmDb';
+import {
+  fetchSmmOrders, fetchSmmProviders, fetchSmmProducts,
+  upsertSmmOrders, upsertSmmProviders, upsertSmmProducts, deleteSmmProductsByIds,
+  fetchSmmOrdersAdmin, fetchSmmProvidersAdmin,
+  upsertSmmOrdersAdmin, upsertSmmProvidersAdmin, upsertSmmProductsAdmin, deleteSmmProductsByIdsAdmin,
+} from './smmDb';
 import { updateProfile, fetchProfileRow } from './profileDb';
 import { fetchNotices, upsertNotices, fetchGradeConfigs, upsertGradeConfigs, fetchPosts, upsertPosts } from './siteDb';
 
@@ -205,6 +210,9 @@ const App: React.FC = () => {
   const channelDbLoaded = useRef(false);
   const smmDbLoaded = useRef(false);
   const siteDbLoaded = useRef(false);
+  // write effect에서 최신 user를 참조하기 위한 ref (의존성 배열에 추가 시 무한 루프 방지)
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
 
   // N잡스토어 + 채널판매: Supabase 로드 (실패 시 1회 재시도 — 쿠키/캐시 삭제 후에도 상품이 보이도록)
   useEffect(() => {
@@ -250,13 +258,16 @@ const App: React.FC = () => {
   }, []);
 
   // SNS활성화: 주문/공급처/상품 Supabase 로드
+  // - 어드민: smm-admin Netlify 함수(service_role)로 전체 데이터 로드
+  // - 일반 사용자: Supabase anon key로 본인 주문만 로드 (RLS 적용)
   useEffect(() => {
     let cancelled = false;
+    const isAdmin = user?.role === 'admin';
     (async () => {
       try {
         const [orders, providers, products] = await Promise.all([
-          fetchSmmOrders(),
-          fetchSmmProviders(),
+          isAdmin ? fetchSmmOrdersAdmin() : fetchSmmOrders(),
+          isAdmin ? fetchSmmProvidersAdmin() : Promise.resolve([] as SMMProvider[]),
           fetchSmmProducts(),
         ]);
         if (!cancelled) {
@@ -265,11 +276,11 @@ const App: React.FC = () => {
           // → 새로고침 시 Supabase write 실패로 DB가 비어 있어도 상품이 사라지지 않음
           if (providers.length > 0) {
             setSmmProviders(providers);
-          } else {
-            // Supabase 공급처가 비어있으면 localStorage 데이터를 Supabase로 마이그레이션
+          } else if (isAdmin) {
+            // 어드민: Supabase 공급처가 비어있으면 localStorage 데이터를 마이그레이션
             const localProviders = safeStorage<SMMProvider[]>('site_smm_providers_v2', []);
             if (localProviders.length > 0) {
-              upsertSmmProviders(localProviders).catch(e => console.warn('smm_providers 마이그레이션 실패:', e));
+              upsertSmmProvidersAdmin(localProviders).catch(e => console.warn('smm_providers 마이그레이션 실패:', e));
             }
           }
           const localProducts = safeStorage<SMMProduct[]>('site_smm_products_v2', []);
@@ -278,9 +289,9 @@ const App: React.FC = () => {
             const dbIds = new Set(products.map(p => p.id));
             const extraLocal = localProducts.filter(p => !dbIds.has(p.id));
             setSmmProducts(extraLocal.length > 0 ? [...products, ...extraLocal] : products);
-          } else if (localProducts.length > 0) {
-            // Supabase 상품이 비어있으면 localStorage 데이터를 Supabase로 마이그레이션
-            upsertSmmProducts(localProducts).catch(e => console.warn('smm_products 마이그레이션 실패:', e));
+          } else if (isAdmin && localProducts.length > 0) {
+            // 어드민: Supabase 상품이 비어있으면 localStorage 데이터를 마이그레이션
+            upsertSmmProductsAdmin(localProducts).catch(e => console.warn('smm_products 마이그레이션 실패:', e));
           }
           smmDbLoaded.current = true;
         }
@@ -290,7 +301,7 @@ const App: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 공지/등급/게시글: Supabase 로드 (1·2·5단계 테이블)
   useEffect(() => {
@@ -344,17 +355,23 @@ const App: React.FC = () => {
   }, [channelOrders]);
 
   // SNS활성화: 주문/공급처/상품 변경 시 DB 저장
+  // - 어드민: smm-admin Netlify 함수(service_role) 사용
+  // - 일반 사용자: Supabase anon key (RLS로 본인 주문만 upsert 가능)
   useEffect(() => {
     if (!smmDbLoaded.current) return;
-    upsertSmmOrders(smmOrders).catch((e) => console.warn('smm_orders 저장:', e));
+    if (userRef.current?.role === 'admin') {
+      upsertSmmOrdersAdmin(smmOrders).catch((e) => console.warn('smm_orders 저장(admin):', e));
+    } else {
+      upsertSmmOrders(smmOrders).catch((e) => console.warn('smm_orders 저장:', e));
+    }
   }, [smmOrders]);
   useEffect(() => {
     if (!smmDbLoaded.current) return;
-    upsertSmmProviders(smmProviders).catch((e) => console.warn('smm_providers 저장:', e));
+    upsertSmmProvidersAdmin(smmProviders).catch((e) => console.warn('smm_providers 저장:', e));
   }, [smmProviders]);
   useEffect(() => {
     if (!smmDbLoaded.current) return;
-    upsertSmmProducts(smmProducts).catch((e) => console.warn('smm_products 저장:', e));
+    upsertSmmProductsAdmin(smmProducts).catch((e) => console.warn('smm_products 저장:', e));
   }, [smmProducts]);
 
   // /mypage, /admin 진입 시 채널/스토어 주문 재로드 (결제 직후 반영 & 웹훅 취소 상태 동기화)
@@ -728,7 +745,7 @@ const App: React.FC = () => {
   /** 상품 인벤토리에서 삭제 시 DB에서 즉시 삭제 (새로고침 후에도 삭제 유지) */
   const handleDeleteSmmProducts = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
-    deleteSmmProductsByIds(ids).catch((e) => console.warn('smm_products 삭제 실패:', e));
+    deleteSmmProductsByIdsAdmin(ids).catch((e) => console.warn('smm_products 삭제 실패:', e));
     setSmmProducts((prev) => prev.filter((p) => !ids.includes(p.id)));
   }, []);
 

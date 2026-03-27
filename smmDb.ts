@@ -146,3 +146,65 @@ export async function upsertSmmOrders(list: SMMOrder[]): Promise<void> {
   const { error } = await supabase.from('smm_orders').upsert(list.map(orderToRow), { onConflict: 'id' });
   if (error) throw error;
 }
+
+// ─── 어드민 전용: smm-admin Netlify 함수(service_role)를 통한 DB 접근 ──────
+// RLS 적용 후 anon key로는 접근이 제한되므로 어드민 작업은 이 함수들을 사용합니다.
+
+const SMM_ADMIN_URL = '/.netlify/functions/smm-admin';
+
+function getAdminKey(): string {
+  return (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PANEL_PASSWORD
+    ?? (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PASSWORD
+    ?? '';
+}
+
+async function smmAdminGet(resource: string): Promise<unknown[]> {
+  const res = await fetch(`${SMM_ADMIN_URL}?resource=${resource}`, {
+    headers: { 'x-admin-key': getAdminKey() },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function smmAdminPost(body: Record<string, unknown>): Promise<void> {
+  const res = await fetch(SMM_ADMIN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+export async function fetchSmmOrdersAdmin(): Promise<SMMOrder[]> {
+  const data = await smmAdminGet('orders');
+  return data.map((row) => rowToOrder(row as Record<string, unknown>));
+}
+
+export async function upsertSmmOrderAdmin(o: SMMOrder): Promise<void> {
+  await smmAdminPost({ action: 'upsertOrder', order: orderToRow(o) });
+}
+
+export async function upsertSmmOrdersAdmin(list: SMMOrder[]): Promise<void> {
+  if (list.length === 0) return;
+  await smmAdminPost({ action: 'upsertOrders', orders: list.map(orderToRow) });
+}
+
+export async function fetchSmmProvidersAdmin(): Promise<SMMProvider[]> {
+  const data = await smmAdminGet('providers');
+  return data.map((row) => rowToProvider(row as Record<string, unknown>));
+}
+
+export async function upsertSmmProvidersAdmin(list: SMMProvider[]): Promise<void> {
+  if (list.length === 0) return;
+  await smmAdminPost({ action: 'upsertProviders', providers: list.map(providerToRow) });
+}
+
+export async function upsertSmmProductsAdmin(list: SMMProduct[]): Promise<void> {
+  if (list.length === 0) return;
+  await smmAdminPost({ action: 'upsertProducts', products: list.map(productToRow) });
+}
+
+export async function deleteSmmProductsByIdsAdmin(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await smmAdminPost({ action: 'deleteProducts', ids });
+}
