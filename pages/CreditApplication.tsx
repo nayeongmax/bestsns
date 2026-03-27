@@ -281,11 +281,10 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
             <p className="font-black text-gray-800 text-[13px]">크레딧 환불 규정 (이용약관 제14조)</p>
             <ul className="space-y-2 pl-2">
               <li>• 충전한 크레딧을 전혀 사용하지 않은 경우, 수수료 없이 전액 환불이 가능합니다.</li>
-              <li>• 크레딧 일부를 사용한 경우에도 충전일로부터 <strong>14일 이내</strong>이면 잔액 전액 환불이 가능합니다.</li>
+              <li>• 조금이라도 크레딧을 사용하면 환불이 불가합니다.</li>
               <li>• 충전일로부터 <strong>14일이 경과</strong>한 이후에는 환불이 불가합니다.</li>
               <li>• 이벤트 등으로 무상 지급된 크레딧, 회원이 직접 충전하지 않은 크레딧은 환불이 불가합니다.</li>
-              <li>• 환불 신청은 고객센터(010-5315-6542)를 통해 접수하며, 접수 후 <strong>10일 이내</strong>에 처리됩니다.</li>
-              <li>• 충전된 크레딧의 유효기간은 마지막 로그인일로부터 <strong>1년</strong>입니다.</li>
+              <li>• 환불 신청은 고객센터 상담채팅방을 통해 접수하시면 됩니다.</li>
             </ul>
           </div>
 
@@ -322,7 +321,7 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
                 )}
               </div>
               <span className="text-[13px] font-black text-gray-700 leading-snug">
-                크레딧 지급 후 주문 시 작업이 시작되며, 작업 시작 이후에는 취소·환불이 불가함을 이해합니다. <span className="text-red-500">(필수)</span>
+                마케팅 상품 주문 즉시 작업이 시작됩니다. 이후에는 취소·환불이 불가합니다. <span className="text-red-500">(필수)</span>
               </span>
             </label>
           </div>
