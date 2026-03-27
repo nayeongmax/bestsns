@@ -326,6 +326,20 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
     return dateStr;
   };
 
+  // 충전일 전용: "2026-03-28 03:07:06" 형식으로 정확하게 표시
+  const formatChargeDate = (dateStr: string | undefined) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    const s = String(d.getSeconds()).padStart(2, '0');
+    return `${y}-${mo}-${day} ${h}:${mi}:${s}`;
+  };
+
   const formatOrderTime = (dateStr: string) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
@@ -614,10 +628,10 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                               <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-red-50 text-red-500">반려</span>
                             )}
                           </td>
-                          <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap">
-                            {item.status === 'completed' && item.approved_at
-                              ? safeFormatDate(item.approved_at)
-                              : safeFormatDate(item.created_at)}
+                          <td className="py-3 px-5 text-right text-gray-400 font-bold whitespace-nowrap text-[12px]">
+                            {item.status === 'completed'
+                              ? formatChargeDate(item.approved_at || item.created_at)
+                              : '-'}
                           </td>
                         </tr>
                       ))}
