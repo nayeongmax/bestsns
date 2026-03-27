@@ -366,7 +366,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                   <p className="text-xl font-black italic tracking-tighter leading-none">{(userPoints ?? 0).toLocaleString()} <span className="text-xs text-gray-500 not-italic font-bold">C</span></p>
                 </div>
                 <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/credit/apply')} className="bg-blue-600 text-white py-2.5 px-4 rounded-xl text-[12px] font-black shrink-0">
-                  크레딧 구하기
+                  크레딧 구매
                 </button>
               </div>
             </div>
@@ -388,7 +388,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                    </div>
                    <h4 className="text-2xl sm:text-3xl font-black italic tracking-tighter leading-none break-all">{(userPoints ?? 0).toLocaleString()} <span className="text-xs sm:text-sm text-gray-500 not-italic uppercase ml-0.5 font-bold">C</span></h4>
                    <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/credit/apply')} className="w-full bg-blue-600 text-white py-3 sm:py-3.5 rounded-xl text-[12px] sm:text-[13px] font-black shadow-lg hover:bg-white hover:text-blue-600 transition-all uppercase italic tracking-wider">
-                     크레딧 구하기
+                     크레딧 구매
                    </button>
                  </div>
               </div>

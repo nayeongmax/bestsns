@@ -47,7 +47,7 @@ const MarketingConsentPage: React.FC = () => {
 
         <div className="border-t border-gray-100 pt-6">
           <p className="text-xs text-gray-400 font-bold">
-            고객센터: 010-5315-6542 &nbsp;|&nbsp; 더베스트[THEBEST] &nbsp;|&nbsp; 대구광역시 달성군 현풍로6길 5
+            고객센터: 070-4571-9555 &nbsp;|&nbsp; 더베스트[THEBEST] &nbsp;|&nbsp; 대구광역시 달성군 현풍로6길 5
           </p>
         </div>
 

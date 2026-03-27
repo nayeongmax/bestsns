@@ -27,6 +27,32 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
   const navigate = useNavigate();
   const [depositorName, setDepositorName] = useState('');
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+
+  // 보너스 포인트 계산 (관리자 설정 기반 — PointPayment와 동일한 로직)
+  const isBonusWithinPeriod = (() => {
+    if (!user.pointBonusActive || (user.pointBonusPercent || 0) <= 0) return false;
+    if (user.pointBonusExpiryDays == null) return true; // 무기한
+    if (!user.pointBonusStartDate) return true;
+    const start = new Date(user.pointBonusStartDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + user.pointBonusExpiryDays);
+    end.setHours(23, 59, 59, 999);
+    return new Date() <= end;
+  })();
+  const bonusPercent = isBonusWithinPeriod ? (user.pointBonusPercent || 0) : 0;
+  const bonusPoints = (bonusPercent > 0 && selectedAmount != null)
+    ? Math.floor(selectedAmount * bonusPercent / 100)
+    : 0;
+  const bonusPeriodLabel = (() => {
+    if (!isBonusWithinPeriod) return null;
+    if (user.pointBonusExpiryDays == null) return '무기한';
+    if (!user.pointBonusStartDate) return '무기한';
+    const fmt = (d: Date) => `${String(d.getFullYear()).slice(2)}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}.`;
+    const start = new Date(user.pointBonusStartDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + user.pointBonusExpiryDays);
+    return `${fmt(start)}~${fmt(end)}`;
+  })();
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [workPolicyAgreed, setWorkPolicyAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -218,27 +244,29 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
           )}
         </div>
 
-        {/* 보너스 포인트 배너 */}
-        <div className="bg-amber-50 rounded-[40px] p-7 border border-amber-200 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🎁</span>
-              <div>
-                <p className="font-black text-amber-800 text-base">보너스 포인트 +10%</p>
+        {/* 보너스 포인트 배너 — 관리자가 활성화한 경우에만 표시 */}
+        {isBonusWithinPeriod && bonusPercent > 0 && (
+          <div className="bg-amber-50 rounded-[40px] p-7 border border-amber-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🎁</span>
+                <div>
+                  <p className="font-black text-amber-800 text-base">보너스 포인트 +{bonusPercent}%</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-black text-amber-700 text-xl">
+                  +{bonusPoints > 0 ? bonusPoints.toLocaleString() : `${Math.floor(10000 * bonusPercent / 100).toLocaleString()}`}P
+                </p>
+                <p className="text-[11px] text-amber-500 font-bold">{bonusPeriodLabel}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="font-black text-amber-700 text-xl">
-                +{selectedAmount != null ? (selectedAmount * 0.1).toLocaleString() : '10,000'}P
-              </p>
-              <p className="text-[11px] text-amber-500 font-bold">무기한</p>
-            </div>
+            <p className="text-[11px] text-amber-600 font-bold leading-relaxed border-t border-amber-200 pt-4">
+              ※ 기간이 정해지지 않은 일시적 보너스 포인트입니다.<br />
+              추후 보너스 혜택이 사라질 수 있습니다.
+            </p>
           </div>
-          <p className="text-[11px] text-amber-600 font-bold leading-relaxed border-t border-amber-200 pt-4">
-            ※ 기간이 정해지지 않은 일시적 보너스 포인트입니다.<br />
-            추후 보너스 혜택이 사라질 수 있습니다.
-          </p>
-        </div>
+        )}
 
         {/* 03. 입금 계좌 안내 */}
         <div className="bg-gray-900 rounded-[40px] p-8 md:p-10 space-y-5">

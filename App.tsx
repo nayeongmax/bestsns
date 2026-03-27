@@ -827,7 +827,7 @@ const App: React.FC = () => {
     } else {
       const isAdmin = userData.id?.toLowerCase() === 'admin';
       targetProfile = {
-        ...userData, nickname: isAdmin ? '마케터김' : userData.nickname,
+        ...userData, nickname: isAdmin ? '홍길동' : userData.nickname,
         role: isAdmin ? 'admin' : 'user', sellerStatus: isAdmin ? 'approved' : 'none',
         points: userData.id?.toLowerCase() === 'test' ? 12500 : 0,
         joinDate: new Date().toISOString().split('T')[0], coupons: []
