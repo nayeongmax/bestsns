@@ -32,7 +32,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const [comments, setComments] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // App.tsx에서 전달받은 user.points를 사용 (전역 동기화)
+  // App.tsx에서 전달받은 user.points(크레딧)를 사용 (전역 동기화)
   const userPoints = user.points || 0;
 
   const [mainIdx, setMainIdx] = useState(0);
@@ -150,11 +150,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const handleOrder = async () => {
     if (isGuest) return navigate('/login');
     if (selectedOptions.length === 0) return void showAlert({ description: '주문할 항목이 없습니다.' });
-    if (totalOrderAmount > userPoints) return void showAlert({ description: '보유 포인트가 부족합니다.' });
+    if (totalOrderAmount > userPoints) return void showAlert({ description: '보유 크레딧이 부족합니다. 크레딧 충전 신청을 해주세요.' });
     
     showConfirm({
       title: '주문 확인',
-      description: `총 ${(totalOrderAmount ?? 0).toLocaleString()}P를 결제하고 주문을 접수할까요?`,
+      description: `총 ${(totalOrderAmount ?? 0).toLocaleString()}C를 사용하여 주문을 접수할까요?`,
       confirmLabel: '결제하기',
       cancelLabel: '취소',
       danger: false,
@@ -303,7 +303,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
 
       window.dispatchEvent(new CustomEvent('user-new-order', { detail: { amount: totalOrderAmount - totalRefund } }));
       showAlert({ description: totalRefund > 0
-        ? `일부 주문이 모든 공급처에서 실패하여 ${totalRefund.toLocaleString()}P가 환불되었습니다. 마이페이지에서 현황을 확인하세요.`
+        ? `일부 주문이 모든 공급처에서 실패하여 ${totalRefund.toLocaleString()}C가 환불되었습니다. 마이페이지에서 현황을 확인하세요.`
         : '성공적으로 주문되었습니다! 마이페이지에서 현황을 확인하세요.'
       });
       setSelectedOptions([]);
@@ -362,11 +362,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
               <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                  <p className="text-[9px] font-black text-blue-400 uppercase italic tracking-widest">Available Points</p>
-                  <p className="text-xl font-black italic tracking-tighter leading-none">{(userPoints ?? 0).toLocaleString()} <span className="text-xs text-gray-500 not-italic font-bold">P</span></p>
+                  <p className="text-[9px] font-black text-blue-400 uppercase italic tracking-widest">Available Credits</p>
+                  <p className="text-xl font-black italic tracking-tighter leading-none">{(userPoints ?? 0).toLocaleString()} <span className="text-xs text-gray-500 not-italic font-bold">C</span></p>
                 </div>
-                <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/payment/point')} className="bg-blue-600 text-white py-2.5 px-4 rounded-xl text-[12px] font-black shrink-0">
-                  충전
+                <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/credit/apply')} className="bg-blue-600 text-white py-2.5 px-4 rounded-xl text-[12px] font-black shrink-0">
+                  크레딧 구하기
                 </button>
               </div>
             </div>
@@ -383,12 +383,12 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                  <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent"></div>
                  <div className="relative z-10 space-y-3 sm:space-y-4">
                    <div className="flex justify-between items-center">
-                     <p className="text-[9px] sm:text-[10px] font-black text-blue-400 uppercase italic tracking-widest">Available Points</p>
+                     <p className="text-[9px] sm:text-[10px] font-black text-blue-400 uppercase italic tracking-widest">Available Credits</p>
                      <span className="text-[8px] sm:text-[9px] bg-white/10 px-1.5 sm:px-2 py-0.5 rounded font-bold text-white/40 uppercase">Real-time sync</span>
                    </div>
-                   <h4 className="text-2xl sm:text-3xl font-black italic tracking-tighter leading-none break-all">{(userPoints ?? 0).toLocaleString()} <span className="text-xs sm:text-sm text-gray-500 not-italic uppercase ml-0.5 font-bold">P</span></h4>
-                   <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/payment/point')} className="w-full bg-blue-600 text-white py-3 sm:py-3.5 rounded-xl text-[12px] sm:text-[13px] font-black shadow-lg hover:bg-white hover:text-blue-600 transition-all uppercase italic tracking-wider">
-                     포인트 충전하기
+                   <h4 className="text-2xl sm:text-3xl font-black italic tracking-tighter leading-none break-all">{(userPoints ?? 0).toLocaleString()} <span className="text-xs sm:text-sm text-gray-500 not-italic uppercase ml-0.5 font-bold">C</span></h4>
+                   <button type="button" onClick={() => isGuest ? navigate('/login') : navigate('/credit/apply')} className="w-full bg-blue-600 text-white py-3 sm:py-3.5 rounded-xl text-[12px] sm:text-[13px] font-black shadow-lg hover:bg-white hover:text-blue-600 transition-all uppercase italic tracking-wider">
+                     크레딧 구하기
                    </button>
                  </div>
               </div>
@@ -524,7 +524,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                     className={`w-full p-4 sm:p-6 bg-gray-50 rounded-2xl sm:rounded-[32px] font-black text-left flex items-center justify-between gap-3 transition-all shadow-inner ${isDropdownOpen ? 'bg-white ring-2 ring-blue-100' : 'hover:bg-gray-100'}`}
                   >
                     <span className={`text-sm sm:text-base truncate ${selectedProductId ? 'text-gray-800' : 'text-gray-400'}`}>
-                      {selectedProduct ? `${selectedProduct.name} (${(selectedProduct.sellingPrice ?? 0).toLocaleString()}P)` : '서비스를 선택하세요'}
+                      {selectedProduct ? `${selectedProduct.name} (${(selectedProduct.sellingPrice ?? 0).toLocaleString()}C)` : '서비스를 선택하세요'}
                     </span>
                     <span className={`text-gray-400 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`}>
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -543,7 +543,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                             className={`w-full text-left px-5 sm:px-7 py-3.5 sm:py-4 text-[15px] sm:text-[17px] font-black transition-all flex items-center justify-between gap-4 ${selectedProductId === p.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'}`}
                           >
                             <span>{p.name}</span>
-                            <span className={`text-[14px] sm:text-[16px] font-black shrink-0 ${selectedProductId === p.id ? 'text-blue-200' : 'text-blue-500'}`}>{(p.sellingPrice ?? 0).toLocaleString()}P</span>
+                            <span className={`text-[14px] sm:text-[16px] font-black shrink-0 ${selectedProductId === p.id ? 'text-blue-200' : 'text-blue-500'}`}>{(p.sellingPrice ?? 0).toLocaleString()}C</span>
                           </button>
                         ))}
                       </div>
@@ -619,8 +619,8 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-10 sm:pl-6 flex-shrink-0">
                     <div className="space-y-0.5 sm:space-y-1">
-                      <p className="text-[11px] font-black text-gray-300 uppercase italic break-words">{(opt.unitPrice ?? 0).toLocaleString()}P × {(opt.quantity ?? 0).toLocaleString()}</p>
-                      <p className="text-xl sm:text-2xl font-black text-blue-600 italic tracking-tighter break-all">{(opt.totalPrice ?? 0).toLocaleString()}P</p>
+                      <p className="text-[11px] font-black text-gray-300 uppercase italic break-words">{(opt.unitPrice ?? 0).toLocaleString()}C × {(opt.quantity ?? 0).toLocaleString()}</p>
+                      <p className="text-xl sm:text-2xl font-black text-blue-600 italic tracking-tighter break-all">{(opt.totalPrice ?? 0).toLocaleString()}C</p>
                     </div>
                     <button type="button" onClick={() => setSelectedOptions(selectedOptions.filter(o=>o.id!==opt.id))} className="text-red-200 hover:text-red-500 transition-colors font-black text-xl sm:text-2xl p-1 shrink-0" aria-label="삭제">✕</button>
                   </div>
@@ -630,8 +630,8 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             {selectedOptions.length > 0 && (
               <div className="pt-6 sm:pt-10 space-y-6 sm:space-y-8">
                 <div className="bg-white/50 backdrop-blur-md rounded-2xl sm:rounded-[48px] p-6 sm:p-12 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 border border-white/50 shadow-inner">
-                  <span className="text-blue-900 font-black text-base sm:text-xl italic tracking-widest break-words">결제 예정 총 포인트</span>
-                  <span className="text-3xl sm:text-5xl font-black text-blue-600 italic tracking-tighter break-all">{(totalOrderAmount ?? 0).toLocaleString()}P</span>
+                  <span className="text-blue-900 font-black text-base sm:text-xl italic tracking-widest break-words">사용 예정 총 크레딧</span>
+                  <span className="text-3xl sm:text-5xl font-black text-blue-600 italic tracking-tighter break-all">{(totalOrderAmount ?? 0).toLocaleString()}C</span>
                 </div>
                 <button type="button" onClick={handleOrder} disabled={isProcessing} className={`w-full py-6 sm:py-8 md:py-10 rounded-2xl sm:rounded-[48px] font-black text-xl sm:text-2xl md:text-3xl shadow-xl sm:shadow-2xl transition-all uppercase italic tracking-widest flex items-center justify-center gap-2 sm:gap-4 ${isProcessing ? 'bg-gray-400' : 'bg-black text-white hover:bg-blue-600'}`}>
                   {isProcessing ? '🚀 작업 요청 중...' : '🚀 주문하기'}
