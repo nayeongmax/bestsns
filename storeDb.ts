@@ -79,8 +79,11 @@ export async function upsertStoreProduct(p: EbookProduct): Promise<void> {
 
 export async function upsertStoreProducts(list: EbookProduct[]): Promise<void> {
   if (list.length === 0) return;
-  const { error } = await supabase.from('store_products').upsert(list.map(productToRow), { onConflict: 'id' });
-  if (error) throw error;
+  // 상품별 개별 저장 — 일괄 전송 시 base64 이미지로 인해 payload 한도 초과 방지
+  for (const p of list) {
+    const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
+    if (error) throw error;
+  }
 }
 
 export async function deleteStoreProduct(id: string): Promise<void> {

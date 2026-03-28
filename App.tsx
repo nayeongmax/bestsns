@@ -229,7 +229,18 @@ const App: React.FC = () => {
           fetchChannelOrders(),
         ]);
         if (!cancelled) {
-          setEbooks(products);
+          // Supabase에 thumbnail이 없는 경우 localStorage 데이터로 보완 (upsert 실패로 누락된 경우 복구)
+          const localEbooks = safeStorage<EbookProduct[]>('site_ebooks_v2', []);
+          const mergedProducts = products.map(p => {
+            if (p.thumbnail) return p;
+            const local = localEbooks.find(e => e.id === p.id);
+            return {
+              ...p,
+              thumbnail: local?.thumbnail || '',
+              attachedImages: p.attachedImages?.length ? p.attachedImages : (local?.attachedImages || []),
+            };
+          });
+          setEbooks(mergedProducts);
           setStoreOrders(orders);
           setReviews(reviewList);
           setChannels(channelProducts);
@@ -883,7 +894,12 @@ const App: React.FC = () => {
       fetchChannelOrders(),
     ]).then(([channelProducts, products, reviewList, channelOrderList]) => {
       setChannels(channelProducts);
-      setEbooks(products);
+      const localEbooks = safeStorage<EbookProduct[]>('site_ebooks_v2', []);
+      setEbooks(products.map(p => {
+        if (p.thumbnail) return p;
+        const local = localEbooks.find(e => e.id === p.id);
+        return { ...p, thumbnail: local?.thumbnail || '', attachedImages: p.attachedImages?.length ? p.attachedImages : (local?.attachedImages || []) };
+      }));
       setReviews(reviewList);
       setChannelOrders(channelOrderList);
     }).catch((e) => console.warn('로그인 후 채널/스토어 재로드 실패:', e));

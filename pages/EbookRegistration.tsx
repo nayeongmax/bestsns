@@ -67,7 +67,8 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_SIZE = isThumbnail ? 600 : 1200;
+          const MAX_SIZE = isThumbnail ? 400 : 800;
+          const quality = isThumbnail ? 0.5 : 0.45;
           let width = img.width;
           let height = img.height;
 
@@ -80,7 +81,7 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.6));
+          resolve(canvas.toDataURL('image/jpeg', quality));
         };
       };
     });
@@ -133,7 +134,7 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
       const compressedThumb = await compressImage(files[0] as File, true);
       setThumbnail(compressedThumb);
     } else {
-      const selectedFiles = Array.from(files).slice(0, 10 - attachedImages.length);
+      const selectedFiles = Array.from(files).slice(0, 5 - attachedImages.length);
       for (const file of selectedFiles) {
         const compressedImg = await compressImage(file as File);
         setAttachedImages(prev => [...prev, compressedImg]);
@@ -502,7 +503,7 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="font-bold text-gray-800 text-base">미디어 등록</h3>
-              <p className="text-xs md:text-sm text-gray-500 mt-0.5">대표 썸네일 1장과 상세 이미지를 최대 10장까지 등록할 수 있습니다</p>
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5">대표 썸네일 1장과 상세 이미지를 최대 5장까지 등록할 수 있습니다</p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
               <button
