@@ -90,7 +90,7 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
   // 신청 완료 화면
   if (submittedId) {
     return (
-      <div className="max-w-2xl mx-auto pb-32 px-4 animate-in fade-in duration-500">
+      <div className="max-w-4xl mx-auto pb-32 px-4 animate-in fade-in duration-500">
         <div className="bg-white rounded-[48px] p-10 md:p-14 shadow-sm border border-gray-100 space-y-8 text-center">
           <div className="text-6xl">✅</div>
           <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter">신청 완료!</h2>
@@ -168,7 +168,7 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto pb-32 px-4 animate-in fade-in duration-500">
+    <div className="max-w-4xl mx-auto pb-32 px-4 animate-in fade-in duration-500">
       <button
         onClick={() => navigate(-1)}
         className="mb-8 flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 group"
