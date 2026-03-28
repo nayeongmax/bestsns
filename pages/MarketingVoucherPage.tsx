@@ -10,13 +10,13 @@ const STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID as string;
 const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY as string;
 
 // 금액별 마케팅 이용권 정보
-const VOUCHER_INFO: Record<number, { title: string; desc: string }> = {
-  10000:   { title: 'SNS 마케팅 이용권 1만원',   desc: '1만 크레딧 충전' },
-  30000:   { title: 'SNS 마케팅 이용권 3만원',   desc: '3만 크레딧 충전' },
-  50000:   { title: 'SNS 마케팅 이용권 5만원',   desc: '5만 크레딧 충전' },
-  100000:  { title: 'SNS 마케팅 이용권 10만원',  desc: '10만 크레딧 충전' },
-  500000:  { title: 'SNS 마케팅 이용권 50만원',  desc: '50만 크레딧 충전' },
-  1000000: { title: 'SNS 마케팅 이용권 100만원', desc: '100만 크레딧 충전' },
+const VOUCHER_INFO: Record<number, { title: string; desc: string; orderName: string }> = {
+  10000:   { title: 'SNS 마케팅 이용권 1만원',   desc: '1만 크레딧 충전',   orderName: '마케팅 종합 컨설팅 서비스 (1)' },
+  30000:   { title: 'SNS 마케팅 이용권 3만원',   desc: '3만 크레딧 충전',   orderName: '마케팅 종합 컨설팅 서비스 (2)' },
+  50000:   { title: 'SNS 마케팅 이용권 5만원',   desc: '5만 크레딧 충전',   orderName: '마케팅 종합 컨설팅 서비스 (3)' },
+  100000:  { title: 'SNS 마케팅 이용권 10만원',  desc: '10만 크레딧 충전',  orderName: '마케팅 종합 컨설팅 서비스 (4)' },
+  500000:  { title: 'SNS 마케팅 이용권 50만원',  desc: '50만 크레딧 충전',  orderName: '마케팅 종합 컨설팅 서비스 (5)' },
+  1000000: { title: 'SNS 마케팅 이용권 100만원', desc: '100만 크레딧 충전', orderName: '마케팅 종합 컨설팅 서비스 (6)' },
 };
 
 interface Props {
@@ -29,7 +29,7 @@ const MarketingVoucherPage: React.FC<Props> = ({ user, onUpdateUser, addNotif })
   const navigate = useNavigate();
   const location = useLocation();
   const amount: number = location.state?.amount || 10000;
-  const voucher = VOUCHER_INFO[amount] || { title: `SNS 마케팅 이용권 ${amount.toLocaleString()}원`, desc: `${amount.toLocaleString()} 크레딧 충전` };
+  const voucher = VOUCHER_INFO[amount] || { title: `SNS 마케팅 이용권 ${amount.toLocaleString()}원`, desc: `${amount.toLocaleString()} 크레딧 충전`, orderName: '마케팅 종합 컨설팅 서비스' };
 
   const [isProcessing, setIsProcessing] = useState(false);
   const autoTriggered = useRef(false);
@@ -55,7 +55,7 @@ const MarketingVoucherPage: React.FC<Props> = ({ user, onUpdateUser, addNotif })
         storeId: STORE_ID,
         channelKey: CHANNEL_KEY,
         paymentId,
-        orderName: `[마케팅크레딧] ${voucher.title}`,
+        orderName: voucher.orderName,
         totalAmount: amount,
         currency: 'CURRENCY_KRW',
         payMethod: 'CARD',
