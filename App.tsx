@@ -902,7 +902,6 @@ const App: React.FC = () => {
     setUser(targetProfile);
     // 로그인 직후 채널/스토어 재로드 (첫 로드는 세션 복구 전이라 빈 결과였을 수 있음)
     // 어드민: 비밀 상품 포함 전체 목록(service_role), 일반 사용자: 공개 상품만(RLS 필터)
-    const isAdminLogin = targetProfile.role === 'admin';
     Promise.all([
       fetchChannelProducts(),
       isAdminLogin ? fetchStoreProductsAdmin() : fetchPublicStoreProducts(),
