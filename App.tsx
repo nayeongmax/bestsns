@@ -219,10 +219,13 @@ const App: React.FC = () => {
   // N잡스토어 + 채널판매: Supabase 로드 (실패 시 1회 재시도 — 쿠키/캐시 삭제 후에도 상품이 보이도록)
   useEffect(() => {
     let cancelled = false;
+    // 새로고침 시 localStorage에서 유저 역할 확인 — 어드민이면 비밀/미승인 상품 포함 전체 로드
+    const initialUser = safeStorage<UserProfile | null>('user_profile_v2', null);
+    const isInitialAdmin = initialUser?.role === 'admin';
     const load = async (isRetry: boolean) => {
       try {
         const [products, orders, reviewList, channelProducts, channelOrderList] = await Promise.all([
-          fetchPublicStoreProducts(),
+          isInitialAdmin ? fetchStoreProductsAdmin() : fetchPublicStoreProducts(),
           fetchStoreOrders(),
           fetchReviews(),
           fetchChannelProducts(),
