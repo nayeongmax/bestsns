@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserProfile } from '@/types';
+import { UserProfile, EbookProduct } from '@/types';
 
 interface Props {
   user: UserProfile;
+  ebooks: EbookProduct[];
 }
 
 const CREDIT_PACKAGES = [
@@ -15,7 +16,7 @@ const CREDIT_PACKAGES = [
   { label: '100만 크레딧', amount: 1000000 },
 ];
 
-const CreditApplication: React.FC<Props> = ({ user }) => {
+const CreditApplication: React.FC<Props> = ({ user, ebooks }) => {
   const navigate = useNavigate();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
 
@@ -47,7 +48,15 @@ const CreditApplication: React.FC<Props> = ({ user }) => {
 
   const handleSubmit = () => {
     if (!selectedAmount) return;
-    navigate('/store/marketing-voucher', { state: { amount: selectedAmount } });
+    // N잡스토어에 해당 금액의 상품이 있으면 상세페이지로 이동 + PG창 자동 오픈
+    const matchedEbook = ebooks.find(
+      (e) => e.status === 'approved' && !e.isPaused && e.price === selectedAmount
+    );
+    if (matchedEbook) {
+      navigate(`/ebooks/${matchedEbook.id}`, { state: { autoTrigger: true } });
+    } else {
+      navigate('/store/marketing-voucher', { state: { amount: selectedAmount } });
+    }
   };
 
   return (
