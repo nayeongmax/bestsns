@@ -268,7 +268,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        alert(`환불 실패: ${data.error || '알 수 없는 오류가 발생했습니다.'}\n\n카드 내역에 환불이 확인된다면 관리자에게 문의해 주세요.`);
+        setShowChatConsultModal(true);
         return;
       }
 
@@ -1066,8 +1066,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
             <div className="text-center space-y-2">
               <h3 className="text-xl font-black text-gray-900">환불 안내</h3>
               <p className="text-[14px] font-bold text-gray-500 leading-relaxed">
-                크레딧으로 결제한 주문의 환불은<br />
-                <span className="text-blue-600 font-black">상담채팅을 이용해주세요.</span>
+                환불신청하시려면<br />
+                <span className="text-blue-600 font-black">상담채팅방에 신청하세요.</span>
               </p>
             </div>
             <button
