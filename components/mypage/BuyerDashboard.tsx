@@ -19,6 +19,7 @@ interface Props {
   ebooks: EbookProduct[];
   onAddReview: (review: Review) => void;
   initialSubTab?: 'sns' | 'channel' | 'store';
+  initialSnsSubTab?: 'orders' | 'charge' | 'usage';
 }
 
 type BuyerSubTab = 'sns' | 'channel' | 'store';
@@ -68,11 +69,11 @@ interface OrderItem {
   paymentLog?: string;
 }
 
-const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channelOrders, channelProducts = [], storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, initialSubTab }) => {
+const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channelOrders, channelProducts = [], storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, initialSubTab, initialSnsSubTab }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BuyerSubTab>(() => initialSubTab ?? 'sns');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [snsSubTab, setSnsSubTab] = useState<SnsSubTab>('orders');
+  const [snsSubTab, setSnsSubTab] = useState<SnsSubTab>(() => initialSnsSubTab ?? 'orders');
 
   // 리뷰 모달 상태
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);

@@ -53,7 +53,7 @@ const CreditApplication: React.FC<Props> = ({ user, ebooks }) => {
       (e) => e.status === 'approved' && !e.isPaused && e.price === selectedAmount
     );
     if (matchedEbook) {
-      navigate(`/ebooks/${matchedEbook.id}`, { state: { autoTrigger: true } });
+      navigate(`/ebooks/${matchedEbook.id}`, { state: { autoTrigger: true, fromCreditPurchase: true } });
     } else {
       navigate('/store/marketing-voucher', { state: { amount: selectedAmount } });
     }
