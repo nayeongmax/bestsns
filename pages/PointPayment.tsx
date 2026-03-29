@@ -339,7 +339,10 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
             {!isProductPayment && (
               <div className="pt-2 space-y-1">
                 <p className="text-[11px] font-black text-gray-500 uppercase italic">포인트 충전 유의사항</p>
-                <p className="text-[11px] text-red-500 font-bold leading-relaxed">충전한 포인트는 충전일로부터 1년 이내에 사용하지 않을 경우, 사용하지 못할 수 있습니다.</p>
+                <p className="text-[11px] text-red-500 font-bold leading-relaxed">환불은 결제 완료 후 48시간 이내에만 가능합니다.</p>
+                <p className="text-[11px] text-red-400 font-bold leading-relaxed">(단, 지급된 포인트를 사용하실 경우에는 환불이 불가능하오니 이점 유의하여 주시기 바랍니다.)</p>
+                <p className="text-[11px] text-red-500 font-bold leading-relaxed">환불은 포인트 충전 후 1P도 사용하지 않았을 때 가능합니다.</p>
+                <p className="text-[11px] text-gray-400 leading-relaxed mt-1">충전한 포인트는 충전일로부터 1년 이내에 사용하지 않을 경우, 사용하지 못할 수 있습니다.</p>
                 <p className="text-[11px] text-gray-400 leading-relaxed">포인트는 현금으로 환급되지 않으며, 타인에게 양도할 수 없습니다.</p>
               </div>
             )}
