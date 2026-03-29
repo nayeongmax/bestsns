@@ -245,13 +245,18 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
 
     setRefundLoading(order.id);
     try {
-      // paymentId 조회
+      // paymentId 및 결제수단 조회
       const storeOrder = storeOrders.find(o => o.id === order.id);
       const channelOrder = channelOrders.find(o => o.id === order.id);
       const paymentId = storeOrder?.paymentId || channelOrder?.paymentId;
+      const paymentMethod = storeOrder?.paymentMethod || channelOrder?.paymentMethod;
 
-      if (!paymentId) {
-        alert('환불 실패: 결제 정보를 찾을 수 없습니다. 관리자에게 문의해 주세요.');
+      // 크레딧/계좌이체 결제는 PortOne 자동 환불 불가 → 관리자 문의 안내
+      const isAutoRefundable = paymentMethod === 'CARD' || paymentMethod === 'EASY_PAY';
+      if (!paymentId || !isAutoRefundable) {
+        alert(
+          '크레딧(계좌이체) 결제 주문은 자동 환불이 지원되지 않습니다.\n\n환불을 원하시면 고객센터 또는 관리자에게 문의해 주세요.'
+        );
         return;
       }
 
