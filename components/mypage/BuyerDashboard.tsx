@@ -105,6 +105,7 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
   // 환불 처리 로컬 상태 (환불된 주문 id 추적)
   const [refundedOrderIds, setRefundedOrderIds] = useState<Set<string>>(new Set());
   const [refundLoading, setRefundLoading] = useState<string | null>(null);
+  const [showChatConsultModal, setShowChatConsultModal] = useState(false);
 
   // 포인트 충전 내역 (Supabase DB)
   const [chargeItems, setChargeItems] = useState<PointChargeItem[]>([]);
@@ -245,13 +246,16 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
 
     setRefundLoading(order.id);
     try {
-      // paymentId 조회
+      // paymentId 및 결제수단 조회
       const storeOrder = storeOrders.find(o => o.id === order.id);
       const channelOrder = channelOrders.find(o => o.id === order.id);
       const paymentId = storeOrder?.paymentId || channelOrder?.paymentId;
+      const paymentMethod = storeOrder?.paymentMethod || channelOrder?.paymentMethod;
 
-      if (!paymentId) {
-        alert('환불 실패: 결제 정보를 찾을 수 없습니다. 관리자에게 문의해 주세요.');
+      // 크레딧/계좌이체 결제는 PortOne 자동 환불 불가 → 상담채팅 안내 모달
+      const isAutoRefundable = paymentMethod === 'CARD' || paymentMethod === 'EASY_PAY';
+      if (!paymentId || !isAutoRefundable) {
+        setShowChatConsultModal(true);
         return;
       }
 
@@ -1051,6 +1055,33 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                 <button onClick={() => { setIsReviewModalOpen(false); setTargetOrder(null); }} className="flex-1 py-6 bg-gray-100 text-gray-400 rounded-[24px] font-black text-lg hover:bg-gray-200 transition-all uppercase italic">Cancel</button>
                 <button onClick={handleReviewSubmit} className="flex-[2] py-6 bg-blue-600 text-white rounded-[24px] font-black text-lg shadow-xl shadow-blue-100 hover:bg-black transition-all uppercase italic tracking-widest">Submit Review</button>
              </div>
+          </div>
+        </div>
+      )}
+
+      {showChatConsultModal && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" onClick={() => setShowChatConsultModal(false)}>
+          <div className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl flex flex-col items-center gap-6 animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-3xl">💬</div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-black text-gray-900">환불 안내</h3>
+              <p className="text-[14px] font-bold text-gray-500 leading-relaxed">
+                크레딧으로 결제한 주문의 환불은<br />
+                <span className="text-blue-600 font-black">상담채팅을 이용해주세요.</span>
+              </p>
+            </div>
+            <button
+              onClick={() => { setShowChatConsultModal(false); navigate('/chat'); }}
+              className="w-full py-4 bg-blue-600 text-white rounded-[24px] font-black text-[15px] hover:bg-blue-700 transition-all shadow-lg"
+            >
+              💬 상담채팅 바로가기
+            </button>
+            <button
+              onClick={() => setShowChatConsultModal(false)}
+              className="w-full py-3 bg-gray-100 text-gray-400 rounded-[24px] font-black text-[14px] hover:bg-gray-200 transition-all"
+            >
+              닫기
+            </button>
           </div>
         </div>
       )}
