@@ -178,55 +178,48 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
         </div>
 
         {/* 크레딧 & 쿠폰 가로형식 섹션 */}
-        <div className="flex flex-row gap-3 w-full md:w-auto md:min-w-[340px]">
+        <div className="flex flex-row gap-3 w-full md:min-w-[520px]">
           {/* 크레딧 */}
           <div className="relative bg-gradient-to-br from-blue-600 to-blue-700 rounded-[20px] sm:rounded-[24px] flex-1 overflow-hidden shadow-lg">
             <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)'}} />
-            <div className="relative p-4 sm:p-5 flex flex-col h-full">
-              <div className="flex items-center justify-between mb-3">
+            <div className="relative px-4 sm:px-5 py-3 sm:py-4 flex flex-row items-center justify-between gap-3 h-full">
+              <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-base">💰</span>
+                  <span className="text-sm">💰</span>
                   <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest">크레딧</p>
+                  <span className="text-[9px] font-black text-blue-200 bg-blue-500/40 px-2 py-0.5 rounded-full whitespace-nowrap">마케팅 전용</span>
                 </div>
-                <span className="text-[9px] font-black text-blue-200 bg-blue-500/40 px-2 py-0.5 rounded-full whitespace-nowrap">마케팅 전용</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {(effectiveUser.points || 0).toLocaleString()}
+                  </span>
+                  <span className="text-blue-200 text-sm font-black">C</span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                  {(effectiveUser.points || 0).toLocaleString()}
-                </span>
-                <span className="text-blue-200 text-sm font-black">C</span>
-              </div>
-              <div className="mt-auto">
-                <Link to="/payment/point" className="inline-flex items-center gap-1 bg-white text-blue-600 px-3 py-1.5 rounded-xl font-black text-[11px] shadow hover:bg-blue-50 transition-all">
-                  충전하기 <span className="text-blue-400">→</span>
-                </Link>
-              </div>
+              <Link to="/credit/apply" className="shrink-0 inline-flex items-center gap-1 bg-white text-blue-600 px-3 py-1.5 rounded-xl font-black text-[11px] shadow hover:bg-blue-50 transition-all whitespace-nowrap">
+                충전하기 <span className="text-blue-400">→</span>
+              </Link>
             </div>
-          </div>
-
-          {/* 구분선 */}
-          <div className="hidden sm:flex items-stretch">
-            <div className="w-px bg-gray-100 my-2" />
           </div>
 
           {/* 쿠폰 */}
           <div className="bg-gray-50 border border-gray-100 rounded-[20px] sm:rounded-[24px] flex-1 shadow-sm">
-            <div className="p-4 sm:p-5 flex flex-col h-full">
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="text-base">🎫</span>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">쿠폰</p>
+            <div className="px-4 sm:px-5 py-3 sm:py-4 flex flex-row items-center justify-between gap-3 h-full">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">🎫</span>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">쿠폰</p>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl sm:text-2xl font-black text-gray-900">
+                    {availableCouponCount}
+                  </span>
+                  <span className="text-gray-400 text-sm font-black">장</span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-2xl sm:text-3xl font-black text-gray-900">
-                  {availableCouponCount}
-                </span>
-                <span className="text-gray-400 text-sm font-black">장</span>
-              </div>
-              <div className="mt-auto">
-                <Link to="/coupons" className="inline-flex items-center gap-1 bg-gray-900 text-white px-3 py-1.5 rounded-xl font-black text-[11px] hover:bg-blue-600 transition-all">
-                  내역 <span>→</span>
-                </Link>
-              </div>
+              <Link to="/coupons" className="shrink-0 inline-flex items-center gap-1 bg-gray-900 text-white px-3 py-1.5 rounded-xl font-black text-[11px] hover:bg-blue-600 transition-all whitespace-nowrap">
+                내역 <span>→</span>
+              </Link>
             </div>
           </div>
         </div>
