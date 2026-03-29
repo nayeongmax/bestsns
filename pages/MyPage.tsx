@@ -86,7 +86,8 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
   const [nicknameStatus, setNicknameStatus] = useState<NicknameStatus>('idle');
 
   const availableCouponCount = useMemo(() => {
-    return effectiveUser.coupons?.filter(c => c.status === 'available').length || 0;
+    const now = new Date().toISOString().split('T')[0];
+    return effectiveUser.coupons?.filter(c => c.status === 'available' && c.expiry >= now).length || 0;
   }, [effectiveUser.coupons]);
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,7 +165,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
             ) : (
               <button onClick={() => setIsEditingNickname(true)} className="group flex flex-col items-start gap-1">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-2xl font-black text-gray-900 group-hover:text-blue-600 transition-colors italic">{effectiveUser.nickname}</h2>
+                  <h2 className="text-lg sm:text-2xl font-black text-gray-900 group-hover:text-blue-600 transition-colors italic whitespace-nowrap">{effectiveUser.nickname}</h2>
                   <span className="text-[14px] opacity-30 group-hover:opacity-100 transition-opacity">✏️</span>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
@@ -178,7 +179,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
         </div>
 
         {/* 크레딧 & 쿠폰 가로형식 섹션 */}
-        <div className="flex flex-row gap-3 w-full md:min-w-[520px]">
+        <div className="flex flex-row gap-3 w-full md:min-w-[380px] md:max-w-[420px]">
           {/* 크레딧 */}
           <div className="relative bg-gradient-to-br from-blue-600 to-blue-700 rounded-[20px] sm:rounded-[24px] flex-1 overflow-hidden shadow-lg">
             <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)'}} />
