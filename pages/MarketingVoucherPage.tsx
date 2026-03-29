@@ -67,8 +67,7 @@ const MarketingVoucherPage: React.FC<Props> = ({ user, onUpdateUser, addNotif })
       });
 
       if (!response || 'code' in response) {
-        const msg = (response as any)?.message || '사용자 취소';
-        alert(`결제가 취소되었습니다: ${msg}`);
+        navigate('/credit/apply');
         return;
       }
 
@@ -94,14 +93,15 @@ const MarketingVoucherPage: React.FC<Props> = ({ user, onUpdateUser, addNotif })
       addNotif(
         user.id,
         'payment',
-        '💳 크레딧 충전 완료',
-        `${amount.toLocaleString()}C 크레딧이 충전되었습니다. 현재 잔액: ${nextPoints.toLocaleString()}C`
+        '💳 크레딧 구매 완료',
+        `${amount.toLocaleString()}C 크레딧이 구매되었습니다. 현재 잔액: ${nextPoints.toLocaleString()}C`
       );
 
-      alert('크레딧 충전이 완료되었습니다!');
+      alert('크레딧 구매가 완료되었습니다!');
       navigate('/sns');
     } catch (e: any) {
-      alert(`오류가 발생했습니다: ${e?.message ?? '알 수 없는 오류'}`);
+      console.warn('[MarketingVoucherPage] 결제 오류:', e);
+      navigate('/credit/apply');
     } finally {
       setIsProcessing(false);
     }

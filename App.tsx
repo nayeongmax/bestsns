@@ -6,10 +6,10 @@ import {
   SMMProvider, SMMProduct, NotificationType, GradeConfig
 } from '@/types';
 import { supabase } from './supabase';
-import { fetchStoreProducts, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreOrders, upsertReviews } from './storeDb';
+import { fetchPublicStoreProducts, fetchStoreProductsAdmin, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreProductsAdmin, upsertStoreOrders, upsertReviews } from './storeDb';
 import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from './channelDb';
 import {
-  fetchSmmOrders, fetchSmmProviders, fetchSmmProducts,
+  fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, fetchPublicSmmProducts,
   upsertSmmOrders, upsertSmmProviders, upsertSmmProducts, deleteSmmProductsByIds,
   fetchSmmOrdersAdmin, fetchSmmProvidersAdmin,
   upsertSmmOrdersAdmin, upsertSmmProvidersAdmin, upsertSmmProductsAdmin, deleteSmmProductsByIdsAdmin,
@@ -222,7 +222,7 @@ const App: React.FC = () => {
     const load = async (isRetry: boolean) => {
       try {
         const [products, orders, reviewList, channelProducts, channelOrderList] = await Promise.all([
-          fetchStoreProducts(),
+          fetchPublicStoreProducts(),
           fetchStoreOrders(),
           fetchReviews(),
           fetchChannelProducts(),
@@ -281,7 +281,7 @@ const App: React.FC = () => {
         const [orders, providers, products] = await Promise.all([
           isAdmin ? fetchSmmOrdersAdmin() : fetchSmmOrders(),
           isAdmin ? fetchSmmProvidersAdmin() : Promise.resolve([] as SMMProvider[]),
-          fetchSmmProducts(),
+          isAdmin ? fetchSmmProducts() : fetchPublicSmmProducts(),
         ]);
         if (!cancelled) {
           setSmmOrders(orders);
@@ -341,9 +341,14 @@ const App: React.FC = () => {
   }, []);
 
   // N잡스토어: 상품/주문/리뷰 변경 시 DB 저장
+  // 어드민: service_role(store-admin 함수)로 비밀 상품 포함 전체 저장, 일반: anon key(RLS로 본인 상품만)
   useEffect(() => {
     if (!storeDbLoaded.current) return;
-    upsertStoreProducts(ebooks).catch((e) => console.warn('store_products 저장:', e));
+    if (userRef.current?.role === 'admin') {
+      upsertStoreProductsAdmin(ebooks).catch((e) => console.warn('store_products 저장(admin):', e));
+    } else {
+      upsertStoreProducts(ebooks).catch((e) => console.warn('store_products 저장:', e));
+    }
   }, [ebooks]);
   useEffect(() => {
     if (!storeDbLoaded.current) return;
@@ -895,10 +900,11 @@ const App: React.FC = () => {
       }
     } catch (_) { /* RLS 등으로 조회 실패 시 기본 targetProfile 유지 */ }
     setUser(targetProfile);
-    // 로그인 직후 채널/스토어 재로드 (첫 로드는 세션 복구 전이라 빈 결과였을 수 있음, admin 로그인은 RLS public SELECT 필요)
+    // 로그인 직후 채널/스토어 재로드 (첫 로드는 세션 복구 전이라 빈 결과였을 수 있음)
+    // 어드민: 비밀 상품 포함 전체 목록(service_role), 일반 사용자: 공개 상품만(RLS 필터)
     Promise.all([
       fetchChannelProducts(),
-      fetchStoreProducts(),
+      isAdminLogin ? fetchStoreProductsAdmin() : fetchPublicStoreProducts(),
       fetchReviews(),
       fetchChannelOrders(),
     ]).then(([channelProducts, products, reviewList, channelOrderList]) => {

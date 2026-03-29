@@ -223,8 +223,8 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               payment_method: result.paymentMethod || 'CARD',
               payment_log: result.paymentLog || '',
             }).catch(e => console.warn('[EbookDetail] 충전 내역 저장 실패:', e));
-            addNotif?.(user.id, 'payment', '💳 크레딧 충전 완료', `${selectedTier.price.toLocaleString()}C 크레딧이 충전되었습니다.`);
-            alert('크레딧 충전이 완료되었습니다!');
+            addNotif?.(user.id, 'payment', '💳 크레딧 구매 완료', `${selectedTier.price.toLocaleString()}C 크레딧이 구매되었습니다.`);
+            alert('크레딧 구매가 완료되었습니다!');
             navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'sns', snsSubTab: 'charge' } });
           } else {
             onStoreOrderCreated?.(newOrder);
@@ -235,7 +235,14 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'store' } });
           }
         } else if (result.error) {
-          alert(`결제가 취소되었습니다: ${result.error}`);
+          if (location.state?.fromCreditPurchase) {
+            navigate('/credit/apply');
+          } else {
+            alert(`결제가 취소되었습니다: ${result.error}`);
+          }
+        } else if (location.state?.fromCreditPurchase) {
+          // success도 error도 아닌 경우(창 닫기 등)도 크레딧 구매 페이지로
+          navigate('/credit/apply');
         }
       } finally {
         setIsProcessing(false);

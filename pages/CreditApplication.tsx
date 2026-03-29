@@ -72,7 +72,7 @@ const CreditApplication: React.FC<Props> = ({ user, ebooks }) => {
       </button>
 
       <h2 className="text-3xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-8 mb-10">
-        크레딧 충전
+        크레딧 구매
       </h2>
 
       <div className="space-y-6">
@@ -155,7 +155,7 @@ const CreditApplication: React.FC<Props> = ({ user, ebooks }) => {
           </div>
         </div>
 
-        {/* 충전 신청 버튼 */}
+        {/* 구매 신청 버튼 */}
         <button
           onClick={handleSubmit}
           disabled={!selectedAmount}
@@ -165,7 +165,7 @@ const CreditApplication: React.FC<Props> = ({ user, ebooks }) => {
               : 'bg-gray-100 text-gray-300 cursor-not-allowed'
           }`}
         >
-          충전 신청하기 🚀
+          구매 신청하기 🚀
         </button>
 
         <p className="text-center text-[12px] text-gray-400 font-bold leading-relaxed">

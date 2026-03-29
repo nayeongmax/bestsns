@@ -74,6 +74,18 @@ export async function fetchStoreProducts(): Promise<EbookProduct[]> {
   return (data ?? []).map((row) => rowToProduct(row as Record<string, unknown>));
 }
 
+/** 일반 사용자용: 비밀 상품(is_secret=true) 및 미승인 상품 제외 */
+export async function fetchPublicStoreProducts(): Promise<EbookProduct[]> {
+  const { data, error } = await supabase
+    .from('store_products')
+    .select('*')
+    .eq('is_secret', false)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToProduct(row as Record<string, unknown>));
+}
+
 export async function upsertStoreProduct(p: EbookProduct): Promise<void> {
   const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
   if (error) throw error;
@@ -91,6 +103,56 @@ export async function upsertStoreProducts(list: EbookProduct[]): Promise<void> {
 export async function deleteStoreProduct(id: string): Promise<void> {
   const { error } = await supabase.from('store_products').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ─── 어드민 전용: store-admin Netlify 함수(service_role)를 통한 DB 접근 ──────
+// RLS 적용 후 anon key로는 비밀 상품에 접근이 제한되므로 어드민 작업은 이 함수들을 사용합니다.
+
+const STORE_ADMIN_URL = '/.netlify/functions/store-admin';
+
+function getAdminKey(): string {
+  return (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PANEL_PASSWORD
+    ?? (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PASSWORD
+    ?? '';
+}
+
+async function storeAdminGet(resource: string): Promise<unknown[]> {
+  const res = await fetch(`${STORE_ADMIN_URL}?resource=${resource}`, {
+    headers: { 'x-admin-key': getAdminKey() },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function storeAdminPost(body: Record<string, unknown>): Promise<void> {
+  const res = await fetch(STORE_ADMIN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+/** 어드민 전용: 비밀 상품 포함 전체 상품 목록 조회 */
+export async function fetchStoreProductsAdmin(): Promise<EbookProduct[]> {
+  const data = await storeAdminGet('products');
+  return data.map((row) => rowToProduct(row as Record<string, unknown>));
+}
+
+/** 어드민 전용: 단일 상품 upsert (비밀 상품 토글 등) */
+export async function upsertStoreProductAdmin(p: EbookProduct): Promise<void> {
+  await storeAdminPost({ action: 'upsertProduct', product: productToRow(p) });
+}
+
+/** 어드민 전용: 복수 상품 upsert */
+export async function upsertStoreProductsAdmin(list: EbookProduct[]): Promise<void> {
+  if (list.length === 0) return;
+  await storeAdminPost({ action: 'upsertProducts', products: list.map(productToRow) });
+}
+
+/** 어드민 전용: 상품 삭제 */
+export async function deleteStoreProductAdmin(id: string): Promise<void> {
+  await storeAdminPost({ action: 'deleteProduct', id });
 }
 
 // ─── store_orders ─────────────────────────────────────────────────────
