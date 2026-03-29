@@ -1,6 +1,6 @@
 
-import React, { useState, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade, NotificationType } from '@/types';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { usePortonePayment } from '@/hooks/usePortonePayment';
@@ -22,12 +22,14 @@ interface Props {
 const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user, reviews, storeOrders, members, gradeConfigs = [], addNotif, onStoreOrderCreated }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showConfirm } = useConfirm();
   const { requestPayment } = usePortonePayment();
   const [activeTierIdx, setSelectedTierIdx] = useState(0);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+  const autoTriggered = useRef(false);
+
   const reviewRef = useRef<HTMLDivElement>(null);
 
   const ebook = ebooks.find(e => e.id === id);
@@ -161,6 +163,63 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
       },
     });
   };
+
+  // 크레딧 충전페이지에서 넘어온 경우 PG창 자동 오픈
+  useEffect(() => {
+    if (!location.state?.autoTrigger) return;
+    if (autoTriggered.current) return;
+    if (!ebook) return;
+    autoTriggered.current = true;
+    const selectedTier = tiers[activeTierIdx];
+    const timer = setTimeout(async () => {
+      setIsProcessing(true);
+      try {
+        const result = await requestPayment({
+          orderName: `${ebook.title} [${selectedTier.name}]`,
+          totalAmount: selectedTier.price,
+          productId: ebook.id,
+          productName: `${ebook.title} [${selectedTier.name}]`,
+          userId: user.id,
+          userNickname: user.nickname,
+          userEmail: user.email,
+          sellerNickname: ebook.author,
+          tierName: selectedTier.name,
+          storeType: currentStoreType,
+        });
+        if (result.success) {
+          const newOrder: StoreOrder = {
+            id: result.orderId || `SO_${Date.now()}_${user.id.slice(0, 6)}`,
+            userId: user.id,
+            userNickname: user.nickname,
+            sellerNickname: ebook.author,
+            orderTime: new Date().toISOString(),
+            productId: ebook.id,
+            productName: `${ebook.title} [${selectedTier.name}]`,
+            tierName: selectedTier.name,
+            price: selectedTier.price,
+            storeType: currentStoreType,
+            status: '결제완료',
+            paymentId: result.paymentId,
+            paymentMethod: result.paymentMethod,
+            paymentLog: result.paymentLog,
+            receiptUrl: result.receiptUrl,
+          };
+          onStoreOrderCreated?.(newOrder);
+          upsertStoreOrder(newOrder).catch(e => console.warn('[EbookDetail] 주문 저장 실패:', e));
+          addNotif?.(ebook.authorId, 'ebook', '💰 상품 판매 알림', `[${ebook.title}] 상품이 판매되었습니다.`);
+          addNotif?.(user.id, 'payment', '💳 결제 완료', `[${ebook.title}] 구매가 완료되었습니다. 마이페이지에서 확인하세요.`);
+          alert('결제가 완료되었습니다!');
+          navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'store' } });
+        } else if (result.error) {
+          alert(`결제가 취소되었습니다: ${result.error}`);
+        }
+      } finally {
+        setIsProcessing(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ebook]);
 
   const openInquiry = () => {
     navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } });
