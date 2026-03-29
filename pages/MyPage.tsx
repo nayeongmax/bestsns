@@ -179,7 +179,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
         </div>
 
         {/* 크레딧 & 쿠폰 가로형식 섹션 */}
-        <div className="flex flex-row gap-3 w-full md:min-w-[380px] md:max-w-[420px]">
+        <div className="flex flex-row gap-3 w-full md:min-w-[440px] md:max-w-[520px]">
           {/* 크레딧 */}
           <div className="relative bg-gradient-to-br from-blue-600 to-blue-700 rounded-[20px] sm:rounded-[24px] flex-1 overflow-hidden shadow-lg">
             <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)'}} />
@@ -198,7 +198,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
                 </div>
               </div>
               <Link to="/credit/apply" className="shrink-0 inline-flex items-center gap-1 bg-white text-blue-600 px-3 py-1.5 rounded-xl font-black text-[11px] shadow hover:bg-blue-50 transition-all whitespace-nowrap">
-                충전하기 <span className="text-blue-400">→</span>
+                구매 <span className="text-blue-400">→</span>
               </Link>
             </div>
           </div>
