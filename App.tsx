@@ -747,7 +747,16 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('smm_orders_v2', JSON.stringify(smmOrders)); }, [smmOrders]);
   useEffect(() => { localStorage.setItem('store_orders_v2', JSON.stringify(storeOrders)); }, [storeOrders]);
   useEffect(() => { localStorage.setItem('channel_orders_v2', JSON.stringify(channelOrders)); }, [channelOrders]);
-  useEffect(() => { localStorage.setItem('site_ebooks_v2', JSON.stringify(ebooks)); }, [ebooks]);
+  useEffect(() => {
+    // base64 썸네일/이미지/PDF는 Supabase에 저장되므로 localStorage에는 제외해 용량 초과 방지
+    const stripped = ebooks.map(({ thumbnail, attachedImages, tiers, ...rest }) => ({
+      ...rest,
+      thumbnail: thumbnail?.startsWith('data:') ? '' : (thumbnail ?? ''),
+      attachedImages: (attachedImages ?? []).map(img => img.startsWith('data:') ? '' : img),
+      tiers: (tiers ?? []).map(({ pdfFile: _pdf, ...t }) => t),
+    }));
+    try { localStorage.setItem('site_ebooks_v2', JSON.stringify(stripped)); } catch { /* 용량 초과 시 무시 */ }
+  }, [ebooks]);
   useEffect(() => { localStorage.setItem('site_channels_v2', JSON.stringify(channels)); }, [channels]);
   useEffect(() => { localStorage.setItem('site_posts_v2', JSON.stringify(posts)); }, [posts]);
   useEffect(() => { localStorage.setItem('site_reviews_v2', JSON.stringify(reviews)); }, [reviews]);
