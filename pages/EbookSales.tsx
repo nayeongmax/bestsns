@@ -41,7 +41,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
       const matchCategory = activeCategory === '전체' || (e.category || '') === activeCategory;
       const matchSubCategory = activeSubCategory === '전체' || (e.subCategory || '') === activeSubCategory;
       const title = (e.title ?? '').toString();
-      const currentNickname = members.find(m => m.id === e.authorId)?.nickname || (e.author ?? '');
+      const currentNickname = members.find(m => m.id.toLowerCase() === (e.authorId ?? '').toLowerCase())?.nickname || (e.author ?? '');
       const matchSearch = !searchQuery.trim() || title.toLowerCase().includes(searchQuery.toLowerCase()) || currentNickname.toLowerCase().includes(searchQuery.toLowerCase());
       const isApproved = e.status === 'approved';
       return matchType && matchCategory && matchSubCategory && matchSearch && isApproved;
@@ -204,7 +204,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                 </div>
                 <h3 className={`font-bold text-gray-900 mt-0.5 line-clamp-2 text-sm sm:text-base leading-snug ${!ebook.isPaused && 'hover:text-blue-600'}`}>{ebook.title}</h3>
                 <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-                  <span>{members.find(m => m.id === ebook.authorId)?.nickname || ebook.author}</span>
+                  <span>{members.find(m => m.id.toLowerCase() === (ebook.authorId ?? '').toLowerCase())?.nickname || ebook.author}</span>
                   <span className="font-bold text-blue-600">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
                 </div>
               </div>
@@ -268,10 +268,10 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                   <div className="flex justify-between items-end gap-3 border-t border-gray-50 pt-3 min-w-0">
                     <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
                       <span className="text-[8px] text-gray-300 font-black uppercase tracking-widest">Expert</span>
-                      <span className="text-[11px] font-black text-gray-600 italic break-words">{members.find(m => m.id === ebook.authorId)?.nickname || ebook.author}</span>
+                      <span className="text-[11px] font-black text-gray-600 italic break-words">{members.find(m => m.id.toLowerCase() === (ebook.authorId ?? '').toLowerCase())?.nickname || ebook.author}</span>
                     </div>
                     <div className="flex flex-col items-end shrink-0 gap-1">
-                      {(() => { const u = members.find(m => m.id === ebook.authorId || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? (
+                      {(() => { const u = members.find(m => m.id.toLowerCase() === (ebook.authorId ?? '').toLowerCase() || m.nickname === ebook.author); const g = getUserGrade(u, gradeConfigs); return g ? (
                         <span className={`inline-flex items-center shrink-0 whitespace-nowrap ${g.color} text-white text-[10px] font-black px-2.5 py-1 rounded-lg italic uppercase tracking-wider border border-white/40 bg-gradient-to-b from-white/30 to-transparent`} style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.1)' }}>
                           {g.name}
                         </span>
