@@ -6,6 +6,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
  */
 import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType, GradeConfig, getUserGrade } from '../types';
 import UserInfoSection from '@/components/mypage/UserInfoSection';
+import { updateProfile } from '../profileDb';
 import BuyerDashboard from '@/components/mypage/BuyerDashboard';
 import SellerDashboard from '@/components/mypage/SellerDashboard';
 import FreelancerDashboard from '@/components/mypage/FreelancerDashboard';
@@ -106,20 +107,29 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
       setNicknameStatus('available');
       return;
     }
-    const takenNicknames = ['admin', '관리자', '운영자', 'THEBEST', '마케터이', '김마케터'];
-    if (takenNicknames.includes(trimmedValue)) {
+    const reservedNicknames = ['admin', '관리자', '운영자', 'THEBEST', '마케터이', '김마케터'];
+    const isTaken =
+      reservedNicknames.includes(trimmedValue) ||
+      members.some((m) => m.id !== effectiveUser.id && m.nickname === trimmedValue);
+    if (isTaken) {
       setNicknameStatus('unavailable');
     } else {
       setNicknameStatus('available');
     }
   };
 
-  const handleNicknameUpdate = () => {
+  const handleNicknameUpdate = async () => {
     if (nicknameStatus !== 'available') return alert('중복 확인을 통해 수정 가능 여부를 확인해주세요.');
-    onUpdate({ ...effectiveUser, nickname: editNicknameValue.trim() });
-    setIsEditingNickname(false);
-    setNicknameStatus('idle');
-    alert('닉네임이 성공적으로 변경되었습니다.');
+    const newNickname = editNicknameValue.trim();
+    try {
+      await updateProfile(effectiveUser.id, { nickname: newNickname });
+      onUpdate({ ...effectiveUser, nickname: newNickname });
+      setIsEditingNickname(false);
+      setNicknameStatus('idle');
+      alert('닉네임이 성공적으로 변경되었습니다.');
+    } catch {
+      alert('닉네임 변경 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   };
 
   const goToExpertRegistration = (from?: 'seller' | 'freelancer') => {
