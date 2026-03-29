@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { EbookProduct, SiteNotification, StoreOrder, UserProfile, NotificationType, StoreType } from '@/types';
 import { useNavigate, Link } from 'react-router-dom';
-import { deleteStoreProduct } from '../../storeDb';
+import { deleteStoreProduct, upsertStoreProduct } from '../../storeDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
@@ -86,6 +86,26 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
 
   const togglePause = (id: string) => {
     setEbooks(prev => prev.map(e => e.id === id ? { ...e, isPaused: !e.isPaused } : e));
+  };
+
+  const handleDuplicate = async (eb: EbookProduct) => {
+    const copied: EbookProduct = {
+      ...eb,
+      id: `${Date.now()}-copy`,
+      title: `${eb.title} (복사)`,
+      status: 'approved',
+      isPaused: false,
+      snapshot: undefined,
+      rejectionReason: undefined,
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await upsertStoreProduct(copied);
+      setEbooks(prev => [copied, ...prev]);
+      showAlert({ description: '상품이 복사되었습니다. 제목을 수정해주세요.' });
+    } catch {
+      showAlert({ description: '상품 복사 중 오류가 발생했습니다.' });
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -217,8 +237,9 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 border-t border-gray-100">
+                <div className="grid grid-cols-4 border-t border-gray-100">
                   <button onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })} className="py-2 bg-gray-900 text-white font-black text-[9px] italic uppercase tracking-tighter hover:bg-purple-600 transition-all">수정</button>
+                  <button onClick={() => handleDuplicate(eb)} className="py-2 bg-blue-50 text-blue-600 font-black text-[9px] italic uppercase tracking-tighter hover:bg-blue-100 transition-all">복사</button>
                   <button onClick={() => togglePause(eb.id)} className={`py-2 font-black text-[9px] text-white italic uppercase tracking-tighter transition-all ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}>{eb.isPaused ? '판매재개' : '판매중지'}</button>
                   <button onClick={() => handleDelete(eb.id)} className="py-2 bg-red-50 text-red-500 font-black text-[9px] italic uppercase tracking-tighter hover:bg-red-100 transition-all">삭제</button>
                 </div>
@@ -263,20 +284,26 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                      </div>
 
                      <div className="grid grid-cols-2 gap-2 pt-2">
-                        <button 
-                          onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })} 
+                        <button
+                          onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })}
                           className="py-3 bg-gray-900 text-white rounded-2xl font-black text-[11px] hover:bg-purple-600 transition-all shadow-sm italic uppercase tracking-tighter"
                         >
                           수정하기
                         </button>
-                        <button 
-                          onClick={() => togglePause(eb.id)} 
-                          className={`py-3 rounded-2xl font-black text-[11px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}
+                        <button
+                          onClick={() => handleDuplicate(eb)}
+                          className="py-3 bg-blue-50 text-blue-600 rounded-2xl font-black text-[11px] hover:bg-blue-100 transition-all shadow-sm italic uppercase tracking-tighter"
                         >
-                          {eb.isPaused ? '판매 재개' : '판매중지'}
+                          복사하기
                         </button>
                      </div>
-                     <button 
+                     <button
+                       onClick={() => togglePause(eb.id)}
+                       className={`w-full py-3 rounded-2xl font-black text-[11px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}
+                     >
+                       {eb.isPaused ? '판매 재개' : '판매중지'}
+                     </button>
+                     <button
                        onClick={() => handleDelete(eb.id)}
                        className="w-full py-2.5 text-gray-300 hover:text-red-500 text-[10px] font-black uppercase italic transition-colors"
                      >
