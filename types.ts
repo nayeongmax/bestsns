@@ -332,6 +332,7 @@ export interface EbookProduct {
   isPrime?: boolean;
   isHot?: boolean;
   isNew?: boolean;
+  isSecret?: boolean;
   rejectionReason?: string;
   snapshot?: Partial<EbookProduct>;
 }

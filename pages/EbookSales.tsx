@@ -44,7 +44,8 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
       const currentNickname = members.find(m => m.id.toLowerCase() === (e.authorId ?? '').toLowerCase())?.nickname || (e.author ?? '');
       const matchSearch = !searchQuery.trim() || title.toLowerCase().includes(searchQuery.toLowerCase()) || currentNickname.toLowerCase().includes(searchQuery.toLowerCase());
       const isApproved = e.status === 'approved';
-      return matchType && matchCategory && matchSubCategory && matchSearch && isApproved;
+      const isVisible = !e.isSecret;
+      return matchType && matchCategory && matchSubCategory && matchSearch && isApproved && isVisible;
     });
   }, [safeEbooks, activeStoreType, activeCategory, activeSubCategory, searchQuery]);
 
