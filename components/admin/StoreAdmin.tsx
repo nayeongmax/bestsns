@@ -46,13 +46,10 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
   
   const handleApprove = (eb: EbookProduct) => {
     // 승인 시에는 스냅샷 및 반려사유 초기화
-    setEbooks(prev => prev.map(item => item.id === eb.id ? { 
-      ...item, 
-      status: 'approved', 
-      isPaused: false, 
-      snapshot: undefined, 
-      rejectionReason: undefined 
-    } : item));
+    const approved: EbookProduct = { ...eb, status: 'approved', isPaused: false, snapshot: undefined, rejectionReason: undefined };
+    setEbooks(prev => prev.map(item => item.id === eb.id ? approved : item));
+    // write-back effect에만 의존하지 않고 즉시 Supabase에 저장 (승인 유실 방지)
+    upsertStoreProductAdmin(approved).catch(e => console.warn('승인 Supabase 저장 실패:', e));
     addNotif(eb.authorId, 'approval', '✅ 서비스 등록 승인 완료', `축하합니다! [${eb.title}] 서비스가 승인되어 판매가 시작되었습니다.`);
     showAlert({ description: '승인 처리가 완료되었습니다.' });
     setReviewingEbook(null);

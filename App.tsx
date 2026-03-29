@@ -234,16 +234,25 @@ const App: React.FC = () => {
         if (!cancelled) {
           // Supabase에 thumbnail이 없는 경우 localStorage 데이터로 보완 (upsert 실패로 누락된 경우 복구)
           const localEbooks = safeStorage<EbookProduct[]>('site_ebooks_v2', []);
-          const mergedProducts = products.map(p => {
-            if (p.thumbnail) return p;
-            const local = localEbooks.find(e => e.id === p.id);
-            return {
-              ...p,
-              thumbnail: local?.thumbnail || '',
-              attachedImages: p.attachedImages?.length ? p.attachedImages : (local?.attachedImages || []),
-            };
-          });
-          setEbooks(mergedProducts);
+          if (products.length > 0) {
+            const mergedProducts = products.map(p => {
+              if (p.thumbnail) return p;
+              const local = localEbooks.find(e => e.id === p.id);
+              return {
+                ...p,
+                thumbnail: local?.thumbnail || '',
+                attachedImages: p.attachedImages?.length ? p.attachedImages : (local?.attachedImages || []),
+              };
+            });
+            setEbooks(mergedProducts);
+          } else if (localEbooks.length > 0) {
+            // Supabase가 빈 배열 반환 시 localStorage 데이터 유지 (상품 소실 방지)
+            // 어드민이면 localStorage 데이터를 Supabase에 복구 시도
+            setEbooks(localEbooks);
+            if (isInitialAdmin) {
+              upsertStoreProductsAdmin(localEbooks).catch(e => console.warn('store_products 복구 마이그레이션 실패:', e));
+            }
+          }
           setStoreOrders(orders);
           setReviews(reviewList);
           setChannels(channelProducts);
