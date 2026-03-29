@@ -146,11 +146,11 @@ const CreditApplication: React.FC<Props> = ({ user, ebooks }) => {
           <div className="bg-white/60 rounded-[24px] p-6 space-y-3 text-sm text-blue-800 font-bold leading-relaxed border border-blue-100">
             <p className="font-black text-blue-900 text-[15px]">크레딧 환불 규정 (이용약관 제14조)</p>
             <ul className="space-y-2 pl-2">
-              <li>• 충전한 크레딧을 전혀 사용하지 않은 경우, 수수료 없이 전액 환불이 가능합니다.</li>
-              <li>• 크레딧 일부를 사용한 경우 환불이 불가합니다.</li>
-              <li>• 충전일로부터 <strong>14일이 경과</strong>한 이후에는 환불이 불가합니다.</li>
-              <li>• 이벤트 등으로 무상 지급된 크레딧은 환불이 불가합니다.</li>
-              <li>• 환불 신청은 고객센터 상담채팅방을 통해 접수바랍니다.</li>
+              <li>1. 환불은 결제 완료 후 <strong>48시간 이내</strong>에만 가능합니다. (단, 지급된 크레딧을 사용하실 경우에는 환불이 불가능하오니 이점 유의하여 주시기 바랍니다.)</li>
+              <li>2. 크레딧 구매 후 <strong>1C도 사용하지 않았을 때</strong> 환불이 가능합니다.</li>
+              <li>3. 이벤트 등으로 무상 지급된 크레딧, 회원이 직접 충전하지 않은 크레딧은 환불이 불가합니다.</li>
+              <li>4. 환불 신청은 고객센터 상담채팅방을 통해 접수바랍니다.</li>
+              <li>5. 계좌번호 오타로 입금실수 시 적립 및 환불이 불가하니 확인하고 입금주세요.</li>
             </ul>
           </div>
         </div>
