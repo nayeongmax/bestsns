@@ -33,6 +33,7 @@ function productToRow(p: EbookProduct): Record<string, unknown> {
     is_prime: p.isPrime ?? false,
     is_hot: p.isHot ?? false,
     is_new: p.isNew ?? false,
+    is_secret: p.isSecret ?? false,
     rejection_reason: p.rejectionReason ?? null,
     snapshot: p.snapshot ?? null,
   };
@@ -61,6 +62,7 @@ function rowToProduct(row: Record<string, unknown>): EbookProduct {
     isPrime: Boolean(row.is_prime),
     isHot: Boolean(row.is_hot),
     isNew: Boolean(row.is_new),
+    isSecret: Boolean(row.is_secret),
     rejectionReason: row.rejection_reason != null ? String(row.rejection_reason) : undefined,
     snapshot: row.snapshot as EbookProduct['snapshot'] | undefined,
   };

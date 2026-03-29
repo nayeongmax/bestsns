@@ -88,6 +88,10 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
     setEbooks(prev => prev.map(e => e.id === id ? { ...e, isPaused: !e.isPaused } : e));
   };
 
+  const toggleSecret = (id: string) => {
+    setEbooks(prev => prev.map(e => e.id === id ? { ...e, isSecret: !e.isSecret } : e));
+  };
+
   const handleDuplicate = async (eb: EbookProduct) => {
     const copied: EbookProduct = {
       ...eb,
@@ -237,10 +241,11 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-4 border-t border-gray-100">
+                <div className="grid grid-cols-5 border-t border-gray-100">
                   <button onClick={() => navigate('/ebooks/register', { state: { ebook: eb } })} className="py-2 bg-gray-900 text-white font-black text-[9px] italic uppercase tracking-tighter hover:bg-purple-600 transition-all">수정</button>
                   <button onClick={() => handleDuplicate(eb)} className="py-2 bg-blue-50 text-blue-600 font-black text-[9px] italic uppercase tracking-tighter hover:bg-blue-100 transition-all">복사</button>
                   <button onClick={() => togglePause(eb.id)} className={`py-2 font-black text-[9px] text-white italic uppercase tracking-tighter transition-all ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}>{eb.isPaused ? '판매재개' : '판매중지'}</button>
+                  <button onClick={() => toggleSecret(eb.id)} className={`py-2 font-black text-[9px] text-white italic uppercase tracking-tighter transition-all ${eb.isSecret ? 'bg-indigo-500' : 'bg-gray-400'}`}>{eb.isSecret ? '시크릿ON' : '시크릿'}</button>
                   <button onClick={() => handleDelete(eb.id)} className="py-2 bg-red-50 text-red-500 font-black text-[9px] italic uppercase tracking-tighter hover:bg-red-100 transition-all">삭제</button>
                 </div>
               </div>
@@ -250,12 +255,17 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
           {/* 태블릿/데스크톱: 그리드 카드뷰 */}
           <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
              {filteredInventory.map(eb => (
-               <div key={eb.id} className={`bg-white rounded-[40px] overflow-hidden shadow-sm border-2 transition-all group relative ${eb.isPaused ? 'grayscale opacity-50 bg-gray-50 border-gray-200' : 'border-gray-100 hover:border-purple-200'}`}>
+               <div key={eb.id} className={`bg-white rounded-[40px] overflow-hidden shadow-sm border-2 transition-all group relative ${eb.isPaused ? 'grayscale opacity-50 bg-gray-50 border-gray-200' : eb.isSecret ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-100 hover:border-purple-200'}`}>
                   <div className="relative aspect-video overflow-hidden bg-gray-100">
                      <img src={eb.thumbnail} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="t" />
                      {eb.isPaused && (
                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                           <span className="text-white font-black italic border-2 border-white px-4 py-1 rotate-[-12deg] uppercase">판매중지됨</span>
+                       </div>
+                     )}
+                     {eb.isSecret && !eb.isPaused && (
+                       <div className="absolute inset-0 bg-indigo-900/30 flex items-center justify-center">
+                          <span className="text-white font-black italic border-2 border-white px-4 py-1 rotate-[-12deg] uppercase text-sm">SECRET</span>
                        </div>
                      )}
                      <div className="absolute top-3 right-3 flex flex-col gap-2">
@@ -302,6 +312,12 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
                        className={`w-full py-3 rounded-2xl font-black text-[11px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isPaused ? 'bg-green-500' : 'bg-rose-500'}`}
                      >
                        {eb.isPaused ? '판매 재개' : '판매중지'}
+                     </button>
+                     <button
+                       onClick={() => toggleSecret(eb.id)}
+                       className={`w-full py-3 rounded-2xl font-black text-[11px] text-white shadow-sm transition-all italic uppercase tracking-tighter ${eb.isSecret ? 'bg-indigo-500' : 'bg-gray-400 hover:bg-indigo-400'}`}
+                     >
+                       {eb.isSecret ? '시크릿 모드 ON (리스트 숨김)' : '시크릿 모드 OFF'}
                      </button>
                      <button
                        onClick={() => handleDelete(eb.id)}
