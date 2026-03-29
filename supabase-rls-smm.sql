@@ -47,10 +47,12 @@ ALTER TABLE smm_products ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "public_select" ON smm_products;
 
+-- 숨김 처리된 상품(is_hidden=true)은 일반 사용자에게 노출하지 않음
+-- 어드민은 service_role(smm-admin Netlify 함수)로 전체 조회
 CREATE POLICY "public_select"
   ON smm_products FOR SELECT
   TO anon, authenticated
-  USING (true);
+  USING (is_hidden = false);
 
 
 -- ──────────────────────────────────────────────────────────────

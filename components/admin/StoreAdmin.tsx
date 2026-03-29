@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { EbookProduct, SiteNotification, StoreOrder, UserProfile, NotificationType, StoreType } from '@/types';
 import { useNavigate, Link } from 'react-router-dom';
-import { deleteStoreProduct, upsertStoreProduct } from '../../storeDb';
+import { deleteStoreProductAdmin, upsertStoreProductAdmin } from '../../storeDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Props {
@@ -104,7 +104,7 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
       createdAt: new Date().toISOString(),
     };
     try {
-      await upsertStoreProduct(copied);
+      await upsertStoreProductAdmin(copied);
       setEbooks(prev => [copied, ...prev]);
       showAlert({ description: '상품이 복사되었습니다. 제목을 수정해주세요.' });
     } catch {
@@ -122,7 +122,7 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
       danger: true,
       onConfirm: async () => {
         try {
-          await deleteStoreProduct(id);
+          await deleteStoreProductAdmin(id);
           setEbooks(prev => prev.filter(e => e.id !== id));
         } catch (e) {
           console.error(e);

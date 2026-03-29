@@ -73,6 +73,17 @@ export async function fetchSmmProducts(): Promise<SMMProduct[]> {
   return (data ?? []).map((row) => rowToProduct(row as Record<string, unknown>));
 }
 
+/** 일반 사용자용: 숨김 처리된 상품(is_hidden=true) 제외 */
+export async function fetchPublicSmmProducts(): Promise<SMMProduct[]> {
+  const { data, error } = await supabase
+    .from('smm_products')
+    .select('*')
+    .eq('is_hidden', false)
+    .order('sort_order', { ascending: true, nullsFirst: false });
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToProduct(row as Record<string, unknown>));
+}
+
 /** 지정한 id의 상품을 DB에서 즉시 삭제 (삭제 버튼 클릭 시 호출) */
 export async function deleteSmmProductsByIds(ids: string[]): Promise<void> {
   if (ids.length === 0) return;

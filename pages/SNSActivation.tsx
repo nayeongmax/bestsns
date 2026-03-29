@@ -150,7 +150,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const handleOrder = async () => {
     if (isGuest) return navigate('/login');
     if (selectedOptions.length === 0) return void showAlert({ description: '주문할 항목이 없습니다.' });
-    if (totalOrderAmount > userPoints) return void showAlert({ description: '보유 크레딧이 부족합니다. 크레딧 충전 신청을 해주세요.' });
+    if (totalOrderAmount > userPoints) return void showAlert({ description: '보유 크레딧이 부족합니다. 크레딧 구매 페이지에서 구매해주세요.' });
     
     showConfirm({
       title: '주문 확인',
