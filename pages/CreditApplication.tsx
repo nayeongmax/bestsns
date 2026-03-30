@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, EbookProduct } from '@/types';
 
@@ -19,6 +19,11 @@ const CREDIT_PACKAGES = [
 const CreditApplication: React.FC<Props> = ({ user, ebooks }) => {
   const navigate = useNavigate();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+
+  // 마운트 시 DB에서 최신 프로필 재조회 (어드민이 보너스 OFF 처리 후 즉시 반영되도록)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('credit-refresh-profile'));
+  }, []);
 
   // 보너스 포인트 계산 (관리자 설정 기반)
   const isBonusWithinPeriod = (() => {
