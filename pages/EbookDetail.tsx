@@ -191,9 +191,11 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
     if (!location.state?.autoTrigger) return;
     if (autoTriggered.current) return;
     if (!ebook) return;
-    autoTriggered.current = true;
+    // autoTriggered.current는 타이머 실행 직전에 set — 타이머 취소 후 재시도가 가능하도록
     const selectedTier = tiers[activeTierIdx];
     const timer = setTimeout(async () => {
+      if (autoTriggered.current) return; // 이중 실행 방지
+      autoTriggered.current = true;
       setIsProcessing(true);
       try {
         const result = await requestPayment({
