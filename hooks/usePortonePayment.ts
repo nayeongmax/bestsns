@@ -3,29 +3,17 @@ declare const window: any;
 const STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID as string;
 const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY as string;
 export interface PaymentParams {
-  /** 결제 주문명 */
   orderName: string;
-  /** 결제 금액 (원) */
   totalAmount: number;
-  /** 상품 ID (orders 테이블 product_id) */
   productId: string;
-  /** 상품명 */
   productName: string;
-  /** 구매자 user ID */
   userId: string;
-  /** 구매자 닉네임 */
   userNickname: string;
-  /** 구매자 이메일 */
   userEmail?: string;
-  /** 구매자 휴대폰 번호 (휴대폰 결제 시 필수) */
   userPhone?: string;
-  /** 결제 수단 (기본값: CARD) */
   payMethod?: 'CARD' | 'MOBILE';
-  /** 판매자 닉네임 (스토어 상품인 경우) */
   sellerNickname?: string;
-  /** 티어명 (스토어 상품인 경우) */
   tierName?: string;
-  /** 스토어 타입 */
   storeType?: string;
 }
 export interface PaymentResult {
@@ -59,6 +47,11 @@ export function usePortonePayment() {
         totalAmount: params.totalAmount,
         currency: 'CURRENCY_KRW',
         payMethod: isMobile ? 'MOBILE' : 'CARD',
+        ...(isMobile && {
+          mobile: {
+            productType: 'PRODUCT_TYPE_DIGITAL',
+          },
+        }),
         customer: {
           fullName: params.userNickname,
           email: buyerEmail,
