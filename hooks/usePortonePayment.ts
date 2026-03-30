@@ -47,11 +47,7 @@ export function usePortonePayment() {
         totalAmount: params.totalAmount,
         currency: 'CURRENCY_KRW',
         payMethod: isMobile ? 'MOBILE' : 'CARD',
-        bypass: isMobile ? {
-          inicis_v2: {
-            P_GOODS_TYPE: '2',
-          }
-        } : undefined,
+        productType: 'PRODUCT_TYPE_DIGITAL',
         customer: {
           fullName: params.userNickname,
           email: buyerEmail,
