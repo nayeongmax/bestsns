@@ -11,7 +11,7 @@ import type { EbookProduct, EbookTier, StoreOrder, Review, StoreType } from '@/t
 
 // ─── store_products (N잡 상품) ────────────────────────────────────────
 function productToRow(p: EbookProduct): Record<string, unknown> {
-  return {
+  const row: Record<string, unknown> = {
     id: p.id,
     store_type: p.storeType ?? 'ebook',
     title: p.title,
@@ -19,14 +19,12 @@ function productToRow(p: EbookProduct): Record<string, unknown> {
     sub_category: p.subCategory ?? '',
     author: p.author,
     author_id: p.authorId,
-    thumbnail: p.thumbnail ?? '',
     price: p.price ?? 0,
     tiers: (p.tiers ?? []) as unknown[],
     description: p.description ?? null,
     index_text: p.index ?? null,
     service_method: p.serviceMethod ?? null,
     faqs: (p.faqs ?? []) as unknown[],
-    attached_images: (p.attachedImages ?? []) as unknown[],
     status: p.status ?? 'pending',
     created_at: p.createdAt ?? new Date().toISOString(),
     is_paused: p.isPaused ?? false,
@@ -37,6 +35,21 @@ function productToRow(p: EbookProduct): Record<string, unknown> {
     rejection_reason: p.rejectionReason ?? null,
     snapshot: p.snapshot ?? null,
   };
+  // 빈 문자열로 Supabase의 기존 이미지를 덮어쓰지 않도록 데이터가 있을 때만 컬럼 포함
+  // upsert(merge-duplicates) 시 body에 없는 컬럼은 기존 값을 유지 (PostgREST 동작)
+  if (p.thumbnail) {
+    row.thumbnail = p.thumbnail;
+  }
+  // thumbnail이 빈 문자열이면 컬럼 미포함 → Supabase 기존 thumbnail 보존
+  const validImages = (p.attachedImages ?? []).filter(img => !!img);
+  if (validImages.length > 0) {
+    row.attached_images = validImages as unknown[];
+  } else if ((p.attachedImages ?? []).length === 0) {
+    // attachedImages가 빈 배열이면 명시적으로 []로 저장 (이미지 없음)
+    row.attached_images = [];
+  }
+  // attached_images가 빈 문자열만 있는 경우(데이터 유실) → 컬럼 미포함으로 Supabase 기존값 보존
+  return row;
 }
 
 function rowToProduct(row: Record<string, unknown>): EbookProduct {
@@ -144,10 +157,11 @@ export async function upsertStoreProductAdmin(p: EbookProduct): Promise<void> {
   await storeAdminPost({ action: 'upsertProduct', product: productToRow(p) });
 }
 
-/** 어드민 전용: 복수 상품 upsert */
+/** 어드민 전용: 복수 상품 upsert — base64 이미지 포함 시 일괄 전송 payload 한도 초과를 방지하기 위해 개별 전송 */
 export async function upsertStoreProductsAdmin(list: EbookProduct[]): Promise<void> {
-  if (list.length === 0) return;
-  await storeAdminPost({ action: 'upsertProducts', products: list.map(productToRow) });
+  for (const p of list) {
+    await storeAdminPost({ action: 'upsertProduct', product: productToRow(p) });
+  }
 }
 
 /** 어드민 전용: 상품 삭제 */

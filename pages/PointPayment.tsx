@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile, Coupon, NotificationType, EbookProduct, ChannelProduct, ChannelOrder, StoreOrder, StoreType } from '@/types';
 import { updateProfile } from '../profileDb';
@@ -76,6 +76,32 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
     return `${fmt(start)}~${fmt(end)}`;
   })();
 
+  // 결제 데이터 사전 준비 (버튼 클릭 시 즉시 사용 가능하도록 미리 계산)
+  const precomputedPaymentBase = useMemo(() => ({
+    storeId: STORE_ID,
+    channelKey: CHANNEL_KEY,
+    orderName: isProductPayment
+      ? `[상품구매] ${productInfo?.title ?? ''}`
+      : `[포인트충전] ${amount.toLocaleString()}원`,
+    totalAmount: finalPayAmount,
+    currency: 'CURRENCY_KRW',
+    payMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
+    customer: {
+      fullName: user.nickname,
+      phoneNumber: '01000000000',
+      email: 'user@bestsns.com',
+    },
+    ...(paymentMethod === 'toss' ? { easyPay: { provider: 'TOSSPAY' } } : {}),
+  }), [isProductPayment, productInfo?.title, amount, finalPayAmount, paymentMethod, user.nickname]);
+
+  // PortOne 결제 모듈 사전 연결 (창 오픈 속도 개선)
+  useEffect(() => {
+    const { PortOne } = window as any;
+    if (PortOne && typeof PortOne.load === 'function') {
+      try { PortOne.load(); } catch { /* ignore */ }
+    }
+  }, []);
+
   // 금액 선택 프리셋
   const amountPresets = [10000, 30000, 50000, 100000, 300000, 500000];
 
@@ -88,36 +114,17 @@ const PointPayment: React.FC<Props> = ({ user, ebooks, channels, members, onUpda
     if (amount <= 0) return alert('결제할 금액을 선택하거나 입력해주세요.');
     if (isProcessing) return;
 
-    const { PortOne } = window;
+    const { PortOne } = window as any;
     if (!PortOne) return alert('결제 모듈이 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
+
+    // 사전 계산된 데이터 + 결제 고유 ID만 신규 생성 → requestPayment 호출 최소화
+    const paymentData = {
+      ...precomputedPaymentBase,
+      paymentId: `PAY_${Date.now()}_${user.id.slice(0, 4)}`,
+    };
 
     setIsProcessing(true);
     try {
-      // 포트원 V2 결제 요청 파라미터
-      const paymentData: any = {
-        storeId: STORE_ID,
-        channelKey: CHANNEL_KEY,
-        paymentId: `PAY_${Date.now()}_${user.id.slice(0, 4)}`,
-        orderName: isProductPayment
-          ? `[상품구매] ${productInfo.title}`
-          : `[포인트충전] ${amount.toLocaleString()}원`,
-        totalAmount: finalPayAmount,
-        currency: "CURRENCY_KRW",
-        payMethod: paymentMethod === 'card' ? 'CARD' : paymentMethod === 'toss' ? 'EASY_PAY' : 'TRANSFER',
-        customer: {
-          fullName: user.nickname,
-          phoneNumber: "01000000000",
-          email: "user@bestsns.com",
-        },
-      };
-
-      // 간편결제(토스)일 경우 추가 설정
-      if (paymentMethod === 'toss') {
-        paymentData.easyPay = {
-          provider: "TOSSPAY"
-        };
-      }
-
       const response = await PortOne.requestPayment(paymentData);
 
       // 결제 성공 시 (response.code가 없으면 성공으로 간주하는 V2 방식)

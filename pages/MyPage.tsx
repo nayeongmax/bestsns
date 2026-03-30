@@ -7,6 +7,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType, GradeConfig, getUserGrade } from '../types';
 import UserInfoSection from '@/components/mypage/UserInfoSection';
 import { updateProfile } from '../profileDb';
+import { compressImageForStorage } from '../constants';
 import BuyerDashboard from '@/components/mypage/BuyerDashboard';
 import SellerDashboard from '@/components/mypage/SellerDashboard';
 import FreelancerDashboard from '@/components/mypage/FreelancerDashboard';
@@ -94,8 +95,18 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      onUpdate({ ...effectiveUser, profileImage: reader.result as string });
+    reader.onloadend = async () => {
+      const raw = reader.result as string;
+      let imageToSave = raw;
+      try {
+        imageToSave = await compressImageForStorage(raw, 200, 0.8);
+      } catch {
+        // 압축 실패 시 원본 사용
+      }
+      onUpdate({ ...effectiveUser, profileImage: imageToSave });
+      updateProfile(effectiveUser.id, { profileImage: imageToSave }).catch((err) =>
+        console.warn('프로필 이미지 DB 저장 실패:', err)
+      );
     };
     reader.readAsDataURL(file);
     e.target.value = '';
