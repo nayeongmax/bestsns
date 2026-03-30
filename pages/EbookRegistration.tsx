@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { EbookProduct, EbookTier, UserProfile, StoreType } from '../types';
 import { EBOOK_CATEGORIES, MARKETING_CATEGORIES } from '../constants';
+import { upsertStoreProduct, upsertStoreProductAdmin } from '../storeDb';
 
 interface Props {
   user: UserProfile;
@@ -159,7 +160,9 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
     setFaqs(updated);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!thumbnail) {
       alert('대표 썸네일 이미지는 필수입니다.');
@@ -184,6 +187,20 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
       status: 'pending',
       createdAt: editingEbook?.createdAt || new Date().toISOString(),
     };
+
+    setIsSaving(true);
+    try {
+      // 썸네일/이미지 유실 방지: 로컬 상태 업데이트 전에 Supabase에 직접 저장
+      if (user.role === 'admin') {
+        await upsertStoreProductAdmin(newEbook);
+      } else {
+        await upsertStoreProduct(newEbook);
+      }
+    } catch (err) {
+      console.warn('상품 Supabase 저장 실패 (로컬에는 저장됨):', err);
+    } finally {
+      setIsSaving(false);
+    }
 
     setEbooks(prev => {
       const filtered = prev.filter(eb => eb.id !== newEbook.id);
@@ -574,9 +591,10 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
         {/* 제출 버튼 */}
         <button
           type="submit"
-          className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold text-lg hover:bg-blue-600 transition-all shadow-lg"
+          disabled={isSaving}
+          className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold text-lg hover:bg-blue-600 transition-all shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {editingEbook ? '서비스 정보 수정 완료' : '서비스 등록 신청'}
+          {isSaving ? '저장 중...' : (editingEbook ? '서비스 정보 수정 완료' : '서비스 등록 신청')}
         </button>
       </form>
 

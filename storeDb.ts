@@ -107,9 +107,10 @@ export async function upsertStoreProduct(p: EbookProduct): Promise<void> {
 export async function upsertStoreProducts(list: EbookProduct[]): Promise<void> {
   if (list.length === 0) return;
   // 상품별 개별 저장 — 일괄 전송 시 base64 이미지로 인해 payload 한도 초과 방지
+  // 개별 실패 시 경고만 출력하고 나머지 상품은 계속 저장 (한 실패가 전체를 막지 않도록)
   for (const p of list) {
     const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
-    if (error) throw error;
+    if (error) console.warn('store_products 개별 저장 실패:', p.id, error.message);
   }
 }
 
@@ -157,10 +158,15 @@ export async function upsertStoreProductAdmin(p: EbookProduct): Promise<void> {
   await storeAdminPost({ action: 'upsertProduct', product: productToRow(p) });
 }
 
-/** 어드민 전용: 복수 상품 upsert — base64 이미지 포함 시 일괄 전송 payload 한도 초과를 방지하기 위해 개별 전송 */
+/** 어드민 전용: 복수 상품 upsert — base64 이미지 포함 시 일괄 전송 payload 한도 초과를 방지하기 위해 개별 전송
+ *  개별 실패 시 경고만 출력하고 나머지 상품은 계속 저장 */
 export async function upsertStoreProductsAdmin(list: EbookProduct[]): Promise<void> {
   for (const p of list) {
-    await storeAdminPost({ action: 'upsertProduct', product: productToRow(p) });
+    try {
+      await storeAdminPost({ action: 'upsertProduct', product: productToRow(p) });
+    } catch (e) {
+      console.warn('store_products 어드민 개별 저장 실패:', p.id, e);
+    }
   }
 }
 
