@@ -1,37 +1,21 @@
 import { useCallback } from 'react';
-
 declare const window: any;
-
 const STORE_ID = import.meta.env.VITE_PORTONE_STORE_ID as string;
 const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY as string;
-
 export interface PaymentParams {
-  /** 결제 주문명 */
   orderName: string;
-  /** 결제 금액 (원) */
   totalAmount: number;
-  /** 상품 ID (orders 테이블 product_id) */
   productId: string;
-  /** 상품명 */
   productName: string;
-  /** 구매자 user ID */
   userId: string;
-  /** 구매자 닉네임 */
   userNickname: string;
-  /** 구매자 이메일 */
   userEmail?: string;
-  /** 구매자 휴대폰 번호 (휴대폰 결제 시 필수) */
   userPhone?: string;
-  /** 결제 수단 (기본값: CARD) */
-  payMethod?: 'CARD';
-  /** 판매자 닉네임 (스토어 상품인 경우) */
+  payMethod?: 'CARD' | 'MOBILE';
   sellerNickname?: string;
-  /** 티어명 (스토어 상품인 경우) */
   tierName?: string;
-  /** 스토어 타입 */
   storeType?: string;
 }
-
 export interface PaymentResult {
   success: boolean;
   paymentId?: string;
@@ -41,22 +25,19 @@ export interface PaymentResult {
   paymentLog?: string;
   receiptUrl?: string;
 }
-
 export function usePortonePayment() {
   const requestPayment = useCallback(async (params: PaymentParams): Promise<PaymentResult> => {
     if (!STORE_ID || !CHANNEL_KEY) {
       console.error('[PortOne] 환경변수 VITE_PORTONE_STORE_ID, VITE_PORTONE_CHANNEL_KEY를 확인하세요.');
       return { success: false, error: '결제 설정이 올바르지 않습니다.' };
     }
-
     const { PortOne } = window;
     if (!PortOne) {
       return { success: false, error: '결제 모듈이 로드되지 않았습니다. 페이지를 새로고침 후 다시 시도해주세요.' };
     }
-
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     const paymentId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const buyerEmail = params.userEmail || `user_${params.userId.slice(0, 8)}@bestsns.com`;
-
     try {
       const PAYMENT_TIMEOUT_MS = 180_000; // 3분 타임아웃 (hang 방지)
       const paymentPromise = PortOne.requestPayment({
@@ -66,7 +47,8 @@ export function usePortonePayment() {
         orderName: params.orderName,
         totalAmount: params.totalAmount,
         currency: 'CURRENCY_KRW',
-        payMethod: 'CARD',
+        payMethod: isMobile ? 'MOBILE' : 'CARD',
+        productType: 'PRODUCT_TYPE_DIGITAL',
         customer: {
           fullName: params.userNickname,
           email: buyerEmail,
@@ -81,21 +63,16 @@ export function usePortonePayment() {
       if (!response) {
         return { success: false, error: '결제창이 닫혔습니다.' };
       }
-
       if ('code' in response) {
-        // 결제 실패
         const errMsg = response.message ?? '결제에 실패했습니다.';
         console.error('[PortOne] 결제 실패:', response.code, errMsg);
         return { success: false, paymentId, error: errMsg };
       }
-
-      // 결제 성공 → paymentId, paymentLog, receiptUrl 반환 (실제 DB 저장은 각 호출부에서 처리)
       const receiptUrl = (response as any).receiptUrl ?? (response as any).receipt_url;
-
       return {
         success: true,
         paymentId: response.paymentId,
-        paymentMethod: 'CARD',
+        paymentMethod: isMobile ? 'MOBILE' : 'CARD',
         paymentLog: JSON.stringify(response),
         receiptUrl,
       };
@@ -105,6 +82,5 @@ export function usePortonePayment() {
       return { success: false, error: message };
     }
   }, []);
-
   return { requestPayment };
 }
