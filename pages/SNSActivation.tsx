@@ -2,8 +2,9 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { SNS_PLATFORMS } from '../constants';
-import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource } from '@/types';
+import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource, SMMReview } from '@/types';
 import { updateProfile } from '../profileDb';
+import { fetchSmmReviews, insertSmmReview } from '../smmDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import AdBanner from '@/components/AdBanner';
 import CoupangSidebarBanner from '@/components/CoupangSidebarBanner';
@@ -32,6 +33,13 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const [comments, setComments] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // 리뷰 섹션 상태
+  const [smmReviews, setSmmReviews] = useState<SMMReview[]>([]);
+  const [myReviewRating, setMyReviewRating] = useState(5);
+  const [myReviewContent, setMyReviewContent] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
   // App.tsx에서 전달받은 user.points(크레딧)를 사용 (전역 동기화)
   const userPoints = user.points || 0;
 
@@ -42,6 +50,10 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     const mainInterval = setInterval(() => setMainIdx(prev => (prev + 1) % mainSequence.length), 1200);
     return () => clearInterval(mainInterval);
   }, [mainSequence.length]);
+
+  useEffect(() => {
+    fetchSmmReviews().then(setSmmReviews).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -110,6 +122,31 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     const maxs = active.map(s => s.maxQuantity ?? selectedProduct.maxQuantity ?? 999999999);
     return { min: Math.min(...mins), max: Math.max(...maxs) };
   }, [selectedProduct, activeProviderIds]);
+
+  const handleSubmitReview = async () => {
+    if (isGuest) { showAlert({ title: '로그인 필요', description: '로그인 후 이용 가능합니다.' }); return; }
+    if (!myReviewContent.trim()) { showAlert({ title: '내용 입력', description: '리뷰 내용을 입력해주세요.' }); return; }
+    setIsSubmittingReview(true);
+    try {
+      await insertSmmReview({
+        userId: user.id,
+        userNickname: user.nickname ?? '',
+        productName: selectedProduct?.name ?? 'SMM 서비스',
+        platform: selectedPlatform,
+        rating: myReviewRating,
+        content: myReviewContent.trim(),
+      });
+      setMyReviewContent('');
+      setMyReviewRating(5);
+      setReviewSubmitted(true);
+      const updated = await fetchSmmReviews();
+      setSmmReviews(updated);
+    } catch {
+      showAlert({ title: '오류', description: '리뷰 등록 중 오류가 발생했습니다.' });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   const handleAddOption = () => {
     if (isGuest) {
@@ -639,6 +676,121 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               </div>
             )}
           </div>
+
+          {/* ── SMM 이용 후기 섹션 ── */}
+          {(() => {
+            const avgRating = smmReviews.length > 0
+              ? Math.round((smmReviews.reduce((sum, r) => sum + r.rating, 0) / smmReviews.length) * 10) / 10
+              : 0;
+            const maskNickname = (nick: string) => {
+              if (!nick) return '익명';
+              if (nick.length === 1) return nick + '*';
+              if (nick.length === 2) return nick[0] + '*';
+              return nick[0] + '*'.repeat(nick.length - 2) + nick[nick.length - 1];
+            };
+            const renderStars = (rating: number, interactive = false, onSelect?: (n: number) => void) => (
+              <div className="flex gap-0.5">
+                {[1,2,3,4,5].map(n => (
+                  <span
+                    key={n}
+                    onClick={() => interactive && onSelect && onSelect(n)}
+                    className={`text-lg sm:text-xl ${interactive ? 'cursor-pointer hover:scale-125 transition-transform' : ''} ${n <= rating ? 'text-yellow-400' : 'text-gray-200'}`}
+                  >★</span>
+                ))}
+              </div>
+            );
+            return (
+              <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[56px] shadow-sm border border-gray-100 p-4 sm:p-8 md:p-14 space-y-6 sm:space-y-10">
+                {/* 헤더 */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <h3 className="text-base sm:text-xl font-black text-gray-900 italic uppercase flex items-center gap-2 sm:gap-3">
+                    <span className="w-1.5 h-4 sm:h-6 bg-yellow-400 rounded-full shrink-0"></span>
+                    이용 후기
+                    <span className="text-xs sm:text-sm font-black text-gray-300 normal-case italic">({smmReviews.length}개)</span>
+                  </h3>
+                  {smmReviews.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map(n => (
+                          <span key={n} className={`text-base sm:text-lg ${n <= Math.round(avgRating) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+                        ))}
+                      </div>
+                      <span className="text-lg sm:text-2xl font-black text-yellow-500 italic">{avgRating}</span>
+                      <span className="text-[10px] sm:text-xs font-black text-gray-300 italic">/5.0</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 리뷰 작성 폼 */}
+                {!isGuest && (
+                  <div className="bg-gray-50 rounded-2xl sm:rounded-[32px] p-4 sm:p-8 space-y-4">
+                    <p className="text-[11px] sm:text-xs font-black text-gray-400 uppercase italic tracking-widest">내 후기 작성</p>
+                    <div className="flex items-center gap-3">
+                      {renderStars(myReviewRating, true, setMyReviewRating)}
+                      <span className="text-xs font-black text-gray-400 italic">{myReviewRating}점</span>
+                    </div>
+                    <textarea
+                      value={myReviewContent}
+                      onChange={(e) => setMyReviewContent(e.target.value)}
+                      placeholder="SMM 서비스를 이용하신 후기를 남겨주세요. (최소 10자)"
+                      className="w-full p-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 text-sm outline-none focus:border-blue-400 resize-none"
+                      rows={3}
+                      maxLength={300}
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-gray-300 italic">{myReviewContent.length}/300</span>
+                      <button
+                        type="button"
+                        onClick={handleSubmitReview}
+                        disabled={isSubmittingReview || myReviewContent.trim().length < 10}
+                        className={`px-6 py-2.5 rounded-xl font-black text-sm uppercase italic tracking-widest transition-all ${isSubmittingReview || myReviewContent.trim().length < 10 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-black shadow-lg'}`}
+                      >
+                        {reviewSubmitted ? '✓ 등록 완료' : isSubmittingReview ? '등록 중...' : '후기 등록'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {isGuest && (
+                  <div className="bg-gray-50 rounded-2xl p-4 sm:p-6 text-center text-[12px] sm:text-sm font-black text-gray-400 italic">
+                    <button type="button" onClick={() => navigate('/login')} className="text-blue-500 hover:underline">로그인</button>
+                    {' '}후 이용 후기를 남길 수 있습니다.
+                  </div>
+                )}
+
+                {/* 리뷰 목록 */}
+                {smmReviews.length === 0 ? (
+                  <div className="py-12 text-center text-gray-200 font-black italic border-2 border-dashed border-gray-100 rounded-2xl text-sm">
+                    아직 후기가 없습니다. 첫 번째 후기를 남겨보세요!
+                  </div>
+                ) : (
+                  <div className="space-y-3 sm:space-y-4">
+                    {smmReviews.map((r) => (
+                      <div key={r.id} className="bg-gray-50 rounded-2xl sm:rounded-[28px] p-4 sm:p-6 space-y-2.5 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs shrink-0">
+                              {(r.userNickname || '익명')[0]}
+                            </div>
+                            <div>
+                              <p className="text-[12px] sm:text-sm font-black text-gray-800">{maskNickname(r.userNickname)}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-gray-300 italic uppercase">{r.platform} · {r.productName.length > 20 ? r.productName.slice(0, 20) + '…' : r.productName}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {renderStars(r.rating)}
+                            <span className="text-[9px] sm:text-[10px] font-bold text-gray-300 italic">
+                              {new Date(r.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-[12px] sm:text-sm font-bold text-gray-600 leading-relaxed pl-9 sm:pl-10 break-words">{r.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
