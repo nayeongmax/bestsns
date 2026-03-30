@@ -177,17 +177,12 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
 
   const handleUpdateMemberInfo = async () => {
     if (!editingMember) return;
-    setMembers(prev => prev.map(m => m.id === editingMember.id ? editingMember : m));
-    // 현재 로그인 유저와 동일한 회원이면 전역 user 상태도 즉시 갱신 (보너스 이벤트 등 반영)
-    if (currentUser?.id === editingMember.id && onUpdateUser) {
-      onUpdateUser(editingMember);
-    }
     try {
       // 보너스 활성화 시 시작일 자동 설정 (기존 시작일 없을 때만)
       const bonusStartDate = editingMember.pointBonusActive
         ? (editingMember.pointBonusStartDate || new Date().toISOString().split('T')[0])
         : null;
-      await supabase.from('profiles').update({
+      const { error } = await supabase.from('profiles').update({
         role: editingMember.role,
         points: editingMember.points ?? 0,
         manual_grade: editingMember.manualGrade || null,
@@ -199,7 +194,16 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
         point_bonus_start_date: bonusStartDate,
         updated_at: new Date().toISOString()
       }).eq('id', editingMember.id);
-    } catch (_) {}
+      if (error) throw error;
+    } catch (err: any) {
+      alert('DB 저장 실패: ' + (err?.message || '알 수 없는 오류가 발생했습니다.'));
+      return;
+    }
+    // DB 저장 성공 후 in-memory 상태 업데이트 (저장 실패 시 로컬/DB 불일치 방지)
+    setMembers(prev => prev.map(m => m.id === editingMember.id ? editingMember : m));
+    if (currentUser?.id === editingMember.id && onUpdateUser) {
+      onUpdateUser(editingMember);
+    }
     alert('회원 정보 업데이트가 적용되었습니다.');
     setEditingMember(null);
   };
