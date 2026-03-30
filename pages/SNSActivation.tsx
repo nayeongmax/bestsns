@@ -33,6 +33,9 @@ const MOCK_REVIEWS: import('@/types').SMMReview[] = [
   { id: 'm29', userId: 'mock', userNickname: 'FLUX****', rating: 4, platform: '페이스북', productName: '그룹 멤버 500명', content: '커뮤니티 초반 활성화에 큰 도움이 됐어요. 멤버가 늘고 나서 자연 가입도 꾸준히 이어지고 있습니다.', createdAt: '2026-03-23' },
   { id: 'm30', userId: 'mock', userNickname: '(주)드림**', rating: 5, platform: '인스타그램', productName: '팔로워 3,000명', content: '패션 계정 운영 중인데 팔로워 늘고 협찬 제안이 쏟아지네요! 이 사이트 덕분에 협업이 성사됐습니다.', createdAt: '2026-03-27' },
 ];
+
+const NEGATIVE_KEYWORDS = ['사기', '환불', '가짜', '허위', '불량', '최악', '쓰레기', '불만', '실망', '형편없', '별로', '노출', '속임', '차단', '신고', '폰지', '다단계'];
+
 import { useNavigate, Link } from 'react-router-dom';
 import { SNS_PLATFORMS } from '../constants';
 import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource, SMMReview } from '@/types';
@@ -72,6 +75,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   const [myReviewContent, setMyReviewContent] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [myReviewPlatform, setMyReviewPlatform] = useState('인스타그램');
   const [reviewSlideIdx, setReviewSlideIdx] = useState(0);
   const reviewSliderPaused = useRef(false);
 
@@ -90,7 +94,14 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     fetchSmmReviews().then(setSmmReviews).catch(() => {});
   }, []);
 
-  const allReviewsForSlider = useMemo(() => [...MOCK_REVIEWS, ...smmReviews].filter(r => r.rating >= 4), [smmReviews]);
+  const allReviewsForSlider = useMemo(() => {
+    return [...MOCK_REVIEWS, ...smmReviews].filter(r => {
+      if (r.rating <= 3) return false;
+      const text = r.content.toLowerCase();
+      if (NEGATIVE_KEYWORDS.some(kw => text.includes(kw))) return false;
+      return true;
+    });
+  }, [smmReviews]);
 
   const goToReviewSlide = useCallback((idx: number) => {
     setReviewSlideIdx(idx < 0 ? allReviewsForSlider.length - 1 : idx >= allReviewsForSlider.length ? 0 : idx);
@@ -183,7 +194,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         userId: user.id,
         userNickname: user.nickname ?? '',
         productName: selectedProduct?.name ?? 'SMM 서비스',
-        platform: selectedPlatform,
+        platform: myReviewPlatform,
         rating: myReviewRating,
         content: myReviewContent.trim(),
       });
@@ -460,8 +471,26 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             </div>
           </div>
 
-          {/* 데스크톱: 월렛 + 공지사항 + 쿠팡 광고 전체 고정 (sticky) */}
+          {/* 데스크톱: 공지사항 + 월렛 + 장바구니 + 쿠팡 광고 전체 고정 (sticky) */}
           <div className="hidden lg:flex flex-col gap-5 sticky top-24">
+            {/* 공지사항 */}
+            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4">
+              <div className="flex justify-between items-center px-1">
+                <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest">
+                   <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span> 공지사항
+                </h3>
+                <button type="button" onClick={() => navigate('/notices')} className="text-[9px] sm:text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all uppercase italic">전체보기 +</button>
+              </div>
+              <div className="space-y-2.5">
+                 {notices.filter(n => !n.isHidden).slice(0, 3).map(n => (
+                   <div key={n.id} onClick={() => navigate('/notices')} className="p-3 bg-gray-50/50 rounded-xl hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-gray-100 group">
+                      <p className="text-[12px] font-black text-gray-800 break-words mb-0.5 group-hover:text-blue-600">{n.title}</p>
+                      <span className="text-[9px] font-bold text-gray-300 uppercase italic">{n.date}</span>
+                   </div>
+                 ))}
+              </div>
+            </div>
+
             {/* My Wallet */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4 sm:space-y-6">
               <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest px-1">
@@ -482,23 +511,37 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               </div>
             </div>
 
-            {/* 공지사항 */}
-            <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] shadow-sm border border-gray-100 space-y-4">
-              <div className="flex justify-between items-center px-1">
-                <h3 className="font-black text-gray-900 italic uppercase flex items-center gap-2.5 text-[11px] sm:text-[12px] tracking-widest">
-                   <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span> 공지사항
+            {/* 주문 장바구니 (사이드바 컴팩트) */}
+            {selectedOptions.length > 0 && (
+              <div className="bg-[#f2f8ff] border border-[#d0e5ff] rounded-2xl p-4 space-y-3">
+                <h3 className="text-sm font-black text-blue-900 italic uppercase flex items-center gap-2">
+                  <span className="w-1 h-4 bg-blue-600 rounded-full shrink-0"></span>
+                  주문 장바구니
                 </h3>
-                <button type="button" onClick={() => navigate('/notices')} className="text-[9px] sm:text-[10px] font-black text-gray-400 hover:text-blue-600 transition-all uppercase italic">전체보기 +</button>
+                <div className="space-y-2">
+                  {selectedOptions.map((opt, idx) => (
+                    <div key={opt.id} className="bg-white rounded-xl p-3 flex justify-between items-start gap-2 border border-blue-50">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[9px] font-black text-blue-500 uppercase italic">{idx + 1}. Package</span>
+                        <p className="font-black text-gray-900 text-[12px] truncate">{opt.serviceName}</p>
+                        <p className="text-[10px] font-bold text-gray-400 truncate italic">{opt.link}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-sm font-black text-blue-600 italic">{(opt.totalPrice ?? 0).toLocaleString()}C</span>
+                        <button type="button" onClick={() => setSelectedOptions(selectedOptions.filter(o => o.id !== opt.id))} className="text-red-200 hover:text-red-500 font-black text-sm" aria-label="삭제">✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between items-center px-1 pt-1 border-t border-blue-100">
+                  <span className="text-[11px] font-black text-blue-900 italic">총 크레딧</span>
+                  <span className="text-lg font-black text-blue-600 italic">{(totalOrderAmount ?? 0).toLocaleString()}C</span>
+                </div>
+                <button type="button" onClick={handleOrder} disabled={isProcessing} className={`w-full py-3 rounded-xl font-black text-sm uppercase italic tracking-widest transition-all ${isProcessing ? 'bg-gray-400 text-white' : 'bg-black text-white hover:bg-blue-600'}`}>
+                  {isProcessing ? '🚀 요청 중...' : '🚀 주문하기'}
+                </button>
               </div>
-              <div className="space-y-2.5">
-                 {notices.filter(n => !n.isHidden).slice(0, 3).map(n => (
-                   <div key={n.id} onClick={() => navigate('/notices')} className="p-3 bg-gray-50/50 rounded-xl hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-gray-100 group">
-                      <p className="text-[12px] font-black text-gray-800 break-words mb-0.5 group-hover:text-blue-600">{n.title}</p>
-                      <span className="text-[9px] font-bold text-gray-300 uppercase italic">{n.date}</span>
-                   </div>
-                 ))}
-              </div>
-            </div>
+            )}
 
             {/* 쿠팡 세로형 광고 배너 */}
             <CoupangSidebarBanner />
@@ -687,52 +730,44 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               <button type="button" onClick={handleAddOption} className="w-full py-5 sm:py-6 md:py-8 bg-blue-600 text-white rounded-2xl sm:rounded-[32px] font-black text-lg sm:text-xl md:text-2xl hover:bg-black shadow-xl sm:shadow-2xl transition-all italic uppercase tracking-widest active:scale-[0.98]">+ 장바구니 담기</button>
             </div>
           </div>
-          <div className="bg-[#f2f8ff] border-2 border-[#d0e5ff] rounded-2xl sm:rounded-[40px] md:rounded-[64px] p-5 sm:p-8 md:p-14 space-y-6 md:space-y-10 shadow-sm">
-            <h3 className="text-base sm:text-xl font-black text-blue-900 italic uppercase flex items-center gap-2 sm:gap-3">
-              <span className="w-1.5 h-4 sm:h-6 bg-blue-600 rounded-full shrink-0"></span>
-              주문 장바구니
-            </h3>
-            <div className="space-y-4">
-              {selectedOptions.length === 0 ? (
-                <div className="py-12 sm:py-24 text-center text-blue-200 font-black italic border-2 border-dashed border-blue-100 rounded-2xl sm:rounded-[40px] text-sm sm:text-base">장바구니가 비어 있습니다.</div>
-              ) : selectedOptions.map((opt, idx) => (
-                <div key={opt.id} className="bg-white rounded-2xl sm:rounded-[36px] p-4 sm:p-6 md:p-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 shadow-sm border border-blue-50 group hover:border-blue-300 transition-all">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-black text-blue-500 uppercase italic tracking-widest">{idx + 1}. Package</span>
-                    <h4 className="font-black text-gray-900 text-base sm:text-xl break-words mb-0.5">{opt.serviceName}</h4>
-                    <p className="text-[11px] font-bold text-gray-400 break-all italic">{opt.link}</p>
-                    {opt.comments && (
-                      <p className="text-[10px] font-bold text-orange-400 mt-1 whitespace-pre-line line-clamp-2 italic">💬 {opt.comments}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-10 sm:pl-6 flex-shrink-0">
-                    <div className="space-y-0.5 sm:space-y-1">
-                      <p className="text-[11px] font-black text-gray-300 uppercase italic break-words">{(opt.unitPrice ?? 0).toLocaleString()}C × {(opt.quantity ?? 0).toLocaleString()}</p>
-                      <p className="text-xl sm:text-2xl font-black text-blue-600 italic tracking-tighter break-all">{(opt.totalPrice ?? 0).toLocaleString()}C</p>
+          {/* 모바일용 장바구니 (lg 미만에서만 표시) */}
+          {selectedOptions.length > 0 && (
+            <div className="lg:hidden bg-[#f2f8ff] border border-[#d0e5ff] rounded-2xl p-4 space-y-3 shadow-sm">
+              <h3 className="text-sm font-black text-blue-900 italic uppercase flex items-center gap-2">
+                <span className="w-1 h-4 bg-blue-600 rounded-full shrink-0"></span>
+                주문 장바구니
+              </h3>
+              <div className="space-y-2">
+                {selectedOptions.map((opt, idx) => (
+                  <div key={opt.id} className="bg-white rounded-xl p-3 flex justify-between items-start gap-2 border border-blue-50">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[9px] font-black text-blue-500 uppercase italic">{idx + 1}. Package</span>
+                      <p className="font-black text-gray-900 text-[12px] truncate">{opt.serviceName}</p>
+                      <p className="text-[10px] font-bold text-gray-400 truncate italic">{opt.link}</p>
                     </div>
-                    <button type="button" onClick={() => setSelectedOptions(selectedOptions.filter(o=>o.id!==opt.id))} className="text-red-200 hover:text-red-500 transition-colors font-black text-xl sm:text-2xl p-1 shrink-0" aria-label="삭제">✕</button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-black text-blue-600 italic">{(opt.totalPrice ?? 0).toLocaleString()}C</span>
+                      <button type="button" onClick={() => setSelectedOptions(selectedOptions.filter(o => o.id !== opt.id))} className="text-red-200 hover:text-red-500 font-black text-sm" aria-label="삭제">✕</button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            {selectedOptions.length > 0 && (
-              <div className="pt-6 sm:pt-10 space-y-6 sm:space-y-8">
-                <div className="bg-white/50 backdrop-blur-md rounded-2xl sm:rounded-[48px] p-6 sm:p-12 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 border border-white/50 shadow-inner">
-                  <span className="text-blue-900 font-black text-base sm:text-xl italic tracking-widest break-words">사용 예정 총 크레딧</span>
-                  <span className="text-3xl sm:text-5xl font-black text-blue-600 italic tracking-tighter break-all">{(totalOrderAmount ?? 0).toLocaleString()}C</span>
-                </div>
-                <button type="button" onClick={handleOrder} disabled={isProcessing} className={`w-full py-6 sm:py-8 md:py-10 rounded-2xl sm:rounded-[48px] font-black text-xl sm:text-2xl md:text-3xl shadow-xl sm:shadow-2xl transition-all uppercase italic tracking-widest flex items-center justify-center gap-2 sm:gap-4 ${isProcessing ? 'bg-gray-400' : 'bg-black text-white hover:bg-blue-600'}`}>
-                  {isProcessing ? '🚀 작업 요청 중...' : '🚀 주문하기'}
-                </button>
+                ))}
               </div>
-            )}
-          </div>
+              <div className="flex justify-between items-center px-1 pt-1 border-t border-blue-100">
+                <span className="text-[11px] font-black text-blue-900 italic">총 크레딧</span>
+                <span className="text-lg font-black text-blue-600 italic">{(totalOrderAmount ?? 0).toLocaleString()}C</span>
+              </div>
+              <button type="button" onClick={handleOrder} disabled={isProcessing} className={`w-full py-3 rounded-xl font-black text-sm uppercase italic tracking-widest transition-all ${isProcessing ? 'bg-gray-400 text-white' : 'bg-black text-white hover:bg-blue-600'}`}>
+                {isProcessing ? '🚀 요청 중...' : '🚀 주문하기'}
+              </button>
+            </div>
+          )}
 
           {/* ── SMM 이용 후기 섹션 ── */}
           {(() => {
-            const avgRating = allReviewsForSlider.length > 0
+            const rawAvg = allReviewsForSlider.length > 0
               ? Math.round((allReviewsForSlider.reduce((sum, r) => sum + r.rating, 0) / allReviewsForSlider.length) * 10) / 10
               : 0;
+            const avgRating = Math.min(rawAvg, 4.9);
             const renderStars = (rating: number, interactive = false, onSelect?: (n: number) => void) => (
               <div className="flex gap-0.5">
                 {[1,2,3,4,5].map(n => (
@@ -805,9 +840,18 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                 {!isGuest && (
                   <div className="bg-gray-50 rounded-2xl sm:rounded-[32px] p-4 sm:p-8 space-y-4">
                     <p className="text-[11px] sm:text-xs font-black text-gray-400 uppercase italic tracking-widest">내 후기 작성</p>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       {renderStars(myReviewRating, true, setMyReviewRating)}
                       <span className="text-xs font-black text-gray-400 italic">{myReviewRating}점</span>
+                      <select
+                        value={myReviewPlatform}
+                        onChange={(e) => setMyReviewPlatform(e.target.value)}
+                        className="ml-auto border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-black text-gray-600 bg-white outline-none focus:border-blue-400 cursor-pointer"
+                      >
+                        {['인스타그램','유튜브','틱톡','트위터','페이스북'].map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
                     </div>
                     <textarea
                       value={myReviewContent}
