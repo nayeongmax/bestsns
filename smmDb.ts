@@ -3,7 +3,7 @@
  * - smm_orders (주문/결제 내역), smm_providers (공급처), smm_products (마스터상품)
  */
 import { supabase } from './supabase';
-import type { SMMOrder, SMMProvider, SMMProduct, SMMSource } from '@/types';
+import type { SMMOrder, SMMProvider, SMMProduct, SMMSource, SMMReview } from '@/types';
 
 // ─── smm_providers ─────────────────────────────────────────────────────
 function providerToRow(p: SMMProvider): Record<string, unknown> {
@@ -155,6 +155,42 @@ export async function upsertSmmOrder(o: SMMOrder): Promise<void> {
 export async function upsertSmmOrders(list: SMMOrder[]): Promise<void> {
   if (list.length === 0) return;
   const { error } = await supabase.from('smm_orders').upsert(list.map(orderToRow), { onConflict: 'id' });
+  if (error) throw error;
+}
+
+// ─── smm_reviews ─────────────────────────────────────────────────────────
+function rowToReview(row: Record<string, unknown>): SMMReview {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    userNickname: String(row.user_nickname ?? ''),
+    productName: String(row.product_name ?? ''),
+    platform: String(row.platform ?? ''),
+    rating: Number(row.rating ?? 5),
+    content: String(row.content ?? ''),
+    createdAt: String(row.created_at ?? ''),
+  };
+}
+
+export async function fetchSmmReviews(): Promise<SMMReview[]> {
+  const { data, error } = await supabase
+    .from('smm_reviews')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToReview(row as Record<string, unknown>));
+}
+
+export async function insertSmmReview(review: Omit<SMMReview, 'id' | 'createdAt'>): Promise<void> {
+  const { error } = await supabase.from('smm_reviews').insert({
+    user_id: review.userId,
+    user_nickname: review.userNickname,
+    product_name: review.productName,
+    platform: review.platform,
+    rating: review.rating,
+    content: review.content,
+  });
   if (error) throw error;
 }
 

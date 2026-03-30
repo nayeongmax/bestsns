@@ -263,6 +263,17 @@ export interface SMMOrder {
   externalOrderId: string;
 }
 
+export interface SMMReview {
+  id: string;
+  userId: string;
+  userNickname: string;
+  productName: string;
+  platform: string;
+  rating: number; // 1~5
+  content: string;
+  createdAt: string;
+}
+
 export interface ChannelOrder {
   id: string;
   userId: string;
