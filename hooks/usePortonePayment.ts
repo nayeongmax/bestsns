@@ -39,7 +39,8 @@ export function usePortonePayment() {
     const paymentId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const buyerEmail = params.userEmail || `user_${params.userId.slice(0, 8)}@bestsns.com`;
     try {
-      const response = await PortOne.requestPayment({
+      const PAYMENT_TIMEOUT_MS = 180_000; // 3분 타임아웃 (hang 방지)
+      const paymentPromise = PortOne.requestPayment({
         storeId: STORE_ID,
         channelKey: CHANNEL_KEY,
         paymentId,
@@ -54,6 +55,11 @@ export function usePortonePayment() {
           phoneNumber: params.userPhone || '01000000000',
         },
       });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('결제 시간이 초과되었습니다. 다시 시도해주세요.')), PAYMENT_TIMEOUT_MS)
+      );
+      const response = await Promise.race([paymentPromise, timeoutPromise]);
+
       if (!response) {
         return { success: false, error: '결제창이 닫혔습니다.' };
       }

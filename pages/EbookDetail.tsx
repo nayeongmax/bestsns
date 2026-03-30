@@ -30,9 +30,26 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
   const [activeTierIdx, setSelectedTierIdx] = useState(0);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cooldownVisible, setCooldownVisible] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const autoTriggered = useRef(false);
+  const lastCancelTimeRef = useRef<number | null>(null);
+  // PortOne SDK가 결제창 취소 후 내부 세션 정리에 필요한 최소 대기 시간
+  const PG_COOLDOWN_MS = 5_000;
 
   const reviewRef = useRef<HTMLDivElement>(null);
+
+  // 쿨다운 카운트다운
+  useEffect(() => {
+    if (!cooldownVisible || cooldownSeconds <= 0) return;
+    const t = setTimeout(() => {
+      setCooldownSeconds(s => {
+        if (s <= 1) { setCooldownVisible(false); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [cooldownVisible, cooldownSeconds]);
 
   const ebook = ebooks.find(e => e.id === id);
 
@@ -109,6 +126,18 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
 
   const handleBuyNow = () => {
     if (isProcessing) return;
+
+    // 이전 결제창 취소 후 쿨다운 체크 (PortOne SDK 세션 정리 시간 필요)
+    if (lastCancelTimeRef.current !== null) {
+      const elapsed = Date.now() - lastCancelTimeRef.current;
+      if (elapsed < PG_COOLDOWN_MS) {
+        const remaining = Math.ceil((PG_COOLDOWN_MS - elapsed) / 1000);
+        setCooldownSeconds(remaining);
+        setCooldownVisible(true);
+        return;
+      }
+    }
+
     const selectedTier = tiers[activeTierIdx];
     showConfirm({
       title: '상품 구매',
@@ -133,6 +162,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
           });
 
           if (result.success) {
+            lastCancelTimeRef.current = null; // 성공 시 쿨다운 초기화
             if (location.state?.fromCreditPurchase) {
               // 크레딧 구매 버튼에서 진입한 경우: 포인트 충전 처리 후 SNS 충전리스트로 이동
               const paymentId = result.paymentId || `PAY_${Date.now()}_${user.id.slice(0, 4)}`;
@@ -176,8 +206,12 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               alert('결제가 완료되었습니다!');
               navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'store' } });
             }
-          } else if (result.error) {
-            alert(`결제 실패: ${result.error}`);
+          } else {
+            // 취소 또는 실패 시 쿨다운 시작
+            lastCancelTimeRef.current = Date.now();
+            if (result.error) {
+              alert(`결제 실패: ${result.error}`);
+            }
           }
         } finally {
           setIsProcessing(false);
@@ -282,6 +316,28 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
 
   return (
     <div className="max-w-[1400px] mx-auto pb-36 lg:pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
+      {/* 결제창 쿨다운 안내 모달 */}
+      {cooldownVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">잠시 후 다시 시도해주세요</h3>
+            <p className="text-gray-500 font-medium mb-6 leading-relaxed">
+              이전 결제창이 아직 종료 처리 중입니다.<br />
+              PG 결제창 중복 방지를 위해<br />
+              <span className="text-2xl font-black text-gray-900">{cooldownSeconds}초</span> 후 구매하기 버튼을 눌러주세요.
+            </p>
+            <button
+              onClick={() => setCooldownVisible(false)}
+              className="w-full py-3 bg-gray-900 text-white rounded-2xl font-black text-sm hover:bg-gray-700 transition-colors"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
       <button onClick={() => navigate(-1)} className="mb-8 flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 transition-colors group">
         <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         뒤로가기
@@ -629,7 +685,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
               <button onClick={openInquiry} className="w-full py-4 bg-white border-2 border-gray-900 text-gray-900 rounded-[32px] font-black text-lg hover:bg-gray-50 transition-all shadow-xl italic uppercase tracking-widest active:scale-95">
                 문의하기 ✉
               </button>
-              <button onClick={handleBuyNow} disabled={isProcessing} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 transition-all shadow-2xl uppercase italic tracking-[0.2em] ${!isProcessing ? 'animate-pulse' : 'opacity-60 cursor-not-allowed'}`}>
+              <button onClick={isProcessing ? () => setIsProcessing(false) : handleBuyNow} className={`w-full py-8 ${typeColor} text-white rounded-[32px] font-black text-2xl hover:opacity-95 transition-all shadow-2xl uppercase italic tracking-[0.2em] ${!isProcessing ? 'animate-pulse' : 'opacity-70'}`}>
                 {isProcessing ? '결제 처리 중...' : '즉시 구매하기 🚀'}
               </button>
             </div>
