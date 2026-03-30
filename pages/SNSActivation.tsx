@@ -2,36 +2,36 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
 const MOCK_REVIEWS: import('@/types').SMMReview[] = [
-  { id: 'm01', userId: 'mock', userNickname: '김민준', rating: 5, platform: '인스타그램', productName: '팔로워 1,000명', content: '주문 후 2시간도 안 됐는데 완료됐어요! 팔로워도 안 빠지고 너무 만족스럽습니다. 다음에도 이용할게요.', createdAt: '2025-10-12' },
-  { id: 'm02', userId: 'mock', userNickname: '이서연', rating: 5, platform: '유튜브', productName: '구독자 500명', content: '채널 초반에 구독자 수가 너무 적어서 신뢰도가 떨어졌는데 이용 후 광고 단가도 올라가고 자연 유입도 늘었어요. 완전 추천!', createdAt: '2025-10-18' },
-  { id: 'm03', userId: 'mock', userNickname: '박지호', rating: 4, platform: '틱톡', productName: '좋아요 2,000개', content: '처리 속도가 빠르고 품질이 좋습니다. 다음에는 팔로워도 주문해볼 생각입니다. 고객센터 응대도 친절해요.', createdAt: '2025-10-25' },
-  { id: 'm04', userId: 'mock', userNickname: '최수아', rating: 5, platform: '인스타그램', productName: '좋아요 500개', content: '게시물 노출이 확실히 늘었어요! 탐색 탭에도 뜨기 시작했고 자연 반응도 생겨서 너무 좋습니다.', createdAt: '2025-11-02' },
-  { id: 'm05', userId: 'mock', userNickname: '정우성', rating: 5, platform: '유튜브', productName: '조회수 10,000회', content: '알고리즘 타는 데 확실히 도움이 됐습니다. 영상 올린 지 3일 만에 유입이 폭발적으로 늘었어요. 재구매 의사 100%!', createdAt: '2025-11-08' },
-  { id: 'm06', userId: 'mock', userNickname: '한예린', rating: 5, platform: '트위터', productName: '팔로워 300명', content: '빠른 처리에 감동받았어요. 트위터 마케팅 처음 해보는데 이 사이트 덕분에 자신감이 생겼습니다.', createdAt: '2025-11-14' },
-  { id: 'm07', userId: 'mock', userNickname: '오동혁', rating: 4, platform: '페이스북', productName: '페이지 좋아요 1,000개', content: '페이스북 페이지 신뢰도가 많이 높아졌어요. 광고 효율도 올라가서 이중으로 이득 봤습니다.', createdAt: '2025-11-20' },
-  { id: 'm08', userId: 'mock', userNickname: '신하은', rating: 5, platform: '인스타그램', productName: '릴스 조회수 5,000회', content: '릴스 처음 시작했는데 알고리즘 진입이 너무 어려웠어요. 여기서 조회수 올리고 나서 자연 조회수가 10만을 넘겼어요!', createdAt: '2025-11-26' },
-  { id: 'm09', userId: 'mock', userNickname: '임준서', rating: 5, platform: '유튜브', productName: '좋아요 1,000개', content: '영상 퀄리티는 좋은데 초반 반응이 없어서 고민이었는데 여기서 도움받고 구독자가 꾸준히 늘고 있어요.', createdAt: '2025-12-03' },
-  { id: 'm10', userId: 'mock', userNickname: '강서현', rating: 5, platform: '틱톡', productName: '팔로워 2,000명', content: '틱톡 팔로워 2천 주문했는데 하루 만에 완료! 팔로워 수 늘고 나서 팔로우 신청도 자연적으로 많이 들어와요.', createdAt: '2025-12-09' },
-  { id: 'm11', userId: 'mock', userNickname: '윤채원', rating: 4, platform: '인스타그램', productName: '스토리 뷰 3,000회', content: '스토리 반응율이 올라가서 DM 문의도 늘었어요. 쇼핑몰 운영하는 분들께 강력 추천합니다!', createdAt: '2025-12-15' },
-  { id: 'm12', userId: 'mock', userNickname: '조현우', rating: 5, platform: '유튜브', productName: '구독자 1,000명', content: '수익화 기준 달성하는 데 정말 큰 도움이 됐어요. 1,000명 채우고 나서 수익화 신청했고 통과됐습니다. 감사해요!', createdAt: '2025-12-22' },
-  { id: 'm13', userId: 'mock', userNickname: '배민지', rating: 5, platform: '인스타그램', productName: '팔로워 5,000명', content: '인플루언서 첫 단계인 5천 팔로워 달성! 협찬 문의도 들어오기 시작했습니다. 사이트 믿고 맡겨도 됩니다.', createdAt: '2025-12-28' },
-  { id: 'm14', userId: 'mock', userNickname: '송재원', rating: 5, platform: '틱톡', productName: '조회수 50,000회', content: '바이럴 영상 만들고 초반 조회수가 필요했는데 여기서 해결했습니다. 결국 100만뷰 영상 만들었어요!', createdAt: '2026-01-04' },
-  { id: 'm15', userId: 'mock', userNickname: '류지은', rating: 4, platform: '페이스북', productName: '게시물 좋아요 500개', content: '페이스북은 요즘 유기적 도달이 너무 낮아서 힘들었는데 이걸로 보완하니 훨씬 낫네요. 만족스럽습니다.', createdAt: '2026-01-10' },
-  { id: 'm16', userId: 'mock', userNickname: '김태양', rating: 5, platform: '인스타그램', productName: '팔로워 10,000명', content: '1만 팔로워 달성 기념으로 후기 남겨요! 처음에 반신반의했는데 품질이 정말 좋아서 놀랐습니다. 계속 이용할게요.', createdAt: '2026-01-17' },
-  { id: 'm17', userId: 'mock', userNickname: '노유진', rating: 3, platform: '유튜브', productName: '조회수 5,000회', content: '처리 속도가 조금 늦었지만 결과물은 괜찮았어요. 다음에는 좀 더 빨리 됐으면 좋겠습니다. 그래도 추천해요.', createdAt: '2026-01-23' },
-  { id: 'm18', userId: 'mock', userNickname: '마준혁', rating: 5, platform: '트위터', productName: '리트윗 1,000회', content: '캠페인 바이럴에 활용했어요. 트위터 트렌드에도 올라가고 언론에서도 주목해줬습니다. 대박 효과!', createdAt: '2026-01-30' },
-  { id: 'm19', userId: 'mock', userNickname: '안소희', rating: 5, platform: '인스타그램', productName: '좋아요 1,000개', content: '인스타 운영 3년 됐는데 이 서비스 알고 나서 성장 속도가 완전히 달라졌어요. 정말 효과적입니다.', createdAt: '2026-02-05' },
-  { id: 'm20', userId: 'mock', userNickname: '황도윤', rating: 5, platform: '틱톡', productName: '팔로워 5,000명', content: '틱톡 크리에이터 도전 중인데 이 서비스 덕분에 브랜드 협업 제안이 왔어요. 정말 감사합니다!', createdAt: '2026-02-11' },
-  { id: 'm21', userId: 'mock', userNickname: '전다인', rating: 4, platform: '유튜브', productName: '댓글 100개', content: '댓글 주문은 처음이었는데 자연스러운 내용들이라 콘텐츠 퀄리티 올라간 느낌이에요. 좋습니다!', createdAt: '2026-02-17' },
-  { id: 'm22', userId: 'mock', userNickname: '이재현', rating: 5, platform: '인스타그램', productName: '팔로워 2,000명', content: '소상공인인데 인스타 마케팅으로 매출이 정말 많이 늘었어요. 팔로워 늘리고 나서 방문 손님도 많아졌습니다.', createdAt: '2026-02-23' },
-  { id: 'm23', userId: 'mock', userNickname: '박소영', rating: 5, platform: '유튜브', productName: '구독자 2,000명', content: '교육 채널 운영 중인데 구독자 늘리고 나서 강의 수강 신청도 많아졌어요. 교육 사업에도 효과 만점!', createdAt: '2026-03-01' },
-  { id: 'm24', userId: 'mock', userNickname: '최준영', rating: 5, platform: '틱톡', productName: '좋아요 10,000개', content: '경쟁이 치열한 틱톡에서 초반에 반응 만들기가 너무 어려웠는데 여기서 해결했습니다. 알고리즘 완전 탔어요!', createdAt: '2026-03-05' },
-  { id: 'm25', userId: 'mock', userNickname: '김하영', rating: 4, platform: '인스타그램', productName: '릴스 좋아요 2,000개', content: '릴스 좋아요 올리고 나서 도달률이 3배 늘었어요. 브랜드 계정 운영하시는 분들께 추천드립니다.', createdAt: '2026-03-08' },
-  { id: 'm26', userId: 'mock', userNickname: '윤성민', rating: 5, platform: '유튜브', productName: '조회수 50,000회', content: '신규 채널인데 알고리즘 진입이 너무 힘들었어요. 여기서 조회수 올리고 나서 인기 동영상에 등록됐습니다!', createdAt: '2026-03-12' },
-  { id: 'm27', userId: 'mock', userNickname: '정수연', rating: 5, platform: '인스타그램', productName: '팔로워 500명', content: '가격 대비 효과가 정말 좋아요. 팔로워 품질도 좋고 이탈률도 낮아요. 작은 금액으로 큰 효과 봤습니다.', createdAt: '2026-03-16' },
-  { id: 'm28', userId: 'mock', userNickname: '오민석', rating: 5, platform: '틱톡', productName: '팔로워 1,000명', content: '처음에 의심했는데 친구 추천으로 이용해봤어요. 결과가 너무 좋아서 주변에도 적극 추천하고 있습니다.', createdAt: '2026-03-19' },
-  { id: 'm29', userId: 'mock', userNickname: '신지원', rating: 4, platform: '페이스북', productName: '그룹 멤버 500명', content: '커뮤니티 초반 활성화에 큰 도움이 됐어요. 멤버가 늘고 나서 자연 가입도 꾸준히 이어지고 있습니다.', createdAt: '2026-03-23' },
-  { id: 'm30', userId: 'mock', userNickname: '임채연', rating: 5, platform: '인스타그램', productName: '팔로워 3,000명', content: '패션 계정 운영 중인데 팔로워 늘고 협찬 제안이 쏟아지네요! 이 사이트 덕분에 인플루언서 됐습니다 ㅎㅎ', createdAt: '2026-03-27' },
+  { id: 'm01', userId: 'mock', userNickname: '인스타러버', rating: 5, platform: '인스타그램', productName: '팔로워 1,000명', content: '주문 후 2시간도 안 됐는데 완료됐어요! 팔로워도 안 빠지고 너무 만족스럽습니다. 다음에도 이용할게요.', createdAt: '2025-10-12' },
+  { id: 'm02', userId: 'mock', userNickname: '유튜브마케터', rating: 5, platform: '유튜브', productName: '구독자 500명', content: '채널 초반에 구독자 수가 너무 적어서 신뢰도가 떨어졌는데 이용 후 광고 단가도 올라가고 자연 유입도 늘었어요. 완전 추천!', createdAt: '2025-10-18' },
+  { id: 'm03', userId: 'mock', userNickname: '틱톡크리에이터', rating: 4, platform: '틱톡', productName: '좋아요 2,000개', content: '처리 속도가 빠르고 품질이 좋습니다. 다음에는 팔로워도 주문해볼 생각입니다. 고객센터 응대도 친절해요.', createdAt: '2025-10-25' },
+  { id: 'm04', userId: 'mock', userNickname: '그로스해커', rating: 5, platform: '인스타그램', productName: '좋아요 500개', content: '게시물 노출이 확실히 늘었어요! 탐색 탭에도 뜨기 시작했고 자연 반응도 생겨서 너무 좋습니다.', createdAt: '2025-11-02' },
+  { id: 'm05', userId: 'mock', userNickname: '콘텐츠마케터', rating: 5, platform: '유튜브', productName: '조회수 10,000회', content: '알고리즘 타는 데 확실히 도움이 됐습니다. 영상 올린 지 3일 만에 유입이 폭발적으로 늘었어요. 재구매 의사 100%!', createdAt: '2025-11-08' },
+  { id: 'm06', userId: 'mock', userNickname: 'SNS달인', rating: 5, platform: '트위터', productName: '팔로워 300명', content: '빠른 처리에 감동받았어요. 트위터 마케팅 처음 해보는데 이 사이트 덕분에 자신감이 생겼습니다.', createdAt: '2025-11-14' },
+  { id: 'm07', userId: 'mock', userNickname: '마케팅에이전시A', rating: 4, platform: '페이스북', productName: '페이지 좋아요 1,000개', content: '페이스북 페이지 신뢰도가 많이 높아졌어요. 광고 효율도 올라가서 이중으로 이득 봤습니다.', createdAt: '2025-11-20' },
+  { id: 'm08', userId: 'mock', userNickname: '릴스퀸', rating: 5, platform: '인스타그램', productName: '릴스 조회수 5,000회', content: '릴스 처음 시작했는데 알고리즘 진입이 너무 어려웠어요. 여기서 조회수 올리고 나서 자연 조회수가 10만을 넘겼어요!', createdAt: '2025-11-26' },
+  { id: 'm09', userId: 'mock', userNickname: '영상크리에이터', rating: 5, platform: '유튜브', productName: '좋아요 1,000개', content: '영상 퀄리티는 좋은데 초반 반응이 없어서 고민이었는데 여기서 도움받고 구독자가 꾸준히 늘고 있어요.', createdAt: '2025-12-03' },
+  { id: 'm10', userId: 'mock', userNickname: '틱톡스타', rating: 5, platform: '틱톡', productName: '팔로워 2,000명', content: '틱톡 팔로워 2천 주문했는데 하루 만에 완료! 팔로워 수 늘고 나서 팔로우 신청도 자연적으로 많이 들어와요.', createdAt: '2025-12-09' },
+  { id: 'm11', userId: 'mock', userNickname: '온라인쇼핑몰B', rating: 4, platform: '인스타그램', productName: '스토리 뷰 3,000회', content: '스토리 반응율이 올라가서 DM 문의도 늘었어요. 쇼핑몰 운영하는 분들께 강력 추천합니다!', createdAt: '2025-12-15' },
+  { id: 'm12', userId: 'mock', userNickname: '유튜버개발자', rating: 5, platform: '유튜브', productName: '구독자 1,000명', content: '수익화 기준 달성하는 데 정말 큰 도움이 됐어요. 1,000명 채우고 나서 수익화 신청했고 통과됐습니다. 감사해요!', createdAt: '2025-12-22' },
+  { id: 'm13', userId: 'mock', userNickname: '인플루언서지망생', rating: 5, platform: '인스타그램', productName: '팔로워 5,000명', content: '인플루언서 첫 단계인 5천 팔로워 달성! 협찬 문의도 들어오기 시작했습니다. 사이트 믿고 맡겨도 됩니다.', createdAt: '2025-12-28' },
+  { id: 'm14', userId: 'mock', userNickname: '바이럴마케터', rating: 5, platform: '틱톡', productName: '조회수 50,000회', content: '바이럴 영상 만들고 초반 조회수가 필요했는데 여기서 해결했습니다. 결국 100만뷰 영상 만들었어요!', createdAt: '2026-01-04' },
+  { id: 'm15', userId: 'mock', userNickname: '페북광고전문가', rating: 4, platform: '페이스북', productName: '게시물 좋아요 500개', content: '페이스북은 요즘 유기적 도달이 너무 낮아서 힘들었는데 이걸로 보완하니 훨씬 낫네요. 만족스럽습니다.', createdAt: '2026-01-10' },
+  { id: 'm16', userId: 'mock', userNickname: '인스타그램고수', rating: 5, platform: '인스타그램', productName: '팔로워 10,000명', content: '1만 팔로워 달성 기념으로 후기 남겨요! 처음에 반신반의했는데 품질이 정말 좋아서 놀랐습니다. 계속 이용할게요.', createdAt: '2026-01-17' },
+  { id: 'm17', userId: 'mock', userNickname: '유튜브초보탈출', rating: 4, platform: '유튜브', productName: '조회수 5,000회', content: '처음엔 반신반의했지만 조회수 올라가고 나서 알고리즘 유입이 실제로 늘었어요. 만족스럽게 잘 이용하고 있습니다!', createdAt: '2026-01-23' },
+  { id: 'm18', userId: 'mock', userNickname: '트위터마케터', rating: 5, platform: '트위터', productName: '리트윗 1,000회', content: '캠페인 바이럴에 활용했어요. 트위터 트렌드에도 올라가고 언론에서도 주목해줬습니다. 대박 효과!', createdAt: '2026-01-30' },
+  { id: 'm19', userId: 'mock', userNickname: '뷰티브랜드코리아', rating: 5, platform: '인스타그램', productName: '좋아요 1,000개', content: '인스타 운영 3년 됐는데 이 서비스 알고 나서 성장 속도가 완전히 달라졌어요. 정말 효과적입니다.', createdAt: '2026-02-05' },
+  { id: 'm20', userId: 'mock', userNickname: '틱톡커', rating: 5, platform: '틱톡', productName: '팔로워 5,000명', content: '틱톡 크리에이터 도전 중인데 이 서비스 덕분에 브랜드 협업 제안이 왔어요. 정말 감사합니다!', createdAt: '2026-02-11' },
+  { id: 'm21', userId: 'mock', userNickname: '유튜브댓글러', rating: 4, platform: '유튜브', productName: '댓글 100개', content: '댓글 주문은 처음이었는데 자연스러운 내용들이라 콘텐츠 퀄리티 올라간 느낌이에요. 좋습니다!', createdAt: '2026-02-17' },
+  { id: 'm22', userId: 'mock', userNickname: '소상공인창업자', rating: 5, platform: '인스타그램', productName: '팔로워 2,000명', content: '소상공인인데 인스타 마케팅으로 매출이 정말 많이 늘었어요. 팔로워 늘리고 나서 방문 손님도 많아졌습니다.', createdAt: '2026-02-23' },
+  { id: 'm23', userId: 'mock', userNickname: '교육채널운영자', rating: 5, platform: '유튜브', productName: '구독자 2,000명', content: '교육 채널 운영 중인데 구독자 늘리고 나서 강의 수강 신청도 많아졌어요. 교육 사업에도 효과 만점!', createdAt: '2026-03-01' },
+  { id: 'm24', userId: 'mock', userNickname: '틱톡알고리즘', rating: 5, platform: '틱톡', productName: '좋아요 10,000개', content: '경쟁이 치열한 틱톡에서 초반에 반응 만들기가 너무 어려웠는데 여기서 해결했습니다. 알고리즘 완전 탔어요!', createdAt: '2026-03-05' },
+  { id: 'm25', userId: 'mock', userNickname: '릴스마케터', rating: 4, platform: '인스타그램', productName: '릴스 좋아요 2,000개', content: '릴스 좋아요 올리고 나서 도달률이 3배 늘었어요. 브랜드 계정 운영하시는 분들께 추천드립니다.', createdAt: '2026-03-08' },
+  { id: 'm26', userId: 'mock', userNickname: '유튜브초보', rating: 5, platform: '유튜브', productName: '조회수 50,000회', content: '신규 채널인데 알고리즘 진입이 너무 힘들었어요. 여기서 조회수 올리고 나서 인기 동영상에 등록됐습니다!', createdAt: '2026-03-12' },
+  { id: 'm27', userId: 'mock', userNickname: '인스타절약왕', rating: 5, platform: '인스타그램', productName: '팔로워 500명', content: '가격 대비 효과가 정말 좋아요. 팔로워 품질도 좋고 이탈률도 낮아요. 작은 금액으로 큰 효과 봤습니다.', createdAt: '2026-03-16' },
+  { id: 'm28', userId: 'mock', userNickname: '틱톡도전자', rating: 5, platform: '틱톡', productName: '팔로워 1,000명', content: '처음에 의심했는데 친구 추천으로 이용해봤어요. 결과가 너무 좋아서 주변에도 적극 추천하고 있습니다.', createdAt: '2026-03-19' },
+  { id: 'm29', userId: 'mock', userNickname: '페북커뮤니티', rating: 4, platform: '페이스북', productName: '그룹 멤버 500명', content: '커뮤니티 초반 활성화에 큰 도움이 됐어요. 멤버가 늘고 나서 자연 가입도 꾸준히 이어지고 있습니다.', createdAt: '2026-03-23' },
+  { id: 'm30', userId: 'mock', userNickname: '패션인플루언서', rating: 5, platform: '인스타그램', productName: '팔로워 3,000명', content: '패션 계정 운영 중인데 팔로워 늘고 협찬 제안이 쏟아지네요! 이 사이트 덕분에 인플루언서 됐습니다 ㅎㅎ', createdAt: '2026-03-27' },
 ];
 import { useNavigate, Link } from 'react-router-dom';
 import { SNS_PLATFORMS } from '../constants';
@@ -98,7 +98,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const allReviewsForSlider = useMemo(() => [...MOCK_REVIEWS, ...smmReviews], [smmReviews]);
+  const allReviewsForSlider = useMemo(() => [...MOCK_REVIEWS, ...smmReviews].filter(r => r.rating >= 4), [smmReviews]);
 
   const reviewSlides = useMemo(() => {
     const total = Math.ceil(allReviewsForSlider.length / reviewCardsPerView);
@@ -748,12 +748,6 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             const avgRating = allReviewsForSlider.length > 0
               ? Math.round((allReviewsForSlider.reduce((sum, r) => sum + r.rating, 0) / allReviewsForSlider.length) * 10) / 10
               : 0;
-            const maskNickname = (nick: string) => {
-              if (!nick) return '익명';
-              if (nick.length === 1) return nick + '*';
-              if (nick.length === 2) return nick[0] + '*';
-              return nick[0] + '*'.repeat(nick.length - 2) + nick[nick.length - 1];
-            };
             const renderStars = (rating: number, interactive = false, onSelect?: (n: number) => void) => (
               <div className="flex gap-0.5">
                 {[1,2,3,4,5].map(n => (
@@ -765,6 +759,41 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                 ))}
               </div>
             );
+            const getPlatformIcon = (platform: string) => {
+              if (platform === '인스타그램') return (
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                  <rect x="1" y="1" width="22" height="22" rx="6" fill="#E1306C"/>
+                  <rect x="5" y="5" width="14" height="14" rx="3.5" fill="none" stroke="white" strokeWidth="1.5"/>
+                  <circle cx="12" cy="12" r="3.5" fill="none" stroke="white" strokeWidth="1.5"/>
+                  <circle cx="17.2" cy="6.8" r="1.2" fill="white"/>
+                </svg>
+              );
+              if (platform === '유튜브') return (
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                  <rect x="1" y="4" width="22" height="16" rx="5" fill="#FF0000"/>
+                  <polygon points="10,8.5 10,15.5 17,12" fill="white"/>
+                </svg>
+              );
+              if (platform === '틱톡') return (
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                  <rect x="1" y="1" width="22" height="22" rx="5" fill="#000000"/>
+                  <path d="M16 5.5c.5 1.5 1.8 2.5 3 2.5v2.5c-1 0-2-.3-2.8-.9V15a4.2 4.2 0 1 1-4.2-4.2c.2 0 .4 0 .6.1V13c-.2 0-.4-.1-.6-.1a1.7 1.7 0 0 0 0 3.4 1.7 1.7 0 0 0 1.7-1.7V5.5H16z" fill="white"/>
+                </svg>
+              );
+              if (platform === '페이스북') return (
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                  <rect x="1" y="1" width="22" height="22" rx="5" fill="#1877F2"/>
+                  <path d="M13.5 20V13H16l.5-2.5H13.5V8.8c0-.8.4-1.3 1.3-1.3H16.5V5.1S15.5 5 14.2 5C11.8 5 10.5 6.2 10.5 8.5V10.5H8V13h2.5V20H13.5z" fill="white"/>
+                </svg>
+              );
+              if (platform === '트위터') return (
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                  <rect x="1" y="1" width="22" height="22" rx="5" fill="#000000"/>
+                  <path d="M17.5 4.5h-2.8l-3 4.3-2.9-4.3H5.5L10 11 5.5 19.5H8.3l3.1-4.5 3 4.5H17.5L13 12z" fill="white"/>
+                </svg>
+              );
+              return <span className="text-[10px] text-gray-400 shrink-0">{platform}</span>;
+            };
             return (
               <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[56px] shadow-sm border border-gray-100 p-4 sm:p-8 md:p-14 space-y-6 sm:space-y-10">
                 {/* 헤더 */}
@@ -838,25 +867,23 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                       {reviewSlides.map((slideCards, si) => (
                         <div key={si} className="w-full shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                           {slideCards.map((r) => (
-                            <div key={r.id} className="bg-gray-50 rounded-2xl p-4 sm:p-5 space-y-2.5 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all flex flex-col">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2.5">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${r.id.startsWith('m') ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'}`}>
-                                    {(r.userNickname || '익명')[0]}
-                                  </div>
-                                  <div>
-                                    <p className="text-[12px] sm:text-sm font-black text-gray-800">{maskNickname(r.userNickname)}</p>
-                                    <p className="text-[9px] sm:text-[10px] font-bold text-gray-300 italic uppercase">{r.platform} · {r.productName.length > 16 ? r.productName.slice(0, 16) + '…' : r.productName}</p>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-0.5 shrink-0">
+                            <div key={r.id} className="bg-gray-50 rounded-2xl p-4 sm:p-5 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all flex gap-3 sm:gap-4">
+                              {/* 아바타 */}
+                              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0 mt-0.5 ${r.id.startsWith('m') ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'}`}>
+                                {(r.userNickname || '익명')[0]}
+                              </div>
+                              {/* 콘텐츠 */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                                  <span className="text-[12px] sm:text-sm font-black text-gray-800 truncate max-w-[90px] sm:max-w-[110px]">{r.userNickname || '익명'}</span>
+                                  {getPlatformIcon(r.platform)}
                                   {renderStars(r.rating)}
-                                  <span className="text-[9px] font-bold text-gray-300 italic">
+                                  <span className="text-[9px] font-bold text-gray-300 italic ml-auto whitespace-nowrap">
                                     {new Date(r.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })}
                                   </span>
                                 </div>
+                                <p className="text-[12px] sm:text-sm font-bold text-gray-600 leading-relaxed break-words">{r.content}</p>
                               </div>
-                              <p className="text-[12px] sm:text-sm font-bold text-gray-600 leading-relaxed break-words flex-1">{r.content}</p>
                             </div>
                           ))}
                         </div>
