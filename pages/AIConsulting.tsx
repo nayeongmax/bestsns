@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getMarketingConsultation } from '../services/geminiService';
 import { supabase } from '../supabase';
-import type { UserProfile } from '@/types';
+import type { UserProfile, Notice } from '@/types';
 
 /** 마크다운 형식 텍스트를 가독성 있게 렌더링 (추가 의존성 없음) */
 function formatAiText(text: string): React.ReactNode[] {
@@ -47,14 +48,17 @@ function formatAiText(text: string): React.ReactNode[] {
 
 interface Props {
   user?: UserProfile | null;
+  notices?: Notice[];
 }
 
-const AIConsulting: React.FC<Props> = ({ user }) => {
+const AIConsulting: React.FC<Props> = ({ user, notices = [] }) => {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; text: string }[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const latestNotice = notices.filter(n => !n.isHidden)[0];
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
@@ -120,7 +124,25 @@ const AIConsulting: React.FC<Props> = ({ user }) => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-20 sm:pb-24">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-20 sm:pb-24 space-y-6">
+      {/* 공지사항 배너 */}
+      {latestNotice && (
+        <div className="bg-[#1e293b] rounded-[32px] p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden group">
+          <div className="absolute right-0 top-0 opacity-10 translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-700">
+            <svg className="w-64 h-64" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          </div>
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="bg-orange-500 px-4 py-1.5 rounded-full font-black text-xs italic tracking-widest uppercase">Official Notice</div>
+            <p className="text-lg font-black tracking-tight truncate max-w-2xl">{latestNotice.title}</p>
+          </div>
+          <button
+            onClick={() => navigate('/notices')}
+            className="bg-white/10 hover:bg-white text-white hover:text-gray-900 px-8 py-2.5 rounded-2xl font-black text-[13px] transition-all whitespace-nowrap relative z-10"
+          >
+            전체보기
+          </button>
+        </div>
+      )}
       <div className="h-[75vh] min-h-[400px] sm:h-[78vh] md:h-[80vh] bg-white rounded-2xl sm:rounded-3xl md:rounded-[48px] shadow-sm border border-gray-100 flex flex-col overflow-hidden">
       <div className="p-4 sm:p-6 md:p-8 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white z-10">
         <div className="flex items-center gap-3 sm:gap-4">
