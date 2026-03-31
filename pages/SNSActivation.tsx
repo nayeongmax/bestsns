@@ -847,9 +847,10 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                         value={myReviewPlatform}
                         onChange={(e) => setMyReviewPlatform(e.target.value)}
                         className="ml-auto border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-black text-gray-600 bg-white outline-none focus:border-blue-400 cursor-pointer"
+                        style={{ maxHeight: '180px', overflowY: 'auto' }}
                       >
-                        {['인스타그램','유튜브','틱톡','트위터','페이스북'].map(p => (
-                          <option key={p} value={p}>{p}</option>
+                        {SNS_PLATFORMS.map(p => (
+                          <option key={p.id} value={p.name}>{p.name}</option>
                         ))}
                       </select>
                     </div>
