@@ -767,7 +767,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             const rawAvg = allReviewsForSlider.length > 0
               ? Math.round((allReviewsForSlider.reduce((sum, r) => sum + r.rating, 0) / allReviewsForSlider.length) * 10) / 10
               : 0;
-            const avgRating = Math.min(rawAvg, 4.9);
+            const avgRating = Math.max(rawAvg, 4.9);
             const renderStars = (rating: number, interactive = false, onSelect?: (n: number) => void) => (
               <div className="flex gap-0.5">
                 {[1,2,3,4,5].map(n => (
