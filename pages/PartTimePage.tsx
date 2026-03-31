@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
-import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock } from '@/types';
+import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock, Notice } from '@/types';
 import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '@/constants';
 import {
   fetchPartTimeTasks,
@@ -16,9 +16,10 @@ import {
 interface Props {
   user: UserProfile | null;
   onUpdateUser?: (updated: UserProfile) => void;
+  notices?: Notice[];
 }
 
-const PartTimePage: React.FC<Props> = ({ user }) => {
+const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
@@ -120,8 +121,28 @@ const PartTimePage: React.FC<Props> = ({ user }) => {
     );
   }
 
+  const latestNotice = notices.filter(n => !n.isHidden)[0];
+
   return (
-    <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700">
+    <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700 space-y-6">
+      {/* 공지사항 배너 */}
+      {latestNotice && (
+        <div className="bg-[#1e293b] rounded-[32px] p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden group">
+          <div className="absolute right-0 top-0 opacity-10 translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-700">
+            <svg className="w-64 h-64" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          </div>
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="bg-orange-500 px-4 py-1.5 rounded-full font-black text-xs italic tracking-widest uppercase">Official Notice</div>
+            <p className="text-lg font-black tracking-tight truncate max-w-2xl">{latestNotice.title}</p>
+          </div>
+          <button
+            onClick={() => navigate('/notices')}
+            className="bg-white/10 hover:bg-white text-white hover:text-gray-900 px-8 py-2.5 rounded-2xl font-black text-[13px] transition-all whitespace-nowrap relative z-10"
+          >
+            전체보기
+          </button>
+        </div>
+      )}
       <div className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-10 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
 
