@@ -144,12 +144,12 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
         </div>
       )}
       <div className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-10 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-blue-500 to-blue-500" />
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <h2 className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
-              누구나<span className="text-emerald-600">알바</span>
+              누구나<span className="text-blue-600">알바</span>
             </h2>
             <p className="text-gray-700 font-semibold text-xs md:text-sm mt-2 whitespace-nowrap">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
             <p className="text-gray-700 font-semibold text-xs md:text-sm mt-1 whitespace-nowrap">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
@@ -165,25 +165,25 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
               )}
               <button
                 onClick={() => navigate('/part-time/request')}
-                className="px-5 py-3 rounded-xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 transition-all"
+                className="px-5 py-3 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-all"
               >
                 작업의뢰
               </button>
             </div>
           </div>
           {user ? (
-            <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+            <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
               <p className="text-[10px] font-black text-gray-500 uppercase italic">수익통장</p>
-              <p className="text-lg font-black text-emerald-700 italic">{balance.toLocaleString()}원</p>
+              <p className="text-lg font-black text-blue-700 italic">{balance.toLocaleString()}원</p>
               <p className="text-[10px] text-gray-500 mt-0.5">
                 {balance >= MIN_WITHDRAW_FREELANCER ? '출금 가능' : `${(MIN_WITHDRAW_FREELANCER - balance).toLocaleString()}원 더 모으면 출금 가능`}
               </p>
-              <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-2 text-emerald-600 font-black text-xs hover:underline">
+              <Link to="/mypage" state={{ activeTab: 'freelancer' } as any} className="inline-block mt-2 text-blue-600 font-black text-xs hover:underline">
                 마이페이지에서 출금하기 →
               </Link>
             </div>
           ) : (
-            <button onClick={() => navigate('/login')} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black hover:bg-emerald-600 transition-all">
+            <button onClick={() => navigate('/login')} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-black hover:bg-blue-600 transition-all">
               로그인 후 이용
             </button>
           )}
@@ -196,13 +196,13 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
               <button
                 type="button"
                 onClick={() => handleCalendarSwipe('prev')}
-                className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 bg-white hover:bg-emerald-50 hover:border-emerald-400 text-gray-500 hover:text-emerald-600 transition-all text-sm"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 bg-white hover:bg-blue-50 hover:border-blue-400 text-gray-500 hover:text-blue-600 transition-all text-sm"
                 aria-label="이전 주"
               >‹</button>
               <button
                 type="button"
                 onClick={() => handleCalendarSwipe('next')}
-                className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 bg-white hover:bg-emerald-50 hover:border-emerald-400 text-gray-500 hover:text-emerald-600 transition-all text-sm"
+                className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-300 bg-white hover:bg-blue-50 hover:border-blue-400 text-gray-500 hover:text-blue-600 transition-all text-sm"
                 aria-label="다음 주"
               >›</button>
             </div>
@@ -212,7 +212,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
               <button
                 type="button"
                 onClick={() => handleCalendarSwipe('prev')}
-                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-white active:bg-emerald-50 active:border-emerald-400 text-gray-500 text-lg font-black"
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-white active:bg-blue-50 active:border-blue-400 text-gray-500 text-lg font-black"
                 aria-label="이전 주"
               >‹</button>
               <span className="text-xs font-bold text-gray-500">
@@ -221,7 +221,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
               <button
                 type="button"
                 onClick={() => handleCalendarSwipe('next')}
-                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-white active:bg-emerald-50 active:border-emerald-400 text-gray-500 text-lg font-black"
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 bg-white active:bg-blue-50 active:border-blue-400 text-gray-500 text-lg font-black"
                 aria-label="다음 주"
               >›</button>
             </div>
@@ -252,13 +252,13 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                         onClick={() => setSelectedDate(d)}
                         className={`p-2 rounded-lg border text-left transition-all duration-200 min-w-0 ${
                           isSelected
-                            ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
+                            ? 'border-blue-400 bg-blue-50/80 shadow-md ring-2 ring-blue-200/60'
                             : 'border-gray-200/80 bg-white'
                         }`}
                       >
                         <p className="text-[11px] font-black text-gray-600">{dayLabel}</p>
                         <p className="text-[10px] text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
-                        <p className="text-[10px] text-emerald-600 font-semibold leading-tight">완료 {c.done}</p>
+                        <p className="text-[10px] text-blue-600 font-semibold leading-tight">완료 {c.done}</p>
                       </button>
                     );
                   })}
@@ -275,13 +275,13 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                         onClick={() => setSelectedDate(d)}
                         className={`p-2 rounded-lg border text-center transition-all duration-200 min-w-0 ${
                           isSelected
-                            ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
+                            ? 'border-blue-400 bg-blue-50/80 shadow-md ring-2 ring-blue-200/60'
                             : 'border-gray-200/80 bg-white'
                         }`}
                       >
                         <p className="text-[11px] font-black text-gray-600">{dayLabel}</p>
                         <p className="text-[10px] text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
-                        <p className="text-[10px] text-emerald-600 font-semibold leading-tight">완료 {c.done}</p>
+                        <p className="text-[10px] text-blue-600 font-semibold leading-tight">완료 {c.done}</p>
                       </button>
                     );
                   })}
@@ -301,13 +301,13 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                     onClick={() => setSelectedDate(d)}
                     className={`p-4 rounded-xl border text-left transition-all duration-200 min-w-0 ${
                       isSelected
-                        ? 'border-emerald-400 bg-emerald-50/80 shadow-md ring-2 ring-emerald-200/60'
-                        : 'border-gray-200/80 bg-white hover:border-emerald-200 hover:shadow-sm'
+                        ? 'border-blue-400 bg-blue-50/80 shadow-md ring-2 ring-blue-200/60'
+                        : 'border-gray-200/80 bg-white hover:border-blue-200 hover:shadow-sm'
                     }`}
                   >
                     <p className="text-sm font-black text-gray-600">{dayLabel}</p>
                     <p className="text-xs text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
-                    <p className="text-xs text-emerald-600 font-semibold leading-tight">완료 {c.done}</p>
+                    <p className="text-xs text-blue-600 font-semibold leading-tight">완료 {c.done}</p>
                   </button>
                 );
               })}
@@ -327,7 +327,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                   <div
                     key={task.id}
                     className={`w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
-                      done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-emerald-200 hover:shadow-sm'
+                      done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm'
                     }`}
                   >
                     <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className="flex-1 text-left">
@@ -336,8 +336,8 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                       <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
                     </button>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="font-black text-emerald-600 text-base">+{task.reward.toLocaleString()}원</span>
-                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className={`px-4 py-2 rounded-xl text-sm font-black ${done ? 'bg-gray-200 text-gray-500' : task.applicants?.some((a) => a.selected) ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      <span className="font-black text-blue-600 text-base">+{task.reward.toLocaleString()}원</span>
+                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className={`px-4 py-2 rounded-xl text-sm font-black ${done ? 'bg-gray-200 text-gray-500' : task.applicants?.some((a) => a.selected) ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                         {done ? '완료됨' : task.applicants?.some((a) => a.selected) ? '선정완료 →' : '상세보기 →'}
                       </button>
                       {user?.role === 'admin' && (
@@ -618,38 +618,38 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           돌아가기
         </button>
-        <h2 className="flex-1 text-center text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-emerald-500 underline-offset-8">프리랜서 작업 등록</h2>
+        <h2 className="flex-1 text-center text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-blue-500 underline-offset-8">프리랜서 작업 등록</h2>
         <div className="w-16 sm:w-20 shrink-0" />
       </div>
       <form onSubmit={handleSubmit} formNoValidate className="bg-white p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-[48px] shadow-xl border border-gray-100 space-y-8 sm:space-y-12">
         <section className="space-y-6">
-          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full shrink-0" /><h3 className="text-sm sm:text-base md:text-lg font-black text-gray-900 italic whitespace-nowrap">1. 포인트 금액 · 게시글 제목 · 내용</h3></div>
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-blue-600 rounded-full shrink-0" /><h3 className="text-sm sm:text-base md:text-lg font-black text-gray-900 italic whitespace-nowrap">1. 포인트 금액 · 게시글 제목 · 내용</h3></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">보상 금액 (원)</label>
-              <input type="number" min={0} value={reward} onChange={(e) => setReward(Number(e.target.value) || 0)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold" />
+              <input type="number" min={0} value={reward} onChange={(e) => setReward(Number(e.target.value) || 0)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none font-bold" />
             </div>
             <div>
               <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">카테고리</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold">
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none font-bold">
                 {REGISTER_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
           <div>
             <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">게시글 제목 *</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 카페 글 작성 · SNS 공유 인증" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold" required />
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 카페 글 작성 · SNS 공유 인증" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none font-bold" required />
           </div>
           <div>
             <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">한 줄 설명</label>
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="작업 한 줄 요약" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none" />
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="작업 한 줄 요약" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none" />
           </div>
         </section>
         <section className="space-y-6">
-          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full shrink-0" /><h3 className="text-sm sm:text-base md:text-lg font-black text-gray-900 italic whitespace-nowrap">2. 모집 인원 · 신청기간 · 작업기간</h3></div>
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-blue-600 rounded-full shrink-0" /><h3 className="text-sm sm:text-base md:text-lg font-black text-gray-900 italic whitespace-nowrap">2. 모집 인원 · 신청기간 · 작업기간</h3></div>
           <div>
             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">결제 완료된 광고주 (견적서 결제 건에서 선택)</label>
-            <select value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} className="w-full max-w-md px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-bold">
+            <select value={applicantUserId} onChange={(e) => setApplicantUserId(e.target.value)} className="w-full max-w-md px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm font-bold">
               <option value="">선택 안 함</option>
               {paidAdvertiserOptions.map((opt) => (
                 <option key={opt.userId} value={opt.userId}>{opt.nickname} - {opt.title}</option>
@@ -660,16 +660,16 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             <div>
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">모집 인원</label>
-              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold text-sm" />
+              <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none font-bold text-sm" />
             </div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm [color-scheme:light]" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm [color-scheme:light]" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm [color-scheme:light]" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
           </div>
         </section>
         <section className="space-y-6">
-          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-emerald-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용</h3></div>
+          <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-blue-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용</h3></div>
           <p className="text-sm text-gray-500">아래 항목을 클릭하면 순서대로 섹션이 추가됩니다. 원하는 만큼 추가하고 위치를 이동할 수 있습니다.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4 rounded-2xl bg-gray-50 border border-gray-100">
             {SECTION_TYPES.map(({ key, label }) => (
@@ -677,7 +677,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                 key={key}
                 type="button"
                 onClick={() => addSection(key)}
-                className="px-4 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 font-black text-sm hover:bg-emerald-50 hover:border-emerald-400 transition-all text-center"
+                className="px-4 py-2 rounded-xl bg-white border border-blue-200 text-blue-700 font-black text-sm hover:bg-blue-50 hover:border-blue-400 transition-all text-center"
               >
                 + {label}
               </button>
@@ -687,7 +687,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
             {sectionItems.map((item, idx) => (
               <div key={item.id} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3 relative">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black text-emerald-700 uppercase bg-emerald-100 px-2 py-1 rounded-lg">
+                  <span className="text-xs font-black text-blue-700 uppercase bg-blue-100 px-2 py-1 rounded-lg">
                     {SECTION_TYPES.find((t) => t.key === item.type)?.label ?? item.type} {idx + 1}
                   </span>
                   <div className="flex items-center gap-1">
@@ -701,7 +701,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                     value={item.value ?? ''}
                     onChange={(e) => updateSection(item.id, { value: e.target.value })}
                     placeholder="제목"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
                   />
                 )}
                 {item.type === '내용' && (
@@ -710,7 +710,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                     onChange={(e) => updateSection(item.id, { value: e.target.value })}
                     placeholder="내용"
                     rows={4}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm resize-y"
                   />
                 )}
                 {item.type === '게시글' && item.postBlock && (
@@ -719,14 +719,14 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                       value={item.postBlock.제목}
                       onChange={(e) => updateSection(item.id, { postBlock: { ...item.postBlock!, 제목: e.target.value } })}
                       placeholder="제목"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
                     />
                     <textarea
                       value={item.postBlock.내용}
                       onChange={(e) => updateSection(item.id, { postBlock: { ...item.postBlock!, 내용: e.target.value } })}
                       placeholder="내용"
                       rows={4}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm resize-y"
                     />
                   </div>
                 )}
@@ -735,7 +735,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                     value={item.value ?? ''}
                     onChange={(e) => updateSection(item.id, { value: e.target.value })}
                     placeholder={item.type === '댓글' ? '댓글 지시사항' : item.type === '키워드' ? '키워드' : 'URL 또는 링크 안내'}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
                   />
                 )}
                 {item.type === '이미지' && (
@@ -744,7 +744,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                       value={item.value ?? ''}
                       onChange={(e) => updateSection(item.id, { value: e.target.value })}
                       placeholder="이미지 지시사항 (선택)"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
                     />
                     <input
                       ref={(el) => { fileInputRefs.current[item.id] = el; }}
@@ -754,7 +754,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                       onChange={(e) => handleImageUpload(item.id, e)}
                       className="hidden"
                     />
-                    <button type="button" onClick={() => fileInputRefs.current[item.id]?.click()} disabled={(item.images?.length ?? 0) >= MAX_IMAGES_PER_SECTION} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs disabled:opacity-50">
+                    <button type="button" onClick={() => fileInputRefs.current[item.id]?.click()} disabled={(item.images?.length ?? 0) >= MAX_IMAGES_PER_SECTION} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-300 text-gray-500 font-bold text-xs disabled:opacity-50">
                       이미지 업로드 (최대 {MAX_IMAGES_PER_SECTION}개) {(item.images?.length ?? 0) > 0 && `(${item.images?.length})`}
                     </button>
                     {item.images && item.images.length > 0 && (
@@ -775,7 +775,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                       value={item.value ?? ''}
                       onChange={(e) => updateSection(item.id, { value: e.target.value })}
                       placeholder="동영상 지시사항 (선택)"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
                     />
                     <input
                       ref={(el) => { fileInputRefs.current[`${item.id}_video`] = el; }}
@@ -796,7 +796,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                       }}
                       className="hidden"
                     />
-                    <button type="button" onClick={() => fileInputRefs.current[`${item.id}_video`]?.click()} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs">
+                    <button type="button" onClick={() => fileInputRefs.current[`${item.id}_video`]?.click()} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-300 text-gray-500 font-bold text-xs">
                       동영상 업로드
                     </button>
                     {item.videoFile && (
@@ -813,7 +813,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                       value={item.value ?? ''}
                       onChange={(e) => updateSection(item.id, { value: e.target.value })}
                       placeholder="gif 지시사항 (선택)"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
                     />
                     <input
                       ref={(el) => { fileInputRefs.current[`${item.id}_gif`] = el; }}
@@ -834,7 +834,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                       }}
                       className="hidden"
                     />
-                    <button type="button" onClick={() => fileInputRefs.current[`${item.id}_gif`]?.click()} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-xs">
+                    <button type="button" onClick={() => fileInputRefs.current[`${item.id}_gif`]?.click()} className="px-4 py-2 rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-300 text-gray-500 font-bold text-xs">
                       GIF 업로드
                     </button>
                     {item.gifFile && (
@@ -851,7 +851,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                     onChange={(e) => updateSection(item.id, { value: e.target.value })}
                     placeholder="전체 작업 가이드"
                     rows={6}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm resize-y"
                   />
                 )}
               </div>
@@ -859,7 +859,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           </div>
         </section>
         <div className="flex gap-4 pt-6">
-          <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? '등록 중...' : '작업 등록하기'}</button>
+          <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? '등록 중...' : '작업 등록하기'}</button>
           <button type="button" onClick={() => navigate('/part-time')} className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-600 font-black hover:bg-gray-200 transition-all">취소</button>
         </div>
       </form>
