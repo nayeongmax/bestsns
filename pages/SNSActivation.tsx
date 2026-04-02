@@ -40,7 +40,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { SNS_PLATFORMS } from '../constants';
 import { SelectedOption, SMMProduct, SMMProvider, UserProfile, SMMOrder, Notice, SMMSource, SMMReview } from '@/types';
 import { updateProfile } from '../profileDb';
-import { fetchSmmReviews, insertSmmReview } from '../smmDb';
+import { fetchSmmReviews, insertSmmReview, recordProviderAttemptAdmin } from '../smmDb';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import AdBanner from '@/components/AdBanner';
 import CoupangSidebarBanner from '@/components/CoupangSidebarBanner';
@@ -307,8 +307,13 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
           continue;
         }
 
-        // 우선순위 순으로 정렬 (가격 낮은 순 → 시간 빠른 순), 순서대로 모두 시도
+        // 우선순위 순으로 정렬 (관리자 설정 priority → 가격 낮은 순 → 시간 빠른 순), 순서대로 모두 시도
         const sortedSources = [...validActiveSources].sort((a, b) => {
+          const providerA = providers.find(p => p.id === a.providerId);
+          const providerB = providers.find(p => p.id === b.providerId);
+          const prioA = providerA?.priority ?? 99;
+          const prioB = providerB?.priority ?? 99;
+          if (prioA !== prioB) return prioA - prioB;
           const costA = a.costPrice ?? 0;
           const costB = b.costPrice ?? 0;
           if (costA !== costB) return costA - costB;
@@ -336,6 +341,8 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
             const result = await resp.json();
             console.log(`[주문시도] provider:${source.providerId} service:${source.serviceId} qty:${opt.quantity} → status:${result.status} orderId:${result.orderId || '-'} msg:${result.message || '-'}`);
             if (result.status === 'success' && result.orderId) {
+              // 성공 통계 기록
+              recordProviderAttemptAdmin(source.providerId, true).catch(e => console.warn('[stats]', e));
               const order: SMMOrder = {
                 id: `ORD${Date.now()}${Math.floor(Math.random()*100)}`,
                 userId: user.id,
@@ -358,14 +365,18 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
               orderPlaced = true;
               break;
             } else {
+              // 실패 통계 기록
+              recordProviderAttemptAdmin(source.providerId, false).catch(e => console.warn('[stats]', e));
               console.error('[주문실패] serviceId:', source.serviceId, '|', result.message);
             }
           } catch (e) {
+            // 네트워크 오류도 실패로 기록
+            recordProviderAttemptAdmin(source.providerId, false).catch(err => console.warn('[stats]', err));
             console.error('[주문실패] 네트워크/파싱 오류 - serviceId:', source.serviceId, e);
           }
         }
 
-        // 모든 소스 실패 → 주문취소 내역 저장 + 포인트 환불 예약
+        // 모든 소스 실패 → 주문취소 내역 저장 + 포인트 환불 예약 + 카카오 알림
         if (!orderPlaced) {
           const fallbackProvider = providers.find(p => p.id === sortedSources[0]?.providerId);
           const canceledOrder: SMMOrder = {
@@ -388,6 +399,20 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
           };
           onOrderComplete(canceledOrder);
           totalRefund += opt.totalPrice;
+          // 카카오 알림톡: 모든 공급처 실패 시 운영자에게 알림
+          fetch('/.netlify/functions/kakao-notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'order_all_failed',
+              productName: product.name,
+              platform: product.platform,
+              quantity: opt.quantity,
+              userId: user.id,
+              userNickname: user.nickname,
+              triedProviders: sortedSources.map(s => s.providerId).join(', '),
+            }),
+          }).catch(e => console.warn('[kakao] 알림 실패:', e));
         }
       }
 

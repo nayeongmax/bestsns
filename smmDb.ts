@@ -1,9 +1,10 @@
 /**
  * SNS활성화 Supabase DB 연동
  * - smm_orders (주문/결제 내역), smm_providers (공급처), smm_products (마스터상품)
+ * - smm_provider_stats (공급처별 성공률 통계)
  */
 import { supabase } from './supabase';
-import type { SMMOrder, SMMProvider, SMMProduct, SMMSource, SMMReview } from '@/types';
+import type { SMMOrder, SMMProvider, SMMProduct, SMMSource, SMMReview, SMMProviderStats } from '@/types';
 
 // ─── smm_providers ─────────────────────────────────────────────────────
 function providerToRow(p: SMMProvider): Record<string, unknown> {
@@ -12,6 +13,7 @@ function providerToRow(p: SMMProvider): Record<string, unknown> {
     name: p.name,
     api_url: p.apiUrl ?? '',
     is_hidden: p.isHidden ?? false,
+    priority: p.priority ?? 99,
   };
 }
 
@@ -21,6 +23,7 @@ function rowToProvider(row: Record<string, unknown>): SMMProvider {
     name: String(row.name),
     apiUrl: String(row.api_url ?? ''),
     isHidden: Boolean(row.is_hidden),
+    priority: row.priority != null ? Number(row.priority) : 99,
   };
 }
 
@@ -254,4 +257,31 @@ export async function upsertSmmProductsAdmin(list: SMMProduct[]): Promise<void> 
 export async function deleteSmmProductsByIdsAdmin(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   await smmAdminPost({ action: 'deleteProducts', ids });
+}
+
+// ─── smm_provider_stats ─────────────────────────────────────────────────
+function rowToProviderStats(row: Record<string, unknown>): SMMProviderStats {
+  return {
+    id: String(row.id),
+    totalAttempts: Number(row.total_attempts ?? 0),
+    successCount: Number(row.success_count ?? 0),
+    failCount: Number(row.fail_count ?? 0),
+    successRate: Number(row.success_rate ?? 100),
+    lastAttemptAt: row.last_attempt_at ? String(row.last_attempt_at) : undefined,
+    lastSuccessAt: row.last_success_at ? String(row.last_success_at) : undefined,
+    lastFailAt: row.last_fail_at ? String(row.last_fail_at) : undefined,
+    autoDisabled: Boolean(row.auto_disabled),
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+  };
+}
+
+/** 공급처별 통계 전체 조회 (어드민) */
+export async function fetchSmmProviderStatsAdmin(): Promise<SMMProviderStats[]> {
+  const data = await smmAdminGet('providerStats');
+  return data.map((row) => rowToProviderStats(row as Record<string, unknown>));
+}
+
+/** 주문 시도 결과를 통계에 기록 (anon 클라이언트 → smm-admin 경유) */
+export async function recordProviderAttemptAdmin(providerId: string, success: boolean): Promise<void> {
+  await smmAdminPost({ action: 'recordProviderAttempt', providerId, success });
 }

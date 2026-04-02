@@ -473,6 +473,24 @@ export interface SMMProvider {
   name: string;
   apiUrl: string;
   isHidden: boolean;
+  /** 공급처 우선순위 (1=1순위, 2=2순위, ... 낮을수록 먼저 시도). 미설정 시 99 */
+  priority?: number;
+}
+
+/** 공급처별 주문 성공률 통계 */
+export interface SMMProviderStats {
+  id: string;
+  totalAttempts: number;
+  successCount: number;
+  failCount: number;
+  /** 성공률 (0~100) */
+  successRate: number;
+  lastAttemptAt?: string;
+  lastSuccessAt?: string;
+  lastFailAt?: string;
+  /** 성공률 80% 미만으로 자동 비활성화 된 경우 true */
+  autoDisabled: boolean;
+  updatedAt?: string;
 }
 
 export interface SMMSource {
