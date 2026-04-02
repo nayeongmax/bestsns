@@ -350,7 +350,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                 providerName: provider.name,
                 costPrice: source.costPrice || 0,
                 sellingPrice: product.sellingPrice || 0,
-                profit: Math.floor(opt.totalPrice - ((source.costPrice || 0) / 1000 * opt.quantity)),
+                profit: Math.floor(opt.totalPrice - ((source.costPrice || 0) * opt.quantity)),
                 status: '진행중',
                 externalOrderId: result.orderId
               };
