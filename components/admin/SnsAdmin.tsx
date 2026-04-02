@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert, NotificationType, BannerAd } from '@/types';
+import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert, SMMProviderStats, NotificationType, BannerAd } from '@/types';
 import { SNS_PLATFORMS } from '../../constants.tsx';
-import { upsertSmmOrderAdmin } from '../../smmDb';
+import { upsertSmmOrderAdmin, fetchSmmProviderStatsAdmin, upsertSmmProvidersAdmin } from '../../smmDb';
 import { fetchProfileRow, updateProfile } from '../../profileDb';
 import { fetchBannerAds, upsertBannerAd, deleteBannerAd } from '../../bannerDb';
 
@@ -50,6 +50,30 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const [orderMonthFilter, setOrderMonthFilter] = useState('전체 기간');
 
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+
+  // 공급처별 성공률 통계
+  const [providerStats, setProviderStats] = useState<SMMProviderStats[]>([]);
+  const [isSavingPriority, setIsSavingPriority] = useState(false);
+
+  useEffect(() => {
+    fetchSmmProviderStatsAdmin()
+      .then(setProviderStats)
+      .catch(e => console.warn('[SnsAdmin] providerStats 로드 실패:', e));
+  }, []);
+
+  const handleSavePriority = async (providerId: string, priority: number) => {
+    const updated = smmProviders.map(p => p.id === providerId ? { ...p, priority } : p);
+    setSmmProviders(updated);
+    setIsSavingPriority(true);
+    try {
+      await upsertSmmProvidersAdmin(updated);
+    } catch (e) {
+      console.error('[SnsAdmin] 우선순위 저장 실패:', e);
+      alert('우선순위 저장에 실패했습니다.');
+    } finally {
+      setIsSavingPriority(false);
+    }
+  };
 
   // JAP 주문 상태 (orderId → { status, remains })
   // 배너 광고 관리
@@ -819,24 +843,85 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
             </button>
           </div>
           <div className="space-y-4 md:space-y-6 px-2 md:px-4">
-             <h4 className="text-base md:text-xl font-black text-gray-900 italic uppercase">시스템 등록 공급처 목록 ({smmProviders.length})</h4>
+             <div className="flex items-center justify-between">
+               <h4 className="text-base md:text-xl font-black text-gray-900 italic uppercase">시스템 등록 공급처 목록 ({smmProviders.length})</h4>
+               {isSavingPriority && <span className="text-[11px] text-blue-500 font-black animate-pulse">저장 중...</span>}
+             </div>
+
+             {/* 공급처 우선순위 안내 */}
+             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 md:p-6 text-[11px] md:text-xs text-blue-700 font-bold space-y-1">
+               <p>🏆 <strong>우선순위 설정</strong>: 주문 시 낮은 번호(1순위)부터 먼저 시도합니다.</p>
+               <p>🔄 <strong>자동 Failover</strong>: 1순위 실패 → 2순위 → 3순위 순으로 자동 전환됩니다.</p>
+               <p>⚠️ <strong>자동 비활성화</strong>: 성공률 80% 미만 시 자동으로 비활성화됩니다.</p>
+             </div>
+
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-                {smmProviders.map(p => (
+                {[...smmProviders].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99)).map(p => {
+                  const stats = providerStats.find(s => s.id === p.id);
+                  const successRate = stats?.successRate ?? 100;
+                  const rateColor = successRate >= 90 ? 'text-green-600' : successRate >= 80 ? 'text-yellow-600' : 'text-red-600';
+                  const rateBg = successRate >= 90 ? 'bg-green-50' : successRate >= 80 ? 'bg-yellow-50' : 'bg-red-50';
+                  const priorityVal = p.priority ?? 99;
+                  const priorityLabel = priorityVal === 1 ? '🥇 1순위' : priorityVal === 2 ? '🥈 2순위' : priorityVal === 3 ? '🥉 3순위' : `${priorityVal}순위`;
+                  const priorityBg = priorityVal === 1 ? 'bg-yellow-400 text-yellow-900' : priorityVal === 2 ? 'bg-gray-300 text-gray-800' : priorityVal === 3 ? 'bg-orange-300 text-orange-900' : 'bg-gray-100 text-gray-500';
+                  return (
                   <div key={p.id} className={`bg-white p-4 md:p-8 rounded-2xl md:rounded-[40px] shadow-sm border-2 transition-all group ${p.isHidden ? 'grayscale opacity-50 bg-gray-50 border-gray-300' : 'border-gray-100 hover:border-blue-200'}`}>
-                     <div className="flex justify-between items-start mb-4 md:mb-6">
-                        <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase italic ${p.isHidden ? 'bg-gray-200 text-gray-400' : 'bg-blue-50 text-blue-600'}`}>ID: {p.id}</span>
+                     <div className="flex justify-between items-start mb-3 md:mb-5">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase italic ${p.isHidden ? 'bg-gray-200 text-gray-400' : 'bg-blue-50 text-blue-600'}`}>ID: {p.id}</span>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black ${priorityBg}`}>{priorityLabel}</span>
+                        </div>
                         <div className="flex gap-2">
                            {!p.isHidden && <button onClick={() => startEditProvider(p)} className="text-gray-300 hover:text-blue-500 font-black text-sm">수정</button>}
                            <button onClick={() => handleDeleteProvider(p.id)} className="text-gray-300 hover:text-red-500 font-black text-sm">삭제</button>
                         </div>
                      </div>
                      <h5 className="text-lg md:text-2xl font-black text-gray-900 mb-1 md:mb-2 italic">{p.name}</h5>
-                     <p className="text-[11px] font-bold text-gray-400 truncate opacity-60 mb-3 md:mb-6">{p.apiUrl}</p>
+                     <p className="text-[11px] font-bold text-gray-400 truncate opacity-60 mb-3">{p.apiUrl}</p>
+
+                     {/* 성공률 통계 */}
+                     {stats && stats.totalAttempts > 0 && (
+                       <div className={`${rateBg} rounded-xl p-3 mb-3 flex items-center justify-between`}>
+                         <span className="text-[10px] font-black text-gray-500">성공률</span>
+                         <div className="flex items-center gap-2">
+                           <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                             <div className={`h-full rounded-full ${successRate >= 90 ? 'bg-green-500' : successRate >= 80 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${Math.max(0, Math.min(100, successRate))}%` }} />
+                           </div>
+                           <span className={`text-sm font-black ${rateColor}`}>{successRate.toFixed(1)}%</span>
+                         </div>
+                       </div>
+                     )}
+                     {stats && stats.totalAttempts > 0 && (
+                       <div className="grid grid-cols-3 gap-1 mb-3 text-center">
+                         <div className="bg-gray-50 rounded-xl p-2"><p className="text-[9px] text-gray-400 font-bold">총시도</p><p className="text-sm font-black text-gray-700">{stats.totalAttempts}</p></div>
+                         <div className="bg-green-50 rounded-xl p-2"><p className="text-[9px] text-green-400 font-bold">성공</p><p className="text-sm font-black text-green-700">{stats.successCount}</p></div>
+                         <div className="bg-red-50 rounded-xl p-2"><p className="text-[9px] text-red-400 font-bold">실패</p><p className="text-sm font-black text-red-700">{stats.failCount}</p></div>
+                       </div>
+                     )}
+
+                     {/* 우선순위 선택 */}
+                     <div className="mb-3">
+                       <label className="text-[10px] font-black text-gray-400 uppercase italic block mb-1">주문 우선순위</label>
+                       <select
+                         value={priorityVal}
+                         onChange={e => handleSavePriority(p.id, Number(e.target.value))}
+                         className={`w-full p-2.5 rounded-2xl font-black text-sm border-2 outline-none transition-all ${priorityVal <= 3 ? 'border-blue-200 bg-blue-50' : 'border-gray-100 bg-gray-50'}`}
+                       >
+                         <option value={1}>🥇 1순위 (최우선)</option>
+                         <option value={2}>🥈 2순위</option>
+                         <option value={3}>🥉 3순위</option>
+                         <option value={4}>4순위</option>
+                         <option value={5}>5순위</option>
+                         <option value={99}>미설정 (99)</option>
+                       </select>
+                     </div>
+
                      <button onClick={() => setSmmProviders(prev => prev.map(item => item.id === p.id ? { ...item, isHidden: !item.isHidden } : item))} className={`w-full py-2 md:py-3 rounded-2xl font-black text-[11px] transition-all italic uppercase ${p.isHidden ? 'bg-red-500 text-white shadow-lg' : 'bg-gray-900 text-white'}`}>
                         {p.isHidden ? '⚠️ 시스템 중지됨 (재가동)' : '현재 정상 운영 중 (중지)'}
                      </button>
                   </div>
-                ))}
+                  );
+                })}
              </div>
           </div>
         </div>

@@ -6,14 +6,16 @@
  *
  * 인증: 요청 헤더 x-admin-key 가 VITE_ADMIN_PANEL_PASSWORD(또는 VITE_ADMIN_PASSWORD)와 일치해야 합니다.
  *
- * GET  /.netlify/functions/smm-admin?resource=orders     → 전체 주문 목록
- * GET  /.netlify/functions/smm-admin?resource=providers  → 전체 공급처 목록
- * GET  /.netlify/functions/smm-admin?resource=products   → 전체 상품 목록
- * POST /.netlify/functions/smm-admin  { action:'upsertOrder',    order }
- * POST /.netlify/functions/smm-admin  { action:'upsertOrders',   orders }
- * POST /.netlify/functions/smm-admin  { action:'upsertProviders',providers }
- * POST /.netlify/functions/smm-admin  { action:'upsertProducts', products }
- * POST /.netlify/functions/smm-admin  { action:'deleteProducts', ids }
+ * GET  /.netlify/functions/smm-admin?resource=orders        → 전체 주문 목록
+ * GET  /.netlify/functions/smm-admin?resource=providers     → 전체 공급처 목록
+ * GET  /.netlify/functions/smm-admin?resource=products      → 전체 상품 목록
+ * GET  /.netlify/functions/smm-admin?resource=providerStats → 공급처별 성공률 통계
+ * POST /.netlify/functions/smm-admin  { action:'upsertOrder',           order }
+ * POST /.netlify/functions/smm-admin  { action:'upsertOrders',          orders }
+ * POST /.netlify/functions/smm-admin  { action:'upsertProviders',       providers }
+ * POST /.netlify/functions/smm-admin  { action:'upsertProducts',        products }
+ * POST /.netlify/functions/smm-admin  { action:'deleteProducts',        ids }
+ * POST /.netlify/functions/smm-admin  { action:'recordProviderAttempt', providerId, success }
  */
 
 const CORS_HEADERS = {
@@ -97,7 +99,16 @@ exports.handler = async (event) => {
         return resp(200, await res.json());
       }
 
-      return resp(400, { error: 'resource 파라미터가 필요합니다. (orders | providers | products)' });
+      if (resource === 'providerStats') {
+        const res = await fetch(
+          `${supabaseUrl}/rest/v1/smm_provider_stats?order=id.asc&select=*`,
+          { headers: authHeaders }
+        );
+        if (!res.ok) throw new Error(await res.text());
+        return resp(200, await res.json());
+      }
+
+      return resp(400, { error: 'resource 파라미터가 필요합니다. (orders | providers | products | providerStats)' });
     }
 
     // ── POST: 데이터 변경 ────────────────────────────────────────
@@ -182,6 +193,81 @@ exports.handler = async (event) => {
         );
         if (!res.ok) throw new Error(await res.text());
         return resp(200, { success: true });
+      }
+
+      // 공급처 주문 시도 결과 기록 (성공/실패 통계 누적)
+      if (body.action === 'recordProviderAttempt') {
+        const { providerId, success } = body;
+        if (!providerId) return resp(400, { error: 'providerId 가 필요합니다.' });
+
+        const now = new Date().toISOString();
+
+        // 현재 통계 조회
+        const getRes = await fetch(
+          `${supabaseUrl}/rest/v1/smm_provider_stats?id=eq.${encodeURIComponent(providerId)}&select=*`,
+          { headers: authHeaders }
+        );
+        const existing = getRes.ok ? (await getRes.json())[0] : null;
+
+        const totalAttempts = (existing?.total_attempts ?? 0) + 1;
+        const successCount  = (existing?.success_count  ?? 0) + (success ? 1 : 0);
+        const failCount     = (existing?.fail_count     ?? 0) + (success ? 0 : 1);
+        const successRate   = totalAttempts > 0 ? Math.round((successCount / totalAttempts) * 10000) / 100 : 100;
+
+        const statsRow = {
+          id: providerId,
+          total_attempts: totalAttempts,
+          success_count:  successCount,
+          fail_count:     failCount,
+          success_rate:   successRate,
+          last_attempt_at: now,
+          ...(success ? { last_success_at: now } : { last_fail_at: now }),
+          auto_disabled: existing?.auto_disabled ?? false,
+          updated_at: now,
+        };
+
+        const upsertRes = await fetch(
+          `${supabaseUrl}/rest/v1/smm_provider_stats`,
+          {
+            method: 'POST',
+            headers: { ...authHeaders, Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify(statsRow),
+          }
+        );
+        if (!upsertRes.ok) throw new Error(await upsertRes.text());
+
+        // 성공률 80% 미만이고 시도 횟수 10건 이상이면 자동 비활성화
+        if (totalAttempts >= 10 && successRate < 80) {
+          await fetch(
+            `${supabaseUrl}/rest/v1/smm_providers?id=eq.${encodeURIComponent(providerId)}`,
+            {
+              method: 'PATCH',
+              headers: { ...authHeaders, Prefer: 'return=minimal' },
+              body: JSON.stringify({ is_hidden: true }),
+            }
+          );
+          await fetch(
+            `${supabaseUrl}/rest/v1/smm_provider_stats?id=eq.${encodeURIComponent(providerId)}`,
+            {
+              method: 'PATCH',
+              headers: { ...authHeaders, Prefer: 'return=minimal' },
+              body: JSON.stringify({ auto_disabled: true }),
+            }
+          );
+          console.log(`[smm-admin] 공급처 ${providerId} 성공률 ${successRate}% → 자동 비활성화`);
+
+          // 카카오 알림: 자동 비활성화
+          const kakaoUrl = process.env.URL ? `${process.env.URL}/.netlify/functions/kakao-notify` : null;
+          if (kakaoUrl) {
+            fetch(kakaoUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'provider_auto_disabled', providerId, successRate }),
+            }).catch(() => {});
+          }
+        }
+
+        return resp(200, { success: true, successRate });
       }
 
       return resp(400, { error: '알 수 없는 action 입니다.' });

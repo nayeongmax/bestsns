@@ -186,5 +186,63 @@ exports.handler = async () => {
   });
 
   console.log(`[smm-sync] ${successCount}/${updates.length}건 업데이트 완료`);
+
+  // ── 6. 공급처 성공률 주기적 체크 → 80% 미만이면 자동 비활성화 ──────────
+  try {
+    await checkAndAutoDisableProviders(supabaseUrl, authHeaders);
+  } catch (e) {
+    console.warn('[smm-sync] 공급처 자동비활성화 체크 실패:', e.message);
+  }
+
   return { statusCode: 200, body: `updated ${successCount} orders` };
 };
+
+/**
+ * smm_provider_stats 테이블을 읽어 성공률 80% 미만 공급처를 자동 비활성화.
+ * 10건 미만 시도는 아직 데이터 부족이라 판단하여 건너뜀.
+ */
+async function checkAndAutoDisableProviders(supabaseUrl, authHeaders) {
+  const statsRes = await fetch(
+    `${supabaseUrl}/rest/v1/smm_provider_stats?select=id,total_attempts,success_rate,auto_disabled`,
+    { headers: authHeaders }
+  );
+  if (!statsRes.ok) return;
+  const stats = await statsRes.json();
+
+  for (const stat of stats) {
+    if (stat.auto_disabled) continue;
+    if ((stat.total_attempts ?? 0) < 10) continue;
+    if ((stat.success_rate ?? 100) < 80) {
+      console.log(`[smm-sync] 공급처 ${stat.id} 성공률 ${stat.success_rate}% → 자동 비활성화`);
+      await fetch(
+        `${supabaseUrl}/rest/v1/smm_providers?id=eq.${encodeURIComponent(stat.id)}`,
+        {
+          method: 'PATCH',
+          headers: { ...authHeaders, Prefer: 'return=minimal' },
+          body: JSON.stringify({ is_hidden: true }),
+        }
+      );
+      await fetch(
+        `${supabaseUrl}/rest/v1/smm_provider_stats?id=eq.${encodeURIComponent(stat.id)}`,
+        {
+          method: 'PATCH',
+          headers: { ...authHeaders, Prefer: 'return=minimal' },
+          body: JSON.stringify({ auto_disabled: true, updated_at: new Date().toISOString() }),
+        }
+      );
+      // 카카오 알림
+      const siteUrl = process.env.URL;
+      if (siteUrl) {
+        fetch(`${siteUrl}/.netlify/functions/kakao-notify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'provider_auto_disabled',
+            providerId: stat.id,
+            successRate: stat.success_rate,
+          }),
+        }).catch(() => {});
+      }
+    }
+  }
+}
