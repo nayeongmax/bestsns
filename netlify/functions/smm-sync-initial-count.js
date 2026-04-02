@@ -1,13 +1,23 @@
 /**
- * smm-sync-initial-count.js — 최초수량(initial_count) 자동 동기화 스케줄 함수
+ * smm-sync-initial-count.js — 주문 상태 자동 동기화 스케줄 함수
  *
- * 매 5분마다 자동 실행되어, initial_count가 0이거나 NULL인 주문에 대해
- * 공급처 API에서 start_count를 조회하고 DB에 업데이트합니다.
+ * 매 5분마다 자동 실행되어, 진행 중인 주문에 대해 공급처 API에서
+ * start_count, remains, status를 조회하고 DB에 업데이트합니다.
  *
  * netlify.toml 에 아래 설정 필요:
  *   [functions."smm-sync-initial-count"]
  *     schedule = "*/5 * * * *"
  */
+
+/** 공급처 status 문자열 → 한국어 주문 상태 */
+function mapProviderStatus(status) {
+  if (!status) return null;
+  const s = status.toLowerCase();
+  if (s === 'completed') return '작업완료';
+  // Canceled/Refunded는 환불 로직이 필요하므로 여기서는 처리하지 않음
+  // (관리자 화면의 handleCheckOrderStatuses에서 처리)
+  return null;
+}
 
 exports.handler = async () => {
   const supabaseUrl = (
@@ -44,9 +54,9 @@ exports.handler = async () => {
     providerMap.set(p.name, { id: p.id, apiUrl: p.api_url });
   }
 
-  // 2. initial_count가 0이거나 NULL인 주문 조회 (취소 제외)
+  // 2. 진행 중인 주문 OR initial_count가 0/NULL인 주문 조회 (취소 제외)
   const ordersRes = await fetch(
-    `${supabaseUrl}/rest/v1/smm_orders?select=id,provider_name,external_order_id,status&or=(initial_count.is.null,initial_count.eq.0)`,
+    `${supabaseUrl}/rest/v1/smm_orders?select=id,provider_name,external_order_id,status,initial_count,remains&or=(status.eq.진행중,initial_count.is.null,initial_count.eq.0)`,
     { headers: authHeaders }
   );
   if (!ordersRes.ok) {
@@ -72,7 +82,7 @@ exports.handler = async () => {
   console.log(`[smm-sync] 동기화 대상 주문 ${orders.length}건`);
 
   // 3. 공급처별 그룹화
-  // providerId → { apiUrl, extToOurId: Map<externalOrderId, ourOrderId> }
+  // providerId → { apiUrl, extToOurId: Map<externalOrderId, { ourId, currentStatus, initialCount }> }
   const groups = new Map();
   for (const order of orders) {
     const provider = providerMap.get(order.provider_name);
@@ -80,11 +90,15 @@ exports.handler = async () => {
     if (!groups.has(provider.id)) {
       groups.set(provider.id, { apiUrl: provider.apiUrl, extToOurId: new Map() });
     }
-    groups.get(provider.id).extToOurId.set(order.external_order_id, order.id);
+    groups.get(provider.id).extToOurId.set(order.external_order_id, {
+      ourId: order.id,
+      currentStatus: order.status,
+      initialCount: order.initial_count,
+    });
   }
 
-  // 4. 공급처별 status API 호출 → start_count 수집
-  const updates = []; // { id, initial_count }
+  // 4. 공급처별 status API 호출 → start_count, remains, status 수집
+  const updates = []; // { id, initial_count?, remains?, status? }
 
   for (const [providerId, group] of groups) {
     const apiKey = process.env[`SMM_KEY_${String(providerId).toUpperCase()}`];
@@ -110,12 +124,32 @@ exports.handler = async () => {
       const ordersData = statusData.orders || statusData;
 
       for (const [extId, data] of Object.entries(ordersData)) {
+        const orderInfo = group.extToOurId.get(extId);
+        if (!orderInfo) continue;
+
+        const { ourId, currentStatus, initialCount } = orderInfo;
+        const update = { id: ourId };
+
+        // start_count → initial_count (아직 0/null인 경우만)
         const startCount = Number(data.start_count ?? 0);
-        if (startCount > 0) {
-          const ourId = group.extToOurId.get(extId);
-          if (ourId) {
-            updates.push({ id: ourId, initial_count: startCount });
-          }
+        if (startCount > 0 && (!initialCount || initialCount === 0)) {
+          update.initial_count = startCount;
+        }
+
+        // remains 업데이트 (작업완료 제외)
+        if (currentStatus !== '작업완료' && data.remains != null) {
+          update.remains = Number(data.remains);
+        }
+
+        // status 업데이트: Completed → 작업완료
+        const mappedStatus = mapProviderStatus(data.status);
+        if (mappedStatus && mappedStatus !== currentStatus) {
+          update.status = mappedStatus;
+        }
+
+        // 실제 업데이트할 내용이 있는 경우만 추가
+        if (update.initial_count != null || update.remains != null || update.status != null) {
+          updates.push(update);
         }
       }
     } catch (e) {
@@ -124,28 +158,28 @@ exports.handler = async () => {
   }
 
   if (updates.length === 0) {
-    console.log('[smm-sync] 업데이트할 start_count 없음 (모두 0 또는 미제공)');
-    return { statusCode: 200, body: 'no start_count available yet' };
+    console.log('[smm-sync] 업데이트할 내용 없음');
+    return { statusCode: 200, body: 'no updates available yet' };
   }
 
-  // 5. initial_count만 PATCH (다른 컬럼 보존)
+  // 5. PATCH (업데이트할 필드만)
   const patchResults = await Promise.all(
-    updates.map(({ id, initial_count }) =>
+    updates.map(({ id, ...fields }) =>
       fetch(
         `${supabaseUrl}/rest/v1/smm_orders?id=eq.${encodeURIComponent(id)}`,
         {
           method: 'PATCH',
           headers: { ...authHeaders, Prefer: 'return=minimal' },
-          body: JSON.stringify({ initial_count }),
+          body: JSON.stringify(fields),
         }
-      ).then((r) => ({ id, initial_count, ok: r.ok }))
+      ).then((r) => ({ id, fields, ok: r.ok }))
     )
   );
 
   const successCount = patchResults.filter((r) => r.ok).length;
-  patchResults.forEach(({ id, initial_count, ok }) => {
+  patchResults.forEach(({ id, fields, ok }) => {
     if (ok) {
-      console.log(`[smm-sync] 업데이트 완료: ${id} → initial_count=${initial_count}`);
+      console.log(`[smm-sync] 업데이트 완료: ${id} →`, JSON.stringify(fields));
     } else {
       console.error(`[smm-sync] 업데이트 실패: ${id}`);
     }
