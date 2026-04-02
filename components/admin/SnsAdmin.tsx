@@ -286,13 +286,25 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   }, [smmProviders, smmProducts, isCheckingPrices, setSmmProducts]);
 
   // JAP 공급처에서 주문 상태 일괄 조회
-  const handleCheckOrderStatuses = useCallback(async () => {
+  const handleCheckOrderStatuses = useCallback(async (isAuto = false) => {
     if (isCheckingStatus) return;
-    const pending = smmOrders.filter(o =>
+    // 진행 중인 주문 (취소/환불 처리 대상)
+    const activeOrders = smmOrders.filter(o =>
       o.status !== '작업완료' && o.status !== '주문취소' &&
       o.externalOrderId && o.externalOrderId !== 'PENDING' && o.externalOrderId !== 'FAILED'
     );
-    if (pending.length === 0) { alert('조회할 진행 중인 주문이 없습니다.'); return; }
+    // 작업완료됐지만 최초수량이 미설정인 주문 (초기수량 보완 목적)
+    const completedMissingCount = smmOrders.filter(o =>
+      o.status === '작업완료' &&
+      (o.initialCount === 0 || o.initialCount == null) &&
+      o.externalOrderId && o.externalOrderId !== 'PENDING' && o.externalOrderId !== 'FAILED'
+    );
+    const completedMissingCountIds = new Set(completedMissingCount.map(o => o.id));
+    const pending = [...activeOrders, ...completedMissingCount];
+    if (pending.length === 0) {
+      if (!isAuto) alert('조회할 진행 중인 주문이 없습니다.');
+      return;
+    }
 
     setIsCheckingStatus(true);
     try {
@@ -329,8 +341,10 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       for (const [ourId, jap] of Object.entries(next)) {
         const order = pending.find(o => o.id === ourId);
         if (!order) continue;
-        const shouldUpdateInitialCount = (jap.startCount ?? 0) > 0 && order.initialCount === 0;
-        const shouldUpdateRemains = jap.remains !== undefined && jap.remains !== order.remains;
+        const isCompletedOrder = completedMissingCountIds.has(ourId);
+        const shouldUpdateInitialCount = (jap.startCount ?? 0) > 0 && (order.initialCount === 0 || order.initialCount == null);
+        // 작업완료 주문은 remains 업데이트 제외 (initialCount만 보완)
+        const shouldUpdateRemains = !isCompletedOrder && jap.remains !== undefined && jap.remains !== order.remains;
         if (shouldUpdateInitialCount || shouldUpdateRemains) {
           const updated = {
             ...order,
@@ -343,8 +357,9 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       }
 
       // 공급처에서 Canceled/Refunded된 주문: 다른 serviceId로 재시도, 전부 실패 시 포인트 환불 + 주문취소
+      // (작업완료 보완용 주문은 취소 처리 제외)
       const canceledOurIds = Object.entries(next)
-        .filter(([, v]) => v.status === 'Canceled' || v.status === 'Refunded')
+        .filter(([id, v]) => !completedMissingCountIds.has(id) && (v.status === 'Canceled' || v.status === 'Refunded'))
         .map(([id]) => id);
 
       for (const ourId of canceledOurIds) {
@@ -490,6 +505,14 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     const interval = setInterval(checkDelays, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [smmOrders, delayNotifiedIds, getEstimatedMinsForOrder, addNotif]);
+
+  // 10분마다 주문 상태 자동 조회 → 취소된 주문 자동 크레딧 환불 + 최초수량 동기화
+  useEffect(() => {
+    const interval = setInterval(() => {
+      handleCheckOrderStatuses(true);
+    }, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [handleCheckOrderStatuses]);
 
   // 자동 스케줄: 매일 자정(0시), 정오(12시) 원가 체크
   useEffect(() => {
