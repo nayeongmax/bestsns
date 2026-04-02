@@ -13,6 +13,7 @@
  * POST /.netlify/functions/smm-admin  { action:'upsertOrder',           order }
  * POST /.netlify/functions/smm-admin  { action:'upsertOrders',          orders }
  * POST /.netlify/functions/smm-admin  { action:'upsertProviders',       providers }
+ * POST /.netlify/functions/smm-admin  { action:'deleteProvider',        id }
  * POST /.netlify/functions/smm-admin  { action:'upsertProducts',        products }
  * POST /.netlify/functions/smm-admin  { action:'deleteProducts',        ids }
  * POST /.netlify/functions/smm-admin  { action:'recordProviderAttempt', providerId, success }
@@ -157,6 +158,21 @@ exports.handler = async (event) => {
             method: 'POST',
             headers: { ...authHeaders, Prefer: 'resolution=merge-duplicates,return=minimal' },
             body: JSON.stringify(providers),
+          }
+        );
+        if (!res.ok) throw new Error(await res.text());
+        return resp(200, { success: true });
+      }
+
+      // 공급처 삭제
+      if (body.action === 'deleteProvider') {
+        const { id } = body;
+        if (!id) return resp(400, { error: 'id 가 필요합니다.' });
+        const res = await fetch(
+          `${supabaseUrl}/rest/v1/smm_providers?id=eq.${encodeURIComponent(id)}`,
+          {
+            method: 'DELETE',
+            headers: { ...authHeaders, Prefer: 'return=minimal' },
           }
         );
         if (!res.ok) throw new Error(await res.text());
