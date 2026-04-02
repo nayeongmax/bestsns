@@ -30,6 +30,9 @@
   status = 200
   force = true
 
+[functions."smm-sync-initial-count"]
+  schedule = "*/5 * * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
