@@ -1344,24 +1344,29 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                  <table className="w-full text-left" style={{minWidth: '1200px'}}>
                     <thead className="bg-[#0f172a] text-white text-[10px] font-black uppercase tracking-widest italic">
                        <tr>
-                          <th className="px-6 py-5 whitespace-nowrap">일시 / 주문ID</th>
+                          <th className="px-6 py-5 whitespace-nowrap">주문일시 / 원천ID</th>
                           <th className="px-6 py-5 whitespace-nowrap">구매자</th>
-                          <th className="px-6 py-5 whitespace-nowrap">구매 상품</th>
-                          <th className="px-6 py-5 whitespace-nowrap">작업 링크</th>
-                          <th className="px-6 py-5 text-center whitespace-nowrap">주문량</th>
-                          <th className="px-6 py-5 text-right whitespace-nowrap">포인트 / 수익</th>
-                          <th className="px-6 py-5 text-center whitespace-nowrap" style={{minWidth:'200px'}}>상태</th>
+                          <th className="px-6 py-5 whitespace-nowrap">상품명</th>
+                          <th className="px-6 py-5 whitespace-nowrap">링크</th>
+                          <th className="px-6 py-5 text-center whitespace-nowrap">주문수량 / 최초수량</th>
+                          <th className="px-6 py-5 text-right whitespace-nowrap">비용(Charge) / 수익</th>
+                          <th className="px-6 py-5 text-center whitespace-nowrap">Remains</th>
+                          <th className="px-6 py-5 text-center whitespace-nowrap" style={{minWidth:'200px'}}>진행상황</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                        {filteredOrders.length === 0 ? (
-                         <tr><td colSpan={7} className="py-40 text-center text-gray-300 font-black italic text-lg">기록된 주문 데이터가 없습니다.</td></tr>
+                         <tr><td colSpan={8} className="py-40 text-center text-gray-300 font-black italic text-lg">기록된 주문 데이터가 없습니다.</td></tr>
                        ) : filteredOrders.map(o => (
                          <tr key={o.id} className="hover:bg-blue-50/20 transition-all group">
                             <td className="px-6 py-6">
                                <div className="flex flex-col gap-0.5">
-                                 <span className="text-[12px] font-black text-gray-800 whitespace-nowrap">{o.orderTime}</span>
-                                 <span className="text-[10px] text-blue-500 font-bold whitespace-nowrap">#{o.id}</span>
+                                 <span className="text-[12px] font-black text-gray-800 whitespace-nowrap">{o.orderTime.replace('T', ' ').slice(0, 19)}</span>
+                                 {o.externalOrderId && o.externalOrderId !== 'PENDING' && o.externalOrderId !== 'FAILED' ? (
+                                   <span className="text-[11px] text-orange-500 font-black whitespace-nowrap">ID: {o.externalOrderId}</span>
+                                 ) : (
+                                   <span className="text-[10px] text-gray-300 font-bold whitespace-nowrap">{o.externalOrderId || '-'}</span>
+                                 )}
                                </div>
                             </td>
                             <td className="px-6 py-6 whitespace-nowrap">
@@ -1387,11 +1392,16 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                             </td>
                             <td className="px-6 py-6 text-center whitespace-nowrap">
                                <span className="text-[13px] font-black text-gray-900 italic">{o.quantity.toLocaleString()}</span>
-                               <span className="text-[9.5px] font-bold text-gray-400 ml-2 uppercase">최초 {(japStatuses[o.id]?.startCount ?? o.initialCount ?? 0).toLocaleString()}</span>
+                               <br />
+                               <span className="text-[10px] font-black text-orange-500">최초 {(japStatuses[o.id]?.startCount ?? o.initialCount ?? 0).toLocaleString()}</span>
                             </td>
                             <td className="px-6 py-6 text-right whitespace-nowrap">
-                               <span className="text-[15px] font-black text-gray-900 italic">{(o.sellingPrice * o.quantity).toLocaleString()}P</span>
+                               <span className="text-[11px] font-black text-green-600 block">원가 {+(o.costPrice / 1000 * o.quantity).toFixed(4)}</span>
+                               <span className="text-[13px] font-black text-gray-900 italic">{(o.sellingPrice * o.quantity).toLocaleString()}P</span>
                                <span className="text-[11px] font-black text-blue-500 ml-2">+{o.profit.toLocaleString()}</span>
+                            </td>
+                            <td className="px-6 py-6 text-center whitespace-nowrap">
+                               <span className="text-[13px] font-black text-gray-600 italic">{(japStatuses[o.id]?.remains ?? o.remains ?? 0).toLocaleString()}</span>
                             </td>
                             <td className="px-8 py-6 text-center">
                                {(() => {

@@ -56,7 +56,7 @@ exports.handler = async () => {
 
   // 2. 진행 중인 주문 OR initial_count가 0/NULL인 주문 조회 (취소 제외)
   const ordersRes = await fetch(
-    `${supabaseUrl}/rest/v1/smm_orders?select=id,provider_name,external_order_id,status,initial_count,remains&or=(status.eq.진행중,and(status.eq.작업완료,initial_count.eq.0),initial_count.is.null)`,
+    `${supabaseUrl}/rest/v1/smm_orders?select=id,provider_name,external_order_id,status,initial_count,remains&or=(status.eq.진행중,initial_count.is.null,initial_count.eq.0)`,
     { headers: authHeaders }
   );
   if (!ordersRes.ok) {
