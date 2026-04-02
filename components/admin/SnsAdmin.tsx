@@ -169,7 +169,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
             const newAvgTime = avgTimes[src.providerId]?.[src.serviceId];
             return {
               ...src,
-              ...(newPrice   != null ? { costPrice: newPrice / 1000 }     : {}),
+              ...(newPrice   != null ? { costPrice: newPrice }            : {}),
               ...(newAvgTime != null ? { estimatedMinutes: newAvgTime }   : {}),
             };
           })
@@ -241,7 +241,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
               const newAvgTime = avgTimes[src.providerId]?.[src.serviceId];
               return {
                 ...src,
-                ...(newPrice   != null ? { costPrice: newPrice / 1000 }   : {}),
+                ...(newPrice   != null ? { costPrice: newPrice }          : {}),
                 ...(newAvgTime != null ? { estimatedMinutes: newAvgTime } : {}),
               };
             }),
@@ -540,7 +540,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
       if (result.status === 'success') {
         setTempSource(prev => ({
           ...prev,
-          costPrice: result.price / 1000,
+          costPrice: result.price,
           ...(result.avgTime != null ? { estimatedMinutes: result.avgTime } : {}),
         }));
       } else {
@@ -915,7 +915,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                             <div className="space-y-1">
                                <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">실시간 원가 정보 (1000개당)</span>
                                <div className="flex items-baseline gap-2">
-                                  <input type="number" value={tempSource.costPrice ? +(tempSource.costPrice * 1000).toFixed(4) : 0} onChange={e => setTempSource({...tempSource, costPrice: Number(e.target.value) / 1000})} className="bg-transparent text-4xl font-black text-green-400 italic outline-none w-28 border-b border-white/10" />
+                                  <input type="number" step="0.01" value={tempSource.costPrice ? +tempSource.costPrice.toFixed(2) : 0} onChange={e => setTempSource({...tempSource, costPrice: Number(e.target.value)})} className="bg-transparent text-4xl font-black text-green-400 italic outline-none w-28 border-b border-white/10" />
                                   <span className="text-xl font-black text-green-400/30 italic">P/1K</span>
                                </div>
                             </div>
@@ -954,7 +954,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic tracking-tighter">{s.providerId}</span>
                            <div>
                               <p className="font-black text-gray-800 text-sm">Service ID: <span className="text-blue-600">#{s.serviceId}</span></p>
-                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {+(s.costPrice * 1000).toFixed(4)}P/1000개{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''} · 최소~최대: {(s.minQuantity ?? productForm.minQuantity).toLocaleString()}~{(s.maxQuantity ?? productForm.maxQuantity).toLocaleString()}</p>
+                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {+s.costPrice.toFixed(2)}/1000개{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''} · 최소~최대: {(s.minQuantity ?? productForm.minQuantity).toLocaleString()}~{(s.maxQuantity ?? productForm.maxQuantity).toLocaleString()}</p>
                            </div>
                         </div>
                         <div className="flex gap-2">
@@ -1039,7 +1039,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                        {safeSources.map((src, sidx) => {
                                          const provider = smmProviders.find(sp => sp.id === src.providerId);
                                          const isProviderDisabled = provider?.isHidden;
-                                         const margin = p.sellingPrice - src.costPrice;
+                                         const margin = p.sellingPrice * 1000 - src.costPrice;
                                          const isEditing = editingSourceInList?.providerId === src.providerId && editingSourceInList?.serviceId === src.serviceId && editingSourceInList?.platform === p.platform && editingSourceInList?.name === p.name && (editingSourceInList?.category || '') === (p.category || '');
                                          return (
                                            <div key={`${src.providerId}_${src.serviceId}_${sidx}`} className={`bg-white border rounded-[32px] p-8 shadow-sm flex flex-col gap-6 transition-all ${isProviderDisabled ? 'grayscale opacity-50 border-red-200 bg-red-50/20' : 'border-gray-100 hover:border-blue-200'}`}>
@@ -1054,7 +1054,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                                 </div>
                                               ) : (
                                                 <>
-                                                  <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-50"><div className="space-y-1"><p className="text-[10px] font-black text-gray-400 uppercase italic">원가</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-400' : 'text-green-500'}`}>{src.costPrice.toLocaleString()}P</p></div><div className="space-y-1 text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic">마진</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-300' : (margin > 0 ? 'text-blue-500' : 'text-red-500')}`}>{margin.toLocaleString()}P</p></div></div>
+                                                  <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-50"><div className="space-y-1"><p className="text-[10px] font-black text-gray-400 uppercase italic">원가/1000개</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-400' : 'text-green-500'}`}>{src.costPrice.toFixed(2)}</p></div><div className="space-y-1 text-right"><p className="text-[10px] font-black text-gray-400 uppercase italic">마진/1000개</p><p className={`text-lg font-black italic ${isProviderDisabled ? 'text-gray-300' : (margin > 0 ? 'text-blue-500' : 'text-red-500')}`}>{margin.toFixed(2)}P</p></div></div>
                                                   <div className="flex gap-2 pt-2"><button onClick={() => startEditSourceInList(p, src)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-xl text-[11px] font-black hover:bg-blue-100">수정</button><button onClick={() => deleteSourceFromInventory(p, src)} className="flex-1 py-2 bg-red-50 text-red-500 rounded-xl text-[11px] font-black hover:bg-red-100">삭제</button></div>
                                                 </>
                                               )}
@@ -1141,8 +1141,8 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                       </div>
                       <p className="text-[14px] font-black text-gray-900 truncate">
                         {alert.type === 'price_changed'
-                          ? `원가 변동: ${alert.oldPrice.toLocaleString()}P → ${(alert.newPrice ?? 0).toLocaleString()}P`
-                          : `서비스 중단 감지 (기존 원가: ${alert.oldPrice.toLocaleString()}P)`
+                          ? `원가 변동: ${alert.oldPrice.toFixed(2)} → ${(alert.newPrice ?? 0).toFixed(2)} (/1000개)`
+                          : `서비스 중단 감지 (기존 원가: ${alert.oldPrice.toFixed(2)}/1000개)`
                         }
                       </p>
                       {alert.productNames.length > 0 && (
