@@ -913,10 +913,10 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                       <div className="bg-white/5 p-5 rounded-[32px] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
                          <div className="flex items-center gap-6 flex-wrap">
                             <div className="space-y-1">
-                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">실시간 원가 정보</span>
+                               <span className="text-[10px] font-black text-gray-500 uppercase italic tracking-widest">실시간 원가 정보 (1000개당)</span>
                                <div className="flex items-baseline gap-2">
                                   <input type="number" value={tempSource.costPrice || 0} onChange={e => setTempSource({...tempSource, costPrice: Number(e.target.value)})} className="bg-transparent text-4xl font-black text-green-400 italic outline-none w-28 border-b border-white/10" />
-                                  <span className="text-xl font-black text-green-400/30 italic">P</span>
+                                  <span className="text-xl font-black text-green-400/30 italic">P/1K</span>
                                </div>
                             </div>
                             <div className="space-y-1">
@@ -954,7 +954,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase italic tracking-tighter">{s.providerId}</span>
                            <div>
                               <p className="font-black text-gray-800 text-sm">Service ID: <span className="text-blue-600">#{s.serviceId}</span></p>
-                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''} · 최소~최대: {(s.minQuantity ?? productForm.minQuantity).toLocaleString()}~{(s.maxQuantity ?? productForm.maxQuantity).toLocaleString()}</p>
+                              <p className="text-[11px] font-bold text-gray-400 italic">원가: {s.costPrice.toLocaleString()}P/1000개{s.estimatedMinutes != null ? ` · ${s.estimatedMinutes}분` : ''} · 최소~최대: {(s.minQuantity ?? productForm.minQuantity).toLocaleString()}~{(s.maxQuantity ?? productForm.maxQuantity).toLocaleString()}</p>
                            </div>
                         </div>
                         <div className="flex gap-2">
