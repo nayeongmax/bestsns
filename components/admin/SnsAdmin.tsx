@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { SMMProvider, SMMProduct, SMMSource, SMMOrder, SMMPriceAlert, SMMProviderStats, NotificationType, BannerAd } from '@/types';
 import { SNS_PLATFORMS } from '../../constants.tsx';
-import { upsertSmmOrderAdmin, fetchSmmProviderStatsAdmin, upsertSmmProvidersAdmin } from '../../smmDb';
+import { upsertSmmOrderAdmin, fetchSmmProviderStatsAdmin, upsertSmmProvidersAdmin, deleteSmmProviderByIdAdmin } from '../../smmDb';
 import { fetchProfileRow, updateProfile } from '../../profileDb';
 import { fetchBannerAds, upsertBannerAd, deleteBannerAd } from '../../bannerDb';
 
@@ -596,9 +596,15 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteProvider = (id: string) => {
+  const handleDeleteProvider = async (id: string) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       setSmmProviders(prev => prev.filter(p => p.id !== id));
+      try {
+        await deleteSmmProviderByIdAdmin(id);
+      } catch (e) {
+        console.error('[SnsAdmin] 공급처 삭제 실패:', e);
+        alert('공급처 삭제에 실패했습니다. 다시 시도해주세요.');
+      }
     }
   };
 

@@ -249,6 +249,10 @@ export async function upsertSmmProvidersAdmin(list: SMMProvider[]): Promise<void
   await smmAdminPost({ action: 'upsertProviders', providers: list.map(providerToRow) });
 }
 
+export async function deleteSmmProviderByIdAdmin(id: string): Promise<void> {
+  await smmAdminPost({ action: 'deleteProvider', id });
+}
+
 export async function upsertSmmProductsAdmin(list: SMMProduct[]): Promise<void> {
   if (list.length === 0) return;
   await smmAdminPost({ action: 'upsertProducts', products: list.map(productToRow) });
