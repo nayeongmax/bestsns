@@ -611,16 +611,27 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   const handleSaveProduct = () => {
     if (!productForm.name) return alert('상품명을 입력하세요.');
     setSmmProducts(prev => {
-      const sameKey = (i: SMMProduct) =>
-        i.platform === productForm.platform &&
-        i.name === productForm.name &&
-        (i.category || '') === (productForm.category || '');
-      const toMerge = prev.filter(sameKey);
-      const filtered = prev.filter(i => !sameKey(i));
       // null/잘못된 소스 제거 후 저장 (providerId 읽기 오류 방지)
       const validSources = (productForm.sources || []).filter((s): s is SMMSource => s != null && s.providerId != null && s.serviceId != null);
-      const finalProduct = { ...productForm, id: editingProductId || toMerge[0]?.id || `prod_${Date.now()}`, sources: validSources };
-      return [...filtered, finalProduct];
+      if (editingProductId) {
+        // 수정 모드: ID로 기존 상품을 찾아서 교체 (이름/플랫폼 변경 시에도 올바르게 동작)
+        const finalProduct = { ...productForm, id: editingProductId, sources: validSources };
+        const exists = prev.some(i => i.id === editingProductId);
+        if (exists) {
+          return prev.map(i => i.id === editingProductId ? finalProduct : i);
+        }
+        return [...prev, finalProduct];
+      } else {
+        // 새 상품 추가 모드: 같은 key(platform+name+category)의 상품과 병합
+        const sameKey = (i: SMMProduct) =>
+          i.platform === productForm.platform &&
+          i.name === productForm.name &&
+          (i.category || '') === (productForm.category || '');
+        const toMerge = prev.filter(sameKey);
+        const filtered = prev.filter(i => !sameKey(i));
+        const finalProduct = { ...productForm, id: toMerge[0]?.id || `prod_${Date.now()}`, sources: validSources };
+        return [...filtered, finalProduct];
+      }
     });
     setProductForm(initialProductState);
     setEditingProductId(null);
