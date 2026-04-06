@@ -733,25 +733,6 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                   부적합한 업종(선거, 토토, 바카라, 19금 불법 유흥업소, 다단계 등)의 게시물 불법 작업 사용을 엄격히 제한합니다.
                 </p>
               </div>
-              {/* 댓글 섹션: 댓글 상품 선택 시에만 노출 */}
-              {isCommentProduct && (
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex items-center gap-3 px-1 sm:px-4">
-                    <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic">댓글 내용</h3>
-                    <span className="text-[10px] font-bold text-orange-400 bg-orange-50 px-2.5 py-1 rounded-full italic">1줄에 댓글 1개</span>
-                  </div>
-                  <textarea
-                    placeholder={"댓글 내용을 입력하세요.\n1줄에 댓글 1개씩 작성해 주세요.\n예시)\n안녕하세요 좋은 내용이네요!\n정말 유익한 글 감사합니다."}
-                    className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white text-sm resize-none leading-relaxed"
-                    rows={6}
-                    value={comments}
-                    onChange={(e) => setComments(e.target.value)}
-                  />
-                  <p className="text-[10px] sm:text-[11px] text-gray-400 font-bold px-1 sm:px-4 italic">
-                    ※ 1줄에 댓글 1개 기준으로 작성해주세요. 수량({quantity || 0}개)만큼 댓글이 필요합니다.
-                  </p>
-                </div>
-              )}
               <button type="button" onClick={handleAddOption} className="w-full py-5 sm:py-6 md:py-8 bg-blue-600 text-white rounded-2xl sm:rounded-[32px] font-black text-lg sm:text-xl md:text-2xl hover:bg-black shadow-xl sm:shadow-2xl transition-all italic uppercase tracking-widest active:scale-[0.98]">+ 장바구니 담기</button>
             </div>
           </div>
