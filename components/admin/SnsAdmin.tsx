@@ -361,7 +361,18 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         } catch (e) { console.error('orderStatus fetch error:', e); }
       }
 
-      // JAP에서 받은 remains/startCount를 smmOrders에 동기화 (DB 저장 포함)
+      // 공급처 status → 한국어 상태 매핑 (canceled/refunded는 별도 처리)
+      const providerStatusToKorean = (s: string): string | null => {
+        const lower = s.toLowerCase();
+        if (lower === 'completed') return '작업완료';
+        if (lower === 'partial') return '부분완료';
+        if (lower === 'in progress') return '진행중';
+        if (lower === 'pending') return '대기중';
+        if (lower === 'processing') return '처리중';
+        return null;
+      };
+
+      // 공급처에서 받은 remains/startCount/status를 smmOrders에 동기화 (DB 저장 포함)
       for (const [ourId, jap] of Object.entries(next)) {
         const order = pending.find(o => o.id === ourId);
         if (!order) continue;
@@ -369,14 +380,22 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
         const shouldUpdateInitialCount = (jap.startCount ?? 0) > 0 && (order.initialCount === 0 || order.initialCount == null);
         // 작업완료 주문은 remains 업데이트 제외 (initialCount만 보완)
         const shouldUpdateRemains = !isCompletedOrder && jap.remains !== undefined && jap.remains !== order.remains;
-        if (shouldUpdateInitialCount || shouldUpdateRemains) {
+        // 공급처 상태가 변경된 경우 DB에 반영 (canceled/refunded는 아래에서 별도 처리)
+        const mappedStatus = !isCompletedOrder && jap.status ? providerStatusToKorean(jap.status) : null;
+        const shouldUpdateStatus = mappedStatus !== null && mappedStatus !== order.status;
+        if (shouldUpdateInitialCount || shouldUpdateRemains || shouldUpdateStatus) {
           const updated = {
             ...order,
             ...(shouldUpdateInitialCount ? { initialCount: jap.startCount! } : {}),
             ...(shouldUpdateRemains ? { remains: jap.remains } : {}),
+            ...(shouldUpdateStatus ? { status: mappedStatus! } : {}),
           };
           setSmmOrders(prev => prev.map(o => o.id === ourId ? updated : o));
           upsertSmmOrderAdmin(updated).catch(e => console.warn('order 동기화 실패:', e));
+          // 작업완료 전환 시 구매자에게 알림
+          if (shouldUpdateStatus && mappedStatus === '작업완료') {
+            addNotif(order.userId, 'sns_activation', '✅ 작업 완료', `[${order.productName}] 주문하신 작업이 완료되었습니다. 링크를 확인해주세요.`);
+          }
         }
       }
 
@@ -503,7 +522,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
   // 5분마다 지연 감지 → 구매자에게 자동 알림
   useEffect(() => {
     const checkDelays = () => {
-      const active = smmOrders.filter(o => o.status === '진행중' && o.externalOrderId && o.externalOrderId !== 'PENDING');
+      const active = smmOrders.filter(o => ['진행중', '대기중', '처리중', '부분완료'].includes(o.status) && o.externalOrderId && o.externalOrderId !== 'PENDING');
       const toNotify: string[] = [];
       for (const order of active) {
         if (delayNotifiedIds.has(order.id)) continue;
@@ -1426,7 +1445,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                  </select>
 
                  <select value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)} className="px-6 py-4 bg-gray-50 border-none rounded-full font-black text-[13px] shadow-inner outline-none cursor-pointer">
-                    <option>전체 상태</option><option>준비중</option><option>진행중</option><option>작업완료</option>
+                    <option>전체 상태</option><option>준비중</option><option>대기중</option><option>진행중</option><option>처리중</option><option>부분완료</option><option>작업완료</option><option>주문취소</option>
                  </select>
               </div>
               <div className="flex gap-2 shrink-0">
@@ -1526,6 +1545,10 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm ${
                                        o.status === '작업완료' ? 'bg-green-500 text-white' :
                                        o.status === '진행중' ? 'bg-blue-600 text-white animate-pulse' :
+                                       o.status === '처리중' ? 'bg-yellow-500 text-white animate-pulse' :
+                                       o.status === '대기중' ? 'bg-gray-400 text-white' :
+                                       o.status === '부분완료' ? 'bg-purple-500 text-white' :
+                                       o.status === '주문취소' ? 'bg-red-500 text-white' :
                                        'bg-gray-100 text-gray-400'
                                      }`}>{o.status}</span>
 

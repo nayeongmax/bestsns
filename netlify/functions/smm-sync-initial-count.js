@@ -14,7 +14,11 @@ function mapProviderStatus(status) {
   if (!status) return null;
   const s = status.toLowerCase();
   if (s === 'completed') return '작업완료';
-  // Canceled/Refunded는 환불 로직이 필요하므로 여기서는 처리하지 않음
+  if (s === 'partial') return '부분완료';
+  if (s === 'in progress') return '진행중';
+  if (s === 'pending') return '대기중';
+  if (s === 'processing') return '처리중';
+  // Canceled/Refunded는 환불·재시도 로직이 필요하므로 여기서는 처리하지 않음
   // (관리자 화면의 handleCheckOrderStatuses에서 처리)
   return null;
 }
@@ -54,9 +58,9 @@ exports.handler = async () => {
     providerMap.set(p.name, { id: p.id, apiUrl: p.api_url });
   }
 
-  // 2. 진행 중인 주문 OR initial_count가 0/NULL인 주문 조회 (취소 제외)
+  // 2. 진행 중인 주문(모든 활성 상태) OR initial_count가 0/NULL인 주문 조회 (취소/완료 제외)
   const ordersRes = await fetch(
-    `${supabaseUrl}/rest/v1/smm_orders?select=id,provider_name,external_order_id,status,initial_count,remains&or=(status.eq.진행중,initial_count.is.null,initial_count.eq.0)`,
+    `${supabaseUrl}/rest/v1/smm_orders?select=id,provider_name,external_order_id,status,initial_count,remains&or=(status.eq.진행중,status.eq.대기중,status.eq.처리중,status.eq.부분완료,initial_count.is.null,initial_count.eq.0)`,
     { headers: authHeaders }
   );
   if (!ordersRes.ok) {
@@ -65,13 +69,14 @@ exports.handler = async () => {
   }
   const allOrders = await ordersRes.json();
 
-  // PENDING/FAILED/취소 주문 제외
+  // PENDING/FAILED/취소/완료 주문 제외
   const orders = allOrders.filter(
     (o) =>
       o.external_order_id &&
       o.external_order_id !== 'PENDING' &&
       o.external_order_id !== 'FAILED' &&
-      o.status !== '주문취소'
+      o.status !== '주문취소' &&
+      o.status !== '작업완료'
   );
 
   if (orders.length === 0) {
