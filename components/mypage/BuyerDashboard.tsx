@@ -514,7 +514,15 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                             </td>
                             <td className="py-5 px-4 font-black text-[14px] italic">{order.productName} - {order.price.toLocaleString()}원</td>
                             <td className="py-5 px-4 text-center whitespace-nowrap">
-                              <span className={`px-3 py-1 rounded text-[11px] font-black ${expandedId === order.id ? 'bg-white text-[#2D3E5E]' : 'bg-gray-100 text-gray-400'}`}>{order.status}</span>
+                              <span className={`px-3 py-1 rounded text-[11px] font-black ${
+                                expandedId === order.id ? 'bg-white text-[#2D3E5E]' :
+                                order.status === '작업완료' ? 'bg-green-100 text-green-600' :
+                                order.status === '주문취소' ? 'bg-red-100 text-red-500' :
+                                order.status === '부분완료' ? 'bg-purple-100 text-purple-600' :
+                                order.status === '처리중' ? 'bg-yellow-100 text-yellow-600' :
+                                order.status === '대기중' ? 'bg-gray-100 text-gray-500' :
+                                'bg-blue-50 text-blue-500'
+                              }`}>{order.status}</span>
                             </td>
                             <td className="py-5 px-6 text-right text-[13px] font-bold italic opacity-80 whitespace-nowrap">{formatOrderTime(order.orderTime)} <span className="ml-2">{expandedId === order.id ? '▲' : '▼'}</span></td>
                           </tr>
