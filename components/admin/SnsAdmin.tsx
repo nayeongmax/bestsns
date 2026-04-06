@@ -152,6 +152,8 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
 
   const [japStatuses, setJapStatuses] = useState<Record<string, { status: string; remains: number; startCount?: number }>>({});
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [checkingOrderId, setCheckingOrderId] = useState<string | null>(null);
+  const [editingStatusOrderId, setEditingStatusOrderId] = useState<string | null>(null);
 
   // 원가 모니터링 알림
   const [priceAlerts, setPriceAlerts] = useState<SMMPriceAlert[]>(() => {
@@ -492,6 +494,81 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
     upsertSmmOrderAdmin(completed).catch(e => console.warn('작업완료 DB 실패:', e));
     addNotif(order.userId, 'sns_activation', '✅ 작업 완료', `[${order.productName}] 주문하신 작업이 완료되었습니다. 링크를 확인해주세요.`);
     setJapStatuses(prev => { const n = { ...prev }; delete n[order.id]; return n; });
+  }, [setSmmOrders, addNotif]);
+
+  // 개별 주문 공급처 상태 조회
+  const handleCheckSingleOrderStatus = useCallback(async (order: SMMOrder) => {
+    if (checkingOrderId) return;
+    const provider = smmProviders.find(p => p.name === order.providerName);
+    if (!provider) { alert('공급처 정보를 찾을 수 없습니다.'); return; }
+    if (!order.externalOrderId || order.externalOrderId === 'PENDING' || order.externalOrderId === 'FAILED') {
+      alert('아직 공급처에 접수되지 않은 주문입니다.'); return;
+    }
+    setCheckingOrderId(order.id);
+    try {
+      const resp = await fetch('/.netlify/functions/smm-api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'orderStatus', providerId: provider.id, apiUrl: provider.apiUrl, orderIds: [order.externalOrderId] }),
+      });
+      const result = await resp.json();
+      if (result.status === 'success' && result.orders) {
+        const data = result.orders[order.externalOrderId];
+        if (data) {
+          const remains = Number(data.remains ?? 0);
+          const startCount = Number(data.start_count ?? 0);
+          const rawStatus = data.status || '';
+          setJapStatuses(prev => ({ ...prev, [order.id]: { status: rawStatus, remains, startCount } }));
+
+          const providerStatusToKorean = (s: string): string | null => {
+            const lower = s.toLowerCase();
+            if (lower === 'completed') return '작업완료';
+            if (lower === 'partial') return '부분완료';
+            if (lower === 'in progress') return '진행중';
+            if (lower === 'pending') return '대기중';
+            if (lower === 'processing') return '처리중';
+            return null;
+          };
+          const mappedStatus = providerStatusToKorean(rawStatus);
+          const shouldUpdateInitialCount = startCount > 0 && (order.initialCount === 0 || order.initialCount == null);
+          const shouldUpdateRemains = remains !== order.remains;
+          const shouldUpdateStatus = mappedStatus !== null && mappedStatus !== order.status;
+          if (shouldUpdateInitialCount || shouldUpdateRemains || shouldUpdateStatus) {
+            const updated = {
+              ...order,
+              ...(shouldUpdateInitialCount ? { initialCount: startCount } : {}),
+              ...(shouldUpdateRemains ? { remains } : {}),
+              ...(shouldUpdateStatus ? { status: mappedStatus! } : {}),
+            };
+            setSmmOrders(prev => prev.map(o => o.id === order.id ? updated : o));
+            upsertSmmOrderAdmin(updated).catch(e => console.warn('단일 상태 동기화 실패:', e));
+            if (shouldUpdateStatus && mappedStatus === '작업완료') {
+              addNotif(order.userId, 'sns_activation', '✅ 작업 완료', `[${order.productName}] 주문하신 작업이 완료되었습니다. 링크를 확인해주세요.`);
+            }
+          }
+        } else {
+          alert('공급처에서 해당 주문 정보를 찾을 수 없습니다.');
+        }
+      } else {
+        alert('공급처 조회 실패: ' + (result.message || '알 수 없는 오류'));
+      }
+    } catch (e) {
+      console.error('단일 주문 상태 조회 오류:', e);
+      alert('공급처 조회 중 오류가 발생했습니다.');
+    } finally {
+      setCheckingOrderId(null);
+    }
+  }, [checkingOrderId, smmProviders, addNotif]);
+
+  // 수동 상태 변경
+  const handleChangeOrderStatus = useCallback((order: SMMOrder, newStatus: string) => {
+    const updated = { ...order, status: newStatus };
+    setSmmOrders(prev => prev.map(o => o.id === order.id ? updated : o));
+    upsertSmmOrderAdmin(updated).catch(e => console.warn('상태 변경 DB 실패:', e));
+    setEditingStatusOrderId(null);
+    if (newStatus === '작업완료') {
+      addNotif(order.userId, 'sns_activation', '✅ 작업 완료', `[${order.productName}] 주문하신 작업이 완료되었습니다. 링크를 확인해주세요.`);
+    }
   }, [setSmmOrders, addNotif]);
 
   // 한국어 로케일 날짜 문자열 파싱 ("2024. 11. 1. 오전 9:30:00")
@@ -1539,18 +1616,40 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                  const provObj = smmProviders.find(p => p.name === o.providerName);
                                  const provSite = provObj?.apiUrl ? (() => { try { return new URL(provObj.apiUrl).origin; } catch { return '#'; } })() : '#';
 
+                                 const isThisChecking = checkingOrderId === o.id;
+                                 const isEditingStatus = editingStatusOrderId === o.id;
+                                 const statusOptions = ['준비중', '대기중', '진행중', '처리중', '부분완료', '작업완료', '주문취소'];
+
                                  return (
                                    <div className="flex flex-col items-center gap-2">
-                                     {/* 현재 주문 상태 뱃지 */}
-                                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm ${
-                                       o.status === '작업완료' ? 'bg-green-500 text-white' :
-                                       o.status === '진행중' ? 'bg-blue-600 text-white animate-pulse' :
-                                       o.status === '처리중' ? 'bg-yellow-500 text-white animate-pulse' :
-                                       o.status === '대기중' ? 'bg-gray-400 text-white' :
-                                       o.status === '부분완료' ? 'bg-purple-500 text-white' :
-                                       o.status === '주문취소' ? 'bg-red-500 text-white' :
-                                       'bg-gray-100 text-gray-400'
-                                     }`}>{o.status}</span>
+                                     {/* 현재 주문 상태 뱃지 (클릭하면 상태 변경 모드) */}
+                                     {isEditingStatus ? (
+                                       <div className="flex flex-col items-center gap-1.5">
+                                         <select
+                                           defaultValue={o.status}
+                                           onChange={e => handleChangeOrderStatus(o, e.target.value)}
+                                           className="px-2 py-1 rounded-lg text-[11px] font-black border border-gray-300 bg-white cursor-pointer outline-none shadow-sm"
+                                           autoFocus
+                                           onBlur={() => setEditingStatusOrderId(null)}
+                                         >
+                                           {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                                         </select>
+                                         <button onClick={() => setEditingStatusOrderId(null)} className="text-[9px] text-gray-400 hover:text-gray-600">취소</button>
+                                       </div>
+                                     ) : (
+                                       <button
+                                         onClick={() => setEditingStatusOrderId(o.id)}
+                                         title="클릭하여 상태 변경"
+                                         className={`px-4 py-1.5 rounded-full text-[10px] font-black italic shadow-sm hover:opacity-80 transition-opacity cursor-pointer ${
+                                           o.status === '작업완료' ? 'bg-green-500 text-white' :
+                                           o.status === '진행중' ? 'bg-blue-600 text-white animate-pulse' :
+                                           o.status === '처리중' ? 'bg-yellow-500 text-white animate-pulse' :
+                                           o.status === '대기중' ? 'bg-gray-400 text-white' :
+                                           o.status === '부분완료' ? 'bg-purple-500 text-white' :
+                                           o.status === '주문취소' ? 'bg-red-500 text-white' :
+                                           'bg-gray-100 text-gray-400'
+                                         }`}>{o.status} ✏️</button>
+                                     )}
 
                                      {/* JAP 상태 표시 */}
                                      {jap && o.status !== '작업완료' && (
@@ -1560,7 +1659,7 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                          jap.status === 'Partial' ? 'bg-yellow-100 text-yellow-700' :
                                          jap.status === 'Canceled' ? 'bg-red-100 text-red-600' :
                                          'bg-gray-100 text-gray-500'
-                                       }`}>JAP: {jap.status}</span>
+                                       }`}>공급처: {jap.status}</span>
                                      )}
 
                                      {/* 지연 뱃지 */}
@@ -1579,6 +1678,17 @@ const SnsAdmin: React.FC<Props> = ({ smmProviders, setSmmProviders, smmProducts,
                                            className="px-4 py-1.5 bg-green-500 text-white rounded-xl text-[11px] font-black hover:bg-green-600 transition-all shadow-md"
                                          >✅ 작업완료</button>
                                        </div>
+                                     )}
+
+                                     {/* 개별 공급처 상태 조회 버튼 */}
+                                     {o.status !== '작업완료' && o.status !== '주문취소' && o.externalOrderId && o.externalOrderId !== 'PENDING' && o.externalOrderId !== 'FAILED' && (
+                                       <button
+                                         onClick={() => handleCheckSingleOrderStatus(o)}
+                                         disabled={!!checkingOrderId}
+                                         className="px-3 py-1.5 bg-indigo-500 text-white rounded-xl text-[10px] font-black hover:bg-indigo-600 transition-all shadow-sm whitespace-nowrap disabled:opacity-50"
+                                       >
+                                         {isThisChecking ? <><span className="inline-block w-2.5 h-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1"></span>조회중</> : '🔍 공급처 현황'}
+                                       </button>
                                      )}
 
                                      {/* 지연 시 공급처 문의 버튼 */}
