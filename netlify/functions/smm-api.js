@@ -75,7 +75,7 @@ exports.handler = async (event, context) => {
 
     // 2. 공급처에 주문 전송 (Order Submit)
     if (event.httpMethod === 'POST' && body.action === 'submit') {
-      const { providerId, apiUrl, serviceId, link, quantity } = body;
+      const { providerId, apiUrl, serviceId, link, quantity, comments } = body;
       const envKeyName = `SMM_KEY_${String(providerId).toUpperCase()}`;
       const apiKey = process.env[envKeyName];
 
@@ -95,6 +95,9 @@ exports.handler = async (event, context) => {
         link: String(link),
         quantity: String(quantity)
       });
+      if (comments) {
+        formData.set('comments', String(comments));
+      }
 
       const fetchResponse = await fetch(String(apiUrl), {
         method: 'POST',
@@ -104,7 +107,7 @@ exports.handler = async (event, context) => {
       const data = await fetchResponse.json();
 
       console.log('[smm-api] JAP 응답 전체:', JSON.stringify(data));
-      console.log('[smm-api] 요청 정보 - providerId:', providerId, '| apiUrl:', apiUrl, '| serviceId:', serviceId, '| quantity:', quantity);
+      console.log('[smm-api] 요청 정보 - providerId:', providerId, '| apiUrl:', apiUrl, '| serviceId:', serviceId, '| quantity:', quantity, comments ? `| comments(${String(comments).split('\n').length}줄)` : '');
 
       if (data.order) {
         return {
