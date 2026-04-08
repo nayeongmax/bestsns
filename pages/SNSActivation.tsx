@@ -948,10 +948,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                               <span className="text-[12px] sm:text-sm font-black text-gray-800 truncate max-w-[120px] sm:max-w-[160px]">{r.userNickname || '익명'}</span>
                               {getPlatformIcon(r.platform)}
                               {renderStars(r.rating)}
-                              <span className="text-[9px] font-bold text-gray-300 italic ml-auto whitespace-nowrap">
-                                {new Date(r.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })}
-                              </span>
-                            </div>
+                                            </div>
                             <p className="text-[12px] sm:text-sm font-bold text-gray-600 leading-relaxed break-words line-clamp-3">{r.content}</p>
                           </div>
                         </div>

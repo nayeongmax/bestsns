@@ -5,6 +5,7 @@ import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, upsertStoreOrder, type Orde
 import { upsertChannelOrder } from '../../channelDb';
 import { fetchPointTransactions, type PointTransaction } from '../../pointDb';
 import { supabase } from '../../supabase';
+import { insertSmmReview } from '../../smmDb';
 
 interface Props {
   user: UserProfile;
@@ -118,7 +119,8 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
         id: o.id, type: 'sns', orderTime: o.orderTime, productName: o.productName,
         thumbnail: '', productId: 'sns', sellerName: 'BESTSNS',
         price: o.sellingPrice, quantity: o.quantity, totalPrice: o.sellingPrice * o.quantity,
-        status: o.status, link: o.link, initialCount: o.initialCount, remains: o.remains
+        status: o.status, link: o.link, initialCount: o.initialCount, remains: o.remains,
+        storeType: o.platform
       }));
 
     const channelItems: OrderItem[] = channelOrders
@@ -174,13 +176,37 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
     setTargetOrder(order); setRating(5); setReviewContent(''); setIsReviewModalOpen(true);
   };
 
+  const NEGATIVE_KEYWORDS = ['사기', '환불', '가짜', '허위', '불량', '최악', '쓰레기', '불만', '실망', '형편없', '별로', '노출', '속임', '차단', '신고', '폰지', '다단계'];
+
   const handleReviewSubmit = () => {
     if (!targetOrder || !reviewContent.trim()) return alert('리뷰 내용을 입력해 주세요.');
+    if (reviewContent.trim().length < 10) return alert('리뷰 내용을 10자 이상 입력해 주세요.');
     const newReview: Review = {
       id: `rev_${Date.now()}`, productId: targetOrder.productId, userId: user.id, author: user.nickname,
       rating, content: reviewContent, date: new Date().toISOString().split('T')[0].replace(/-/g, '.')
     };
     onAddReview(newReview);
+
+    // SNS 주문 리뷰는 별 4개 이상 + 악성 키워드 없을 때 마케팅 주문 페이지 리뷰 섹션에 노출
+    if (targetOrder.type === 'sns' && rating >= 4) {
+      const text = reviewContent.toLowerCase();
+      const isMalicious = NEGATIVE_KEYWORDS.some(kw => text.includes(kw));
+      if (!isMalicious) {
+        const nickname = user.nickname || '익명';
+        const masked = nickname.length > 3
+          ? nickname.slice(0, 3) + '*'.repeat(nickname.length - 3)
+          : nickname + '***';
+        insertSmmReview({
+          userId: user.id,
+          userNickname: masked,
+          productName: targetOrder.productName,
+          platform: targetOrder.storeType || '',
+          rating,
+          content: reviewContent,
+        }).catch((err) => console.warn('SMM 리뷰 저장:', err));
+      }
+    }
+
     const now = new Date().toISOString();
     upsertOrderBuyerFlag(targetOrder.id, user.id, targetOrder.type, { reviewedAt: now })
       .then(() => setFlags((prev) => {
@@ -537,8 +563,14 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
                                   <div className="flex gap-2"><span>비용</span> <span className="text-gray-900">{order.totalPrice.toLocaleString()}C</span></div>
                                   <div className="flex gap-2"><span>주문수량</span> <span className="text-gray-900">{order.quantity}</span></div>
                                   <div className="flex gap-2"><span>최초수량</span> <span className="text-orange-600">{order.initialCount || 0}</span></div>
-                                  <div className="pt-6 flex justify-end">
-                                    <button onClick={(e) => handleConfirmOrder(order, e)} className={`px-8 py-3 rounded-xl font-black text-sm transition-all ${confirmedList.includes(order.id) ? 'bg-gray-200 text-gray-400' : 'bg-blue-600 text-white hover:bg-black shadow-lg'}`}>{confirmedList.includes(order.id) ? '확정 완료 ✓' : '구매 확정'}</button>
+                                  <div className="pt-6 flex justify-end gap-3">
+                                    {!confirmedList.includes(order.id) ? (
+                                      <button onClick={(e) => handleConfirmOrder(order, e)} className="px-8 py-3 rounded-xl font-black text-sm transition-all bg-blue-600 text-white hover:bg-black shadow-lg">구매 확정</button>
+                                    ) : reviewedList.includes(order.id) ? (
+                                      <button className="px-8 py-3 rounded-xl font-black text-sm bg-gray-200 text-gray-400 cursor-default">리뷰 완료 ✓</button>
+                                    ) : (
+                                      <button onClick={(e) => handleOpenReview(order, e)} className="px-8 py-3 rounded-xl font-black text-sm bg-orange-500 text-white hover:bg-black shadow-lg transition-all animate-bounce">리뷰 쓰기</button>
+                                    )}
                                   </div>
                                 </div>
                               </td>
