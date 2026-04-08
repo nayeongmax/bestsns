@@ -174,6 +174,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     [selectedProduct]
   );
 
+  const isCustomProduct = useMemo(() =>
+    !!(selectedProduct && selectedProduct.name.includes('커스텀')),
+    [selectedProduct]
+  );
+
   // 합집합 수량: 모든 활성 소스 중 가장 낮은 min ~ 가장 높은 max (예: A 10~100000, B 10~1000000 → 10~1000000)
   // 주문 수량에 맞는 소스를 자동 선택하므로 소스 중 하나라도 커버 가능하면 주문 허용
   const effectiveQuantityRange = useMemo(() => {
@@ -224,9 +229,18 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
     }
     if (!selectedProductId || !link || quantity <= 0) return void showAlert({ description: '정보를 모두 입력하세요.' });
     if (!selectedProduct) return;
+
+    // 커스텀 상품: 댓글 입력 필수, 수량을 줄 수로 자동 설정
+    let finalQuantity = quantity;
+    if (isCustomProduct) {
+      if (!comments.trim()) return void showAlert({ description: '커스텀 댓글을 입력해주세요. (1줄에 댓글 1개)' });
+      const lineCount = comments.trim().split('\n').filter(l => l.trim()).length;
+      finalQuantity = lineCount;
+    }
+
     const { min: minQ, max: maxQ } = effectiveQuantityRange;
-    if (quantity < minQ) return void showAlert({ description: `최소 주문량 ${minQ.toLocaleString()}개 이상 가능합니다.` });
-    if (quantity > maxQ) return void showAlert({ description: `최대 주문량 ${maxQ.toLocaleString()}개 이하로 입력해주세요.` });
+    if (finalQuantity < minQ) return void showAlert({ description: `최소 주문량 ${minQ.toLocaleString()}개 이상 가능합니다. 현재 댓글 ${finalQuantity}개 입력됨.` });
+    if (finalQuantity > maxQ) return void showAlert({ description: `최대 주문량 ${maxQ.toLocaleString()}개 이하로 입력해주세요. 현재 댓글 ${finalQuantity}개 입력됨.` });
 
     const newOption: SelectedOption = {
       id: Date.now().toString(),
@@ -234,9 +248,9 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       serviceName: selectedProduct.name,
       link: link,
       unitPrice: selectedProduct.sellingPrice || 0,
-      quantity: quantity,
-      totalPrice: Math.floor(quantity * (selectedProduct.sellingPrice || 0)),
-      ...(isCommentProduct && comments.trim() ? { comments: comments.trim() } : {}),
+      quantity: finalQuantity,
+      totalPrice: Math.floor(finalQuantity * (selectedProduct.sellingPrice || 0)),
+      ...((isCommentProduct || isCustomProduct) && comments.trim() ? { comments: comments.trim() } : {}),
     };
     setSelectedOptions([...selectedOptions, newOption]);
     setLink('');
@@ -335,7 +349,8 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                 apiUrl: provider.apiUrl,
                 serviceId: source.serviceId,
                 link: opt.link,
-                quantity: opt.quantity
+                quantity: opt.quantity,
+                ...(opt.comments ? { comments: opt.comments } : {})
               })
             });
             const result = await resp.json();
@@ -727,6 +742,23 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                   <input type="number" placeholder="0" min={effectiveQuantityRange.min} max={effectiveQuantityRange.max < 999999999 ? effectiveQuantityRange.max : undefined} className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white text-sm sm:text-base" value={quantity || ''} onChange={(e) => setQuantity(Number(e.target.value))} />
                 </div>
               </div>
+              {isCustomProduct && (
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-[12px] sm:text-[13px] font-black text-gray-400 uppercase italic px-1 sm:px-4">
+                    Comments <span className="text-gray-300 font-bold normal-case not-italic">(1 per line)</span>
+                  </h3>
+                  <textarea
+                    rows={5}
+                    placeholder={"댓글을 한 줄에 하나씩 입력하세요\n예:\n좋은 게시물이네요!\n정말 멋진 사진이에요!\n계속 응원할게요!"}
+                    className="w-full p-4 sm:p-6 bg-gray-50 border-none rounded-2xl sm:rounded-[32px] font-black text-gray-700 shadow-inner outline-none focus:bg-white text-sm sm:text-base resize-none leading-relaxed"
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                  />
+                  <p className="text-[10px] sm:text-[11px] font-bold text-blue-400 italic px-1 sm:px-4">
+                    입력한 댓글 수가 주문 수량과 일치해야 합니다. 수량이 입력한 댓글 수로 자동 반영됩니다.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center gap-3 bg-yellow-400 border-2 border-yellow-500 rounded-2xl px-4 py-3 shadow-sm">
                 <span className="text-lg shrink-0">🚫</span>
                 <p className="text-[11px] sm:text-[12px] font-black text-red-700 leading-snug whitespace-nowrap overflow-hidden text-ellipsis">
