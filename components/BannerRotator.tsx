@@ -24,9 +24,9 @@ const EmptySlot: React.FC<{ height: number }> = ({ height }) => (
 
 const BannerItem: React.FC<{ ad: BannerAd; height: number }> = ({ ad, height }) => (
   <a href={ad.linkUrl} target="_blank" rel="noopener noreferrer"
-    className="block overflow-hidden rounded-xl bg-black hover:opacity-90 transition-opacity"
+    className="block overflow-hidden rounded-xl hover:opacity-90 transition-opacity"
     title={ad.companyName}>
-    <img src={ad.imageUrl} alt={ad.companyName} style={{ height }} className="w-full object-contain block" />
+    <img src={ad.imageUrl} alt={ad.companyName} style={{ height }} className="w-full object-cover block" />
   </a>
 );
 
