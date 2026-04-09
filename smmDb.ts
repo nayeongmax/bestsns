@@ -253,6 +253,11 @@ export async function deleteSmmProviderByIdAdmin(id: string): Promise<void> {
   await smmAdminPost({ action: 'deleteProvider', id });
 }
 
+export async function fetchSmmProductsAdmin(): Promise<SMMProduct[]> {
+  const data = await smmAdminGet('products');
+  return data.map((row) => rowToProduct(row as Record<string, unknown>));
+}
+
 export async function upsertSmmProductsAdmin(list: SMMProduct[]): Promise<void> {
   if (list.length === 0) return;
   await smmAdminPost({ action: 'upsertProducts', products: list.map(productToRow) });

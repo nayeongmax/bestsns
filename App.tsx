@@ -11,7 +11,7 @@ import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsert
 import {
   fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, fetchPublicSmmProducts,
   upsertSmmOrders, upsertSmmProviders, upsertSmmProducts, deleteSmmProductsByIds,
-  fetchSmmOrdersAdmin, fetchSmmProvidersAdmin,
+  fetchSmmOrdersAdmin, fetchSmmProvidersAdmin, fetchSmmProductsAdmin,
   upsertSmmOrdersAdmin, upsertSmmProvidersAdmin, upsertSmmProductsAdmin, deleteSmmProductsByIdsAdmin,
 } from './smmDb';
 import { updateProfile, fetchProfileRow } from './profileDb';
@@ -293,7 +293,7 @@ const App: React.FC = () => {
         const [orders, providers, products] = await Promise.all([
           isAdmin ? fetchSmmOrdersAdmin() : fetchSmmOrders(),
           isAdmin ? fetchSmmProvidersAdmin() : Promise.resolve([] as SMMProvider[]),
-          isAdmin ? fetchSmmProducts() : fetchPublicSmmProducts(),
+          isAdmin ? fetchSmmProductsAdmin() : fetchPublicSmmProducts(),
         ]);
         if (!cancelled) {
           setSmmOrders(orders);
