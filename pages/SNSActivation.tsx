@@ -668,8 +668,8 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                     </button>
                   ))}
                 </div>
-                {/* 데스크탑: 기존 그리드 */}
-                <div className="hidden sm:grid gap-4" style={{ gridTemplateColumns: `repeat(${categoriesForPlatform.length}, 1fr)` }}>
+                {/* 데스크탑: 4개씩 그리드 */}
+                <div className="hidden sm:grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                   {categoriesForPlatform.map((cat) => (
                     <button
                       key={cat}
