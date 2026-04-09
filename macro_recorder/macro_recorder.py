@@ -1,7 +1,8 @@
 """
-게임 매크로 레코더 v2.0 (백그라운드 동작)
+게임 매크로 레코더 v3.0 (게임 입력 호환)
 ==========================================
-게임 창이 전면에 있어도 백그라운드에서 동작합니다.
+하드웨어 스캔코드 방식으로 게임에 직접 입력을 전송합니다.
+WASD, 마우스 클릭 등 게임 내 조작이 정상 동작합니다.
 
 사용법:
   1. 관리자 권한으로 cmd 실행
@@ -20,10 +21,9 @@ import threading
 import ctypes
 from ctypes import wintypes
 
-# ── 글로벌 입력 감지를 위한 라이브러리 ──
-import keyboard  # 글로벌 키보드 훅 (백그라운드 동작)
+import keyboard
 from pynput import mouse
-from pynput.mouse import Button, Controller as MouseController
+from pynput.mouse import Controller as MouseController
 
 # ─────────────────────────────────────────────
 # 설정
@@ -103,35 +103,41 @@ def send_input(inputs):
 
 
 # ─────────────────────────────────────────────
-# 가상키 코드 매핑
+# 하드웨어 스캔코드 매핑 (게임이 읽는 실제 키보드 코드)
 # ─────────────────────────────────────────────
-VK_CODE_MAP = {
-    'up': 0x26, 'down': 0x28, 'left': 0x25, 'right': 0x27,
-    'space': 0x20, 'enter': 0x0D,
-    'shift': 0x10, 'left shift': 0xA0, 'right shift': 0xA1,
-    'ctrl': 0x11, 'left ctrl': 0xA2, 'right ctrl': 0xA3,
-    'alt': 0x12, 'left alt': 0xA4, 'right alt': 0xA5,
-    'tab': 0x09, 'esc': 0x1B, 'backspace': 0x08, 'delete': 0x2E,
-    'f1': 0x70, 'f2': 0x71, 'f3': 0x72, 'f4': 0x73,
-    'f5': 0x74, 'f6': 0x75, 'f7': 0x76, 'f8': 0x77,
-    'f9': 0x78, 'f10': 0x79, 'f11': 0x7A, 'f12': 0x7B,
-    '1': 0x31, '2': 0x32, '3': 0x33, '4': 0x34, '5': 0x35,
-    '6': 0x36, '7': 0x37, '8': 0x38, '9': 0x39, '0': 0x30,
-    'q': 0x51, 'w': 0x57, 'e': 0x45, 'r': 0x52, 't': 0x54,
-    'y': 0x59, 'u': 0x55, 'i': 0x49, 'o': 0x4F, 'p': 0x50,
-    'a': 0x41, 's': 0x53, 'd': 0x44, 'f': 0x46, 'g': 0x47,
-    'h': 0x48, 'j': 0x4A, 'k': 0x4B, 'l': 0x4C,
-    'z': 0x5A, 'x': 0x58, 'c': 0x43, 'v': 0x56, 'b': 0x42,
-    'n': 0x4E, 'm': 0x4D,
+SCAN_CODE_MAP = {
+    'esc': 0x01,
+    '1': 0x02, '2': 0x03, '3': 0x04, '4': 0x05, '5': 0x06,
+    '6': 0x07, '7': 0x08, '8': 0x09, '9': 0x0A, '0': 0x0B,
+    'q': 0x10, 'w': 0x11, 'e': 0x12, 'r': 0x13, 't': 0x14,
+    'y': 0x15, 'u': 0x16, 'i': 0x17, 'o': 0x18, 'p': 0x19,
+    'a': 0x1E, 's': 0x1F, 'd': 0x20, 'f': 0x21, 'g': 0x22,
+    'h': 0x23, 'j': 0x24, 'k': 0x25, 'l': 0x26,
+    'z': 0x2C, 'x': 0x2D, 'c': 0x2E, 'v': 0x2F, 'b': 0x30,
+    'n': 0x31, 'm': 0x32,
+    'space': 0x39,
+    'enter': 0x1C,
+    'tab': 0x0F,
+    'backspace': 0x0E,
+    'left shift': 0x2A, 'right shift': 0x36, 'shift': 0x2A,
+    'left ctrl': 0x1D, 'right ctrl': 0x1D, 'ctrl': 0x1D,
+    'left alt': 0x38, 'right alt': 0x38, 'alt': 0x38,
+    'caps lock': 0x3A,
+    'f1': 0x3B, 'f2': 0x3C, 'f3': 0x3D, 'f4': 0x3E,
+    'f5': 0x3F, 'f6': 0x40, 'f7': 0x41, 'f8': 0x42,
+    'f9': 0x43, 'f10': 0x44, 'f11': 0x57, 'f12': 0x58,
+    'up': 0x48, 'down': 0x50, 'left': 0x4B, 'right': 0x4D,
+    'delete': 0x53, 'insert': 0x52,
+    'home': 0x47, 'end': 0x4F,
+    'page up': 0x49, 'page down': 0x51,
 }
 
 
-def get_vk_code(key_name):
+def get_scan_code(key_name):
+    """키 이름으로 하드웨어 스캔코드 반환"""
     key_name = key_name.lower().strip()
-    if key_name in VK_CODE_MAP:
-        return VK_CODE_MAP[key_name]
-    if len(key_name) == 1:
-        return ord(key_name.upper())
+    if key_name in SCAN_CODE_MAP:
+        return SCAN_CODE_MAP[key_name]
     return None
 
 
@@ -159,7 +165,7 @@ class InputEvent:
 
 
 # ─────────────────────────────────────────────
-# 매크로 레코더 (백그라운드 동작)
+# 매크로 레코더 v3.0
 # ─────────────────────────────────────────────
 class MacroRecorder:
     def __init__(self):
@@ -183,7 +189,6 @@ class MacroRecorder:
             if self.replaying:
                 print("[!] 재생 중에는 녹화할 수 없습니다.")
                 return
-
             self.events = []
             self.recording = True
             self.start_time = time.time()
@@ -192,7 +197,6 @@ class MacroRecorder:
         print(f"  녹화 시작! ({self.record_duration}초)")
         print(f"  게임으로 전환해서 플레이하세요!")
         print(f"{'='*50}\n")
-
         threading.Thread(target=self._record_timer, daemon=True).start()
 
     def _record_timer(self):
@@ -210,7 +214,6 @@ class MacroRecorder:
             if not self.recording:
                 return
             self.recording = False
-
         duration = time.time() - self.start_time
         print(f"\n{'='*50}")
         print(f"  녹화 완료! ({duration:.1f}초, {len(self.events)}개 이벤트)")
@@ -219,11 +222,13 @@ class MacroRecorder:
         self._save_events()
 
     def record_key_event(self, event):
-        """keyboard 라이브러리의 글로벌 훅에서 호출됨"""
+        """글로벌 키보드 훅 - 녹화 중일때만 기록"""
+        # 재생 중이면 무시 (피드백 루프 방지)
+        if self.replaying:
+            return
         if not self.recording:
             return
-
-        # 핫키(F9, F10, F12)는 녹화하지 않음
+        # 핫키는 녹화하지 않음
         if event.name in ('f9', 'f10', 'f12'):
             return
 
@@ -231,53 +236,45 @@ class MacroRecorder:
         event_type = "key_press" if event.event_type == "down" else "key_release"
 
         self.events.append(InputEvent(
-            event_type,
-            timestamp,
+            event_type, timestamp,
             key=event.name,
             scan_code=event.scan_code
         ))
 
     def record_mouse_click(self, x, y, button, pressed):
-        """pynput 마우스 리스너에서 호출됨"""
+        if self.replaying:
+            return
         if not self.recording:
             return
-
         timestamp = time.time() - self.start_time
         event_type = "mouse_click_down" if pressed else "mouse_click_up"
-
         self.events.append(InputEvent(
-            event_type,
-            timestamp,
-            x=x, y=y,
-            button=str(button)
+            event_type, timestamp,
+            x=x, y=y, button=str(button)
         ))
 
     def record_mouse_move(self, x, y):
-        """pynput 마우스 리스너에서 호출됨"""
+        if self.replaying:
+            return
         if not self.recording:
             return
-
         timestamp = time.time() - self.start_time
-
         if self.events:
             last = self.events[-1]
             if last.event_type == "mouse_move" and (timestamp - last.timestamp) < 0.05:
                 return
-
         self.events.append(InputEvent(
-            "mouse_move",
-            timestamp,
-            x=x, y=y
+            "mouse_move", timestamp, x=x, y=y
         ))
 
     def record_mouse_scroll(self, x, y, dx, dy):
+        if self.replaying:
+            return
         if not self.recording:
             return
-
         timestamp = time.time() - self.start_time
         self.events.append(InputEvent(
-            "mouse_scroll",
-            timestamp,
+            "mouse_scroll", timestamp,
             x=x, y=y, dx=dx, dy=dy
         ))
 
@@ -287,7 +284,6 @@ class MacroRecorder:
         if self.recording:
             print("[!] 녹화 중에는 재생할 수 없습니다.")
             return
-
         if self.replaying:
             self.stop_replay()
         else:
@@ -298,7 +294,6 @@ class MacroRecorder:
             if not self._load_events():
                 print("[!] 녹화된 데이터가 없습니다. F9로 먼저 녹화하세요.")
                 return
-
         with self.lock:
             self.replaying = True
             self.replay_count = 0
@@ -309,7 +304,6 @@ class MacroRecorder:
         print(f"  게임으로 전환하세요! 백그라운드에서 동작합니다.")
         print(f"  F10: 중지 | F12: 종료")
         print(f"{'='*50}\n")
-
         self.replay_thread = threading.Thread(target=self._replay_loop, daemon=True)
         self.replay_thread.start()
 
@@ -319,16 +313,33 @@ class MacroRecorder:
                 return
             self.replaying = False
             self.stop_replay_event.set()
-
+        # 모든 키 해제 (키가 눌린 채로 멈추는 것 방지)
+        self._release_all_keys()
         print(f"\n{'='*50}")
         print(f"  재생 중지! (총 {self.replay_count}회 반복)")
         print(f"{'='*50}\n")
+
+    def _release_all_keys(self):
+        """재생 중지 시 눌려있는 키 모두 해제"""
+        for key_name, sc in SCAN_CODE_MAP.items():
+            if key_name in ('f9', 'f10', 'f11', 'f12'):
+                continue
+            inp = INPUT()
+            inp.type = INPUT_KEYBOARD
+            inp.union.ki.wVk = 0
+            inp.union.ki.wScan = sc
+            inp.union.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP
+            inp.union.ki.time = 0
+            inp.union.ki.dwExtraInfo = ctypes.pointer(ctypes.c_ulong(0))
+            send_input([inp])
 
     def _replay_loop(self):
         while self.replaying and not self.stop_replay_event.is_set():
             self.replay_count += 1
             print(f"  >> {self.replay_count}번째 반복 중...")
             self._replay_once()
+            # 반복 사이에 모든 키 해제
+            self._release_all_keys()
             if self.replaying:
                 if self.stop_replay_event.wait(REPLAY_DELAY_BETWEEN):
                     break
@@ -336,7 +347,6 @@ class MacroRecorder:
     def _replay_once(self):
         if not self.events:
             return
-
         prev_timestamp = 0
 
         for event in self.events:
@@ -350,13 +360,13 @@ class MacroRecorder:
                     if self.stop_replay_event.is_set():
                         return
                     remaining = wait_end - time.time()
-                    time.sleep(min(0.01, max(0, remaining)))
+                    time.sleep(min(0.005, max(0, remaining)))
 
             prev_timestamp = event.timestamp
 
             try:
                 self._execute_event(event)
-            except Exception as e:
+            except Exception:
                 pass
 
     def _execute_event(self, event):
@@ -376,35 +386,40 @@ class MacroRecorder:
             self.mouse_controller.position = (event.data["x"], event.data["y"])
             self.mouse_controller.scroll(event.data["dx"], event.data["dy"])
 
-    def _send_key(self, key_name, scan_code, is_release):
-        """SendInput으로 키 입력 전송 (게임 포커스 상태에서도 동작)"""
-        vk = get_vk_code(key_name)
+    def _send_key(self, key_name, recorded_scan_code, is_release):
+        """하드웨어 스캔코드로 키 입력 전송 (게임 호환)"""
 
-        # scan_code가 저장되어 있으면 사용, 없으면 VK에서 변환
-        if scan_code:
-            sc = scan_code
-        elif vk:
-            sc = ctypes.windll.user32.MapVirtualKeyW(vk, 0)
-        else:
+        # 1순위: 스캔코드 맵에서 찾기
+        sc = get_scan_code(key_name)
+
+        # 2순위: 녹화 시 저장된 스캔코드 사용
+        if sc is None and recorded_scan_code:
+            sc = recorded_scan_code
+
+        if sc is None:
             return
 
+        # 스캔코드 전용으로 전송 (wVk=0)
+        # 게임은 대부분 스캔코드를 읽으므로 VK 코드 없이 보냄
         inp = INPUT()
         inp.type = INPUT_KEYBOARD
-        inp.union.ki.wVk = vk if vk else 0
+        inp.union.ki.wVk = 0
         inp.union.ki.wScan = sc
-        inp.union.ki.dwFlags = KEYEVENTF_SCANCODE | (KEYEVENTF_KEYUP if is_release else 0)
+        inp.union.ki.dwFlags = KEYEVENTF_SCANCODE
+        if is_release:
+            inp.union.ki.dwFlags |= KEYEVENTF_KEYUP
         inp.union.ki.time = 0
         inp.union.ki.dwExtraInfo = ctypes.pointer(ctypes.c_ulong(0))
         send_input([inp])
 
     def _send_mouse_click(self, x, y, button_str, pressed):
-        """SendInput으로 마우스 클릭 전송"""
+        """마우스 클릭 전송"""
         screen_w = ctypes.windll.user32.GetSystemMetrics(0)
         screen_h = ctypes.windll.user32.GetSystemMetrics(1)
         abs_x = int(x * 65535 / screen_w)
         abs_y = int(y * 65535 / screen_h)
 
-        # 이동
+        # 먼저 마우스 이동
         move_inp = INPUT()
         move_inp.type = INPUT_MOUSE
         move_inp.union.mi.dx = abs_x
@@ -413,32 +428,34 @@ class MacroRecorder:
         move_inp.union.mi.mouseData = 0
         move_inp.union.mi.time = 0
         move_inp.union.mi.dwExtraInfo = ctypes.pointer(ctypes.c_ulong(0))
+        send_input([move_inp])
 
-        # 클릭
+        # 약간의 딜레이 후 클릭 (게임이 이동을 먼저 처리하도록)
+        time.sleep(0.002)
+
+        # 클릭 전송
         click_inp = INPUT()
         click_inp.type = INPUT_MOUSE
-        click_inp.union.mi.dx = abs_x
-        click_inp.union.mi.dy = abs_y
-        click_inp.union.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE
+        click_inp.union.mi.dx = 0
+        click_inp.union.mi.dy = 0
+        click_inp.union.mi.dwFlags = 0
 
         if "left" in button_str.lower():
-            click_inp.union.mi.dwFlags |= (MOUSEEVENTF_LEFTDOWN if pressed else MOUSEEVENTF_LEFTUP)
+            click_inp.union.mi.dwFlags = MOUSEEVENTF_LEFTDOWN if pressed else MOUSEEVENTF_LEFTUP
         elif "right" in button_str.lower():
-            click_inp.union.mi.dwFlags |= (MOUSEEVENTF_RIGHTDOWN if pressed else MOUSEEVENTF_RIGHTUP)
+            click_inp.union.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN if pressed else MOUSEEVENTF_RIGHTUP
 
         click_inp.union.mi.mouseData = 0
         click_inp.union.mi.time = 0
         click_inp.union.mi.dwExtraInfo = ctypes.pointer(ctypes.c_ulong(0))
-
-        send_input([move_inp, click_inp])
+        send_input([click_inp])
 
     def _send_mouse_move(self, x, y):
-        """SendInput으로 마우스 이동"""
+        """마우스 이동"""
         screen_w = ctypes.windll.user32.GetSystemMetrics(0)
         screen_h = ctypes.windll.user32.GetSystemMetrics(1)
         abs_x = int(x * 65535 / screen_w)
         abs_y = int(y * 65535 / screen_h)
-
         inp = INPUT()
         inp.type = INPUT_MOUSE
         inp.union.mi.dx = abs_x
@@ -475,7 +492,6 @@ class MacroRecorder:
 def main():
     recorder = MacroRecorder()
 
-    # 설정 파일 로드
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
     if os.path.exists(config_path):
         try:
@@ -488,34 +504,30 @@ def main():
 
     print("""
 ==================================================
-    게임 매크로 레코더 v2.0 (백그라운드 동작)
+   게임 매크로 레코더 v3.0 (게임 입력 호환)
 ==================================================
 
   [F9]   녹화 시작 (60초)
   [F10]  반복 재생 시작/중지
   [F12]  프로그램 종료
 
-  ** 게임 창이 전면에 있어도 동작합니다! **
-  ** 반드시 관리자 권한으로 실행하세요!  **
+  ** 하드웨어 스캔코드 방식 - 게임 입력 호환! **
+  ** 반드시 관리자 권한으로 실행하세요!        **
 
 ==================================================
 """)
 
-    # 저장된 매크로 자동 로드
     recorder._load_events()
 
-    # ── 글로벌 키보드 훅 (어떤 창이 포커스여도 동작) ──
-    # keyboard 라이브러리는 Windows 저수준 훅을 사용하므로
-    # 게임이 전면에 있어도 키 입력을 감지하고 전달합니다.
-
+    # 글로벌 핫키
     keyboard.on_press_key('f9', lambda e: recorder.start_recording(), suppress=False)
     keyboard.on_press_key('f10', lambda e: recorder.toggle_replay(), suppress=False)
     keyboard.on_press_key('f12', lambda e: os._exit(0), suppress=False)
 
-    # 키보드 녹화: 모든 키 이벤트를 글로벌하게 캡처
+    # 글로벌 키보드 녹화 훅
     keyboard.hook(recorder.record_key_event)
 
-    # ── 글로벌 마우스 훅 (pynput은 글로벌 마우스 감지 지원) ──
+    # 글로벌 마우스 녹화 훅
     mouse_listener = mouse.Listener(
         on_click=recorder.record_mouse_click,
         on_move=recorder.record_mouse_move,
@@ -526,7 +538,6 @@ def main():
     print("대기 중... 게임으로 전환해도 됩니다!")
     print("(F9: 녹화 | F10: 재생 | F12: 종료)\n")
 
-    # 메인 스레드 유지 (프로그램이 종료되지 않도록)
     try:
         while True:
             time.sleep(1)
