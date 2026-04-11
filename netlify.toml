@@ -30,6 +30,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/scrape-dealbaron"
+  to = "/.netlify/functions/scrape-dealbaron"
+  status = 200
+  force = true
+
 [functions."smm-sync-initial-count"]
   schedule = "*/5 * * * *"
 
