@@ -781,7 +781,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree4} onChange={(e) => setAgree4(e.target.checked)} className="mt-1 rounded" />
-                <span className="text-sm">(필수) 본 작업에서 알게 된 광고주 정보, 작업 내용, 작업 결과물 등 일체의 정보는 제3자에게 공개·누설·제공할 수 없으며, 비밀유지 의무 위반 시 민·형사상 책임을 질 수 있음에 동의합니다.</span>
+                <span className="text-sm">(필수) 본 작업에서 알게 된 광고주 정보, 작업 내용, 작업 결과물은 제3자에게 공개·누설·제공할 수 없습니다.<br />비밀유지 의무 위반 시 민·형사상 책임을 질 수 있음에 동의합니다.</span>
               </label>
             </div>
             <button
