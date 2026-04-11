@@ -739,7 +739,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       ) : needsSelection && t.applicants[0] ? (
                         <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: t.applicants[0].userId, nickname: t.applicants[0].nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white font-black text-[10px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
                       ) : (
-                        <Link to={`/part-time-register?edit=${t.id}`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white font-black text-[10px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
+                        <Link to={`/part-time/register`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white font-black text-[10px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
                       )}
                     </div>
                     <div className="grid grid-cols-3 border-t border-gray-50">
@@ -815,7 +815,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                         ) : needsSelection && t.applicants[0] ? (
                           <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: t.applicants[0].userId, nickname: t.applicants[0].nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white rounded-xl font-black text-[11px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
                         ) : (
-                          <Link to={`/part-time-register?edit=${t.id}`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white rounded-xl font-black text-[11px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
+                          <Link to={`/part-time/register`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white rounded-xl font-black text-[11px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
                         )}
                       </div>
                       <div className="grid grid-cols-3 gap-1.5 mt-2">
