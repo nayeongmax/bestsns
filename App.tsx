@@ -889,22 +889,24 @@ const App: React.FC = () => {
         role: isAdminLogin ? 'admin' : existingMember.role
       };
     } else {
-      const isAdmin = userData.id?.toLowerCase() === 'admin';
       targetProfile = {
-        ...userData, nickname: isAdmin ? '홍길동' : userData.nickname,
-        role: isAdmin ? 'admin' : 'user', sellerStatus: isAdmin ? 'approved' : 'none',
+        ...userData,
+        role: isAdminLogin ? 'admin' : (userData.role ?? 'user'),
+        sellerStatus: isAdminLogin ? 'approved' : (userData.sellerStatus ?? 'none'),
         points: userData.id?.toLowerCase() === 'test' ? 12500 : 0,
         joinDate: new Date().toISOString().split('T')[0], coupons: []
       };
       setMembers(prev => [...prev, targetProfile]);
     }
-    // 돈·포인트는 항상 DB 기준으로 덮어쓰기 (쿠키 삭제 후 0으로 바뀌는 현상 방지)
+    // 닉네임·프로필이미지·포인트 등 항상 DB 기준으로 덮어쓰기 (다른 기기 로그인·캐시 불일치 방지)
     try {
       const dbRow = await fetchProfileRow(userData.id);
       if (dbRow) {
         const dbProfile = profileRowToUserProfile(dbRow);
         targetProfile = {
           ...targetProfile,
+          nickname: dbProfile.nickname || targetProfile.nickname,
+          profileImage: dbProfile.profileImage || targetProfile.profileImage,
           points: dbProfile.points,
           totalPurchaseAmount: dbProfile.totalPurchaseAmount,
           totalSalesAmount: dbProfile.totalSalesAmount,
