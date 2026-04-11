@@ -35,10 +35,17 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
 
   const [thumbnail, setThumbnail] = useState('');
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
-  
+
   const [tempDescription, setTempDescription] = useState('');
   const [isApprovedTemp, setIsApprovedTemp] = useState(false);
   const [isHotTemp, setIsHotTemp] = useState(false);
+
+  // 딜바론 자동완성 상태
+  const [dealbaronUrl, setDealbaronUrl] = useState('');
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapeMsg, setScrapeMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [prefill, setPrefill] = useState<Partial<ChannelProduct> | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   const thumbInputRef = useRef<HTMLInputElement>(null);
   const multiInputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +107,12 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
   };
 
   const startEditChannel = (ch: ChannelProduct | null) => {
+    // 딜바론 자동완성 상태 초기화
+    setPrefill(null);
+    setScrapeMsg(null);
+    setDealbaronUrl('');
+    setFormKey(k => k + 1);
+
     if (ch) {
       setEditingChannel(ch);
       setThumbnail(ch.thumbnail);
@@ -116,6 +129,52 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
       setIsApprovedTemp(false);
       setIsHotTemp(false);
       setIsRegisteringChannel(true);
+    }
+  };
+
+  const handleScrapeDealbaron = async () => {
+    const trimmedUrl = dealbaronUrl.trim();
+    if (!trimmedUrl) return;
+    setIsScraping(true);
+    setScrapeMsg(null);
+    try {
+      const res = await fetch('/.netlify/functions/scrape-dealbaron', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: trimmedUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.status === 'error') {
+        setScrapeMsg({ type: 'error', text: data.message || '스크래핑에 실패했습니다.' });
+        return;
+      }
+
+      // 폼 prefill 데이터 구성
+      const fill: Partial<ChannelProduct> = {};
+      if (data.title) fill.title = data.title;
+      if (data.subscribers != null) fill.subscribers = data.subscribers;
+      if (data.income != null) fill.income = data.income;
+      if (data.expense != null) fill.expense = data.expense;
+
+      setPrefill(fill);
+
+      // 제어 상태 직접 업데이트
+      if (data.description) setTempDescription(data.description);
+      if (data.thumbnail) setThumbnail(data.thumbnail);
+      if (data.images?.length) setAttachedImages((data.images as string[]).slice(0, 10));
+
+      // formKey 변경으로 uncontrolled 입력 리셋 (defaultValue 재적용)
+      setFormKey(k => k + 1);
+
+      const imgCount = (data.thumbnail ? 1 : 0) + (data.images?.length || 0);
+      setScrapeMsg({
+        type: 'success',
+        text: `자동완성 완료! 이미지 ${imgCount}개${data.storageUsed ? ' (Supabase Storage 저장됨)' : ''}.`,
+      });
+    } catch {
+      setScrapeMsg({ type: 'error', text: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+    } finally {
+      setIsScraping(false);
     }
   };
 
@@ -248,7 +307,42 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
                 <button onClick={() => { setEditingChannel(null); setIsRegisteringChannel(false); }} className="w-12 h-12 bg-gray-50 text-gray-400 rounded-2xl font-black text-xl hover:bg-red-50 hover:text-red-500 transition-colors shadow-sm">✕</button>
               </div>
               
-              <form onSubmit={handleSaveChannel} className="space-y-14">
+              {/* ── 딜바론 자동완성 섹션 ── */}
+              <div className="mb-8 p-5 md:p-8 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-[28px] border-2 border-indigo-100">
+                <p className="text-[10px] md:text-[11px] font-black text-indigo-400 uppercase italic tracking-widest mb-3">딜바론 자동완성</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="url"
+                    value={dealbaronUrl}
+                    onChange={e => setDealbaronUrl(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleScrapeDealbaron())}
+                    placeholder="https://dealbaron.com/..."
+                    className="flex-1 px-5 py-3 bg-white border border-indigo-100 rounded-2xl font-bold text-gray-700 text-sm outline-none focus:ring-2 focus:ring-indigo-200 shadow-sm transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleScrapeDealbaron}
+                    disabled={isScraping || !dealbaronUrl.trim()}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                  >
+                    {isScraping ? (
+                      <>
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        가져오는 중…
+                      </>
+                    ) : (
+                      '딜바론에서 자동완성'
+                    )}
+                  </button>
+                </div>
+                {scrapeMsg && (
+                  <p className={`mt-3 text-xs font-bold ${scrapeMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                    {scrapeMsg.type === 'success' ? '✓ ' : '✗ '}{scrapeMsg.text}
+                  </p>
+                )}
+              </div>
+
+              <form key={formKey} onSubmit={handleSaveChannel} className="space-y-14">
                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 border-b border-gray-50 pb-12">
                     <div className="lg:col-span-4 space-y-4">
                        <label className="text-[12px] font-black text-gray-400 uppercase italic tracking-widest px-2">대표 썸네일 이미지</label>
@@ -337,14 +431,14 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
 
                  <div className="space-y-3">
                    <label className="text-[11px] font-black text-gray-400 px-2 uppercase italic tracking-widest">매물 상품 타이틀</label>
-                   <input name="title" defaultValue={editingChannel?.title} placeholder="판매 시 노출될 채널 이름을 입력하세요" className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-800 text-lg shadow-inner outline-none focus:ring-4 focus:ring-blue-50" required />
+                   <input name="title" defaultValue={prefill?.title ?? editingChannel?.title} placeholder="판매 시 노출될 채널 이름을 입력하세요" className="w-full p-6 bg-gray-50 border-none rounded-[32px] font-black text-gray-800 text-lg shadow-inner outline-none focus:ring-4 focus:ring-blue-50" required />
                  </div>
 
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                    <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 px-2 italic uppercase">최종 판매가(원)</label><input type="number" name="price" defaultValue={editingChannel?.price} className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" required /></div>
-                    <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 px-2 italic uppercase">총 구독자수</label><input type="number" name="subscribers" defaultValue={editingChannel?.subscribers} className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" /></div>
-                    <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 px-2 italic uppercase">월평균 수입($)</label><input type="number" name="income" defaultValue={editingChannel?.income} className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" /></div>
-                    <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 px-2 italic uppercase">월평균 지출($)</label><input type="number" name="expense" defaultValue={editingChannel?.expense} className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" /></div>
+                    <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 px-2 italic uppercase">최종 판매가(원)</label><input type="number" name="price" defaultValue={prefill?.price ?? editingChannel?.price} className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" required /></div>
+                    <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 px-2 italic uppercase">총 구독자수</label><input type="number" name="subscribers" defaultValue={prefill?.subscribers ?? editingChannel?.subscribers} className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" /></div>
+                    <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 px-2 italic uppercase">월평균 수입($)</label><input type="number" name="income" defaultValue={prefill?.income ?? editingChannel?.income} className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" /></div>
+                    <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 px-2 italic uppercase">월평균 지출($)</label><input type="number" name="expense" defaultValue={prefill?.expense ?? editingChannel?.expense} className="w-full p-5 bg-gray-50 rounded-[24px] font-black text-gray-700 shadow-inner outline-none focus:bg-white" /></div>
                  </div>
 
                  <div className="space-y-3">
