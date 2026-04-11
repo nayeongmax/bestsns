@@ -72,6 +72,8 @@ function taskToRow(t: PartTimeTask): Record<string, unknown> {
     job_request_id: t.jobRequestId ?? null,
     project_no: t.projectNo ?? null,
     sent_to_advertiser_at: t.sentToAdvertiserAt ?? null,
+    signup_link: t.signupLink ?? null,
+    post_visibility: t.postVisibility ?? null,
   };
 }
 
@@ -104,6 +106,8 @@ function rowToTask(row: Record<string, unknown>): PartTimeTask {
     jobRequestId: row.job_request_id != null ? String(row.job_request_id) : undefined,
     projectNo: row.project_no != null ? String(row.project_no) : undefined,
     sentToAdvertiserAt: row.sent_to_advertiser_at != null ? new Date(row.sent_to_advertiser_at as string).toISOString() : undefined,
+    signupLink: row.signup_link != null ? String(row.signup_link) : undefined,
+    postVisibility: row.post_visibility != null ? (String(row.post_visibility) as '전체공개' | '멤버공개') : undefined,
   };
 }
 
