@@ -2,8 +2,8 @@
 // 포트원 V2 웹훅 수신 → 결제 완료/취소(환불) 시 Supabase DB 상태 동기화
 
 const PORTONE_API_SECRET = process.env.PORTONE_API_SECRET;
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
 /**
  * 포트원 API에서 결제 정보 조회

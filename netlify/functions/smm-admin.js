@@ -57,7 +57,7 @@ exports.handler = async (event) => {
 
   if (!supabaseUrl || !serviceKey) {
     return resp(500, {
-      error: 'Netlify 환경변수에 SUPABASE_URL 과 SUPABASE_SERVICE_KEY 를 설정해 주세요.',
+      error: 'Netlify 환경변수에 SUPABASE_URL 과 SUPABASE_SERVICE_ROLE_KEY 를 설정해 주세요.',
     });
   }
 
