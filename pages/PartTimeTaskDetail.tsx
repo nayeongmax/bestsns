@@ -45,6 +45,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const [agree1, setAgree1] = useState(false);
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
+  const [agree4, setAgree4] = useState(false);
 
   const task = tasks.find((t) => t.id === taskId);
 
@@ -134,7 +135,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       alert('이미 신청하셨습니다.');
       return;
     }
-    if (!agree1 || !agree2 || !agree3) {
+    if (!agree1 || !agree2 || !agree3 || !agree4) {
       alert('필수 동의 항목에 모두 체크해 주세요.');
       return;
     }
@@ -777,6 +778,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
                 <span className="text-sm">(필수) 직거래 시도 시 거래액의 10배 위약벌 청구 및 영구 제명 조치에 동의합니다.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={agree4} onChange={(e) => setAgree4(e.target.checked)} className="mt-1 rounded" />
+                <span className="text-sm">(필수) 본 작업에서 알게 된 광고주 정보, 작업 내용, 작업 결과물 등 일체의 정보는 제3자에게 공개·누설·제공할 수 없으며, 비밀유지 의무 위반 시 민·형사상 책임을 질 수 있음에 동의합니다.</span>
               </label>
             </div>
             <button
