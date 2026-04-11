@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock, Notice } from '@/types';
 import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '@/constants';
@@ -342,7 +342,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                       </button>
                       {user?.role === 'admin' && (
                         <>
-                          <Link to={`/part-time-register`} state={{ editTask: task }} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100">수정</Link>
+                          <Link to={`/part-time/register`} state={{ editTask: task }} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100">수정</Link>
                           <button type="button" onClick={async (e) => { e.stopPropagation(); if (!confirm(`"${task.title}" 작업을 삭제할까요?`)) return; await deletePartTimeTask(task.id); setTasks(prev => prev.filter(x => x.id !== task.id)); }} className="px-3 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-black hover:bg-red-100">삭제</button>
                         </>
                       )}
@@ -409,19 +409,55 @@ const MAX_IMAGES_PER_SECTION = 10;
 
 export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?: UserProfile[] }> = ({ user, members = [] }) => {
   const navigate = useNavigate();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(REGISTER_CATEGORIES[0]);
-  const [reward, setReward] = useState(300);
-  const [maxApplicants, setMaxApplicants] = useState(0);
-  const [sectionItems, setSectionItems] = useState<SectionItem[]>([]);
-  const [appStart, setAppStart] = useState(todayStr());
-  const [appEnd, setAppEnd] = useState(todayStr());
-  const [workStart, setWorkStart] = useState(todayStr());
-  const [workEnd, setWorkEnd] = useState(todayStr());
-  const [applicantUserId, setApplicantUserId] = useState('');
-  const [signupLink, setSignupLink] = useState('');
-  const [postVisibility, setPostVisibility] = useState<'전체공개' | '멤버공개'>('전체공개');
+  const location = useLocation();
+  const editTask = (location.state as { editTask?: PartTimeTask } | null)?.editTask ?? null;
+
+  const [title, setTitle] = useState(editTask?.title ?? '');
+  const [description, setDescription] = useState(editTask?.description ?? '');
+  const [category, setCategory] = useState(editTask?.category ?? REGISTER_CATEGORIES[0]);
+  const [reward, setReward] = useState(editTask?.reward ?? 300);
+  const [maxApplicants, setMaxApplicants] = useState(editTask?.maxApplicants ?? 0);
+  const [sectionItems, setSectionItems] = useState<SectionItem[]>(() => {
+    if (!editTask?.sections) return [];
+    const s = editTask.sections;
+    const items: SectionItem[] = [];
+    const order = s.sectionOrder ?? [];
+    if (order.length > 0) {
+      order.forEach(({ type, index }) => {
+        const id = `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        if (type === '제목' && s.제목목록?.[index] !== undefined) {
+          items.push({ id, type: '제목', value: s.제목목록[index] });
+        } else if (type === '내용' && s.내용목록?.[index] !== undefined) {
+          items.push({ id, type: '내용', value: s.내용목록[index] });
+        } else if (type === '게시글' && s.게시글목록?.[index] !== undefined) {
+          items.push({ id, type: '게시글', postBlock: { ...s.게시글목록[index] } });
+        } else if (type === '댓글' && s.댓글목록?.[index] !== undefined) {
+          items.push({ id, type: '댓글', value: s.댓글목록[index] });
+        } else if (type === '작업링크' && s.작업링크목록?.[index] !== undefined) {
+          items.push({ id, type: '작업링크', value: s.작업링크목록[index] });
+        }
+      });
+    } else {
+      if (s.제목목록?.length) s.제목목록.forEach((v) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '제목', value: v }));
+      if (s.내용목록?.length) s.내용목록.forEach((v) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '내용', value: v }));
+      if (s.게시글목록?.length) s.게시글목록.forEach((pb) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '게시글', postBlock: { ...pb } }));
+      if (s.댓글목록?.length) s.댓글목록.forEach((v) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '댓글', value: v }));
+      if (s.작업링크목록?.length) s.작업링크목록.forEach((v) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '작업링크', value: v }));
+    }
+    if (s.키워드) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '키워드', value: s.키워드 });
+    if (s.이미지 || s.이미지목록?.length) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '이미지', value: s.이미지 ?? '', images: s.이미지목록 ?? [] });
+    if (s.동영상) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '동영상', value: s.동영상 });
+    if (s.gif) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: 'gif', value: s.gif });
+    if (s.작업안내) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '작업안내', value: s.작업안내 });
+    return items;
+  });
+  const [appStart, setAppStart] = useState(editTask?.applicationPeriod?.start ?? todayStr());
+  const [appEnd, setAppEnd] = useState(editTask?.applicationPeriod?.end ?? todayStr());
+  const [workStart, setWorkStart] = useState(editTask?.workPeriod?.start ?? todayStr());
+  const [workEnd, setWorkEnd] = useState(editTask?.workPeriod?.end ?? todayStr());
+  const [applicantUserId, setApplicantUserId] = useState(editTask?.applicantUserId ?? '');
+  const [signupLink, setSignupLink] = useState(editTask?.signupLink ?? '');
+  const [postVisibility, setPostVisibility] = useState<'전체공개' | '멤버공개'>(editTask?.postVisibility ?? '전체공개');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
@@ -582,29 +618,44 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
       }
       return `ALBA-${String(maxN + 1).padStart(5, '0')}`;
     })();
-    const newTask: PartTimeTask = {
-      id: `t_${Date.now()}`,
-      title: title.trim(),
-      description: description.trim() || title.trim(),
-      category,
-      reward: Math.max(0, reward),
-      maxApplicants: maxApplicants > 0 ? maxApplicants : undefined,
-      sections: sectionsOut,
-      applicationPeriod: { start: appStart, end: appEnd },
-      workPeriod: { start: workStart, end: workEnd },
-      createdAt: new Date().toISOString(),
-      createdBy: user.id,
-      applicants: [],
-      pointPaid: false,
-      paidUserIds: [],
-      projectNo,
-      ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
-      ...(signupLink.trim() ? { signupLink: signupLink.trim() } : {}),
-      postVisibility,
-    };
+    const newTask: PartTimeTask = editTask
+      ? {
+          ...editTask,
+          title: title.trim(),
+          description: description.trim() || title.trim(),
+          category,
+          reward: Math.max(0, reward),
+          maxApplicants: maxApplicants > 0 ? maxApplicants : undefined,
+          sections: sectionsOut,
+          applicationPeriod: { start: appStart, end: appEnd },
+          workPeriod: { start: workStart, end: workEnd },
+          ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
+          ...(signupLink.trim() ? { signupLink: signupLink.trim() } : {}),
+          postVisibility,
+        }
+      : {
+          id: `t_${Date.now()}`,
+          title: title.trim(),
+          description: description.trim() || title.trim(),
+          category,
+          reward: Math.max(0, reward),
+          maxApplicants: maxApplicants > 0 ? maxApplicants : undefined,
+          sections: sectionsOut,
+          applicationPeriod: { start: appStart, end: appEnd },
+          workPeriod: { start: workStart, end: workEnd },
+          createdAt: new Date().toISOString(),
+          createdBy: user.id,
+          applicants: [],
+          pointPaid: false,
+          paidUserIds: [],
+          projectNo,
+          ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
+          ...(signupLink.trim() ? { signupLink: signupLink.trim() } : {}),
+          postVisibility,
+        };
     try {
       await upsertPartTimeTask(newTask);
-      alert('작업이 등록되었습니다.');
+      alert(editTask ? '작업이 수정되었습니다.' : '작업이 등록되었습니다.');
       navigate('/part-time');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : ((err as Record<string, unknown>)?.message ? String((err as Record<string, unknown>).message) : JSON.stringify(err));
@@ -622,7 +673,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           돌아가기
         </button>
-        <h2 className="flex-1 text-center text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-blue-500 underline-offset-8">프리랜서 작업 등록</h2>
+        <h2 className="flex-1 text-center text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-blue-500 underline-offset-8">{editTask ? '프리랜서 작업 수정' : '프리랜서 작업 등록'}</h2>
         <div className="w-16 sm:w-20 shrink-0" />
       </div>
       <form onSubmit={handleSubmit} formNoValidate className="bg-white p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-[48px] shadow-xl border border-gray-100 space-y-8 sm:space-y-12">
@@ -893,7 +944,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           </div>
         </section>
         <div className="flex gap-4 pt-6">
-          <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? '등록 중...' : '작업 등록하기'}</button>
+          <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? (editTask ? '수정 중...' : '등록 중...') : (editTask ? '작업 수정하기' : '작업 등록하기')}</button>
           <button type="button" onClick={() => navigate('/part-time')} className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-600 font-black hover:bg-gray-200 transition-all">취소</button>
         </div>
       </form>
