@@ -420,6 +420,8 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   const [workStart, setWorkStart] = useState(todayStr());
   const [workEnd, setWorkEnd] = useState(todayStr());
   const [applicantUserId, setApplicantUserId] = useState('');
+  const [signupLink, setSignupLink] = useState('');
+  const [postVisibility, setPostVisibility] = useState<'전체공개' | '멤버공개'>('전체공개');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
@@ -597,15 +599,17 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
       paidUserIds: [],
       projectNo,
       ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
+      ...(signupLink.trim() ? { signupLink: signupLink.trim() } : {}),
+      postVisibility,
     };
     try {
       await upsertPartTimeTask(newTask);
       alert('작업이 등록되었습니다.');
       navigate('/part-time');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = err instanceof Error ? err.message : ((err as Record<string, unknown>)?.message ? String((err as Record<string, unknown>).message) : JSON.stringify(err));
       console.error('작업 등록 실패:', err);
-      alert(`작업 등록에 실패했습니다. ${msg ? `\n\n원인: ${msg}` : ''}\n\n다시 시도해 주세요.`);
+      alert(`작업 등록에 실패했습니다. ${msg ? `\n\n원인: ${msg}` : ''}\n\n다시 시도해 주세요.\n\n※ Supabase SQL Editor에서 supabase-fix-parttime-tasks.sql 을 실행하면 해결될 수 있습니다.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -643,6 +647,36 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           <div>
             <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">한 줄 설명</label>
             <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="작업 한 줄 요약" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none" />
+          </div>
+          {/* Step 1 회원가입 링크 + 게시물 공개 설정 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Step 1 회원가입 링크 (플랫폼 가입 URL)</label>
+              <input
+                type="url"
+                value={signupLink}
+                onChange={(e) => setSignupLink(e.target.value)}
+                placeholder="https://example.com/join"
+                className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">작업 상세페이지 Step 1에 표시되는 가입 링크</p>
+            </div>
+            <div>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">게시물 공개 설정</label>
+              <div className="flex gap-3 pt-1">
+                {(['전체공개', '멤버공개'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setPostVisibility(v)}
+                    className={`flex-1 py-3 rounded-2xl font-black text-sm border-2 transition-all ${postVisibility === v ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300'}`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">작업 상세페이지 Step 2에 표시되는 공개 설정</p>
+            </div>
           </div>
         </section>
         <section className="space-y-6">

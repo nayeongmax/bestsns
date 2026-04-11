@@ -218,6 +218,10 @@ export interface PartTimeTask {
   projectNo?: string;
   /** 운영자가 광고주에게 결과물 제출한 시각 (ISO). 광고주가 링크확인·수정·구매확정 가능 */
   sentToAdvertiserAt?: string;
+  /** Step 1 회원가입/참여 링크 (플랫폼 가입 URL) */
+  signupLink?: string;
+  /** 게시물 공개 설정 (전체공개 / 멤버공개) */
+  postVisibility?: '전체공개' | '멤버공개';
 }
 
 export interface SellerApplication {

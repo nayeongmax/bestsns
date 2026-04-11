@@ -381,7 +381,58 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           </button>
         </div>
 
-        <div className="grid gap-4">
+        {/* ── 3단계 진행 안내 ─────────────────────────────────── */}
+        <div className="space-y-0">
+
+          {/* STEP 1 ─ 회원가입하기 */}
+          <div className="border-2 border-emerald-200 rounded-2xl p-5 md:p-6 bg-emerald-50/30">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">1</div>
+              <div>
+                <h3 className="font-black text-gray-900">회원가입하기</h3>
+                <p className="text-xs text-gray-500 mt-0.5">링크를 눌러서 해당 플랫폼에 회원가입 하세요</p>
+              </div>
+            </div>
+            {task.signupLink ? (
+              <a
+                href={task.signupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 text-white font-black text-sm hover:bg-emerald-600 active:scale-95 transition-all shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                회원가입 바로가기
+              </a>
+            ) : (
+              <p className="text-sm text-gray-400 italic">등록된 가입 링크가 없습니다. 운영자에게 문의하세요.</p>
+            )}
+          </div>
+
+          {/* 화살표 */}
+          <div className="flex justify-center py-2">
+            <svg className="w-5 h-8 text-gray-300" fill="currentColor" viewBox="0 0 20 32">
+              <path d="M9 0h2v22H9zM4.5 17.5l5.5 8 5.5-8H4.5z" />
+            </svg>
+          </div>
+
+          {/* STEP 2 ─ 원본 글 작성 */}
+          <div className="border-2 border-blue-200 rounded-2xl p-5 md:p-6 bg-blue-50/20">
+            <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">2</div>
+                <div>
+                  <h3 className="font-black text-gray-900">아래 원본 내용으로 게시글 작성하기</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">원본 글을 그대로 복사해서 작성해 주세요</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <span className={`px-3 py-1 rounded-full text-xs font-black border ${(task.postVisibility ?? '전체공개') === '멤버공개' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                  {task.postVisibility ?? '전체공개'}
+                </span>
+                <span className="px-3 py-1 rounded-full text-xs font-black bg-purple-100 text-purple-700 border border-purple-200">1분간 체류하기</span>
+              </div>
+            </div>
+            <div className="grid gap-4">
           <h3 className="text-sm font-black text-gray-500 uppercase">작업 내용 (작업자가 할 일)</h3>
           {(() => {
             const order = sections.sectionOrder;
@@ -582,7 +633,90 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               );
             }
           )}
-        </div>
+            </div>{/* close grid gap-4 (sections) */}
+          </div>{/* close Step 2 box */}
+
+          {/* 화살표 */}
+          <div className="flex justify-center py-2">
+            <svg className="w-5 h-8 text-gray-300" fill="currentColor" viewBox="0 0 20 32">
+              <path d="M9 0h2v22H9zM4.5 17.5l5.5 8 5.5-8H4.5z" />
+            </svg>
+          </div>
+
+          {/* STEP 3 ─ 업로드한 링크 제출하기 */}
+          <div className="border-2 border-rose-200 rounded-2xl p-5 md:p-6 bg-rose-50/20">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">3</div>
+              <div>
+                <h3 className="font-black text-gray-900">업로드한 링크 제출하기</h3>
+                <p className="text-xs text-gray-500 mt-0.5">링크를 복사해서 아래에 붙여넣고 제출 버튼을 눌러주세요</p>
+              </div>
+            </div>
+            {user ? (() => {
+              const me = task.applicants.find((a) => a.userId === user.id);
+              if (!me?.selected || task.pointPaid) {
+                return (
+                  <p className="text-sm text-gray-400 italic">
+                    {task.pointPaid ? '✓ 지급 완료된 작업입니다.' : me ? '선정된 후 이 곳에서 링크를 제출할 수 있습니다.' : '신청 후 선정되면 이 곳에서 링크를 제출할 수 있습니다.'}
+                  </p>
+                );
+              }
+              const submitted = me.workLinks?.length ? me.workLinks : (me.workLink ? [me.workLink] : []);
+              return (
+                <div className="space-y-3">
+                  {me.revisionRequest && (
+                    <div className="p-3 rounded-xl bg-orange-50 border border-orange-200">
+                      <p className="text-xs font-black text-orange-700 mb-1">수정 요청 사항</p>
+                      <p className="text-sm text-orange-800 whitespace-pre-wrap">{me.revisionRequest}</p>
+                    </div>
+                  )}
+                  {submitted.length > 0 && !isEditingWorkLinks ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-700 font-bold">제출된 링크:</p>
+                      {submitted.map((url, i) => (
+                        <p key={i} className="text-sm break-all">
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">{url}</a>
+                        </p>
+                      ))}
+                      <button type="button" onClick={() => setIsEditingWorkLinks(true)} className="mt-2 px-4 py-2 rounded-xl bg-amber-500 text-white font-black text-sm hover:bg-amber-600 transition-all">수정</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        {workLinks.map((url, idx) => (
+                          <div key={idx} className="flex gap-2 items-center">
+                            <input
+                              type="url"
+                              value={url}
+                              onChange={(e) => updateWorkLinkInput(idx, e.target.value)}
+                              placeholder="https://..."
+                              className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-rose-200 outline-none"
+                            />
+                            {workLinks.length > 1 && (
+                              <button type="button" onClick={() => removeWorkLinkInput(idx)} className="px-3 py-2 rounded-lg text-red-500 text-sm font-bold hover:bg-red-50">삭제</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button type="button" onClick={addWorkLinkInput} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">+ 링크 추가</button>
+                        <button type="button" onClick={handleSubmitWorkLink} className="px-6 py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-all">
+                          {me.revisionRequest ? '재승인 요청' : '작업 링크 제출'}
+                        </button>
+                        {submitted.length > 0 && (
+                          <button type="button" onClick={() => setIsEditingWorkLinks(false)} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">취소</button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })() : (
+              <p className="text-sm text-gray-400 italic">로그인 후 신청 및 선정되면 링크를 제출할 수 있습니다.</p>
+            )}
+          </div>
+
+        </div>{/* close space-y-0 (3단계 flow) */}
 
         <div className="flex flex-wrap gap-3">
           <div className="inline-flex items-center gap-2 bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
@@ -612,113 +746,58 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           )}
         </div>
 
-        {user && !task.pointPaid && (
-          <>
-            {!isApplicant ? (
-              <div className="border-t border-gray-100 pt-6">
-                <p className="text-sm font-bold text-gray-700 mb-2">내 신청 댓글 (선택)</p>
-                <input
-                  type="text"
-                  value={applyComment}
-                  onChange={(e) => setApplyComment(e.target.value)}
-                  placeholder="신청합니다"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
-                />
-                <p className="text-sm font-bold text-gray-700 mb-2">연락처 (급할 때 연락 가능)</p>
-                <input
-                  type="tel"
-                  value={applyContact}
-                  onChange={(e) => setApplyContact(e.target.value)}
-                  placeholder="010-0000-0000"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
-                />
-                <div className="space-y-3 p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
-                    <span className="text-sm">(필수) 본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</span>
-                  </label>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
-                    <span className="text-sm">(필수) 본 작업과 관련된 게시글 및 대화 기록은 임의로 삭제할 수 없음에 동의합니다.</span>
-                  </label>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
-                    <span className="text-sm">(필수) 직거래 시도 시 거래액의 10배 위약벌 청구 및 영구 제명 조치에 동의합니다.</span>
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleApply}
-                  className="mt-3 px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all"
-                >
-                  신청하기
-                </button>
-              </div>
-            ) : (
-              <>
-                <p className="text-gray-500 font-bold">신청 완료되었습니다. 선정 시 해당 작업 완료 후 운영자와 광고주가 결과물 확인 후 수익통장에 적립됩니다.</p>
-                {(() => {
-                  const me = task.applicants.find((a) => a.userId === user?.id);
-                  if (me?.selected) {
-                    const submitted = me.workLinks?.length ? me.workLinks : (me.workLink ? [me.workLink] : []);
-                    return (
-                      <div className="border-t border-gray-100 pt-6 mt-4">
-                        <h3 className="text-lg font-black text-gray-800 mb-2">작업 링크 제출</h3>
-                        <p className="text-sm text-gray-500 mb-3">작업을 완료한 후 결과 링크를 남겨 주세요. 링크를 여러 개 제출할 수 있습니다. 운영자 확인 후 포인트가 지급됩니다.</p>
-                        {submitted.length > 0 && !isEditingWorkLinks ? (
-                          <div className="space-y-2">
-                            <p className="text-gray-700 font-bold">제출된 링크:</p>
-                            {submitted.map((url, i) => (
-                              <p key={i} className="text-sm">
-                                <a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline break-all">{url}</a>
-                              </p>
-                            ))}
-                            <button type="button" onClick={() => setIsEditingWorkLinks(true)} className="mt-3 px-4 py-2 rounded-xl bg-amber-500 text-white font-black text-sm hover:bg-amber-600">
-                              수정
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="space-y-2 mb-3">
-                              {workLinks.map((url, idx) => (
-                                <div key={idx} className="flex gap-2 items-center">
-                                  <input
-                                    type="url"
-                                    value={url}
-                                    onChange={(e) => updateWorkLinkInput(idx, e.target.value)}
-                                    placeholder="https://..."
-                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none"
-                                  />
-                                  {workLinks.length > 1 && (
-                                    <button type="button" onClick={() => removeWorkLinkInput(idx)} className="px-3 py-2 rounded-lg text-red-500 text-sm font-bold hover:bg-red-50">삭제</button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                              <button type="button" onClick={addWorkLinkInput} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">
-                                + 링크 추가
-                              </button>
-                              <button type="button" onClick={handleSubmitWorkLink} className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all">
-                                {me.revisionRequest ? '재승인 요청' : '작업 링크 제출'}
-                              </button>
-                              {submitted.length > 0 && (
-                                <button type="button" onClick={() => setIsEditingWorkLinks(false)} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200">
-                                  취소
-                                </button>
-                              )}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </>
-            )}
-          </>
+        {/* 신청하기 — 미신청자 전용 */}
+        {user && !task.pointPaid && !isApplicant && (
+          <div className="border-t border-gray-100 pt-6">
+            <p className="text-sm font-bold text-gray-700 mb-2">내 신청 댓글 (선택)</p>
+            <input
+              type="text"
+              value={applyComment}
+              onChange={(e) => setApplyComment(e.target.value)}
+              placeholder="신청합니다"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
+            />
+            <p className="text-sm font-bold text-gray-700 mb-2">연락처 (급할 때 연락 가능)</p>
+            <input
+              type="tel"
+              value={applyContact}
+              onChange={(e) => setApplyContact(e.target.value)}
+              placeholder="010-0000-0000"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
+            />
+            <div className="space-y-3 p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
+                <span className="text-sm">(필수) 본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={agree2} onChange={(e) => setAgree2(e.target.checked)} className="mt-1 rounded" />
+                <span className="text-sm">(필수) 본 작업과 관련된 게시글 및 대화 기록은 임의로 삭제할 수 없음에 동의합니다.</span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={agree3} onChange={(e) => setAgree3(e.target.checked)} className="mt-1 rounded" />
+                <span className="text-sm">(필수) 직거래 시도 시 거래액의 10배 위약벌 청구 및 영구 제명 조치에 동의합니다.</span>
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={handleApply}
+              className="mt-3 px-6 py-3 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all"
+            >
+              신청하기
+            </button>
+          </div>
         )}
+        {/* 신청 완료 — 신청자이지만 아직 선정 전 */}
+        {user && isApplicant && !task.pointPaid && (() => {
+          const me = task.applicants.find((a) => a.userId === user?.id);
+          if (!me?.selected) {
+            return (
+              <p className="text-gray-500 font-bold border-t border-gray-100 pt-6">신청 완료되었습니다. 선정 시 위 Step 3에서 링크를 제출해 주세요. 운영자와 광고주 확인 후 수익통장에 적립됩니다.</p>
+            );
+          }
+          return null;
+        })()}
 
         {/* 운영자 전용 목록 — 로그인한 운영자에게만 항상 표시 (닉네임·댓글·연락처·선정) */}
         {user && isOperator && (
