@@ -160,71 +160,93 @@ function extractDescription(html) {
   return ogDesc || null;
 }
 
+/** 아바타·뱃지·UI 이미지 URL인지 판단 */
+function isAvatarOrBadgeUrl(url) {
+  return /\/avatar|\/profile|\/user[_-]?(?:img|photo|pic)|\/badge|\/rank|\/level|\/icon|\/emoji|\/flag/i.test(url);
+}
+
+/** __NEXT_DATA__의 매물(listing) 객체에서 첨부 이미지 추출 */
+function extractAttachedImagesFromNextData(nextData, baseUrl) {
+  if (!nextData) return [];
+
+  // 딜바론 구조: props.pageProps 하위의 group/listing/item 등
+  const pageProps = nextData?.props?.pageProps ?? {};
+  const listingKeys = ['group', 'listing', 'item', 'product', 'channel', 'post', 'data'];
+  const imgKeys = ['attachedImages', 'images', 'imageList', 'photos', 'gallery'];
+
+  const results = [];
+
+  const tryExtract = (obj) => {
+    if (!obj || typeof obj !== 'object') return;
+    for (const imgKey of imgKeys) {
+      if (!obj[imgKey]) continue;
+      const val = obj[imgKey];
+      if (typeof val === 'string') {
+        const resolved = resolveUrl(val, baseUrl);
+        if (resolved && !isAvatarOrBadgeUrl(resolved)) results.push(resolved);
+      } else if (Array.isArray(val)) {
+        for (const item of val) {
+          let src = null;
+          if (typeof item === 'string') src = item;
+          else if (item?.url) src = item.url;
+          else if (item?.src) src = item.src;
+          if (src) {
+            const resolved = resolveUrl(src, baseUrl);
+            if (resolved && !isAvatarOrBadgeUrl(resolved)) results.push(resolved);
+          }
+        }
+      }
+    }
+  };
+
+  // pageProps 직속 listing 키 탐색
+  for (const key of listingKeys) {
+    if (pageProps[key]) {
+      tryExtract(pageProps[key]);
+      if (results.length > 0) return [...new Set(results)];
+    }
+  }
+
+  // pageProps 자체에서도 시도
+  tryExtract(pageProps);
+  return [...new Set(results)];
+}
+
 /** 이미지 URL 목록 추출 */
 function extractImages(html, baseUrl) {
-  // 1. OG image (썸네일)
+  // 1. OG image (썸네일) — 매물 대표 이미지로 신뢰도 높음
   const ogImage = getMeta(html, 'og:image');
   const thumbnail = ogImage ? resolveUrl(ogImage, baseUrl) : null;
 
-  // 2. Next.js __NEXT_DATA__ 이미지
+  // 2. __NEXT_DATA__에서 매물 첨부 이미지만 추출 (유저 아바타·뱃지 제외)
   const nextData = extractNextData(html);
-  const nextImages = [];
-  if (nextData) {
-    const imgs = deepFindAll(nextData, ['image', 'images', 'thumbnail', 'thumbnails', 'imageList', 'attachedImages']);
-    for (const img of imgs) {
-      if (typeof img === 'string') {
-        const resolved = resolveUrl(img, baseUrl);
-        if (resolved) nextImages.push(resolved);
+  const nextAttached = extractAttachedImagesFromNextData(nextData, baseUrl);
+
+  // 3. __NEXT_DATA__로 못 찾은 경우: HTML에서 "Attached images" 섹션 한정 탐색
+  const galleryImages = [];
+  if (nextAttached.length === 0) {
+    // 딜바론의 첨부 이미지 컨테이너 클래스 패턴
+    const attachedSectionPattern =
+      /<(?:div|section|ul)[^>]+class="[^"]*(?:attached|gallery|image-list|swiper|carousel|product-image)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|section|ul)>/gi;
+    let secMatch;
+    while ((secMatch = attachedSectionPattern.exec(html)) !== null) {
+      const sectionHtml = secMatch[1];
+      const imgPattern = /<img[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi;
+      let m;
+      while ((m = imgPattern.exec(sectionHtml)) !== null) {
+        const resolved = resolveUrl(m[1], baseUrl);
+        if (resolved && !isAvatarOrBadgeUrl(resolved)) galleryImages.push(resolved);
       }
     }
   }
 
-  // 3. 일반 img 태그 수집
-  const imgPattern = /<img[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi;
-  const allHtmlImages = [];
-  let m;
-  while ((m = imgPattern.exec(html)) !== null) {
-    const src = m[1];
-    const resolved = resolveUrl(src, baseUrl);
-    if (!resolved) continue;
-    // 아이콘·로고·스피너 필터링
-    if (/icon|logo|favicon|spinner|placeholder|loading|blank|pixel|1x1/i.test(src)) continue;
-    // 외부 트래킹 픽셀 필터링
-    if (/\.(gif)$/.test(src.toLowerCase()) && src.includes('1x1')) continue;
-    allHtmlImages.push(resolved);
-  }
+  // 상세 이미지: __NEXT_DATA__ 첨부 이미지 우선, 없으면 갤러리 섹션 이미지
+  const rawDetail = nextAttached.length > 0 ? nextAttached : galleryImages;
 
-  // 4. CSS background-image URL 수집
-  const bgPattern = /background(?:-image)?\s*:\s*url\(["']?([^"')]+)["']?\)/gi;
-  const bgImages = [];
-  while ((m = bgPattern.exec(html)) !== null) {
-    const resolved = resolveUrl(m[1], baseUrl);
-    if (resolved && !/icon|logo|favicon|pattern|texture/i.test(m[1])) {
-      bgImages.push(resolved);
-    }
-  }
+  // 썸네일과 중복 제거
+  const detailImages = [...new Set(rawDetail)].filter(url => url !== thumbnail);
 
-  // 5. 딜바론 특화 갤러리 이미지 패턴
-  const galleryPattern = /<(?:div|li|figure)[^>]+class="[^"]*(?:gallery|slide|swiper|carousel|thumb|image)[^"]*"[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
-  const galleryImages = [];
-  while ((m = galleryPattern.exec(html)) !== null) {
-    const resolved = resolveUrl(m[1], baseUrl);
-    if (resolved) galleryImages.push(resolved);
-  }
-
-  // 이미지 목록 조합: nextImages > galleryImages > allHtmlImages > bgImages
-  const combined = [...new Set([
-    ...(thumbnail ? [thumbnail] : []),
-    ...nextImages,
-    ...galleryImages,
-    ...allHtmlImages,
-    ...bgImages,
-  ])];
-
-  // 썸네일 제외한 상세 이미지 목록
-  const detailImages = combined.filter(url => url !== thumbnail);
-
-  return { thumbnail: thumbnail || combined[0] || null, detail: detailImages.slice(0, 20) };
+  return { thumbnail: thumbnail || null, detail: detailImages.slice(0, 20) };
 }
 
 /** 채널 통계 수치 추출 (구독자, 조회수 등) */
