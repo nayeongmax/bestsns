@@ -265,51 +265,6 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
             </section>
           )}
 
-          <section className="space-y-6 sm:space-y-12">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 italic uppercase tracking-tighter flex items-center gap-3 sm:gap-4">
-              <span className="w-1.5 sm:w-2 h-6 sm:h-10 bg-orange-500 rounded-full shadow-lg"></span> 실제 구매 고객 만족도
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
-              {allChannelReviews.length === 0 ? (
-                <div className="col-span-full py-12 sm:py-24 text-center bg-gray-50 rounded-2xl sm:rounded-3xl md:rounded-[56px] border-4 border-dashed border-gray-100">
-                  <p className="text-gray-300 font-black italic text-base sm:text-xl uppercase tracking-widest px-4">아직 작성된 리뷰가 없습니다.</p>
-                </div>
-              ) : allChannelReviews.map(rev => (
-                <div key={rev.id} className="space-y-4 sm:space-y-6">
-                  <div className="bg-white p-4 sm:p-6 md:p-10 rounded-2xl sm:rounded-3xl md:rounded-[40px] border border-gray-100 flex flex-col gap-3 sm:gap-6 shadow-sm hover:border-blue-200 transition-all group">
-                     <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4">
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-[20px] overflow-hidden bg-gray-50 border border-gray-100 shrink-0">
-                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rev.userId}`} className="w-full h-full object-cover" alt="p" />
-                          </div>
-                          <div>
-                            <p className="font-black text-gray-900 text-base sm:text-lg">@{rev.author}</p>
-                            <div className="flex text-yellow-400 text-xs sm:text-sm">{Array.from({length: 5}).map((_, i) => (<span key={i}>{i < rev.rating ? '★' : '☆'}</span>))}</div>
-                          </div>
-                        </div>
-                        <span className="text-[10px] sm:text-[11px] font-bold text-gray-300 italic uppercase">{rev.date}</span>
-                     </div>
-                     <p className="text-sm sm:text-[17px] font-bold text-gray-600 leading-relaxed italic group-hover:text-gray-900 transition-colors">"{rev.content}"</p>
-                     <p className="text-[9px] sm:text-[10px] font-black text-blue-400 italic"># {channels.find(c => c.id === rev.productId)?.title || '채널 매매'} 거래 완료 리뷰</p>
-                  </div>
-                  {rev.reply && (
-                    <div className="ml-8 sm:ml-16 bg-blue-50/50 p-4 sm:p-8 rounded-xl sm:rounded-[40px] border border-blue-100 shadow-inner relative animate-in slide-in-from-left-4">
-                       <div className="flex items-center gap-3 mb-4">
-                          <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-md">
-                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rev.productId}`} className="w-full h-full object-cover" alt="expert" />
-                          </div>
-                          <div>
-                            <p className="text-[14px] font-black text-blue-900 italic leading-none">Expert Reply <span className="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full ml-1 not-italic">✓</span></p>
-                            <p className="text-[9px] text-blue-300 font-bold uppercase">{rev.replyDate}</p>
-                          </div>
-                       </div>
-                       <p className="text-[15px] font-black text-blue-800 leading-relaxed italic">"{rev.reply}"</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
         </div>
       </div>
 
