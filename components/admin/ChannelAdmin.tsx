@@ -149,27 +149,28 @@ const ChannelAdmin: React.FC<Props> = ({ channels, setChannels, channelOrders, s
         return;
       }
 
-      // 폼 prefill 데이터 구성
+      // 폼 prefill 데이터 구성 (이미지·통계만, 타이틀/설명은 당겨오지 않음)
       const fill: Partial<ChannelProduct> = {};
-      if (data.title) fill.title = data.title;
       if (data.subscribers != null) fill.subscribers = data.subscribers;
       if (data.income != null) fill.income = data.income;
       if (data.expense != null) fill.expense = data.expense;
 
       setPrefill(fill);
 
-      // 제어 상태 직접 업데이트
-      if (data.description) setTempDescription(data.description);
+      // 제어 상태 직접 업데이트 (이미지만)
       if (data.thumbnail) setThumbnail(data.thumbnail);
       if (data.images?.length) setAttachedImages((data.images as string[]).slice(0, 10));
 
       // formKey 변경으로 uncontrolled 입력 리셋 (defaultValue 재적용)
       setFormKey(k => k + 1);
 
-      const imgCount = (data.thumbnail ? 1 : 0) + (data.images?.length || 0);
+      const thumbCount = data.thumbnail ? 1 : 0;
+      const detailCount = data.images?.length || 0;
+      const thumbMsg = data.thumbnail ? '썸네일 1개' : '썸네일 없음';
+      const detailMsg = detailCount > 0 ? `, 상세이미지 ${detailCount}개` : '';
       setScrapeMsg({
         type: 'success',
-        text: `자동완성 완료! 이미지 ${imgCount}개${data.storageUsed ? ' (Supabase Storage 저장됨)' : ''}.`,
+        text: `이미지 자동완성 완료! ${thumbMsg}${detailMsg}${data.storageUsed ? ' (Storage 저장됨)' : ''}.`,
       });
     } catch {
       setScrapeMsg({ type: 'error', text: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
