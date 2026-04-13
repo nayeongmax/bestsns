@@ -162,13 +162,42 @@ function extractDescription(html) {
 
 /** 이미지 URL 목록 추출 (딜바론 전용) */
 function extractImages(html, baseUrl) {
-  // ── 1. 썸네일: .group-image 안의 <img> (딜바론 매물 대표 이미지)
+  // ── 1. 썸네일: 다양한 패턴으로 시도
   let thumbnail = null;
-  const groupImgMatch = html.match(/class="group-image"[\s\S]*?<img[^>]+src=["']([^"']+)["']/i);
-  if (groupImgMatch) {
-    thumbnail = resolveUrl(groupImgMatch[1], baseUrl);
+
+  // 1-a. .group-image 안의 <img> (순서 무관)
+  const groupImgMatch =
+    html.match(/class="[^"]*group-image[^"]*"[\s\S]{0,300}?<img[^>]+src=["']([^"']+)["']/i) ||
+    html.match(/<img[^>]+src=["']([^"']+)["'][^>]*>[\s\S]{0,300}?class="[^"]*group-image[^"]*"/i);
+  if (groupImgMatch?.[1]) thumbnail = resolveUrl(groupImgMatch[1], baseUrl);
+
+  // 1-b. 딜바론 특화: product-image / listing-image / channel-logo / avatar 클래스
+  if (!thumbnail) {
+    const classPatterns = [
+      /class="[^"]*(?:product-image|listing-image|channel-logo|item-image|cover-image|avatar|logo)[^"]*"[\s\S]{0,300}?<img[^>]+src=["']([^"']+)["']/i,
+      /<img[^>]+class="[^"]*(?:product-image|listing-image|channel-logo|item-image|cover-image|avatar|logo)[^"]*"[^>]+src=["']([^"']+)["']/i,
+      /<img[^>]+src=["']([^"']+)["'][^>]*class="[^"]*(?:product-image|listing-image|channel-logo|item-image|cover-image|avatar|logo)[^"]*"/i,
+    ];
+    for (const p of classPatterns) {
+      const m = html.match(p);
+      if (m?.[1]) { thumbnail = resolveUrl(m[1], baseUrl); break; }
+    }
   }
-  // 없으면 OG image fallback
+
+  // 1-c. Next.js __NEXT_DATA__ 에서 썸네일/이미지 필드 탐색
+  if (!thumbnail) {
+    const nextData = extractNextData(html);
+    if (nextData) {
+      const thumbKeys = ['thumbnail', 'thumbnailUrl', 'thumbnail_url', 'image', 'imageUrl', 'image_url',
+                         'avatar', 'avatarUrl', 'cover', 'coverImage', 'logo', 'logoUrl', 'photo'];
+      const found = deepFind(nextData, thumbKeys);
+      if (found && typeof found === 'string' && found.startsWith('http')) {
+        thumbnail = resolveUrl(found, baseUrl);
+      }
+    }
+  }
+
+  // 1-d. OG image fallback
   if (!thumbnail) {
     const ogImage = getMeta(html, 'og:image');
     if (ogImage) thumbnail = resolveUrl(ogImage, baseUrl);
