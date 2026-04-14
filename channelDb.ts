@@ -3,7 +3,7 @@
  * - channel_products (채널 상품), channel_orders (채널 구매 내역)
  */
 import { supabase } from './supabase';
-import type { ChannelProduct, ChannelOrder } from '@/types';
+import type { ChannelProduct, ChannelOrder, ChannelReview } from '@/types';
 
 // ─── channel_products ──────────────────────────────────────────────────
 function productToRow(p: ChannelProduct): Record<string, unknown> {
@@ -195,4 +195,42 @@ export async function upsertChannelOrders(list: ChannelOrder[]): Promise<void> {
   }
 
   throw error;
+}
+
+// ─── channel_reviews ─────────────────────────────────────────────────────────
+function rowToChannelReview(row: Record<string, unknown>): ChannelReview {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    userNickname: String(row.user_nickname ?? ''),
+    productId: String(row.product_id ?? ''),
+    productName: String(row.product_name ?? ''),
+    platform: String(row.platform ?? ''),
+    rating: Number(row.rating ?? 5),
+    content: String(row.content ?? ''),
+    createdAt: String(row.created_at ?? ''),
+  };
+}
+
+export async function fetchChannelReviews(): Promise<ChannelReview[]> {
+  const { data, error } = await supabase
+    .from('channel_reviews')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToChannelReview(row as Record<string, unknown>));
+}
+
+export async function insertChannelReview(review: Omit<ChannelReview, 'id' | 'createdAt'>): Promise<void> {
+  const { error } = await supabase.from('channel_reviews').insert({
+    user_id: review.userId,
+    user_nickname: review.userNickname,
+    product_id: review.productId,
+    product_name: review.productName,
+    platform: review.platform,
+    rating: review.rating,
+    content: review.content,
+  });
+  if (error) throw error;
 }
