@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { 
-  UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct, 
+import {
+  UserProfile, SMMOrder, ChannelOrder, StoreOrder, EbookProduct,
   ChannelProduct, SiteNotification, Notice, Post, Review, WishlistItem, Coupon, AutoCouponCampaign,
-  SMMProvider, SMMProduct, NotificationType, GradeConfig
+  SMMProvider, SMMProduct, NotificationType, GradeConfig, ChannelReview
 } from '@/types';
 import { supabase } from './supabase';
 import { fetchPublicStoreProducts, fetchStoreProductsAdmin, fetchStoreOrders, fetchReviews, upsertStoreProducts, upsertStoreProductsAdmin, upsertStoreOrders, upsertReviews } from './storeDb';
-import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders } from './channelDb';
+import { fetchChannelProducts, fetchChannelOrders, upsertChannelProducts, upsertChannelOrders, fetchChannelReviews } from './channelDb';
 import {
   fetchSmmOrders, fetchSmmProviders, fetchSmmProducts, fetchPublicSmmProducts,
   upsertSmmOrders, upsertSmmProviders, upsertSmmProducts, deleteSmmProductsByIds,
@@ -92,6 +92,7 @@ function ContainerRoutes(props: {
   smmProducts: any[]; smmProviders: any[]; smmOrders: any[]; notices: any[]; setSmmOrders: React.Dispatch<React.SetStateAction<any[]>>; addNotif: (userId: string, type: NotificationType, title: string, body: string) => void; handleLogout: () => void;
   channels: any[]; setChannels: React.Dispatch<React.SetStateAction<any[]>>; reviews: any[]; members: UserProfile[]; setMembers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
   storeOrders: any[]; channelOrders: any[]; posts: any[]; setPosts: React.Dispatch<React.SetStateAction<any[]>>; setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
+  channelReviews: any[]; setChannelReviews: React.Dispatch<React.SetStateAction<any[]>>;
   setNotifications: React.Dispatch<React.SetStateAction<SiteNotification[]>>; notifications: SiteNotification[]; setStoreOrders: React.Dispatch<React.SetStateAction<any[]>>; setChannelOrders: React.Dispatch<React.SetStateAction<any[]>>;
   handleGlobalUserUpdate: (u: UserProfile) => void; handleLoginSuccess: (u: UserProfile) => void;
   setSmmProviders: React.Dispatch<React.SetStateAction<any[]>>; setSmmProducts: React.Dispatch<React.SetStateAction<any[]>>; setNotices: React.Dispatch<React.SetStateAction<Notice[]>>;
@@ -121,7 +122,7 @@ function ContainerRoutes(props: {
     <Routes>
       <Route path="/ebooks" element={<EbookSales ebooks={props.ebooks} setEbooks={props.setEbooks} user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user' }} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} members={props.members} gradeConfigs={props.gradeConfigs} />} />
       <Route path="/sns" element={<SNSActivation smmProducts={props.smmProducts} providers={props.smmProviders} user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={props.notices} onOrderComplete={(o) => { props.setSmmOrders(prev => [o, ...prev]); if (props.user) props.addNotif(props.user.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={props.handleLogout} />} />
-      <Route path="/channels" element={<ChannelSales channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} />} />
+      <Route path="/channels" element={<ChannelSales channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channelReviews={props.channelReviews} />} />
       <Route path="/channels/:id" element={<ChannelDetail channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} reviews={props.reviews} members={props.members} user={props.user ?? undefined} addNotif={props.user ? props.addNotif : undefined} onChannelOrderCreated={props.user ? (o) => props.setChannelOrders(prev => [o, ...prev]) : undefined} />} />
       <Route path="/ebooks/:id" element={props.user ? <EbookDetail ebooks={props.ebooks} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} user={props.user} reviews={props.reviews} storeOrders={props.storeOrders} members={props.members} gradeConfigs={props.gradeConfigs} addNotif={props.addNotif} onStoreOrderCreated={(o) => props.setStoreOrders(prev => [o, ...prev])} /> : <Navigate to="/login" />} />
       <Route path="/ebooks/register" element={props.user ? <EbookRegistration user={props.user} setEbooks={props.setEbooks} /> : <Navigate to="/login" />} />
@@ -136,7 +137,7 @@ function ContainerRoutes(props: {
       <Route path="/revenue" element={props.user ? <RevenueManagement user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/profit-mgmt" element={props.user ? <ProfitManagement user={props.user} storeOrders={props.storeOrders} /> : <Navigate to="/login" />} />
       <Route path="/chat" element={props.user ? <ChatPage user={props.user} members={props.members} addNotif={props.addNotif} onlineUserIds={props.onlineUserIds} /> : <Navigate to="/login" />} />
-      <Route path="/mypage" element={props.user ? <MyPage user={props.user} members={props.members} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} setStoreOrders={props.setStoreOrders} setChannelOrders={props.setChannelOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={props.onRefetchProfile} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
+      <Route path="/mypage" element={props.user ? <MyPage user={props.user} members={props.members} onUpdate={props.handleGlobalUserUpdate} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} smmOrders={props.smmOrders} channelOrders={props.channelOrders} storeOrders={props.storeOrders} setStoreOrders={props.setStoreOrders} setChannelOrders={props.setChannelOrders} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} onAddChannelReview={(r)=>props.setChannelReviews(prev=>[r,...prev])} onUpdateReview={(r)=>props.setReviews(prev=>prev.map(i=>i.id===r.id?r:i))} reviews={props.reviews} addNotif={props.addNotif} onRefetchProfile={props.onRefetchProfile} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/notifications" element={props.user ? <NotificationsPage notifications={props.notifications} setNotifications={props.setNotifications} user={props.user} /> : <Navigate to="/login" />} />
       <Route path="/wishlist" element={<WishlistPage wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channels={props.channels} ebooks={props.ebooks} />} />
       <Route path="/coupons" element={props.user ? <CouponBox user={props.user} /> : <Navigate to="/login" />} />
@@ -180,6 +181,7 @@ const App: React.FC = () => {
   const [channels, setChannels] = useState<ChannelProduct[]>(() => safeStorage('site_channels_v2', []));
   const [posts, setPosts] = useState<Post[]>(() => safeStorage('site_posts_v2', []));
   const [reviews, setReviews] = useState<Review[]>(() => safeStorage('site_reviews_v2', []));
+  const [channelReviews, setChannelReviews] = useState<ChannelReview[]>([]);
   const [notices, setNotices] = useState<Notice[]>(() => safeStorage('site_notices_v2', []));
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [gradeConfigs, setGradeConfigs] = useState<GradeConfig[]>(() => {
@@ -224,12 +226,13 @@ const App: React.FC = () => {
     const isInitialAdmin = initialUser?.role === 'admin';
     const load = async (isRetry: boolean) => {
       try {
-        const [products, orders, reviewList, channelProducts, channelOrderList] = await Promise.all([
+        const [products, orders, reviewList, channelProducts, channelOrderList, channelReviewList] = await Promise.all([
           isInitialAdmin ? fetchStoreProductsAdmin() : fetchPublicStoreProducts(),
           fetchStoreOrders(),
           fetchReviews(),
           fetchChannelProducts(),
           fetchChannelOrders(),
+          fetchChannelReviews().catch(() => [] as ChannelReview[]),
         ]);
         if (!cancelled) {
           // Supabase에 thumbnail이 없는 경우 localStorage 데이터로 보완 (upsert 실패로 누락된 경우 복구)
@@ -257,6 +260,7 @@ const App: React.FC = () => {
           setReviews(reviewList);
           setChannels(channelProducts);
           setChannelOrders(channelOrderList);
+          setChannelReviews(channelReviewList);
           storeDbLoaded.current = true;
           channelDbLoaded.current = true;
         }
@@ -997,6 +1001,8 @@ const App: React.FC = () => {
             posts={posts}
             setPosts={setPosts}
             setReviews={setReviews}
+            channelReviews={channelReviews}
+            setChannelReviews={setChannelReviews}
             setNotifications={setNotifications}
             notifications={notifications}
             setStoreOrders={setStoreOrders}

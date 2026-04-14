@@ -4,7 +4,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 /**
  * Fixed: Imported missing NotificationType
  */
-import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType, GradeConfig, getUserGrade } from '../types';
+import { UserProfile, EbookProduct, ChannelProduct, ChannelOrder, SMMOrder, Review, StoreOrder, NotificationType, GradeConfig, getUserGrade, ChannelReview } from '../types';
 import UserInfoSection from '@/components/mypage/UserInfoSection';
 import { updateProfile } from '../profileDb';
 import { compressImageForStorage } from '../constants';
@@ -25,6 +25,7 @@ interface Props {
   setStoreOrders?: React.Dispatch<React.SetStateAction<StoreOrder[]>>;
   setChannelOrders?: React.Dispatch<React.SetStateAction<ChannelOrder[]>>;
   onAddReview: (review: Review) => void;
+  onAddChannelReview?: (review: ChannelReview) => void;
   onUpdateReview: (review: Review) => void;
   reviews: Review[];
   addNotif: (userId: string, type: NotificationType, title: string, message: string, reason?: string) => void;
@@ -39,7 +40,7 @@ type NicknameStatus = 'idle' | 'available' | 'unavailable';
 /**
  * Fixed: Added addNotif to component destructuring
  */
-const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, setStoreOrders, setChannelOrders, onAddReview, onUpdateReview, reviews, addNotif, onRefetchProfile, gradeConfigs = [] }) => {
+const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEbooks, channels, smmOrders, channelOrders, storeOrders, setStoreOrders, setChannelOrders, onAddReview, onAddChannelReview, onUpdateReview, reviews, addNotif, onRefetchProfile, gradeConfigs = [] }) => {
   const displayUser = useMemo(() => {
     if (!user) return null;
     const m = members.find((x) => x.id === user.id);
@@ -271,7 +272,7 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
             addNotif={addNotif}
           />
         )}
-        {activeMainTab === 'buyer' && <BuyerDashboard user={effectiveUser} members={members} smmOrders={smmOrders} channelOrders={channelOrders} channelProducts={channels} storeOrders={storeOrders} setStoreOrders={setStoreOrders} setChannelOrders={setChannelOrders} ebooks={ebooks} onAddReview={onAddReview} initialSubTab={(location.state as any)?.buyerSubTab} initialSnsSubTab={(location.state as any)?.snsSubTab} />}
+        {activeMainTab === 'buyer' && <BuyerDashboard user={effectiveUser} members={members} smmOrders={smmOrders} channelOrders={channelOrders} channelProducts={channels} storeOrders={storeOrders} setStoreOrders={setStoreOrders} setChannelOrders={setChannelOrders} ebooks={ebooks} onAddReview={onAddReview} onAddChannelReview={onAddChannelReview} initialSubTab={(location.state as any)?.buyerSubTab} initialSnsSubTab={(location.state as any)?.snsSubTab} />}
         {activeMainTab === 'freelancer' && <FreelancerDashboard user={effectiveUser} onUpdate={onUpdate} onApplyFreelancer={() => goToExpertRegistration('freelancer')} initialSubTab={(location.state as any)?.freelancerSubTab} addNotif={addNotif} />}
         {activeMainTab === 'seller' && (
           <SellerDashboard

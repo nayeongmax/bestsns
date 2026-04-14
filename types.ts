@@ -278,6 +278,18 @@ export interface SMMReview {
   createdAt: string;
 }
 
+export interface ChannelReview {
+  id: string;
+  userId: string;
+  userNickname: string;
+  productId: string;
+  productName: string;
+  platform: string;
+  rating: number; // 1~5
+  content: string;
+  createdAt: string;
+}
+
 export interface ChannelOrder {
   id: string;
   userId: string;

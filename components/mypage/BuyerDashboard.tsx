@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder, ChannelProduct } from '@/types';
+import { UserProfile, SMMOrder, EbookProduct, Review, ChannelOrder, StoreOrder, ChannelProduct, ChannelReview } from '@/types';
 import { fetchOrderBuyerFlags, upsertOrderBuyerFlag, upsertStoreOrder, type OrderBuyerFlag } from '../../storeDb';
-import { upsertChannelOrder } from '../../channelDb';
+import { upsertChannelOrder, insertChannelReview } from '../../channelDb';
 import { fetchPointTransactions, type PointTransaction } from '../../pointDb';
 import { supabase } from '../../supabase';
 import { insertSmmReview } from '../../smmDb';
@@ -18,6 +18,7 @@ interface Props {
   setChannelOrders?: React.Dispatch<React.SetStateAction<ChannelOrder[]>>;
   ebooks: EbookProduct[];
   onAddReview: (review: Review) => void;
+  onAddChannelReview?: (review: ChannelReview) => void;
   initialSubTab?: 'sns' | 'channel' | 'store';
   initialSnsSubTab?: 'orders' | 'charge' | 'usage';
 }
@@ -57,7 +58,7 @@ interface OrderItem {
   paymentLog?: string;
 }
 
-const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channelOrders, channelProducts = [], storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, initialSubTab, initialSnsSubTab }) => {
+const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channelOrders, channelProducts = [], storeOrders, setStoreOrders, setChannelOrders, ebooks, onAddReview, onAddChannelReview, initialSubTab, initialSnsSubTab }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BuyerSubTab>(() => initialSubTab ?? 'sns');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -187,15 +188,19 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
     };
     onAddReview(newReview);
 
+    const maskNick = (nickname: string) => {
+      if (!nickname || nickname.length <= 1) return '익명';
+      if (nickname.length <= 3) return nickname[0] + '**';
+      if (nickname.length <= 6) return nickname.slice(0, 2) + '***';
+      return nickname.slice(0, 3) + '***';
+    };
+
     // SNS 주문 리뷰는 별 4개 이상 + 악성 키워드 없을 때 마케팅 주문 페이지 리뷰 섹션에 노출
     if (targetOrder.type === 'sns' && rating >= 4) {
       const text = reviewContent.toLowerCase();
       const isMalicious = NEGATIVE_KEYWORDS.some(kw => text.includes(kw));
       if (!isMalicious) {
-        const nickname = user.nickname || '익명';
-        const masked = nickname.length > 3
-          ? nickname.slice(0, 3) + '*'.repeat(nickname.length - 3)
-          : nickname + '***';
+        const masked = maskNick(user.nickname || '익명');
         insertSmmReview({
           userId: user.id,
           userNickname: masked,
@@ -204,6 +209,36 @@ const BuyerDashboard: React.FC<Props> = ({ user, members = [], smmOrders, channe
           rating,
           content: reviewContent,
         }).catch((err) => console.warn('SMM 리뷰 저장:', err));
+      }
+    }
+
+    // 채널 주문 리뷰는 별 4점 이상 + 악성 키워드 없을 때 채널판매 페이지 리뷰 섹션에 노출
+    if (targetOrder.type === 'channel' && rating >= 4) {
+      const text = reviewContent.toLowerCase();
+      const isMalicious = NEGATIVE_KEYWORDS.some(kw => text.includes(kw));
+      if (!isMalicious) {
+        const masked = maskNick(user.nickname || '익명');
+        const newChannelReview: ChannelReview = {
+          id: `cr_${Date.now()}`,
+          userId: user.id,
+          userNickname: masked,
+          productId: targetOrder.productId,
+          productName: targetOrder.productName,
+          platform: '',
+          rating,
+          content: reviewContent,
+          createdAt: new Date().toISOString(),
+        };
+        onAddChannelReview?.(newChannelReview);
+        insertChannelReview({
+          userId: user.id,
+          userNickname: masked,
+          productId: targetOrder.productId,
+          productName: targetOrder.productName,
+          platform: '',
+          rating,
+          content: reviewContent,
+        }).catch((err) => console.warn('채널 리뷰 저장:', err));
       }
     }
 

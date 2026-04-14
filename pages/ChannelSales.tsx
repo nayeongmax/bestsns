@@ -1,15 +1,18 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ChannelProduct, WishlistItem } from '@/types';
+import { ChannelProduct, WishlistItem, ChannelReview } from '@/types';
 
 interface Props {
   channels: ChannelProduct[];
   wishlist: WishlistItem[];
   onToggleWishlist: (item: WishlistItem) => void;
+  channelReviews?: ChannelReview[];
 }
 
-const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist }) => {
+const NEGATIVE_KEYWORDS = ['사기', '환불', '가짜', '허위', '불량', '최악', '쓰레기', '불만', '실망', '형편없', '별로', '노출', '속임', '차단', '신고', '폰지', '다단계'];
+
+const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, channelReviews = [] }) => {
   const [activePlatform, setActivePlatform] = useState('전체');
   const [showOnlyApproved, setShowOnlyApproved] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,18 +26,35 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist })
 
   const isWishlisted = (id: string) => wishlist.some(w => w.data.id === id);
 
-  const CHANNEL_REVIEWS = [
-    { id: 'fr1', author: 'junho_media', rating: 5, content: '처음 이용해봤는데 정말 만족스러웠어요. 구독자 수 그대로 이전되었고 수익창출도 유지됩니다. 친절한 안내 덕분에 걱정 없이 진행했습니다!', channel: '요리/레시피 YouTube 채널' },
-    { id: 'fr2', author: 'minjee_v', rating: 5, content: '구매 후 설명대로 월 수익이 잘 나오고 있어요. 인수인계 과정도 꼼꼼하게 도와주셔서 초보자도 어렵지 않았습니다. 강력 추천합니다!', channel: '뷰티/패션 YouTube 채널' },
-    { id: 'fr3', author: 'game_kr99', rating: 4, content: '가격 대비 구독자 퀄리티가 좋고 활성 구독자 비율도 높네요. 이전 과정도 빠르게 완료되어 만족합니다.', channel: '게임 YouTube 채널' },
-    { id: 'fr4', author: 'biz_invest_lee', rating: 5, content: '기대 이상이었어요. 기존 콘텐츠 퀄리티도 높고 구독자 충성도가 대단하더라고요. 재구매 의사 있습니다!', channel: '비즈니스 YouTube 채널' },
-    { id: 'fr5', author: 'foodie_park', rating: 5, content: '인수 후 바로 운영 시작했는데 상태가 정말 좋았어요. 애드센스 연동도 문제없이 됐고 판매자분도 인계 후 궁금한 점 친절히 답변해주셨어요.', channel: '음식/맛집 YouTube 채널' },
-    { id: 'fr6', author: 'sports_fan_choi', rating: 4, content: '매매 처음이라 걱정했는데 에스크로 방식이라 안심하고 진행했어요. 설명과 동일하게 좋은 상태여서 만족합니다.', channel: '스포츠 YouTube 채널' },
-    { id: 'fr7', author: 'life_creator_kim', rating: 5, content: '이미 팬층이 형성되어 있어서 첫 영상 업로드부터 반응이 좋았어요. 정말 좋은 투자였어요. 채널 매매는 여기가 최고입니다.', channel: '라이프스타일 YouTube 채널' },
-    { id: 'fr8', author: 'news_info_yoo', rating: 5, content: '수익 데이터 검증도 꼼꼼하게 해주셔서 신뢰가 갔고 실제로 수익도 꾸준히 나오고 있어요. 채널 매매 망설이시는 분들께 강추!', channel: '정보/뉴스 YouTube 채널' },
-    { id: 'fr9', author: 'humor_content_oh', rating: 4, content: '조회수가 생각보다 잘 나와요. 구독자도 꾸준히 늘고 있고요. 처음엔 반신반의했는데 이렇게 잘 될 줄 몰랐네요. 다음에도 이용할게요!', channel: '유머/엔터 YouTube 채널' },
-    { id: 'fr10', author: 'tiktok_pro_shin', rating: 5, content: '팔로워 수 변동 없이 완벽히 이전됐고 기존 영상 조회수도 유지되네요. 빠른 처리와 친절한 응대에 감사드려요. 최고의 플랫폼입니다!', channel: 'TikTok 채널' },
-    { id: 'fr11', author: 'jinwoo_yt82', rating: 5, content: '다른 데서 카톡으로 구매했다가 바로 채널 막혀서 돈만 날렸어요.. 여기서 다시 구매했는데 에스크로라 안전하고 채널도 멀쩡히 이전됐습니다. 처음부터 여기 올 걸 그랬네요.', channel: 'YouTube 채널' },
+  const STATIC_CHANNEL_REVIEWS = [
+    { id: 'fr1', author: 'junho_media', rating: 5, content: '처음 이용해봤는데 정말 만족스러웠어요. 구독자 수 그대로 이전되었고 수익창출도 유지됩니다. 친절한 안내 덕분에 걱정 없이 진행했습니다!' },
+    { id: 'fr2', author: 'minjee_v', rating: 5, content: '구매 후 설명대로 월 수익이 잘 나오고 있어요. 인수인계 과정도 꼼꼼하게 도와주셔서 초보자도 어렵지 않았습니다. 강력 추천합니다!' },
+    { id: 'fr3', author: 'game_kr99', rating: 4, content: '가격 대비 구독자 퀄리티가 좋고 활성 구독자 비율도 높네요. 이전 과정도 빠르게 완료되어 만족합니다.' },
+    { id: 'fr4', author: 'biz_invest_lee', rating: 5, content: '기대 이상이었어요. 기존 콘텐츠 퀄리티도 높고 구독자 충성도가 대단하더라고요. 재구매 의사 있습니다!' },
+    { id: 'fr5', author: 'foodie_park', rating: 5, content: '인수 후 바로 운영 시작했는데 상태가 정말 좋았어요. 애드센스 연동도 문제없이 됐고 판매자분도 인계 후 궁금한 점 친절히 답변해주셨어요.' },
+    { id: 'fr6', author: 'sports_fan_choi', rating: 4, content: '매매 처음이라 걱정했는데 에스크로 방식이라 안심하고 진행했어요. 설명과 동일하게 좋은 상태여서 만족합니다.' },
+    { id: 'fr7', author: 'life_creator_kim', rating: 5, content: '이미 팬층이 형성되어 있어서 첫 영상 업로드부터 반응이 좋았어요. 정말 좋은 투자였어요. 채널 매매는 여기가 최고입니다.' },
+    { id: 'fr8', author: 'news_info_yoo', rating: 5, content: '수익 데이터 검증도 꼼꼼하게 해주셔서 신뢰가 갔고 실제로 수익도 꾸준히 나오고 있어요. 채널 매매 망설이시는 분들께 강추!' },
+    { id: 'fr9', author: 'humor_content_oh', rating: 4, content: '조회수가 생각보다 잘 나와요. 구독자도 꾸준히 늘고 있고요. 처음엔 반신반의했는데 이렇게 잘 될 줄 몰랐네요. 다음에도 이용할게요!' },
+    { id: 'fr10', author: 'tiktok_pro_shin', rating: 5, content: '팔로워 수 변동 없이 완벽히 이전됐고 기존 영상 조회수도 유지되네요. 빠른 처리와 친절한 응대에 감사드려요. 최고의 플랫폼입니다!' },
+    { id: 'fr11', author: 'jinwoo_yt82', rating: 5, content: '다른 데서 카톡으로 구매했다가 바로 채널 막혀서 돈만 날렸어요.. 여기서 다시 구매했는데 에스크로라 안전하고 채널도 멀쩡히 이전됐습니다. 처음부터 여기 올 걸 그랬네요.' },
+    { id: 'fr12', author: 'soyeon_yt', rating: 5, content: '생각보다 훨씬 빠르게 이전이 완료됐고 구글 계정 연동도 문제없었어요. 채널 히스토리도 깔끔하게 유지돼서 아주 만족합니다.' },
+    { id: 'fr13', author: 'kwon_media22', rating: 5, content: '에스크로 덕분에 안전하게 거래할 수 있었어요. 판매자와의 소통도 원활했고 약속한 수익 조건도 그대로였습니다.' },
+    { id: 'fr14', author: 'hanbit_studio', rating: 4, content: '구독자 이탈 없이 이전 완료됐어요. 초기 셋업이 좀 복잡할 줄 알았는데 가이드가 친절해서 혼자서도 충분했습니다.' },
+    { id: 'fr15', author: 'travel_log_kim', rating: 5, content: '여행 채널 인수했는데 기존 팬들이 신규 영상에도 반응을 잘 해줘서 처음부터 탄력받아서 좋았어요. 정말 좋은 선택이었습니다.' },
+    { id: 'fr16', author: 'digitalpark_jh', rating: 5, content: '채널 상태가 설명 그대로였고 수익창출 상태도 이상 없었어요. 처음 채널 매매 도전해봤는데 여기가 딱 맞는 플랫폼이네요.' },
+    { id: 'fr17', author: 'yt_investor_ryu', rating: 5, content: '투자 관점에서 접근했는데 ROI가 예상보다 훨씬 빠르게 나오고 있어요. 채널 퀄리티도 높고 운영 노하우 전수도 해주셔서 감사했습니다.' },
+    { id: 'fr18', author: 'creator_base_ko', rating: 4, content: '매매 전 채널 감사 자료를 꼼꼼히 제공해 주셔서 믿고 진행할 수 있었어요. 인수 후 이상 없이 운영 중입니다.' },
+    { id: 'fr19', author: 'media_flip_ahn', rating: 5, content: '여러 플랫폼 채널을 거래해봤는데 여기가 제일 프로세스가 명확하고 안전해요. 서류 처리도 빠르고 매우 만족합니다.' },
+    { id: 'fr20', author: 'sns_grow_chae', rating: 5, content: '처음에 가격이 걱정됐는데 구독자 단가로 계산해보니 오히려 합리적이었어요. 인수 후 수익도 바로 났고 계속 성장하고 있어요.' },
+    { id: 'fr21', author: 'yt_biz_hong', rating: 5, content: '판매자가 채널 운영 팁까지 공유해줬어요. 단순 매매가 아니라 노하우까지 전달받을 수 있어서 정말 값어치 있는 거래였습니다.' },
+    { id: 'fr22', author: 'channel_pro_yim', rating: 4, content: '에스크로 시스템 덕분에 처음 매매임에도 불구하고 심리적으로 안정되게 진행할 수 있었어요. 다음에도 이용할 의향 있습니다.' },
+    { id: 'fr23', author: 'startup_tube_woo', rating: 5, content: '스타트업 홍보용 채널이 필요해서 구매했는데 기존 구독자들이 새 콘텐츠에도 반응이 좋아서 마케팅 효과를 바로 볼 수 있었어요.' },
+    { id: 'fr24', author: 'byeong_create', rating: 5, content: '구매 확정 후 이틀 만에 채널 이전이 완료됐어요. 빠른 처리 덕분에 예정된 업로드 일정을 맞출 수 있었습니다. 적극 추천해요!' },
+    { id: 'fr25', author: 'insta_flip_nam', rating: 4, content: '인스타그램 채널 구매했는데 팔로워 이탈 없이 완벽하게 이전됐어요. 기존 게시물 통계도 그대로 유지돼서 광고 단가에 영향이 없었습니다.' },
+    { id: 'fr26', author: 'yt_lab_seo', rating: 5, content: '여러 번 거래해봤지만 이 플랫폼이 제일 신뢰가 가요. 분쟁 발생 시에도 에스크로로 보호받을 수 있다는 점이 큰 장점입니다.' },
+    { id: 'fr27', author: 'content_flip_jeon', rating: 5, content: '수익창출 중인 채널을 인수했는데 첫 달부터 수익이 발생했어요. 채널 상태가 설명과 100% 일치해서 믿을 수 있는 곳이라고 느꼈습니다.' },
+    { id: 'fr28', author: 'media_asset_oh', rating: 5, content: '채널을 자산으로 생각하는 분들께 강추합니다. 장기 투자 관점에서 정말 좋은 선택이었고, 플랫폼의 전문성과 안전한 거래 방식에 만족합니다.' },
   ];
 
   const [reviewSlideIdx, setReviewSlideIdx] = useState(0);
@@ -46,6 +66,27 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist })
     if (name.length <= 6) return name.slice(0, 2) + '***';
     return name.slice(0, 3) + '***';
   };
+
+  // DB 리뷰: 별점 4점 이상 + 악성 키워드 없는 것만 표시
+  const filteredDbReviews = useMemo(() => {
+    return channelReviews
+      .filter(r => {
+        if (r.rating < 4) return false;
+        const text = r.content.toLowerCase();
+        return !NEGATIVE_KEYWORDS.some(kw => text.includes(kw));
+      })
+      .map(r => ({
+        id: r.id,
+        author: r.userNickname,
+        rating: r.rating,
+        content: r.content,
+      }));
+  }, [channelReviews]);
+
+  const CHANNEL_REVIEWS = useMemo(
+    () => [...filteredDbReviews, ...STATIC_CHANNEL_REVIEWS],
+    [filteredDbReviews]
+  );
 
   useEffect(() => {
     if (CHANNEL_REVIEWS.length <= 1) return;
