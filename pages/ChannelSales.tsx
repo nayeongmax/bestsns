@@ -24,16 +24,17 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist })
   const isWishlisted = (id: string) => wishlist.some(w => w.data.id === id);
 
   const CHANNEL_REVIEWS = [
-    { id: 'fr1', author: 'junho_media', rating: 5, content: '처음 채널 매매를 이용해봤는데 정말 만족스러웠어요. 구독자 수 그대로 이전되었고 수익창출도 유지됩니다. 친절한 안내 덕분에 걱정 없이 진행했습니다!', channel: '요리/레시피 YouTube 채널' },
-    { id: 'fr2', author: 'minjee_v', rating: 5, content: '뷰티 채널을 구매했는데 설명대로 월 수익이 잘 나오고 있어요. 인수인계 과정도 꼼꼼하게 도와주셔서 초보자도 어렵지 않았습니다. 강력 추천합니다!', channel: '뷰티/패션 YouTube 채널' },
-    { id: 'fr3', author: 'game_kr99', rating: 4, content: '게임 채널 구매했습니다. 가격 대비 구독자 퀄리티가 좋고 활성 구독자 비율도 높네요. 이전 과정이 빠르게 완료되어 만족합니다.', channel: '게임 YouTube 채널' },
-    { id: 'fr4', author: 'biz_invest_lee', rating: 5, content: '비즈니스 정보 채널을 인수했는데 기대 이상이었습니다. 기존 콘텐츠 퀄리티도 높고 구독자 충성도가 대단하더라고요. 재구매 의사 있습니다!', channel: '비즈니스 YouTube 채널' },
-    { id: 'fr5', author: 'foodie_park', rating: 5, content: '맛집 리뷰 채널 구매 후 바로 운영 시작했어요. 채널 상태가 정말 좋았고 애드센스 연동도 문제없이 됐습니다. 판매자분도 인계 후 궁금한 점 친절히 답변해주셨어요.', channel: '음식/맛집 YouTube 채널' },
-    { id: 'fr6', author: 'sports_fan_choi', rating: 4, content: '스포츠 채널 매매 처음이라 걱정했는데 플랫폼이 안전하게 에스크로로 진행해줘서 안심됐어요. 채널도 설명과 동일하게 좋은 상태였습니다.', channel: '스포츠 YouTube 채널' },
-    { id: 'fr7', author: 'life_creator_kim', rating: 5, content: '라이프스타일 채널 구매 완료! 이미 팬층이 형성되어 있어서 첫 영상 업로드부터 반응이 좋았습니다. 정말 좋은 투자였어요. 채널 매매는 여기가 최고입니다.', channel: '라이프스타일 YouTube 채널' },
-    { id: 'fr8', author: 'news_info_yoo', rating: 5, content: '정보/뉴스 채널 인수했습니다. 수익 데이터 검증도 꼼꼼하게 해주셔서 신뢰가 갔고 실제로 수익도 꾸준히 나오고 있어요. 채널 매매 망설이시는 분들께 강추!', channel: '정보/뉴스 YouTube 채널' },
-    { id: 'fr9', author: 'humor_content_oh', rating: 4, content: '유머 채널 샀는데 조회수가 생각보다 잘 나와요. 구독자도 꾸준히 늘고 있고요. 처음엔 반신반의했는데 이렇게 잘 될 줄 몰랐네요. 다음에도 이용할게요!', channel: '유머/엔터 YouTube 채널' },
-    { id: 'fr10', author: 'tiktok_pro_shin', rating: 5, content: '틱톡 채널 매매도 잘 되네요. 팔로워 수 변동 없이 완벽히 이전됐고 기존 영상 조회수도 유지됩니다. 빠른 처리와 친절한 응대에 감사드려요. 최고의 플랫폼입니다!', channel: 'TikTok 채널' },
+    { id: 'fr1', author: 'junho_media', rating: 5, content: '처음 이용해봤는데 정말 만족스러웠어요. 구독자 수 그대로 이전되었고 수익창출도 유지됩니다. 친절한 안내 덕분에 걱정 없이 진행했습니다!', channel: '요리/레시피 YouTube 채널' },
+    { id: 'fr2', author: 'minjee_v', rating: 5, content: '구매 후 설명대로 월 수익이 잘 나오고 있어요. 인수인계 과정도 꼼꼼하게 도와주셔서 초보자도 어렵지 않았습니다. 강력 추천합니다!', channel: '뷰티/패션 YouTube 채널' },
+    { id: 'fr3', author: 'game_kr99', rating: 4, content: '가격 대비 구독자 퀄리티가 좋고 활성 구독자 비율도 높네요. 이전 과정도 빠르게 완료되어 만족합니다.', channel: '게임 YouTube 채널' },
+    { id: 'fr4', author: 'biz_invest_lee', rating: 5, content: '기대 이상이었어요. 기존 콘텐츠 퀄리티도 높고 구독자 충성도가 대단하더라고요. 재구매 의사 있습니다!', channel: '비즈니스 YouTube 채널' },
+    { id: 'fr5', author: 'foodie_park', rating: 5, content: '인수 후 바로 운영 시작했는데 상태가 정말 좋았어요. 애드센스 연동도 문제없이 됐고 판매자분도 인계 후 궁금한 점 친절히 답변해주셨어요.', channel: '음식/맛집 YouTube 채널' },
+    { id: 'fr6', author: 'sports_fan_choi', rating: 4, content: '매매 처음이라 걱정했는데 에스크로 방식이라 안심하고 진행했어요. 설명과 동일하게 좋은 상태여서 만족합니다.', channel: '스포츠 YouTube 채널' },
+    { id: 'fr7', author: 'life_creator_kim', rating: 5, content: '이미 팬층이 형성되어 있어서 첫 영상 업로드부터 반응이 좋았어요. 정말 좋은 투자였어요. 채널 매매는 여기가 최고입니다.', channel: '라이프스타일 YouTube 채널' },
+    { id: 'fr8', author: 'news_info_yoo', rating: 5, content: '수익 데이터 검증도 꼼꼼하게 해주셔서 신뢰가 갔고 실제로 수익도 꾸준히 나오고 있어요. 채널 매매 망설이시는 분들께 강추!', channel: '정보/뉴스 YouTube 채널' },
+    { id: 'fr9', author: 'humor_content_oh', rating: 4, content: '조회수가 생각보다 잘 나와요. 구독자도 꾸준히 늘고 있고요. 처음엔 반신반의했는데 이렇게 잘 될 줄 몰랐네요. 다음에도 이용할게요!', channel: '유머/엔터 YouTube 채널' },
+    { id: 'fr10', author: 'tiktok_pro_shin', rating: 5, content: '팔로워 수 변동 없이 완벽히 이전됐고 기존 영상 조회수도 유지되네요. 빠른 처리와 친절한 응대에 감사드려요. 최고의 플랫폼입니다!', channel: 'TikTok 채널' },
+    { id: 'fr11', author: 'jinwoo_yt82', rating: 5, content: '다른 데서 카톡으로 구매했다가 바로 채널 막혀서 돈만 날렸어요.. 여기서 다시 구매했는데 에스크로라 안전하고 채널도 멀쩡히 이전됐습니다. 처음부터 여기 올 걸 그랬네요.', channel: 'YouTube 채널' },
   ];
 
   const [reviewSlideIdx, setReviewSlideIdx] = useState(0);
