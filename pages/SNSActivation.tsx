@@ -935,22 +935,16 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
                       {allReviewsForSlider.map((r) => (
                         <div
                           key={r.id}
-                          className="w-full shrink-0 bg-gray-50 rounded-2xl p-4 sm:p-5 border border-transparent flex gap-3 sm:gap-4"
+                          className="w-full shrink-0 bg-gray-50 rounded-2xl p-4 sm:p-5 border border-transparent flex flex-col gap-1.5"
                           style={{ height: '152px' }}
                         >
-                          {/* 아바타 */}
-                          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0 mt-0.5 ${r.id.startsWith('m') ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'}`}>
-                            {(r.userNickname || '익명')[0]}
-                          </div>
                           {/* 콘텐츠 */}
-                          <div className="flex-1 min-w-0 overflow-hidden">
-                            <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
-                              <span className="text-[12px] sm:text-sm font-black text-gray-800 truncate max-w-[120px] sm:max-w-[160px]">{r.userNickname || '익명'}</span>
-                              {getPlatformIcon(r.platform)}
-                              {renderStars(r.rating)}
-                                            </div>
-                            <p className="text-[12px] sm:text-sm font-bold text-gray-600 leading-relaxed break-words line-clamp-3">{r.content}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                            <span className="text-[12px] sm:text-sm font-black text-gray-800 truncate max-w-[120px] sm:max-w-[160px]">{r.userNickname || '익명'}</span>
+                            {getPlatformIcon(r.platform)}
+                            {renderStars(r.rating)}
                           </div>
+                          <p className="text-[12px] sm:text-sm font-bold text-gray-600 leading-relaxed break-words line-clamp-4">{r.content}</p>
                         </div>
                       ))}
                     </div>
