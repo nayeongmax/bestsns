@@ -537,12 +537,73 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           setLoading(false);
           return;
         }
-        if (msg.includes('already registered') || msg.includes('already exists')) {
-          alert('이미 사용 중인 이메일입니다.');
+        // 이메일이 이미 auth.users에 존재 (미인증 유령 계정 포함)
+        if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('already been registered')) {
+          // 같은 비밀번호로 로그인 시도: 성공하면 프로필이 없을 뿐이므로 복구
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
+          if (!signInErr && signInData?.user) {
+            // 프로필 생성/복구
+            const welcomeCoupon = createWelcomeCoupon(id);
+            const newUser: UserProfile = {
+              id,
+              nickname,
+              email,
+              phone: phoneTrim || '',
+              profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
+              role: 'user',
+              points: 0,
+              joinDate: new Date().toISOString().split('T')[0],
+              coupons: [welcomeCoupon]
+            };
+            await supabase.from('profiles').upsert({
+              id,
+              email,
+              nickname,
+              profile_image: newUser.profileImage,
+              phone: phoneTrim || null,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' }).catch(() => {});
+            await updateProfile(id, { coupons: [welcomeCoupon] }).catch(() => {});
+            onLoginSuccess(newUser);
+            alert('회원가입이 완료되었습니다! BESTSNS에 오신 것을 환영합니다.');
+            navigate('/sns');
+            setLoading(false);
+            return;
+          }
+          // 비밀번호가 달라서 로그인 실패 → 이미 다른 비밀번호로 등록된 계정
+          alert('이미 가입된 이메일입니다.\n비밀번호를 잊으셨다면 로그인 화면에서 [비밀번호를 잊으셨나요?]를 이용해 주세요.');
           setLoading(false);
           return;
         }
         throw authError;
+      }
+
+      // Supabase "Confirm email" ON 상태에서 이미 가입된 이메일 → fake 성공 반환 (identities=[])
+      if (!authData?.user?.identities || authData.user.identities.length === 0) {
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
+        if (!signInErr && signInData?.user) {
+          const welcomeCoupon = createWelcomeCoupon(id);
+          const newUser: UserProfile = {
+            id, nickname, email, phone: phoneTrim || '',
+            profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
+            role: 'user', points: 0,
+            joinDate: new Date().toISOString().split('T')[0],
+            coupons: [welcomeCoupon]
+          };
+          await supabase.from('profiles').upsert({
+            id, email, nickname, profile_image: newUser.profileImage,
+            phone: phoneTrim || null, updated_at: new Date().toISOString()
+          }, { onConflict: 'id' }).catch(() => {});
+          await updateProfile(id, { coupons: [welcomeCoupon] }).catch(() => {});
+          onLoginSuccess(newUser);
+          alert('회원가입이 완료되었습니다! BESTSNS에 오신 것을 환영합니다.');
+          navigate('/sns');
+          setLoading(false);
+          return;
+        }
+        alert('이미 가입된 이메일입니다.\n비밀번호를 잊으셨다면 로그인 화면에서 [비밀번호를 잊으셨나요?]를 이용해 주세요.');
+        setLoading(false);
+        return;
       }
 
       const welcomeCoupon = createWelcomeCoupon(id);
@@ -586,8 +647,8 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       navigate('/sns');
     } catch (err: any) {
       const msg = err?.message || '';
-      if (msg.includes('already registered') || msg.includes('already exists')) {
-        alert('이미 사용 중인 이메일입니다.');
+      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('already been registered')) {
+        alert('이미 가입된 이메일입니다.\n비밀번호를 잊으셨다면 로그인 화면에서 [비밀번호를 잊으셨나요?]를 이용해 주세요.');
       } else {
         alert('회원가입에 실패했습니다. 입력 내용을 확인한 뒤 다시 시도해 주세요.');
       }
