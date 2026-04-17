@@ -538,7 +538,10 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           return;
         }
         // 이메일이 이미 auth.users에 존재 (미인증 유령 계정 포함)
-        if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('already been registered')) {
+        // Supabase 버전마다 에러 메시지가 다르므로 코드도 함께 확인
+        const errCode = (authError as any)?.code || (authError as any)?.error_code || '';
+        const isAlreadyExists = msg.includes('already registered') || msg.includes('already exists') || msg.includes('already been registered') || msg.includes('email_exists') || errCode === 'user_already_exists' || errCode === 'email_exists';
+        if (isAlreadyExists) {
           // 같은 비밀번호로 로그인 시도: 성공하면 프로필이 없을 뿐이므로 복구
           const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
           if (!signInErr && signInData?.user) {
@@ -575,7 +578,42 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
           setLoading(false);
           return;
         }
-        throw authError;
+        // DB 트리거 실패 (Supabase 자동 profiles 생성 트리거 오류) → 회원가입 자체는 됐을 수 있음
+        if (msg.includes('Database error') || msg.includes('database error') || msg.includes('saving new user')) {
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: pw });
+          if (!signInErr && signInData?.user) {
+            const welcomeCoupon = createWelcomeCoupon(id);
+            const newUser: UserProfile = {
+              id, nickname, email, phone: phoneTrim || '',
+              profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
+              role: 'user', points: 0,
+              joinDate: new Date().toISOString().split('T')[0],
+              coupons: [welcomeCoupon]
+            };
+            await supabase.from('profiles').upsert({
+              id, email, nickname, profile_image: newUser.profileImage,
+              phone: phoneTrim || null, join_date: newUser.joinDate,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' }).catch(() => {});
+            await updateProfile(id, { coupons: [welcomeCoupon] }).catch(() => {});
+            onLoginSuccess(newUser);
+            alert('회원가입이 완료되었습니다! BESTSNS에 오신 것을 환영합니다.');
+            navigate('/sns');
+            setLoading(false);
+            return;
+          }
+        }
+        // 보안 재시도 제한 (60초 대기)
+        if (msg.includes('security purposes') || msg.includes('after') || msg.includes('seconds')) {
+          alert('잠시 후 다시 시도해 주세요. (보안 정책상 연속 요청이 제한됩니다.)');
+          setLoading(false);
+          return;
+        }
+        // 그 외 미처리 에러: 실제 메시지 표시 (진단용)
+        console.error('[Auth signUp error]', authError);
+        alert(`회원가입 오류: ${msg || '알 수 없는 오류'}\n\n계속 발생하면 관리자에게 문의해 주세요.`);
+        setLoading(false);
+        return;
       }
 
       // Supabase "Confirm email" ON 상태에서 이미 가입된 이메일 → fake 성공 반환 (identities=[])
@@ -655,10 +693,11 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
       navigate('/sns');
     } catch (err: any) {
       const msg = err?.message || '';
-      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('already been registered')) {
+      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('already been registered') || msg.includes('email_exists')) {
         alert('이미 가입된 이메일입니다.\n비밀번호를 잊으셨다면 로그인 화면에서 [비밀번호를 잊으셨나요?]를 이용해 주세요.');
       } else {
-        alert('회원가입에 실패했습니다. 입력 내용을 확인한 뒤 다시 시도해 주세요.');
+        console.error('[handleJoin catch]', err);
+        alert(`회원가입에 실패했습니다.\n오류: ${msg || '알 수 없는 오류'}\n\n계속 발생하면 관리자에게 문의해 주세요.`);
       }
     } finally {
       setLoading(false);
