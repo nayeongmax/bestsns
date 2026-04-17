@@ -167,6 +167,77 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, c
         </div>
       </div>
 
+      {/* 이용 후기 섹션 */}
+      {(() => {
+        const rawAvg = CHANNEL_REVIEWS.length > 0
+          ? Math.round((CHANNEL_REVIEWS.reduce((sum, r) => sum + r.rating, 0) / CHANNEL_REVIEWS.length) * 10) / 10
+          : 0;
+        const avgRating = Math.max(rawAvg, 4.9);
+        return (
+          <div className="mt-6 sm:mt-8 md:mt-10 mb-6 sm:mb-8 md:mb-10 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-8 md:p-10">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+              <h2 className="text-base sm:text-xl font-black text-gray-900 italic uppercase flex items-center gap-2 sm:gap-3">
+                <span className="w-1.5 h-4 sm:h-6 bg-yellow-400 rounded-full shrink-0"></span>
+                이용 후기
+                <span className="text-xs sm:text-sm font-black text-gray-300 normal-case italic">({CHANNEL_REVIEWS.length}개)</span>
+              </h2>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-0.5">
+                  {[1,2,3,4,5].map(n => (
+                    <span key={n} className={`text-base sm:text-lg ${n <= Math.round(avgRating) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+                  ))}
+                </div>
+                <span className="text-lg sm:text-2xl font-black text-yellow-500 italic">{avgRating}</span>
+                <span className="text-[10px] sm:text-xs font-black text-gray-300 italic">/5.0</span>
+              </div>
+            </div>
+            <div
+              className="relative"
+              onMouseEnter={() => { reviewSliderPaused.current = true; }}
+              onMouseLeave={() => { reviewSliderPaused.current = false; }}
+            >
+              <div className="overflow-hidden rounded-2xl" style={{ height: '152px' }}>
+                <div
+                  className="flex flex-col transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateY(-${reviewSlideIdx * 152}px)` }}
+                >
+                  {CHANNEL_REVIEWS.map((rev) => (
+                    <div
+                      key={rev.id}
+                      className="w-full shrink-0 bg-gray-50 rounded-2xl p-4 sm:p-5 border border-transparent flex flex-col gap-1.5"
+                      style={{ height: '152px' }}
+                    >
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        <span className="text-[12px] sm:text-sm font-black text-gray-800">{maskNickname(rev.author)}</span>
+                        <div className="flex gap-0.5">
+                          {[1,2,3,4,5].map(n => (
+                            <span key={n} className={`text-base ${n <= rev.rating ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-[12px] sm:text-sm font-bold text-gray-600 leading-relaxed line-clamp-4">{rev.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {CHANNEL_REVIEWS.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-4">
+                  {CHANNEL_REVIEWS.slice(0, 10).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setReviewSlideIdx(i)}
+                      className={`rounded-full transition-all duration-300 ${i === reviewSlideIdx % 10 ? 'w-5 h-2 bg-yellow-400' : 'w-2 h-2 bg-gray-200 hover:bg-gray-300'}`}
+                      aria-label={`${i + 1}번 리뷰`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 모바일/태블릿: 목록형 */}
       <div className="lg:hidden space-y-2 sm:space-y-3 max-h-[calc(100vh-16rem)] sm:max-h-[75vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         {filteredChannels.length === 0 ? (
@@ -260,76 +331,6 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, c
         ))}
       </div>
 
-      {/* 이용 후기 섹션 */}
-      {(() => {
-        const rawAvg = CHANNEL_REVIEWS.length > 0
-          ? Math.round((CHANNEL_REVIEWS.reduce((sum, r) => sum + r.rating, 0) / CHANNEL_REVIEWS.length) * 10) / 10
-          : 0;
-        const avgRating = Math.max(rawAvg, 4.9);
-        return (
-          <div className="mt-12 sm:mt-16 md:mt-20 bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-8 md:p-10">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-              <h2 className="text-base sm:text-xl font-black text-gray-900 italic uppercase flex items-center gap-2 sm:gap-3">
-                <span className="w-1.5 h-4 sm:h-6 bg-yellow-400 rounded-full shrink-0"></span>
-                이용 후기
-                <span className="text-xs sm:text-sm font-black text-gray-300 normal-case italic">({CHANNEL_REVIEWS.length}개)</span>
-              </h2>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-0.5">
-                  {[1,2,3,4,5].map(n => (
-                    <span key={n} className={`text-base sm:text-lg ${n <= Math.round(avgRating) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
-                  ))}
-                </div>
-                <span className="text-lg sm:text-2xl font-black text-yellow-500 italic">{avgRating}</span>
-                <span className="text-[10px] sm:text-xs font-black text-gray-300 italic">/5.0</span>
-              </div>
-            </div>
-            <div
-              className="relative"
-              onMouseEnter={() => { reviewSliderPaused.current = true; }}
-              onMouseLeave={() => { reviewSliderPaused.current = false; }}
-            >
-              <div className="overflow-hidden rounded-2xl" style={{ height: '152px' }}>
-                <div
-                  className="flex flex-col transition-transform duration-500 ease-in-out"
-                  style={{ transform: `translateY(-${reviewSlideIdx * 152}px)` }}
-                >
-                  {CHANNEL_REVIEWS.map((rev) => (
-                    <div
-                      key={rev.id}
-                      className="w-full shrink-0 bg-gray-50 rounded-2xl p-4 sm:p-5 border border-transparent flex flex-col gap-1.5"
-                      style={{ height: '152px' }}
-                    >
-                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                        <span className="text-[12px] sm:text-sm font-black text-gray-800">{maskNickname(rev.author)}</span>
-                        <div className="flex gap-0.5">
-                          {[1,2,3,4,5].map(n => (
-                            <span key={n} className={`text-base ${n <= rev.rating ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-[12px] sm:text-sm font-bold text-gray-600 leading-relaxed line-clamp-4">{rev.content}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {CHANNEL_REVIEWS.length > 1 && (
-                <div className="flex justify-center gap-1.5 mt-4">
-                  {CHANNEL_REVIEWS.slice(0, 10).map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setReviewSlideIdx(i)}
-                      className={`rounded-full transition-all duration-300 ${i === reviewSlideIdx % 10 ? 'w-5 h-2 bg-yellow-400' : 'w-2 h-2 bg-gray-200 hover:bg-gray-300'}`}
-                      aria-label={`${i + 1}번 리뷰`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 };
