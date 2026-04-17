@@ -619,25 +619,33 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
         coupons: [welcomeCoupon]
       };
 
-      // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록 (이름·휴대폰 포함 → 소셜 로그인 연동 시 동일 프로필 사용)
+      // 회원 목록 단일 소스: 가입 직후 profiles에 반드시 기록 (이름·휴대폰 포함)
       const { error: profileErr } = await supabase.from('profiles').upsert({
         id,
         email,
         nickname,
         profile_image: newUser.profileImage,
         phone: phoneTrim || null,
+        join_date: newUser.joinDate,
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
       if (profileErr) {
-        console.error('Profiles 저장 실패(회원가입):', profileErr.message, '- supabase-profiles-alter-and-backfill.sql 실행 여부를 확인하세요.');
+        console.error('Profiles 저장 실패(회원가입):', profileErr.message);
       }
-      // Supabase Auth 트리거가 UUID 기반 중복 프로필 생성 시 제거 (같은 이메일, 다른 ID)
+      // Supabase Auth 트리거가 UUID 기반 중복 프로필 생성 시 제거
+      // auth.uid() = Supabase UUID이므로 .eq('id', authUUID) 삭제는 RLS 통과
+      const authUUID = authData.user?.id;
+      if (authUUID && authUUID !== id) {
+        const { error: delErr } = await supabase.from('profiles').delete().eq('id', authUUID);
+        if (delErr) console.warn('UUID 중복 프로필 삭제 실패:', delErr.message);
+      }
+      // 이메일 기준 추가 UUID 중복 정리 (여러 번 시도로 생긴 잔여 UUID 행 제거)
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const { data: dupRows } = await supabase.from('profiles').select('id').eq('email', email).neq('id', id);
       if (dupRows && dupRows.length > 0) {
         const uuidIds = dupRows.map((r: { id: string }) => r.id).filter((rid: string) => uuidPattern.test(rid));
-        if (uuidIds.length > 0) {
-          await supabase.from('profiles').delete().in('id', uuidIds).catch(() => {});
+        for (const uid of uuidIds) {
+          await supabase.from('profiles').delete().eq('id', uid).catch(() => {});
         }
       }
       await updateProfile(id, { coupons: [welcomeCoupon] }).catch((e) => console.warn('가입 쿠폰 DB 반영 실패:', e));
