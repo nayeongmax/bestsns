@@ -789,15 +789,35 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             </button>
           </div>
         )}
-        {/* 신청 완료 — 신청자이지만 아직 선정 전 */}
+        {/* 신청 완료 상태 메시지 */}
         {user && isApplicant && !task.pointPaid && (() => {
           const me = task.applicants.find((a) => a.userId === user?.id);
           if (!me?.selected) {
             return (
-              <p className="text-gray-500 font-bold border-t border-gray-100 pt-6">신청 완료되었습니다. 선정 시 위 Step 3에서 링크를 제출해 주세요. 운영자와 광고주 확인 후 수익통장에 적립됩니다.</p>
+              <div className="border-t border-gray-100 pt-6">
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-full bg-amber-100 flex items-center justify-center shrink-0 text-xl">⏳</div>
+                  <div>
+                    <p className="font-black text-amber-800 text-base mb-1">신청이 완료되었습니다</p>
+                    <p className="text-sm font-bold text-amber-700">현재 선정 진행 중이니 잠시 기다려 주세요.</p>
+                    <p className="text-xs text-amber-500 mt-1">선정 결과는 마이페이지 알림에서 확인할 수 있습니다.</p>
+                  </div>
+                </div>
+              </div>
             );
           }
-          return null;
+          return (
+            <div className="border-t border-gray-100 pt-6">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-start gap-4">
+                <div className="w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-xl">✅</div>
+                <div>
+                  <p className="font-black text-emerald-800 text-base mb-1">선정되셨습니다!</p>
+                  <p className="text-sm font-bold text-emerald-700">위 Step 3에서 링크를 제출해 주세요.</p>
+                  <p className="text-xs text-emerald-600 mt-1">운영자와 광고주 확인 후 수익통장에 적립됩니다.</p>
+                </div>
+              </div>
+            </div>
+          );
         })()}
 
         {/* 운영자 전용 목록 — 로그인한 운영자에게만 항상 표시 (닉네임·댓글·연락처·선정) */}
