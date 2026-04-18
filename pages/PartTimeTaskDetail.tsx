@@ -117,6 +117,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
 
   const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
   const isOperator = user?.role === 'admin' || user?.role === 'manager';
+  const myApplication = user ? task?.applicants.find((a) => a.userId === user.id) : null;
+  const isSelected = !!myApplication?.selected;
 
   const handleApply = () => {
     if (!user || !task) return;
@@ -412,7 +414,17 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             </svg>
           </div>
 
-          {/* STEP 2 ─ 원본 글 작성 */}
+          {/* STEP 2 ─ 원본 글 작성 (선정자·운영자만) */}
+          {!(isSelected || isOperator) ? (
+            <div className="border-2 border-gray-100 rounded-2xl p-5 md:p-6 bg-gray-50 flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-black text-sm flex items-center justify-center shrink-0">2</div>
+              <div>
+                <p className="font-black text-gray-400">아래 원본 내용으로 게시글 작성하기</p>
+                <p className="text-xs text-gray-400 mt-0.5">🔒 선정된 후 작업 내용이 공개됩니다.</p>
+              </div>
+            </div>
+          ) : (
+          <>{/* STEP 2 ─ 원본 글 작성 */}
           <div className="border-2 border-blue-200 rounded-2xl p-5 md:p-6 bg-blue-50/20">
             <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
               <div className="flex items-center gap-3">
@@ -632,6 +644,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           )}
             </div>{/* close grid gap-4 (sections) */}
           </div>{/* close Step 2 box */}
+          </>)}
 
           {/* 화살표 */}
           <div className="flex justify-center py-2">
