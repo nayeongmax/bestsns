@@ -1,8 +1,29 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-const SNS_NAMES = ['인스타그램', '유튜브', '페이스북', '네이버', '쓰레드', '틱톡'];
-const PRODUCT_TYPES = ['팔로워', '좋아요', '조회수', '댓글', '인사이트', '바이럴'];
+const VALID_ORDERS = [
+  '인스타그램 팔로워',
+  '인스타그램 좋아요',
+  '인스타그램 조회수',
+  '인스타그램 댓글',
+  '인스타그램 저장',
+  '유튜브 구독자',
+  '유튜브 좋아요',
+  '유튜브 조회수',
+  '유튜브 댓글',
+  '틱톡 팔로워',
+  '틱톡 좋아요',
+  '틱톡 조회수',
+  '트위터(X) 팔로워',
+  '트위터(X) 좋아요',
+  '페이스북 팔로워',
+  '페이스북 좋아요',
+  '쓰레드 팔로워',
+  '쓰레드 좋아요',
+  '네이버 블로그 방문자',
+  '네이버 블로그 좋아요',
+  '카카오톡 채널 구독',
+];
 
 const LiveNotification: React.FC = () => {
   const [notification, setNotification] = useState<{ type: 'order' | 'users'; content: string } | null>(null);
@@ -32,16 +53,15 @@ const LiveNotification: React.FC = () => {
         const letters = 'abcdefghijklmnopqrstuvwxyz';
         const idLen = Math.floor(Math.random() * 3) + 3;
         const idPrefix = Array.from({ length: idLen }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
-        const sns = SNS_NAMES[Math.floor(Math.random() * SNS_NAMES.length)];
-        const product = PRODUCT_TYPES[Math.floor(Math.random() * PRODUCT_TYPES.length)];
-        
+        const order = VALID_ORDERS[Math.floor(Math.random() * VALID_ORDERS.length)];
+
         let count;
         const rand = Math.random();
         if (rand < 0.5) count = Math.floor(Math.random() * 151) + 40;
         else if (rand < 0.8) count = Math.floor(Math.random() * 301) + 200;
         else count = Math.floor(Math.random() * 401) + 600;
 
-        content = `${idPrefix}****님이 ${sns} ${product} ${count.toLocaleString()}개를 주문했습니다.`;
+        content = `${idPrefix}****님이 ${order} ${count.toLocaleString()}개를 주문했습니다.`;
       } else {
         content = `현재 사이트에 ${userCountRef.current}명이 접속해 있습니다.`;
       }
