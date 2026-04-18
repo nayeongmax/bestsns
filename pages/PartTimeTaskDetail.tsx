@@ -729,14 +729,16 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
         </div>{/* close space-y-0 (3단계 flow) */}
 
         <div className="flex flex-wrap gap-3">
-          <div className="inline-flex items-center gap-2 bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
-            <span className="text-[10px] font-black text-blue-600 uppercase">신청기간</span>
-            <span className="text-gray-800 font-bold">{task.applicationPeriod.start} ~ {task.applicationPeriod.end}</span>
-          </div>
           <div className="inline-flex items-center gap-2 bg-amber-50 rounded-xl px-4 py-3 border border-amber-100">
             <span className="text-[10px] font-black text-amber-600 uppercase">작업기간</span>
             <span className="text-gray-800 font-bold">{task.workPeriod.start} ~ {task.workPeriod.end}</span>
           </div>
+          {task.workTimeSlot && (
+            <div className="inline-flex items-center gap-2 bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
+              <span className="text-[10px] font-black text-purple-600 uppercase">작업시간</span>
+              <span className="text-gray-800 font-bold">{task.workTimeSlot}</span>
+            </div>
+          )}
         </div>
 
         {/* 신청 댓글 — 모두 닉네임·댓글만 표시 (연락처는 운영자 전용 목록에서만) */}

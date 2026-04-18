@@ -240,10 +240,10 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
 
       <div className="bg-gray-100/50 p-1.5 sm:p-2 rounded-[20px] sm:rounded-[32px] grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 w-full max-w-5xl mx-auto shadow-inner">
         {[
-          { id: 'buyer', label: '🖥️ 구매자 대시보드', color: 'text-blue-600' },
-          { id: 'seller', label: '👨‍🏫 판매자 워크스페이스', color: 'text-orange-600' },
-          { id: 'freelancer', label: '👷 프리랜서 워크스페이스', color: 'text-emerald-600' },
-          { id: 'settings', label: '⚙️ 계정 및 정보 관리', color: 'text-gray-900' }
+          { id: 'buyer', label: '🖥️ 구매자 대시보드', color: 'text-blue-600', badge: '마케팅·채널 전용' },
+          { id: 'seller', label: '👨‍🏫 판매자 워크스페이스', color: 'text-orange-600', badge: 'N잡스토어 전용' },
+          { id: 'freelancer', label: '👷 프리랜서 워크스페이스', color: 'text-emerald-600', badge: '누구나알바 전용' },
+          { id: 'settings', label: '⚙️ 계정 및 정보 관리', color: 'text-gray-900', badge: '' }
         ].map(mode => (
           <button
             key={mode.id}
@@ -254,7 +254,8 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
               : 'text-gray-400 hover:text-gray-600'
             }`}
           >
-            {mode.label}
+            <span className="block">{mode.label}</span>
+            {mode.badge && <span className={`block text-[9px] sm:text-[10px] font-black mt-0.5 ${activeMainTab === mode.id ? 'opacity-70' : 'opacity-40'}`}>{mode.badge}</span>}
             {mode.id === 'seller' && effectiveUser.sellerStatus !== 'approved' && <span className="ml-1 opacity-50">🔒</span>}
           </button>
         ))}

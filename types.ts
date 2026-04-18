@@ -203,6 +203,8 @@ export interface PartTimeTask {
   applicationPeriod: { start: string; end: string };
   /** 작업기간 */
   workPeriod: { start: string; end: string };
+  /** 작업시간대 */
+  workTimeSlot?: string;
   createdAt: string;
   createdBy?: string;
   applicants: PartTimeApplicant[];

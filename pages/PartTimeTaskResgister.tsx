@@ -40,6 +40,7 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
   const [appEnd, setAppEnd] = useState(editTask?.applicationPeriod?.end ?? today());
   const [workStart, setWorkStart] = useState(editTask?.workPeriod?.start ?? today());
   const [workEnd, setWorkEnd] = useState(editTask?.workPeriod?.end ?? today());
+  const [workTimeSlot, setWorkTimeSlot] = useState(editTask?.workTimeSlot ?? '');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gifInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,6 +64,7 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
     setAppEnd(editTask.applicationPeriod?.end ?? today());
     setWorkStart(editTask.workPeriod?.start ?? today());
     setWorkEnd(editTask.workPeriod?.end ?? today());
+    setWorkTimeSlot(editTask.workTimeSlot ?? '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editTask?.id]);
 
@@ -140,6 +142,7 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
       },
       applicationPeriod: { start: appStart, end: appEnd },
       workPeriod: { start: workStart, end: workEnd },
+      workTimeSlot: workTimeSlot || undefined,
       createdAt: editTask?.createdAt ?? new Date().toISOString(),
       createdBy: editTask?.createdBy ?? user.id,
       applicants: editTask?.applicants ?? [],
@@ -232,6 +235,21 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
             <div>
               <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">작업기간 종료</label>
               <input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none" />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-2">
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">작업시간 (선택)</label>
+              <div className="flex flex-wrap gap-2">
+                {['', '오전 9:00~12:00', '오후 13:00~18:00', '종일 9:00~18:00'].map((slot) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setWorkTimeSlot(slot)}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-black border-2 transition-all ${workTimeSlot === slot ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-200 hover:border-purple-300'}`}
+                  >
+                    {slot === '' ? '시간 미지정' : slot}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
