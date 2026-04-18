@@ -287,7 +287,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         {[
           { id: 'tasks' as const, label: '작업내역' },
           { id: 'settlement' as const, label: '정산내역' },
-          { id: 'alba' as const, label: '알바의뢰' },
+          { id: 'alba' as const, label: '알바의뢰 (광고주 전용)' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -537,6 +537,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         </div>
       ) : (
         <div className="space-y-8">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 flex items-center gap-3">
+            <span className="text-amber-500 text-lg shrink-0">⚠️</span>
+            <p className="text-sm font-bold text-amber-700">이 탭은 <span className="font-black">광고주 전용</span>입니다. 프리랜서로 알바에 지원·작업하는 경우 <span className="font-black">작업내역</span> 탭을 이용해 주세요.</p>
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
             <button onClick={() => setShowAdvertiserSettlementModal(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-indigo-50 text-indigo-600 font-black text-sm hover:bg-indigo-100 border border-indigo-100 shadow-sm">
               정산 정책 안내
