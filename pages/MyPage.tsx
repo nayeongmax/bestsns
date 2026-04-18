@@ -247,8 +247,8 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
         ].map(mode => (
           <div key={mode.id} className="flex-1 relative">
             {mode.badge && (
-              <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 z-10 animate-float-badge pointer-events-none">
-                <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[10px] sm:text-[11px] px-2.5 sm:px-3 py-1 rounded-full font-black shadow-[0_6px_14px_rgba(255,77,77,0.45)] border border-white/30 leading-none italic tracking-tighter">
+              <div className="absolute -top-6 sm:-top-7 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+                <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[11px] sm:text-[13px] px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-black shadow-[0_4px_10px_rgba(255,77,77,0.4)] border border-white/30 leading-none italic tracking-tighter">
                   {mode.badge}
                 </span>
               </div>
