@@ -240,23 +240,31 @@ const MyPage: React.FC<Props> = ({ user, members = [], onUpdate, ebooks, setEboo
 
       <div className="bg-gray-100/50 p-1.5 sm:p-2 rounded-[20px] sm:rounded-[32px] grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 w-full max-w-5xl mx-auto shadow-inner">
         {[
-          { id: 'buyer', label: '🖥️ 구매자 대시보드', color: 'text-blue-600' },
-          { id: 'seller', label: '👨‍🏫 판매자 워크스페이스', color: 'text-orange-600' },
-          { id: 'freelancer', label: '👷 프리랜서 워크스페이스', color: 'text-emerald-600' },
-          { id: 'settings', label: '⚙️ 계정 및 정보 관리', color: 'text-gray-900' }
+          { id: 'buyer', label: '🖥️ 구매자 대시보드', color: 'text-blue-600', badge: '마케팅/채널 전용' },
+          { id: 'seller', label: '👨‍🏫 판매자 워크스페이스', color: 'text-orange-600', badge: 'N잡스토어 전용' },
+          { id: 'freelancer', label: '👷 프리랜서 워크스페이스', color: 'text-emerald-600', badge: '누구나알바 전용' },
+          { id: 'settings', label: '⚙️ 계정 및 정보 관리', color: 'text-gray-900', badge: '' }
         ].map(mode => (
-          <button
-            key={mode.id}
-            onClick={() => setActiveMainTab(mode.id as MainTab)}
-            className={`flex-1 py-2 sm:py-5 rounded-[16px] sm:rounded-[24px] font-black text-[11px] sm:text-[14px] md:text-[16px] transition-all duration-300 relative leading-snug ${
-              activeMainTab === mode.id
-              ? 'bg-white shadow-xl scale-[1.02] ' + mode.color
-              : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            {mode.label}
-            {mode.id === 'seller' && effectiveUser.sellerStatus !== 'approved' && <span className="ml-1 opacity-50">🔒</span>}
-          </button>
+          <div key={mode.id} className="flex-1 relative">
+            {mode.badge && (
+              <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 z-10 animate-float-badge pointer-events-none">
+                <span className="block whitespace-nowrap bg-[#FF4D4D] text-white text-[10px] sm:text-[11px] px-2.5 sm:px-3 py-1 rounded-full font-black shadow-[0_6px_14px_rgba(255,77,77,0.45)] border border-white/30 leading-none italic tracking-tighter">
+                  {mode.badge}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={() => setActiveMainTab(mode.id as MainTab)}
+              className={`w-full py-2 sm:py-5 rounded-[16px] sm:rounded-[24px] font-black text-[11px] sm:text-[14px] md:text-[16px] transition-all duration-300 relative leading-snug ${
+                activeMainTab === mode.id
+                ? 'bg-white shadow-xl scale-[1.02] ' + mode.color
+                : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {mode.label}
+              {mode.id === 'seller' && effectiveUser.sellerStatus !== 'approved' && <span className="ml-1 opacity-50">🔒</span>}
+            </button>
+          </div>
         ))}
       </div>
 
