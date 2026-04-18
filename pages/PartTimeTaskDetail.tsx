@@ -116,11 +116,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   };
 
   const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
-  /** 운영자: profile role 또는 어드민 비밀번호 로그인 여부 */
-  const isOperator =
-    user?.role === 'admin' ||
-    user?.role === 'manager' ||
-    (typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('admin_logged_in'));
+  const isOperator = user?.role === 'admin' || user?.role === 'manager';
 
   const handleApply = () => {
     if (!user || !task) return;
