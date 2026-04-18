@@ -117,6 +117,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
 
   const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
   const isOperator = user?.role === 'admin' || user?.role === 'manager';
+  const myApplication = user ? task?.applicants.find((a) => a.userId === user.id) : null;
+  const isSelected = !!myApplication?.selected;
 
   const handleApply = () => {
     if (!user || !task) return;
@@ -412,7 +414,17 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             </svg>
           </div>
 
-          {/* STEP 2 ─ 원본 글 작성 */}
+          {/* STEP 2 ─ 원본 글 작성 (선정자·운영자만) */}
+          {!(isSelected || isOperator) ? (
+            <div className="border-2 border-gray-100 rounded-2xl p-5 md:p-6 bg-gray-50 flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-400 font-black text-sm flex items-center justify-center shrink-0">2</div>
+              <div>
+                <p className="font-black text-gray-400">아래 원본 내용으로 게시글 작성하기</p>
+                <p className="text-xs text-gray-400 mt-0.5">🔒 선정된 후 작업 내용이 공개됩니다.</p>
+              </div>
+            </div>
+          ) : (
+          <>{/* STEP 2 ─ 원본 글 작성 */}
           <div className="border-2 border-blue-200 rounded-2xl p-5 md:p-6 bg-blue-50/20">
             <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
               <div className="flex items-center gap-3">
@@ -632,6 +644,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           )}
             </div>{/* close grid gap-4 (sections) */}
           </div>{/* close Step 2 box */}
+          </>)}
 
           {/* 화살표 */}
           <div className="flex justify-center py-2">
@@ -789,15 +802,35 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             </button>
           </div>
         )}
-        {/* 신청 완료 — 신청자이지만 아직 선정 전 */}
+        {/* 신청 완료 상태 메시지 */}
         {user && isApplicant && !task.pointPaid && (() => {
           const me = task.applicants.find((a) => a.userId === user?.id);
           if (!me?.selected) {
             return (
-              <p className="text-gray-500 font-bold border-t border-gray-100 pt-6">신청 완료되었습니다. 선정 시 위 Step 3에서 링크를 제출해 주세요. 운영자와 광고주 확인 후 수익통장에 적립됩니다.</p>
+              <div className="border-t border-gray-100 pt-6">
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-full bg-amber-100 flex items-center justify-center shrink-0 text-xl">⏳</div>
+                  <div>
+                    <p className="font-black text-amber-800 text-base mb-1">신청이 완료되었습니다</p>
+                    <p className="text-sm font-bold text-amber-700">현재 선정 진행 중이니 잠시 기다려 주세요.</p>
+                    <p className="text-xs text-amber-500 mt-1">선정 결과는 마이페이지 알림에서 확인할 수 있습니다.</p>
+                  </div>
+                </div>
+              </div>
             );
           }
-          return null;
+          return (
+            <div className="border-t border-gray-100 pt-6">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-start gap-4">
+                <div className="w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 text-xl">✅</div>
+                <div>
+                  <p className="font-black text-emerald-800 text-base mb-1">선정되셨습니다!</p>
+                  <p className="text-sm font-bold text-emerald-700">위 Step 3에서 링크를 제출해 주세요.</p>
+                  <p className="text-xs text-emerald-600 mt-1">운영자와 광고주 확인 후 수익통장에 적립됩니다.</p>
+                </div>
+              </div>
+            </div>
+          );
         })()}
 
         {/* 운영자 전용 목록 — 로그인한 운영자에게만 항상 표시 (닉네임·댓글·연락처·선정) */}
