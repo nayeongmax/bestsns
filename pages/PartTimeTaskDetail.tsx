@@ -741,6 +741,20 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           )}
         </div>
 
+        {task.workTimeSlot && (
+          <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3">
+            <span className="text-purple-400 text-lg shrink-0">🕐</span>
+            <div>
+              <p className="font-black text-purple-800 text-sm mb-1">작업 시간 안내 — {task.workTimeSlot}</p>
+              <p className="text-sm text-purple-700 leading-relaxed">
+                본 작업은 지정된 시간대 내에 완료해 주세요. 시간 약속은 광고주와의 신뢰를 바탕으로 하며,
+                <span className="font-black"> 해당 시간 내에 작업이 완료되지 않을 경우 부득이하게 작업 건수에 포함되지 않을 수 있습니다.</span>
+              </p>
+              <p className="text-xs text-purple-500 mt-1.5">소중한 시간 약속을 지켜 주셔서 감사합니다 🙏</p>
+            </div>
+          </div>
+        )}
+
         {/* 신청 댓글 — 모두 닉네임·댓글만 표시 (연락처는 운영자 전용 목록에서만) */}
         <div className="border-t border-gray-100 pt-6">
           <h3 className="text-lg font-black text-gray-800 mb-3">신청 댓글</h3>

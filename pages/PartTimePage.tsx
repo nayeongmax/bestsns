@@ -458,6 +458,9 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   const [applicantUserId, setApplicantUserId] = useState(editTask?.applicantUserId ?? '');
   const [signupLink, setSignupLink] = useState(editTask?.signupLink ?? '');
   const [postVisibility, setPostVisibility] = useState<'전체공개' | '멤버공개'>(editTask?.postVisibility ?? '전체공개');
+  const [workTimeSlot, setWorkTimeSlot] = useState<'오전' | '오후' | ''>(
+    editTask?.workTimeSlot === '오전 (09:00~12:00)' ? '오전' : editTask?.workTimeSlot === '오후 (13:00~17:00)' ? '오후' : ''
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
@@ -632,6 +635,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
           ...(signupLink.trim() ? { signupLink: signupLink.trim() } : {}),
           postVisibility,
+          ...(workTimeSlot ? { workTimeSlot: workTimeSlot === '오전' ? '오전 (09:00~12:00)' : '오후 (13:00~17:00)' } : {}),
         }
       : {
           id: `t_${Date.now()}`,
@@ -652,6 +656,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           ...(applicantUserId.trim() ? { applicantUserId: applicantUserId.trim() } : {}),
           ...(signupLink.trim() ? { signupLink: signupLink.trim() } : {}),
           postVisibility,
+          ...(workTimeSlot ? { workTimeSlot: workTimeSlot === '오전' ? '오전 (09:00~12:00)' : '오후 (13:00~17:00)' } : {}),
         };
     try {
       await upsertPartTimeTask(newTask);
@@ -727,6 +732,26 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                 ))}
               </div>
               <p className="text-[10px] text-gray-400 mt-1">작업 상세페이지 Step 2에 표시되는 공개 설정</p>
+            </div>
+            <div>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">작업 시간대 설정</label>
+              <div className="flex gap-3 pt-1">
+                {([
+                  { val: '' as const, label: '시간 미지정' },
+                  { val: '오전' as const, label: '오전 (09:00~12:00)' },
+                  { val: '오후' as const, label: '오후 (13:00~17:00)' },
+                ] as const).map((item) => (
+                  <button
+                    key={item.val}
+                    type="button"
+                    onClick={() => setWorkTimeSlot(item.val)}
+                    className={`flex-1 py-3 rounded-2xl font-black text-sm border-2 transition-all ${workTimeSlot === item.val ? 'border-purple-500 bg-purple-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">작업 상세페이지에 시간 약속 안내와 함께 표시됩니다</p>
             </div>
           </div>
         </section>
