@@ -178,11 +178,10 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
             <div className="absolute right-0 top-0 opacity-5"><svg className="w-64 h-64 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></div>
             <p className="text-[#2b6cb0] text-xl font-black italic tracking-tight uppercase">BESTSNS Escrow Protection 가동 중</p>
             <ul className="mt-3 space-y-2 text-[#4a5568] text-[15px] font-bold italic">
-              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 결제 후, 구매자는 채널의 <b>매니저 권한</b>을 즉시 부여받습니다.</li>
               <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 유튜브 정책상 매니저 추가 후 <b>최소 7일</b>이 지나야 주 소유자(Primary Owner)로 승격이 가능합니다.</li>
-              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 승격 후 기존 소유자(판매자)가 채널에서 완전히 나가는 데 추가 7일이 소요될 수 있어, <b>완전한 소유권 이전까지 최대 14일</b>이 걸릴 수 있습니다.</li>
+              <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 승격 후 기존 소유자(판매자)가 채널에서 완전히 나가는 데 추가 7일이 소요될 수 있으며, <b>완전한 소유권 이전까지 최대 14일</b>이 걸릴 수 있습니다.</li>
               <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 에스크로 대리인이 소유권 이전을 확인한 후 판매 대금이 판매자에게 지급됩니다.</li>
-              <li className="flex items-start gap-3"><span className="text-red-500 font-black shrink-0">✓</span> 채널 양도를 받을 계정을 꼭 정확하게 입력해주세요 (오타 및 계정 문제는 플랫폼 책임이 아니기에 환불되지 않습니다)</li>
+              <li className="flex items-start gap-3"><span className="text-red-500 font-black shrink-0">✓</span> <span className="text-red-600 font-black">채널 양도를 받을 계정을 꼭 정확하게 입력해주세요 (오타 및 계정 문제는 플랫폼 책임이 아니기에 환불되지 않습니다)</span></li>
               <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 채널 인도 후 최소 10일 동안 채널 운영 및 작업을 진행하지 않는것을 권장합니다.</li>
               <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 채널 인도 후 초반부터 유튜브 정책을 어긋나는 과도한 매크로 작업, 선정적 및 위법성 등은 자제해주시기 바랍니다.</li>
               <li className="flex items-start gap-3"><span className="text-blue-500 font-black shrink-0">✓</span> 채널 인수 이후 해킹 또는 계정 및 채널 문제는 회원의 과실로 판단됩니다.</li>
@@ -228,11 +227,10 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
             <div className="absolute right-0 top-0 opacity-5"><svg className="w-24 h-24 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg></div>
             <p className="text-[#2b6cb0] text-sm font-black uppercase tracking-tight">BESTSNS Escrow Protection 가동 중</p>
             <ul className="mt-2 space-y-1.5 text-[#4a5568] text-xs sm:text-sm font-medium">
-              <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 결제 후 매니저 권한 즉시 부여</li>
               <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 최소 7일 후 Primary Owner 승격 가능 (유튜브 정책)</li>
-              <li className="flex items-start gap-2"><span className="text-amber-500 shrink-0 font-black">✓</span> <span className="font-bold">완전한 소유권 이전까지 최대 14일 소요 가능 (판매자 탈퇴 기간 포함)</span></li>
+              <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 승격 후 기존 소유자(판매자)가 채널에서 완전히 나가는 데 추가 7일이 소요될 수 있으며 완전한 소유권 이전까지 최대 14일이 걸릴 수 있습니다.</li>
               <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 에스크로 대리인 확인 후 판매 대금 지급</li>
-              <li className="flex items-start gap-2"><span className="text-red-500 shrink-0 font-black">✓</span> <span className="font-bold">채널 양도를 받을 계정을 꼭 정확하게 입력해주세요 (오타 및 계정 문제는 플랫폼 책임이 아니기에 환불되지 않습니다)</span></li>
+              <li className="flex items-start gap-2"><span className="text-red-500 shrink-0 font-black">✓</span> <span className="text-red-600 font-black">채널 양도를 받을 계정을 꼭 정확하게 입력해주세요 (오타 및 계정 문제는 플랫폼 책임이 아니기에 환불되지 않습니다)</span></li>
               <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 채널 인도 후 최소 10일 동안 채널 운영 및 작업을 진행하지 않는것을 권장합니다.</li>
               <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 채널 인도 후 초반부터 유튜브 정책을 어긋나는 과도한 매크로 작업, 선정적 및 위법성 등은 자제해주시기 바랍니다.</li>
               <li className="flex items-start gap-2"><span className="text-blue-500 shrink-0">✓</span> 채널 인수 이후 해킹 또는 계정 및 채널 문제는 회원의 과실로 판단됩니다.</li>
