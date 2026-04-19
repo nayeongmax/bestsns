@@ -77,7 +77,7 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
       )}
 
       {/* 광고 배너: 모바일 2열(2행), 데스크톱 3열 */}
-      <BannerRotator cols={2} mode="all" location="freeboard" height={80} />
+      <BannerRotator cols={2} mode="all" location="freeboard" height={130} />
 
       {/* 상단 헤더 섹션 */}
       <div className="bg-white p-4 sm:p-6 rounded-[32px] shadow-sm border border-gray-100 space-y-3 sm:space-y-6">
