@@ -26,7 +26,7 @@ const BannerItem: React.FC<{ ad: BannerAd; height: number }> = ({ ad, height }) 
   <a href={ad.linkUrl} target="_blank" rel="noopener noreferrer"
     className="block overflow-hidden rounded-xl hover:opacity-90 transition-opacity"
     title={ad.companyName}>
-    <img src={ad.imageUrl} alt={ad.companyName} style={{ height }} className="w-full object-cover object-top block" />
+    <img src={ad.imageUrl} alt={ad.companyName} style={{ height }} className="w-full object-cover object-left-top block" />
   </a>
 );
 
