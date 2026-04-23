@@ -13,6 +13,7 @@ import MemberAdmin from '../components/admin/MemberAdmin.tsx';
 import MarketingAdmin from '../components/admin/MarketingAdmin.tsx';
 import PartTimeAdmin from '../components/admin/PartTimeAdmin.tsx';
 import AiConsultAdmin from '../components/admin/AiConsultAdmin.tsx';
+import PopupAdmin from '../components/admin/PopupAdmin.tsx';
 
 interface Props {
   user: UserProfile | null;
@@ -57,7 +58,7 @@ const AdminPanel: React.FC<Props> = ({
   const ADMIN_STORAGE_KEY = 'admin_logged_in';
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!sessionStorage.getItem(ADMIN_STORAGE_KEY));
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime' | 'aiconsult'>('sns');
+  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime' | 'aiconsult' | 'popup'>('sns');
 
   const panelPassword = (import.meta as any).env?.VITE_ADMIN_PANEL_PASSWORD ?? (import.meta as any).env?.VITE_ADMIN_PASSWORD ?? 'admin123';
 
@@ -118,6 +119,7 @@ const AdminPanel: React.FC<Props> = ({
               <button onClick={() => setActiveTab('marketing')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'marketing' ? 'bg-rose-600 text-white shadow-sm' : 'text-gray-400'}`}>마케팅</button>
               <button onClick={() => setActiveTab('parttime')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'parttime' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-400'}`}>누구나알바</button>
               <button onClick={() => setActiveTab('aiconsult')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'aiconsult' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-400'}`}>AI 상담</button>
+              <button onClick={() => setActiveTab('popup')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'popup' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-400'}`}>팝업 관리</button>
             </div>
           </div>
         </div>
@@ -138,6 +140,7 @@ const AdminPanel: React.FC<Props> = ({
              <button onClick={() => setActiveTab('marketing')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'marketing' ? 'bg-rose-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>마케팅 캠페인</button>
              <button onClick={() => setActiveTab('parttime')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'parttime' ? 'bg-emerald-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>누구나알바</button>
              <button onClick={() => setActiveTab('aiconsult')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'aiconsult' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>AI 상담 이력</button>
+             <button onClick={() => setActiveTab('popup')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'popup' ? 'bg-orange-500 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>팝업 관리</button>
            </div>
          </div>
       </div>
@@ -182,6 +185,7 @@ const AdminPanel: React.FC<Props> = ({
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
         {activeTab === 'parttime' && <PartTimeAdmin addNotif={addNotif} members={members} />}
         {activeTab === 'aiconsult' && <AiConsultAdmin />}
+        {activeTab === 'popup' && <PopupAdmin />}
       </main>
     </div>
   );

@@ -71,6 +71,7 @@ import CreditApplication from '@/pages/CreditApplication';
 import MarketingVoucherPage from '@/pages/MarketingVoucherPage';
 import AlbaPaymentPage from '@/pages/AlbaPaymentPage';
 import CouponBox from '@/pages/CouponBox';
+import WelcomeGuideModal from '@/components/WelcomeGuideModal';
 import NoticePage from '@/pages/NoticePage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
@@ -1023,6 +1024,7 @@ const App: React.FC = () => {
       </div>
       <Footer />
     </div>
+    <WelcomeGuideModal />
     {showAuthModal && (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowAuthModal(false)}>
         <div className="w-full max-w-[920px] max-md:max-w-[440px]" onClick={e => e.stopPropagation()}>
