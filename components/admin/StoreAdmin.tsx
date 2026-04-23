@@ -110,6 +110,11 @@ const StoreAdmin: React.FC<Props> = ({ ebooks, setEbooks, storeOrders, members, 
   };
 
   const handleDelete = (id: string) => {
+    const hasOrders = storeOrders.some(o => o.productId === id);
+    if (hasOrders) {
+      showAlert({ description: '이 상품은 거래내역이 있어 삭제할 수 없습니다.\n판매를 중단하려면 상품 수정에서 "판매 일시정지"를 사용해주세요.' });
+      return;
+    }
     showConfirm({
       title: '상품 삭제',
       description: '정말 이 상품을 영구 삭제하시겠습니까?',

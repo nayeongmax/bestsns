@@ -190,17 +190,18 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
 
     setIsSaving(true);
     try {
-      // 썸네일/이미지 유실 방지: 로컬 상태 업데이트 전에 Supabase에 직접 저장
+      // Supabase 저장 성공이 확인된 후에만 상태에 추가 (localStorage 의존 없이 DB 단일 소스)
       if (user.role === 'admin') {
         await upsertStoreProductAdmin(newEbook);
       } else {
         await upsertStoreProduct(newEbook);
       }
     } catch (err) {
-      console.warn('상품 Supabase 저장 실패 (로컬에는 저장됨):', err);
-    } finally {
       setIsSaving(false);
+      alert('서버 저장에 실패했습니다. 잠시 후 다시 시도해주세요.\n\n오류: ' + (err instanceof Error ? err.message : String(err)));
+      return;
     }
+    setIsSaving(false);
 
     setEbooks(prev => {
       const filtered = prev.filter(eb => eb.id !== newEbook.id);
