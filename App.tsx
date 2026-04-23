@@ -84,6 +84,7 @@ import WishlistPage from '@/pages/WishlistPage';
 import PartTimePage, { PartTimeTaskRegister } from '@/pages/PartTimePage';
 import PartTimeTaskDetail from '@/pages/PartTimeTaskDetail';
 import PartTimeJobRequestPage from '@/pages/PartTimeJobRequestPage';
+import SlotGameLanding from '@/pages/SlotGameLanding';
 
 /** pathname이 /ebooks일 때 항상 EbookSales만 렌더 (다른 라우트 간섭 방지) */
 function ContainerRoutes(props: {
@@ -151,6 +152,7 @@ function ContainerRoutes(props: {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/marketing-consent" element={<MarketingConsentPage />} />
+      <Route path="/slot" element={<SlotGameLanding />} />
       <Route path="/login" element={<AuthPage onLoginSuccess={props.handleLoginSuccess} />} />
       <Route path="/" element={<Navigate to="/sns" />} />
     </Routes>
