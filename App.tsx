@@ -239,7 +239,10 @@ const App: React.FC = () => {
           // Supabase에 thumbnail이 없는 경우 localStorage 데이터로 보완 (upsert 실패로 누락된 경우 복구)
           const localEbooks = safeStorage<EbookProduct[]>('site_ebooks_v2', []);
           if (products.length > 0) {
-            const mergedProducts = products.map(p => {
+            const dbIds = new Set(products.map(p => p.id));
+            // Supabase에 없는 localStorage 상품을 병합 (저장 실패로 누락된 상품 복구)
+            const localOnly = localEbooks.filter(e => !dbIds.has(e.id));
+            const mergedProducts = [...products, ...localOnly].map(p => {
               if (p.thumbnail) return p;
               const local = localEbooks.find(e => e.id === p.id);
               return {
@@ -931,7 +934,9 @@ const App: React.FC = () => {
     ]).then(([channelProducts, products, reviewList, channelOrderList]) => {
       setChannels(channelProducts);
       const localEbooks = safeStorage<EbookProduct[]>('site_ebooks_v2', []);
-      setEbooks(products.map(p => {
+      const dbIds2 = new Set(products.map(p => p.id));
+      const localOnly2 = localEbooks.filter(e => !dbIds2.has(e.id));
+      setEbooks([...products, ...localOnly2].map(p => {
         if (p.thumbnail) return p;
         const local = localEbooks.find(e => e.id === p.id);
         return { ...p, thumbnail: local?.thumbnail || '', attachedImages: p.attachedImages?.length ? p.attachedImages : (local?.attachedImages || []) };
