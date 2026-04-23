@@ -20,6 +20,7 @@ function toSnakePayload(partial: Partial<{
   totalPurchaseAmount: number;
   totalSalesAmount: number;
   freelancerEarnings: number;
+  violationCount: number;
 }>) {
   const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (partial.points !== undefined) row.points = partial.points;
@@ -36,6 +37,7 @@ function toSnakePayload(partial: Partial<{
   if (partial.totalPurchaseAmount !== undefined) row.total_purchase_amount = partial.totalPurchaseAmount;
   if (partial.totalSalesAmount !== undefined) row.total_sales_amount = partial.totalSalesAmount;
   if (partial.freelancerEarnings !== undefined) row.total_freelancer_earnings = partial.freelancerEarnings;
+  if (partial.violationCount !== undefined) row.violation_count = partial.violationCount;
   return row;
 }
 

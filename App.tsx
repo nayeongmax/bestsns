@@ -178,7 +178,7 @@ const App: React.FC = () => {
   const [smmProducts, setSmmProducts] = useState<SMMProduct[]>(() => safeStorage('site_smm_products_v2', []));
   const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => safeStorage('store_orders_v2', []));
   const [channelOrders, setChannelOrders] = useState<ChannelOrder[]>(() => safeStorage('channel_orders_v2', []));
-  const [ebooks, setEbooks] = useState<EbookProduct[]>(() => safeStorage('site_ebooks_v2', []));
+  const [ebooks, setEbooks] = useState<EbookProduct[]>([]);
   const [channels, setChannels] = useState<ChannelProduct[]>(() => safeStorage('site_channels_v2', []));
   const [posts, setPosts] = useState<Post[]>(() => safeStorage('site_posts_v2', []));
   const [reviews, setReviews] = useState<Review[]>(() => safeStorage('site_reviews_v2', []));
@@ -237,26 +237,8 @@ const App: React.FC = () => {
         ]);
         if (!cancelled) {
           // Supabase에 thumbnail이 없는 경우 localStorage 데이터로 보완 (upsert 실패로 누락된 경우 복구)
-          const localEbooks = safeStorage<EbookProduct[]>('site_ebooks_v2', []);
-          if (products.length > 0) {
-            const mergedProducts = products.map(p => {
-              if (p.thumbnail) return p;
-              const local = localEbooks.find(e => e.id === p.id);
-              return {
-                ...p,
-                thumbnail: local?.thumbnail || '',
-                attachedImages: p.attachedImages?.length ? p.attachedImages : (local?.attachedImages || []),
-              };
-            });
-            setEbooks(mergedProducts);
-          } else if (localEbooks.length > 0) {
-            // Supabase가 빈 배열 반환 시 localStorage 데이터 유지 (상품 소실 방지)
-            // 어드민이면 localStorage 데이터를 Supabase에 복구 시도
-            setEbooks(localEbooks);
-            if (isInitialAdmin) {
-              upsertStoreProductsAdmin(localEbooks).catch(e => console.warn('store_products 복구 마이그레이션 실패:', e));
-            }
-          }
+          // ebooks는 Supabase 단일 소스 — localStorage 의존 없음
+          setEbooks(products);
           setStoreOrders(orders);
           setReviews(reviewList);
           setChannels(channelProducts);
@@ -771,16 +753,7 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('smm_orders_v2', JSON.stringify(smmOrders)); }, [smmOrders]);
   useEffect(() => { localStorage.setItem('store_orders_v2', JSON.stringify(storeOrders)); }, [storeOrders]);
   useEffect(() => { localStorage.setItem('channel_orders_v2', JSON.stringify(channelOrders)); }, [channelOrders]);
-  useEffect(() => {
-    // base64 썸네일/이미지/PDF는 Supabase에 저장되므로 localStorage에는 제외해 용량 초과 방지
-    const stripped = ebooks.map(({ thumbnail, attachedImages, tiers, ...rest }) => ({
-      ...rest,
-      thumbnail: thumbnail?.startsWith('data:') ? '' : (thumbnail ?? ''),
-      attachedImages: (attachedImages ?? []).map(img => img.startsWith('data:') ? '' : img),
-      tiers: (tiers ?? []).map(({ pdfFile: _pdf, ...t }) => t),
-    }));
-    try { localStorage.setItem('site_ebooks_v2', JSON.stringify(stripped)); } catch { /* 용량 초과 시 무시 */ }
-  }, [ebooks]);
+  // ebooks는 Supabase 단일 소스로 관리 — localStorage 저장 없음
   useEffect(() => { localStorage.setItem('site_channels_v2', JSON.stringify(channels)); }, [channels]);
   useEffect(() => { localStorage.setItem('site_posts_v2', JSON.stringify(posts)); }, [posts]);
   useEffect(() => { localStorage.setItem('site_reviews_v2', JSON.stringify(reviews)); }, [reviews]);
@@ -930,12 +903,7 @@ const App: React.FC = () => {
       fetchChannelOrders(),
     ]).then(([channelProducts, products, reviewList, channelOrderList]) => {
       setChannels(channelProducts);
-      const localEbooks = safeStorage<EbookProduct[]>('site_ebooks_v2', []);
-      setEbooks(products.map(p => {
-        if (p.thumbnail) return p;
-        const local = localEbooks.find(e => e.id === p.id);
-        return { ...p, thumbnail: local?.thumbnail || '', attachedImages: p.attachedImages?.length ? p.attachedImages : (local?.attachedImages || []) };
-      }));
+      setEbooks(products);
       setReviews(reviewList);
       setChannelOrders(channelOrderList);
     }).catch((e) => console.warn('로그인 후 채널/스토어 재로드 실패:', e));

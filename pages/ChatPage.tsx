@@ -4,6 +4,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { UserProfile, ChatMessage, ChannelProduct, NotificationType } from '@/types';
 import { supabase } from '../supabase';
 import { fetchChatRoomMeta, upsertChatRoomMeta } from '../chatRoomMetaDb';
+import { updateProfile } from '../profileDb';
 
 interface Props {
   user: UserProfile;
@@ -73,7 +74,8 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif, onl
   const [input, setInput] = useState('');
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState('전체');
-  const [violationCount, setViolationCount] = useState(Number(localStorage.getItem(`violation_${user.id}`) || '0'));
+  // 위반 카운터는 Supabase profiles.violation_count 에서 로드 (localStorage 우회 방지)
+  const [violationCount, setViolationCount] = useState(user.violationCount ?? 0);
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -287,7 +289,8 @@ const ChatPage: React.FC<Props> = ({ user, members, onResetUnread, addNotif, onl
       if (detected.length > 0) {
         const newCount = violationCount + 1;
         setViolationCount(newCount);
-        localStorage.setItem(`violation_${user.id}`, newCount.toString());
+        // Supabase에 위반 카운터 영구 저장 (localStorage 우회 불가)
+        updateProfile(user.id, { violationCount: newCount }).catch(e => console.warn('위반 카운터 저장 실패:', e));
         addNotif(user.id, 'prohibited', '🚨 금지 키워드 감지 경고', DIRECT_TRADE_WARNING);
         alert(DIRECT_TRADE_WARNING);
         const warningMsg: ChatMessageExtended = {
