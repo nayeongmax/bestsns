@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchAllPopups, upsertPopup, deletePopup, deactivateAllPopups, SitePopup } from '@/popupDb';
 
 const newPopup = (): SitePopup => ({
@@ -10,30 +10,73 @@ const newPopup = (): SitePopup => ({
   createdAt: new Date().toISOString(),
 });
 
+const MAX_IMG_PX = 1200;
+
+function resizeToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, MAX_IMG_PX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 const PopupAdmin: React.FC = () => {
   const [popups, setPopups] = useState<SitePopup[]>([]);
   const [editing, setEditing] = useState<SitePopup | null>(null);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' }>({ text: '', type: 'ok' });
+  const [imgLoading, setImgLoading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { load(); }, []);
 
   const load = async () => {
-    try { setPopups(await fetchAllPopups()); } catch { setMsg('불러오기 실패'); }
+    try { setPopups(await fetchAllPopups()); } catch (e) { flash('불러오기 실패: ' + String(e), 'err'); }
   };
 
-  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
+  const flash = (text: string, type: 'ok' | 'err' = 'ok') => {
+    setMsg({ text, type });
+    setTimeout(() => setMsg({ text: '', type: 'ok' }), 4000);
+  };
+
+  const handleImageFile = async (file: File) => {
+    setImgLoading(true);
+    try {
+      const dataUrl = await resizeToDataUrl(file);
+      setEditing(prev => prev ? { ...prev, imageUrl: dataUrl } : prev);
+    } catch {
+      flash('이미지 변환 실패', 'err');
+    }
+    setImgLoading(false);
+  };
 
   const handleSave = async () => {
     if (!editing) return;
-    if (!editing.title.trim()) { flash('제목을 입력해주세요.'); return; }
+    if (!editing.title.trim()) { flash('제목을 입력해주세요.', 'err'); return; }
     setSaving(true);
     try {
       await upsertPopup(editing);
       flash('저장되었습니다.');
       setEditing(null);
       await load();
-    } catch { flash('저장 실패'); }
+    } catch (e) {
+      flash('저장 실패: ' + (e instanceof Error ? e.message : String(e)), 'err');
+    }
     setSaving(false);
   };
 
@@ -44,7 +87,7 @@ const PopupAdmin: React.FC = () => {
       await upsertPopup({ ...popup, isActive: true });
       flash(`"${popup.title}" 팝업이 게시되었습니다.`);
       await load();
-    } catch { flash('게시 실패'); }
+    } catch (e) { flash('게시 실패: ' + String(e), 'err'); }
     setSaving(false);
   };
 
@@ -54,7 +97,7 @@ const PopupAdmin: React.FC = () => {
       await upsertPopup({ ...popup, isActive: false });
       flash('팝업이 비활성화되었습니다.');
       await load();
-    } catch { flash('실패'); }
+    } catch (e) { flash('실패: ' + String(e), 'err'); }
     setSaving(false);
   };
 
@@ -64,7 +107,7 @@ const PopupAdmin: React.FC = () => {
       await deletePopup(id);
       flash('삭제되었습니다.');
       await load();
-    } catch { flash('삭제 실패'); }
+    } catch (e) { flash('삭제 실패: ' + String(e), 'err'); }
   };
 
   return (
@@ -82,11 +125,12 @@ const PopupAdmin: React.FC = () => {
         </button>
       </div>
 
-      {msg && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm font-bold px-4 py-2 rounded-xl">{msg}</div>
+      {msg.text && (
+        <div className={`border text-sm font-bold px-4 py-2 rounded-xl ${msg.type === 'err' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
+          {msg.text}
+        </div>
       )}
 
-      {/* 팝업 목록 */}
       {popups.length === 0 && !editing && (
         <div className="text-center py-16 text-gray-300 font-black text-lg">팝업이 없습니다</div>
       )}
@@ -118,15 +162,14 @@ const PopupAdmin: React.FC = () => {
         ))}
       </div>
 
-      {/* 편집 폼 */}
       {editing && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setEditing(null)}>
           <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="bg-gray-900 px-6 py-5 flex items-center justify-between">
-              <h3 className="text-white font-black text-lg">팝업 {editing.createdAt === popups.find(p => p.id === editing.id)?.createdAt ? '수정' : '만들기'}</h3>
+              <h3 className="text-white font-black text-lg">팝업 {popups.find(p => p.id === editing.id) ? '수정' : '만들기'}</h3>
               <button onClick={() => setEditing(null)} className="text-white/60 hover:text-white text-xl font-bold">✕</button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <label className="block text-xs font-black text-gray-500 mb-1.5 uppercase tracking-wider">제목 *</label>
                 <input
@@ -136,25 +179,49 @@ const PopupAdmin: React.FC = () => {
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-gray-400"
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-black text-gray-500 mb-1.5 uppercase tracking-wider">이미지 URL <span className="text-gray-300 font-normal">(선택)</span></label>
+                <label className="block text-xs font-black text-gray-500 mb-1.5 uppercase tracking-wider">이미지 <span className="text-gray-300 font-normal">(선택)</span></label>
                 <input
-                  value={editing.imageUrl}
-                  onChange={e => setEditing({ ...editing, imageUrl: e.target.value })}
-                  placeholder="https://example.com/image.png"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-gray-400"
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }}
                 />
-                {editing.imageUrl && (
-                  <img src={editing.imageUrl} alt="미리보기" className="mt-2 w-full max-h-40 object-contain rounded-xl border border-gray-100 bg-gray-50" />
+                {editing.imageUrl ? (
+                  <div className="relative">
+                    <img src={editing.imageUrl} alt="미리보기" className="w-full max-h-48 object-contain rounded-xl border border-gray-100 bg-gray-50" />
+                    <button
+                      onClick={() => setEditing({ ...editing, imageUrl: '' })}
+                      className="absolute top-2 right-2 bg-red-500 text-white text-xs font-black px-2 py-1 rounded-lg hover:bg-red-600"
+                    >✕ 제거</button>
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="mt-2 w-full border border-gray-200 text-gray-500 text-xs font-bold py-2 rounded-xl hover:bg-gray-50"
+                    >이미지 교체</button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={imgLoading}
+                    className="w-full border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center gap-2 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="text-2xl">{imgLoading ? '⏳' : '🖼️'}</span>
+                    <span className="text-sm font-bold text-gray-400">{imgLoading ? '처리 중...' : '클릭하여 이미지 첨부'}</span>
+                    <span className="text-xs text-gray-300">JPG, PNG, GIF 등 · 자동 리사이즈</span>
+                  </button>
                 )}
               </div>
+
               <div>
                 <label className="block text-xs font-black text-gray-500 mb-1.5 uppercase tracking-wider">본문 내용 <span className="text-gray-300 font-normal">(선택)</span></label>
                 <textarea
                   value={editing.body}
                   onChange={e => setEditing({ ...editing, body: e.target.value })}
                   placeholder="팝업에 표시할 내용을 입력하세요"
-                  rows={5}
+                  rows={4}
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:border-gray-400 resize-none"
                 />
               </div>
@@ -162,17 +229,12 @@ const PopupAdmin: React.FC = () => {
             <div className="px-6 pb-6 flex gap-3">
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || imgLoading}
                 className="flex-1 bg-gray-900 text-white font-black py-3 rounded-2xl text-sm hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 {saving ? '저장 중...' : '저장'}
               </button>
-              <button
-                onClick={() => setEditing(null)}
-                className="px-5 text-sm font-black text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                취소
-              </button>
+              <button onClick={() => setEditing(null)} className="px-5 text-sm font-black text-gray-400 hover:text-gray-600 transition-colors">취소</button>
             </div>
           </div>
         </div>
