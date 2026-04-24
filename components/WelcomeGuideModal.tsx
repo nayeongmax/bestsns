@@ -10,6 +10,9 @@ const WelcomeGuideModal: React.FC = () => {
   useEffect(() => {
     fetchActivePopup().then((p) => {
       if (!p) return;
+      // 이전 버전 "영구 숨김" 키 제거 (새로고침마다 팝업이 뜨도록)
+      localStorage.removeItem(`bestsns_popup_seen_${p.id}`);
+      // 24시간 숨김만 적용
       const hideUntil = localStorage.getItem(hideUntilKey(p.id));
       if (hideUntil && Date.now() < Number(hideUntil)) return;
       setPopup(p);
