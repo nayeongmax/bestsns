@@ -56,6 +56,20 @@ const RichEditor: React.FC<{ value: string; onChange: (html: string) => void }> 
     if (editorRef.current) onChange(editorRef.current.innerHTML);
   }, [onChange]);
 
+  // px 단위 폰트 사이즈: execCommand fontSize → <font> → <span style> 로 교체
+  const applyFontSize = useCallback((px: string) => {
+    editorRef.current?.focus();
+    document.execCommand('fontSize', false, '7');
+    if (!editorRef.current) return;
+    editorRef.current.querySelectorAll('font[size="7"]').forEach(el => {
+      const span = document.createElement('span');
+      span.style.fontSize = px;
+      span.innerHTML = (el as HTMLElement).innerHTML;
+      el.replaceWith(span);
+    });
+    onChange(editorRef.current.innerHTML);
+  }, [onChange]);
+
   const handleInput = () => {
     if (editorRef.current) onChange(editorRef.current.innerHTML);
   };
@@ -81,17 +95,17 @@ const RichEditor: React.FC<{ value: string; onChange: (html: string) => void }> 
         <ToolBtn label="≡" title="가운데 정렬" onClick={() => exec('justifyCenter')} />
         <ToolBtn label="≡" title="오른쪽 정렬" onClick={() => exec('justifyRight')} />
         <div className="w-px h-5 bg-gray-200 mx-1" />
-        {/* 글자 크기 */}
+        {/* 폰트 사이즈 */}
         <select
           onMouseDown={e => e.stopPropagation()}
-          onChange={e => exec('fontSize', e.target.value)}
-          defaultValue="3"
-          className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-white text-gray-700"
+          onChange={e => applyFontSize(e.target.value)}
+          value=""
+          className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-white text-gray-700 w-20"
         >
-          <option value="1">작게</option>
-          <option value="3">보통</option>
-          <option value="5">크게</option>
-          <option value="7">매우 크게</option>
+          <option value="" disabled>크기</option>
+          {[10,12,13,14,15,16,18,20,22,24,28,32,36,40,48].map(s => (
+            <option key={s} value={`${s}px`}>{s}px</option>
+          ))}
         </select>
         <div className="w-px h-5 bg-gray-200 mx-1" />
         {/* 색상 프리셋 */}
