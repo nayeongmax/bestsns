@@ -81,7 +81,7 @@ const WelcomeGuideModal: React.FC = () => {
         {(!hasImage || hasBody) && (
           <div className={`px-5 py-4 ${hasImage ? 'border-t border-gray-100' : ''}`}>
             {!hasImage && <p className="font-black text-gray-900 text-base mb-1">{popup.title}</p>}
-            {hasBody && <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">{popup.body}</p>}
+            {hasBody && <div className="text-gray-700 text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: popup.body }} />}
           </div>
         )}
 
