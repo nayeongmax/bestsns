@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { fetchActivePopup, SitePopup } from '@/popupDb';
 
 const hideUntilKey = (id: string) => `bestsns_popup_hide_until_${id}`;
@@ -6,18 +7,39 @@ const hideUntilKey = (id: string) => `bestsns_popup_hide_until_${id}`;
 const WelcomeGuideModal: React.FC = () => {
   const [popup, setPopup] = useState<SitePopup | null>(null);
   const [noShow24h, setNoShow24h] = useState(false);
+  const location = useLocation();
+  const cachedPopup = useRef<SitePopup | null>(null);
 
+  const tryShow = (p: SitePopup) => {
+    localStorage.removeItem(`bestsns_popup_seen_${p.id}`);
+    const hideUntil = localStorage.getItem(hideUntilKey(p.id));
+    if (hideUntil && Date.now() < Number(hideUntil)) return;
+    setNoShow24h(false);
+    setPopup(p);
+  };
+
+  // 최초 로드: DB에서 팝업 가져오기
   useEffect(() => {
     fetchActivePopup().then((p) => {
       if (!p) return;
-      // 이전 버전 "영구 숨김" 키 제거 (새로고침마다 팝업이 뜨도록)
-      localStorage.removeItem(`bestsns_popup_seen_${p.id}`);
-      // 24시간 숨김만 적용
-      const hideUntil = localStorage.getItem(hideUntilKey(p.id));
-      if (hideUntil && Date.now() < Number(hideUntil)) return;
-      setPopup(p);
+      cachedPopup.current = p;
+      tryShow(p);
     }).catch(() => {});
   }, []);
+
+  // 홈('/')으로 이동할 때마다 팝업 재표시
+  useEffect(() => {
+    if (location.pathname !== '/') return;
+    if (cachedPopup.current) {
+      tryShow(cachedPopup.current);
+    } else {
+      fetchActivePopup().then((p) => {
+        if (!p) return;
+        cachedPopup.current = p;
+        tryShow(p);
+      }).catch(() => {});
+    }
+  }, [location.pathname]);
 
   const close = () => {
     if (popup && noShow24h) {
@@ -35,7 +57,7 @@ const WelcomeGuideModal: React.FC = () => {
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50" onClick={close}>
       <div
         className="relative bg-white shadow-2xl overflow-hidden"
-        style={{ width: '100%', maxWidth: 420, borderRadius: 4 }}
+        style={{ width: '100%', maxWidth: 560, borderRadius: 4 }}
         onClick={e => e.stopPropagation()}
       >
         {/* 닫기 X */}
@@ -51,11 +73,11 @@ const WelcomeGuideModal: React.FC = () => {
             src={popup.imageUrl}
             alt={popup.title}
             className="w-full block"
-            style={{ maxHeight: 480, objectFit: 'cover' }}
+            style={{ objectFit: 'cover' }}
           />
         )}
 
-        {/* 제목 + 본문 (이미지 없거나 body 있을 때만) */}
+        {/* 제목 + 본문 */}
         {(!hasImage || hasBody) && (
           <div className={`px-5 py-4 ${hasImage ? 'border-t border-gray-100' : ''}`}>
             {!hasImage && <p className="font-black text-gray-900 text-base mb-1">{popup.title}</p>}
