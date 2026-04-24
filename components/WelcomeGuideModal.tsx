@@ -1,75 +1,81 @@
 import React, { useEffect, useState } from 'react';
 import { fetchActivePopup, SitePopup } from '@/popupDb';
 
-const seenKey = (id: string) => `bestsns_popup_seen_${id}`;
+const hideUntilKey = (id: string) => `bestsns_popup_hide_until_${id}`;
 
 const WelcomeGuideModal: React.FC = () => {
   const [popup, setPopup] = useState<SitePopup | null>(null);
+  const [noShow24h, setNoShow24h] = useState(false);
 
   useEffect(() => {
     fetchActivePopup().then((p) => {
       if (!p) return;
-      if (localStorage.getItem(seenKey(p.id))) return;
+      const hideUntil = localStorage.getItem(hideUntilKey(p.id));
+      if (hideUntil && Date.now() < Number(hideUntil)) return;
       setPopup(p);
     }).catch(() => {});
   }, []);
 
   const close = () => {
-    if (popup) localStorage.setItem(seenKey(popup.id), '1');
+    if (popup && noShow24h) {
+      localStorage.setItem(hideUntilKey(popup.id), String(Date.now() + 24 * 60 * 60 * 1000));
+    }
     setPopup(null);
   };
 
   if (!popup) return null;
 
+  const hasImage = !!popup.imageUrl;
+  const hasBody = !!popup.body?.trim();
+
   return (
-    <div
-      className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={close}
-    >
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50" onClick={close}>
       <div
-        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+        className="relative bg-white shadow-2xl overflow-hidden"
+        style={{ width: '100%', maxWidth: 420, borderRadius: 4 }}
         onClick={e => e.stopPropagation()}
       >
-        {/* 헤더 */}
-        <div className="bg-gradient-to-r from-gray-900 to-gray-700 px-6 pt-6 pb-5 relative">
-          <button
-            onClick={close}
-            className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors text-xl font-bold leading-none"
-            aria-label="닫기"
-          >✕</button>
-          <p className="text-[11px] font-black uppercase tracking-widest text-white/50 mb-1">BESTSNS</p>
-          <h2 className="text-white text-xl sm:text-2xl font-black leading-tight">{popup.title}</h2>
-        </div>
+        {/* 닫기 X */}
+        <button
+          onClick={close}
+          className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white text-base font-bold rounded-sm transition-colors"
+          aria-label="닫기"
+        >✕</button>
 
         {/* 이미지 */}
-        {popup.imageUrl && (
+        {hasImage && (
           <img
             src={popup.imageUrl}
             alt={popup.title}
-            className="w-full max-h-64 object-contain bg-gray-50"
+            className="w-full block"
+            style={{ maxHeight: 480, objectFit: 'cover' }}
           />
         )}
 
-        {/* 본문 */}
-        {popup.body && (
-          <div className="px-6 py-5">
-            <p className="text-gray-700 text-sm font-medium leading-relaxed whitespace-pre-wrap">{popup.body}</p>
+        {/* 제목 + 본문 (이미지 없거나 body 있을 때만) */}
+        {(!hasImage || hasBody) && (
+          <div className={`px-5 py-4 ${hasImage ? 'border-t border-gray-100' : ''}`}>
+            {!hasImage && <p className="font-black text-gray-900 text-base mb-1">{popup.title}</p>}
+            {hasBody && <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">{popup.body}</p>}
           </div>
         )}
 
-        {/* 하단 버튼 */}
-        <div className="px-5 pb-5 flex gap-3">
+        {/* 하단 바 */}
+        <div className="flex items-center justify-between bg-gray-800 px-4 py-2.5">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={noShow24h}
+              onChange={e => setNoShow24h(e.target.checked)}
+              className="w-3.5 h-3.5 accent-white cursor-pointer"
+            />
+            <span className="text-gray-300 text-xs">24시간 열지않기</span>
+          </label>
           <button
             onClick={close}
-            className="flex-1 bg-gray-900 text-white font-black py-3 rounded-2xl text-sm hover:bg-gray-700 transition-colors"
+            className="text-gray-300 hover:text-white text-xs font-bold transition-colors"
           >
-            확인
-          </button>
-          <button
-            onClick={close}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-3 font-medium whitespace-nowrap"
-          >
-            다시 보지 않기
+            닫기
           </button>
         </div>
       </div>
