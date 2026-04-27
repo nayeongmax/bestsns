@@ -43,7 +43,7 @@
   schedule = "0 * * * *"
 
 [functions."auto-post-board"]
-  schedule = "0 2 * * *"
+  schedule = "*/5 * * * *"
 
 [[redirects]]
   from = "/*"
