@@ -39,12 +39,11 @@ const FreeBoard: React.FC<Props> = ({ posts, notices, members = [], gradeConfigs
       .slice(0, 2)
       .map(p => ({ ...p, isHot: true }));
 
-    const hotIds = new Set(hotPosts.map(p => p.id));
-    const normalPosts = [...otherNotices, ...commonPosts.filter(p => !hotIds.has(p.id))]
-      .sort((a, b) => Number(b.id) - Number(a.id));
+    const normalPosts = [...otherNotices, ...commonPosts]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     if (activeCategory !== '전체') {
-      const catFiltered = filtered.filter(p => p.category === activeCategory).sort((a, b) => Number(b.id) - Number(a.id));
+      const catFiltered = filtered.filter(p => p.category === activeCategory).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       return { displayPosts: catFiltered, normalPostsStartIdx: 0, totalNormalCount: catFiltered.length };
     }
 
