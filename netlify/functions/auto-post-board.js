@@ -1,7 +1,8 @@
 /**
  * auto-post-board.js
- * 매일 02:00 UTC(한국 11:00 AM) 실행
- * auto_post_pool 에서 미사용 10개를 랜덤 선택 → site_posts 에 당일 무작위 시간으로 게시
+ * */5 * * * * 마다 실행
+ * auto_post_config.next_post_at 에 도달하면 auto_post_pool 에서 1개 꺼내 site_posts 에 삽입
+ * 다음 게시 시각 = 지금 + 55~75분(랜덤) → 매 시간 랜덤 분에 게시되는 효과
  */
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
@@ -20,16 +21,12 @@ async function query(path, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
-function randomTime() {
-  // 오전 8시 ~ 오후 11시 사이 랜덤
-  const h = 8 + Math.floor(Math.random() * 15);
-  const m = Math.floor(Math.random() * 60);
-  const s = Math.floor(Math.random() * 60);
-  const now = new Date();
-  // KST 날짜 기준
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const dateStr = kst.toISOString().slice(0, 10);
-  return `${dateStr} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+async function upsertConfig(nextPostAt) {
+  await query('/auto_post_config', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ id: 1, next_post_at: nextPostAt.toISOString() }),
+  });
 }
 
 exports.handler = async () => {
@@ -38,39 +35,62 @@ exports.handler = async () => {
   }
 
   try {
-    // 1. 미사용 풀 10개 랜덤 조회
-    const pool = await query('/auto_post_pool?is_used=eq.false&order=random_order.asc&limit=10');
-    if (!pool || pool.length === 0) {
-      console.log('[auto-post] 남은 풀 없음. is_used 전체 리셋합니다.');
-      await query('/auto_post_pool?is_used=eq.true', { method: 'PATCH', body: JSON.stringify({ is_used: false }) });
-      return { statusCode: 200, body: 'Pool exhausted — reset done' };
+    // 1. 다음 게시 시각 확인
+    const configs = await query('/auto_post_config?id=eq.1&select=next_post_at');
+    const now = new Date();
+
+    if (configs && configs.length > 0) {
+      const nextAt = new Date(configs[0].next_post_at);
+      if (now < nextAt) {
+        return { statusCode: 200, body: `Next post at ${nextAt.toISOString()}` };
+      }
     }
 
-    // 2. site_posts 에 삽입
-    const posts = pool.map(p => ({
-      id: `auto_${Date.now()}_${p.id}`,
-      category: p.category,
-      title: p.title,
-      content: p.content,
-      author: p.author,
-      author_id: `auto_user_${p.id}`,
-      author_image: null,
-      date: randomTime(),
-      views: Math.floor(Math.random() * 800) + 50,
-      likes_count: Math.floor(Math.random() * 60) + 1,
-      images: [],
-      attachments: [],
-      is_deleted: false,
-    }));
+    // 2. 미사용 풀 1개 조회
+    const pool = await query('/auto_post_pool?is_used=eq.false&order=random_order.asc&limit=1');
+    if (!pool || pool.length === 0) {
+      console.log('[auto-post] 풀 소진 → 전체 리셋');
+      await query('/auto_post_pool?is_used=eq.true', { method: 'PATCH', body: JSON.stringify({ is_used: false }) });
+      await upsertConfig(new Date(now.getTime() + 5 * 60 * 1000));
+      return { statusCode: 200, body: 'Pool reset — will retry in 5 min' };
+    }
 
-    await query('/site_posts', { method: 'POST', body: JSON.stringify(posts), headers: { Prefer: 'return=minimal' } });
+    const p = pool[0];
 
-    // 3. 사용 표시
-    const ids = pool.map(p => p.id);
-    await query(`/auto_post_pool?id=in.(${ids.join(',')})`, { method: 'PATCH', body: JSON.stringify({ is_used: true }) });
+    // 3. site_posts 삽입 (현재 KST 시각으로)
+    const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const dateStr = kst.toISOString().replace('T', ' ').slice(0, 19);
 
-    console.log(`[auto-post] ${posts.length}개 게시 완료`);
-    return { statusCode: 200, body: `Posted ${posts.length}` };
+    await query('/site_posts', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify([{
+        id: `auto_${Date.now()}_${p.id}`,
+        category: p.category,
+        title: p.title,
+        content: p.content,
+        author: p.author,
+        author_id: `auto_user_${p.id}`,
+        author_image: null,
+        date: dateStr,
+        views: Math.floor(Math.random() * 800) + 50,
+        likes_count: Math.floor(Math.random() * 60) + 1,
+        images: [],
+        attachments: [],
+        is_deleted: false,
+      }]),
+    });
+
+    // 4. 사용 표시
+    await query(`/auto_post_pool?id=eq.${p.id}`, { method: 'PATCH', body: JSON.stringify({ is_used: true }) });
+
+    // 5. 다음 게시 시각 = 55~75분 후 랜덤 (매 시간 다른 분에 올라오는 효과)
+    const minutesUntilNext = 55 + Math.floor(Math.random() * 21);
+    const nextPostAt = new Date(now.getTime() + minutesUntilNext * 60 * 1000);
+    await upsertConfig(nextPostAt);
+
+    console.log(`[auto-post] "${p.title}" 게시. 다음: ${nextPostAt.toISOString()} (${minutesUntilNext}분 후)`);
+    return { statusCode: 200, body: `Posted: ${p.title}` };
   } catch (e) {
     console.error('[auto-post]', e);
     return { statusCode: 500, body: String(e) };
