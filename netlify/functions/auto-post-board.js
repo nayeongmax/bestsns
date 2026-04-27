@@ -108,7 +108,7 @@ exports.handler = async () => {
         author_id: `auto_user_${p.id}`,
         author_image: null,
         date: dateStr,
-        views: Math.floor(Math.random() * 800) + 50,
+        views: Math.floor(Math.random() * 1200) + 100,
         likes_count: Math.floor(Math.random() * 60) + 1,
         images: [],
         attachments: [],
