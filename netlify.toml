@@ -42,6 +42,9 @@
 [functions."smm-hourly-order-check"]
   schedule = "0 * * * *"
 
+[functions."auto-post-board"]
+  schedule = "0 2 * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
