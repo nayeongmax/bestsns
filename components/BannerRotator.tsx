@@ -47,14 +47,20 @@ const BannerRotator: React.FC<Props> = ({ cols = 2, mode = 'sequential', locatio
           setAds(sorted);
         } else {
           if (sorted.length <= cols) { setAds(sorted); return; }
-          const stored = parseInt(localStorage.getItem(ROTATION_KEY) ?? '0', 10);
-          const idx = isNaN(stored) ? 0 : stored % sorted.length;
-          const picked: BannerAd[] = [];
-          for (let i = 0; i < cols; i++) {
-            picked.push(sorted[(idx + i) % sorted.length]);
+          const hasRandom = sorted.some(b => b.displayMode === 'random');
+          if (hasRandom) {
+            const shuffled = [...sorted].sort(() => Math.random() - 0.5);
+            setAds(shuffled.slice(0, cols));
+          } else {
+            const stored = parseInt(localStorage.getItem(ROTATION_KEY) ?? '0', 10);
+            const idx = isNaN(stored) ? 0 : stored % sorted.length;
+            const picked: BannerAd[] = [];
+            for (let i = 0; i < cols; i++) {
+              picked.push(sorted[(idx + i) % sorted.length]);
+            }
+            localStorage.setItem(ROTATION_KEY, String((idx + cols) % sorted.length));
+            setAds(picked);
           }
-          localStorage.setItem(ROTATION_KEY, String((idx + cols) % sorted.length));
-          setAds(picked);
         }
       })
       .catch(err => { console.error('[BannerRotator]', err); setAds([]); })
