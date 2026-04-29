@@ -295,7 +295,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       alert('알바비가 지급되었습니다.');
     } catch (err) {
       console.error(err);
-      alert('지급 처리 중 오류가 발생했습니다.');
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`지급 처리 중 오류가 발생했습니다.\n${msg}`);
     }
   };
 
