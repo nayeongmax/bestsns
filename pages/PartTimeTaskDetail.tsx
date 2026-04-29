@@ -327,7 +327,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       if (!userId) navigate('/part-time');
     } catch (err) {
       console.error(err);
-      alert('지급 처리 중 오류가 발생했습니다.');
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`지급 처리 중 오류가 발생했습니다.\n${msg}`);
     }
   };
 
@@ -389,22 +390,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">1</div>
               <div>
                 <h3 className="font-black text-gray-900">회원가입하기</h3>
-                <p className="text-xs text-gray-500 mt-0.5">링크를 눌러서 해당 플랫폼에 회원가입 하세요</p>
+                <p className="text-xs text-gray-500 mt-0.5">작업링크에 접속해서 카페 회원가입 양식에 맞춰 작성 후 가입 하세요!</p>
               </div>
             </div>
-            {task.signupLink ? (
-              <a
-                href={task.signupLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 text-white font-black text-sm hover:bg-emerald-600 active:scale-95 transition-all shadow-sm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                회원가입 바로가기
-              </a>
-            ) : (
-              <p className="text-sm text-gray-400 italic">등록된 가입 링크가 없습니다. 운영자에게 문의하세요.</p>
-            )}
           </div>
 
           {/* 화살표 */}
