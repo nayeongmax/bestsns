@@ -131,9 +131,10 @@ exports.handler = async (event) => {
     // ── fetchWithdrawals: 출금 신청 목록 조회 ──────────────────
     if (action === 'fetchWithdrawals') {
       const status = body.status || 'pending';
-      const rows = await dbGet(
-        `/freelancer_withdraw_requests?status=eq.${encodeURIComponent(status)}&order=requested_at.asc`
-      );
+      const path = status === 'all'
+        ? `/freelancer_withdraw_requests?order=requested_at.desc`
+        : `/freelancer_withdraw_requests?status=eq.${encodeURIComponent(status)}&order=requested_at.desc`;
+      const rows = await dbGet(path);
       return resp(200, { ok: true, data: rows });
     }
 
