@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { PartTimeTask, PartTimeJobRequest } from '@/types';
 import type { UserProfile } from '@/types';
 import { NotificationType } from '@/types';
-import { calcJobRequestFee, FREELANCER_FEE_RATE, PAYMENT_GATEWAY_FEE_RATE } from '@/constants';
+import { calcJobRequestFee, FREELANCER_FEE_RATE, FREELANCER_SETTLEMENT_FEE_RATE, FREELANCER_WITHHOLDING_RATE, PAYMENT_GATEWAY_FEE_RATE } from '@/constants';
 import {
   fetchPartTimeTasks,
   fetchPartTimeJobRequests,
@@ -584,12 +584,16 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
             <table className="w-full text-left">
               <thead className="bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-wider">
                 <tr>
-                  <th className="px-6 py-4">신청일시</th>
-                  <th className="px-6 py-4">출금 예정일 (익일)</th>
-                  <th className="px-6 py-4">프리랜서</th>
-                  <th className="px-6 py-4 text-right">금액 (원)</th>
-                  <th className="px-6 py-4">입금 계좌</th>
-                  <th className="px-6 py-4 text-center">처리</th>
+                  <th className="px-4 py-4">신청일시</th>
+                  <th className="px-4 py-4">출금 예정일 (익일)</th>
+                  <th className="px-4 py-4">프리랜서</th>
+                  <th className="px-4 py-4 text-right">총 작업금액</th>
+                  <th className="px-4 py-4 text-right">플랫폼수수료<br /><span className="font-normal normal-case">(5%)</span></th>
+                  <th className="px-4 py-4 text-right">원천징수<br /><span className="font-normal normal-case">(3.3%)</span></th>
+                  <th className="px-4 py-4 text-right">카드수수료<br /><span className="font-normal normal-case">(3.3%)</span></th>
+                  <th className="px-4 py-4 text-right bg-emerald-50 text-emerald-700">실 지급금액<br /><span className="font-normal normal-case">(이체액)</span></th>
+                  <th className="px-4 py-4">입금 계좌</th>
+                  <th className="px-4 py-4 text-center">처리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -597,22 +601,30 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                   const reqDate = new Date(r.requestedAt);
                   const nextDay = new Date(reqDate);
                   nextDay.setDate(reqDate.getDate() + 1);
+                  const gross = Math.round(r.amount / (1 - FREELANCER_FEE_RATE));
+                  const platformFee = Math.round(gross * FREELANCER_SETTLEMENT_FEE_RATE);
+                  const withholdingFee = Math.round(gross * FREELANCER_WITHHOLDING_RATE);
+                  const cardFee = Math.round(gross * PAYMENT_GATEWAY_FEE_RATE);
                   return (
                   <tr key={r.id} className="hover:bg-emerald-50/20">
-                    <td className="px-6 py-4 font-bold text-sm text-gray-700">
+                    <td className="px-4 py-4 font-bold text-sm text-gray-700">
                       {new Date(r.requestedAt).toLocaleString('ko-KR')}
                     </td>
-                    <td className="px-6 py-4 font-bold text-sm text-emerald-600">
+                    <td className="px-4 py-4 font-bold text-sm text-emerald-600">
                       {nextDay.toLocaleDateString('ko-KR')}
                     </td>
-                    <td className="px-6 py-4 font-black text-gray-900">{r.nickname}</td>
-                    <td className="px-6 py-4 text-right font-black text-emerald-600">{r.amount.toLocaleString()}원</td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-4 py-4 font-black text-gray-900">{r.nickname}</td>
+                    <td className="px-4 py-4 text-right font-bold text-gray-700">{gross.toLocaleString()}원</td>
+                    <td className="px-4 py-4 text-right text-sm text-red-500">-{platformFee.toLocaleString()}원</td>
+                    <td className="px-4 py-4 text-right text-sm text-red-500">-{withholdingFee.toLocaleString()}원</td>
+                    <td className="px-4 py-4 text-right text-sm text-red-500">-{cardFee.toLocaleString()}원</td>
+                    <td className="px-4 py-4 text-right font-black text-emerald-600 bg-emerald-50">{r.amount.toLocaleString()}원</td>
+                    <td className="px-4 py-4 text-sm">
                       <span className="font-bold text-gray-800">{r.bankName}</span> {r.accountNo}
                       <br />
                       <span className="text-gray-500 text-xs">예금주: {r.ownerName}</span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 py-4 text-center">
                       <div className="flex justify-center gap-2">
                         <button
                           type="button"
