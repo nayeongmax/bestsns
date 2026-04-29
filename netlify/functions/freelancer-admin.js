@@ -25,7 +25,7 @@ function resp(statusCode, body) {
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: CORS_HEADERS, body: '' };
+    return { statusCode: 200, headers: CORS_HEADERS, body: '{}' };
   }
 
   // ── 관리자 인증 ──────────────────────────────────────────────

@@ -422,8 +422,17 @@ async function callFreelancerAdmin(body: Record<string, unknown>): Promise<unkno
     headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
     body: JSON.stringify(body),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.error || `freelancer-admin ${res.status}`);
+  const text = await res.text();
+  if (!text.trim()) {
+    throw new Error(`서버 함수 응답 없음 (HTTP ${res.status}) — Netlify 배포 또는 함수 로그를 확인해 주세요`);
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error(`서버 응답 파싱 오류 (HTTP ${res.status}): ${text.slice(0, 300)}`);
+  }
+  if (!res.ok) throw new Error((json as { error?: string })?.error || `freelancer-admin ${res.status}`);
   return json;
 }
 
