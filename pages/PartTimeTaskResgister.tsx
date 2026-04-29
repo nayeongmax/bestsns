@@ -196,7 +196,18 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">보상 포인트 (P)</label>
-              <input type="number" min={0} value={reward} onChange={(e) => setReward(Number(e.target.value) || 0)} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold" />
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={reward === 0 ? '' : String(reward)}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^0-9]/g, '');
+                  setReward(raw === '' ? 0 : parseInt(raw, 10));
+                }}
+                placeholder="예: 300"
+                className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold"
+              />
             </div>
             <div>
               <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">카테고리</label>
