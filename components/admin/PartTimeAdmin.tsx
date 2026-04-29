@@ -11,13 +11,11 @@ import {
   upsertPartTimeJobRequest,
   deletePartTimeTask,
   deletePartTimeJobRequest,
-  fetchFreelancerWithdrawRequests,
-  updateFreelancerWithdrawRequestStatusToDb,
-  refundFreelancerWithdrawalInDb,
   processAutoApprovalsInDb,
-  fetchFreelancerBalance,
-  setFreelancerBalance,
-  addFreelancerEarningToDb,
+  adminPayFreelancers,
+  adminFetchWithdrawals,
+  adminCompleteWithdrawal,
+  adminFailWithdrawal,
 } from '../../parttimeDb';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
@@ -36,7 +34,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [adminTab, setAdminTab] = useState<PartTimeAdminTab>('estimate');
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
-  const [withdrawRequests, setWithdrawRequests] = useState<Awaited<ReturnType<typeof fetchFreelancerWithdrawRequests>>>([]);
+  const [withdrawRequests, setWithdrawRequests] = useState<import('@/constants').FreelancerWithdrawRequest[]>([]);
   const [rejectModal, setRejectModal] = useState<{ jr: PartTimeJobRequest; reason: string } | null>(null);
   const [revisionModal, setRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string; text: string } | null>(null);
   const [detailJr, setDetailJr] = useState<PartTimeJobRequest | null>(null);
@@ -60,7 +58,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
         const [taskList, jrList, withdrawList] = await Promise.all([
           fetchPartTimeTasks(),
           fetchPartTimeJobRequests(),
-          fetchFreelancerWithdrawRequests(),
+          adminFetchWithdrawals('pending'),
         ]);
         if (!cancelled) {
           setTasks(taskList);
@@ -97,7 +95,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     return pushModalState('adminEstimateView', () => setEstimateViewJr(null));
   }, [estimateViewJr]);
 
-  const refreshWithdrawRequests = () => fetchFreelancerWithdrawRequests().then(setWithdrawRequests).catch(console.error);
+  const refreshWithdrawRequests = () => adminFetchWithdrawals('pending').then(setWithdrawRequests).catch(console.error);
 
   const pendingReviewsBase = jobRequests.filter((jr) => jr.status === 'pending_review');
 
@@ -269,12 +267,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     }
     if (!confirm(`작업을 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
     try {
-      const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
-      for (const a of target) {
-        const cur = await fetchFreelancerBalance(a.userId);
-        await setFreelancerBalance(a.userId, cur + netAmount);
-        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
-      }
+      await adminPayFreelancers(
+        target.map((a) => ({ userId: a.userId, reward: task.reward, taskTitle: task.title }))
+      );
       if (addNotif) {
         target.forEach((a) =>
           addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)
@@ -630,7 +625,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                           type="button"
                           onClick={async () => {
                             try {
-                              await updateFreelancerWithdrawRequestStatusToDb(r.id, 'completed');
+                              await adminCompleteWithdrawal(r.id);
                               await refreshWithdrawRequests();
                               if (addNotif) addNotif(r.userId, 'freelancer', '출금 완료', `${r.amount.toLocaleString()}원이 ${r.bankName} ${r.accountNo} 계좌로 입금되었습니다.`);
                               alert('입금 완료로 표시했습니다.');
@@ -648,8 +643,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                           onClick={async () => {
                             if (!confirm('입금 실패로 표시하시겠습니까? 수익통장에 해당 금액이 다시 충전됩니다.')) return;
                             try {
-                              await refundFreelancerWithdrawalInDb(r.userId, r.amount, '출금 실패 환급');
-                              await updateFreelancerWithdrawRequestStatusToDb(r.id, 'failed');
+                              await adminFailWithdrawal(r.id, r.userId, r.amount);
                               await refreshWithdrawRequests();
                               if (addNotif) addNotif(r.userId, 'freelancer', '출금 실패', `출금 신청이 실패하여 ${r.amount.toLocaleString()}원이 수익통장에 환급되었습니다. 통장 정보를 확인 후 다시 출금 신청해 주세요.`);
                               alert('실패로 표시했습니다. 수익통장에 금액이 환급되었습니다.');
