@@ -97,6 +97,14 @@ export interface PartTimePostBlock {
   내용: string;
 }
 
+/** 작업 세트 1개 — 링크 + 게시글(제목/내용) + 링크확인 */
+export interface WorkItemSet {
+  링크: string;
+  제목: string;
+  내용: string;
+  링크확인: string;
+}
+
 /** 누구나알바 작업 상세 (작업 내용 섹션) - 필요한 항목만 사용 */
 export interface PartTimeTaskSections {
   제목?: string;
@@ -126,6 +134,8 @@ export interface PartTimeTaskSections {
   작업링크목록?: string[];
   /** 작업 안내 (전체 가이드) */
   작업안내?: string;
+  /** 링크+게시글+링크확인 세트 여러 개 (있으면 개별 필드 대신 이걸 사용) */
+  작업세트목록?: WorkItemSet[];
   /** 섹션 표시 순서 (등록 시 넣은 순서 유지) [{ type, index }] */
   sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용'; index: number }>;
 }

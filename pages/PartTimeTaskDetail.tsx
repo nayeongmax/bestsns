@@ -501,7 +501,41 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             }
             return (
               <>
-                {sections.게시글목록 && sections.게시글목록.length > 0 && (
+                {/* 작업세트목록 (링크 + 게시글 + 링크확인) */}
+                {sections.작업세트목록 && sections.작업세트목록.length > 0 && (
+                  <div className="space-y-4">
+                    {sections.작업세트목록.map((ws, i) => (
+                      <div key={i} className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100 space-y-3">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">세트 {i + 1}</p>
+                        {ws.링크 && (
+                          <div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">🔗 링크</p>
+                            <a href={ws.링크} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all text-sm">{ws.링크}</a>
+                          </div>
+                        )}
+                        {ws.제목 && (
+                          <div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">📝 게시글 제목</p>
+                            <p className="font-black text-gray-800">{ws.제목}</p>
+                          </div>
+                        )}
+                        {ws.내용 && (
+                          <div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">📄 게시글 내용</p>
+                            <p className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">{ws.내용}</p>
+                          </div>
+                        )}
+                        {ws.링크확인 && (
+                          <div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">✅ 링크확인</p>
+                            <p className="text-gray-700 text-sm">{ws.링크확인}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {sections.게시글목록 && sections.게시글목록.length > 0 && !sections.작업세트목록?.length && (
                   <div className="space-y-4">
                     {sections.게시글목록.map((block, i) => (
                       <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">

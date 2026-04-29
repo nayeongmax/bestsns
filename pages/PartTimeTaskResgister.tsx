@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile } from '@/types';
-import type { PartTimeTask, PartTimeTaskSections } from '@/types';
+import type { PartTimeTask, PartTimeTaskSections, WorkItemSet } from '@/types';
 import { fetchPartTimeTasks, upsertPartTimeTask } from '../parttimeDb';
 
 interface Props {
@@ -29,13 +29,18 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
   const [reward, setReward] = useState(editTask?.reward ?? 300);
   const [maxApplicants, setMaxApplicants] = useState(editTask?.maxApplicants ?? 0);
   const [sections, setSections] = useState<Record<string, string>>({
-    제목: editTask?.sections?.제목 ?? '',
-    내용: editTask?.sections?.내용 ?? '',
     댓글: editTask?.sections?.댓글 ?? '',
     키워드: editTask?.sections?.키워드 ?? '',
     이미지: editTask?.sections?.이미지 ?? '',
     gif: editTask?.sections?.gif ?? '',
   });
+
+  const emptySet = (): WorkItemSet => ({ 링크: '', 제목: '', 내용: '', 링크확인: '' });
+  const [workSets, setWorkSets] = useState<WorkItemSet[]>(
+    editTask?.sections?.작업세트목록?.length
+      ? editTask.sections.작업세트목록
+      : [emptySet()]
+  );
   const [appStart, setAppStart] = useState(editTask?.applicationPeriod?.start ?? today());
   const [appEnd, setAppEnd] = useState(editTask?.applicationPeriod?.end ?? today());
   const [workStart, setWorkStart] = useState(editTask?.workPeriod?.start ?? today());
@@ -53,13 +58,16 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
     setReward(editTask.reward ?? 300);
     setMaxApplicants(editTask.maxApplicants ?? 0);
     setSections({
-      제목: editTask.sections?.제목 ?? '',
-      내용: editTask.sections?.내용 ?? '',
       댓글: editTask.sections?.댓글 ?? '',
       키워드: editTask.sections?.키워드 ?? '',
       이미지: editTask.sections?.이미지 ?? '',
       gif: editTask.sections?.gif ?? '',
     });
+    setWorkSets(
+      editTask.sections?.작업세트목록?.length
+        ? editTask.sections.작업세트목록
+        : [emptySet()]
+    );
     setAppStart(editTask.applicationPeriod?.start ?? today());
     setAppEnd(editTask.applicationPeriod?.end ?? today());
     setWorkStart(editTask.workPeriod?.start ?? today());
@@ -133,12 +141,11 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
       maxApplicants: maxApplicants > 0 ? maxApplicants : undefined,
       sections: {
         ...(editTask?.sections ?? {}),
-        제목: sections.제목,
-        내용: sections.내용,
         댓글: sections.댓글,
         키워드: sections.키워드,
         이미지: sections.이미지,
         gif: sections.gif,
+        작업세트목록: workSets.filter(s => s.링크 || s.제목 || s.내용),
       },
       applicationPeriod: { start: appStart, end: appEnd },
       workPeriod: { start: workStart, end: workEnd },
@@ -254,44 +261,149 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
           </div>
         </section>
 
-        {/* 3. 작업 내용 */}
+        {/* 3. 작업 세트 (링크 + 게시글 + 링크확인) */}
         <section className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="w-1.5 h-8 bg-emerald-600 rounded-full" />
-            <h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용 (작업자가 할 일)</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-1.5 h-8 bg-emerald-600 rounded-full" />
+              <h3 className="text-xl font-black text-gray-900 italic">3. 작업 세트</h3>
+            </div>
+            <span className="text-xs text-gray-400 font-semibold">링크 · 게시글 · 링크확인이 1세트</span>
           </div>
-          <div className="space-y-4">
-            {SECTION_KEYS.map((key) => (
-              <div key={key}>
-                <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{key}</label>
-                {key === '이미지' ? (
-                  <div className="flex flex-col gap-2">
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm">이미지 업로드 (참고용)</button>
-                    {sections.이미지 && (
-                      <div className="relative inline-block max-w-[200px]">
-                        <img src={sections.이미지} alt="참고" className="rounded-xl border border-gray-100 max-h-32 object-contain" />
-                        <button type="button" onClick={() => setSections((s) => ({ ...s, 이미지: '' }))} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-black">×</button>
-                      </div>
-                    )}
-                    <input type="text" value={sections.이미지?.startsWith('data:') ? '' : (sections.이미지 ?? '')} onChange={(e) => handleSectionChange('이미지', e.target.value)} placeholder="또는 이미지 관련 지시사항 텍스트" className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
-                  </div>
-                ) : key === 'gif' ? (
-                  <div className="flex flex-col gap-2">
-                    <input ref={gifInputRef} type="file" accept=".gif,image/gif" onChange={handleGifUpload} className="hidden" />
-                    <button type="button" onClick={() => gifInputRef.current?.click()} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm">GIF 파일 업로드</button>
-                    {sections.gif?.startsWith('data:') && (
-                      <div className="relative inline-block max-w-[200px]">
-                        <img src={sections.gif} alt="GIF 미리보기" className="rounded-xl border border-gray-100 max-h-32" />
-                        <button type="button" onClick={() => setSections((s) => ({ ...s, gif: '' }))} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-black">×</button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <input type="text" value={sections[key] ?? ''} onChange={(e) => handleSectionChange(key, e.target.value)} placeholder={`예: ${key} 관련 지시사항`} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
-                )}
+
+          <div className="space-y-5">
+            {workSets.map((ws, idx) => (
+              <div key={idx} className="border-2 border-emerald-100 rounded-3xl p-6 space-y-4 bg-emerald-50/40 relative">
+                {/* 세트 번호 + 삭제 */}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+                    세트 {idx + 1}
+                  </span>
+                  {workSets.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setWorkSets(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-xs font-black text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-xl transition-all"
+                    >
+                      ✕ 삭제
+                    </button>
+                  )}
+                </div>
+
+                {/* 링크 */}
+                <div>
+                  <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">
+                    🔗 링크 (작업 대상 URL)
+                  </label>
+                  <input
+                    type="url"
+                    value={ws.링크}
+                    onChange={e => setWorkSets(prev => prev.map((s, i) => i === idx ? { ...s, 링크: e.target.value } : s))}
+                    placeholder="https://example.com/post/..."
+                    className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-medium"
+                  />
+                </div>
+
+                {/* 게시글 제목 */}
+                <div>
+                  <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">
+                    📝 게시글 제목
+                  </label>
+                  <input
+                    type="text"
+                    value={ws.제목}
+                    onChange={e => setWorkSets(prev => prev.map((s, i) => i === idx ? { ...s, 제목: e.target.value } : s))}
+                    placeholder="작성할 게시글 제목"
+                    className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-medium"
+                  />
+                </div>
+
+                {/* 게시글 내용 */}
+                <div>
+                  <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">
+                    📄 게시글 내용
+                  </label>
+                  <textarea
+                    value={ws.내용}
+                    onChange={e => setWorkSets(prev => prev.map((s, i) => i === idx ? { ...s, 내용: e.target.value } : s))}
+                    placeholder="작성할 게시글 내용을 입력하세요"
+                    rows={4}
+                    className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-y"
+                  />
+                </div>
+
+                {/* 링크확인 */}
+                <div>
+                  <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">
+                    ✅ 링크확인 (작업 완료 후 제출할 링크 안내)
+                  </label>
+                  <input
+                    type="text"
+                    value={ws.링크확인}
+                    onChange={e => setWorkSets(prev => prev.map((s, i) => i === idx ? { ...s, 링크확인: e.target.value } : s))}
+                    placeholder="예: 게시글 URL / 댓글 URL 등 제출 방식 안내"
+                    className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-medium"
+                  />
+                </div>
               </div>
             ))}
+          </div>
+
+          {/* 세트 추가 버튼 */}
+          <button
+            type="button"
+            onClick={() => setWorkSets(prev => [...prev, emptySet()])}
+            className="w-full py-4 rounded-2xl border-2 border-dashed border-emerald-300 text-emerald-600 font-black hover:bg-emerald-50 transition-all text-sm flex items-center justify-center gap-2"
+          >
+            <span className="text-lg">＋</span> 작업 세트 추가
+          </button>
+          <p className="text-xs text-gray-400 text-center">
+            💡 게시글 5개 = 세트 5개 추가 · 총 보상 포인트를 세트 수에 맞게 설정하세요
+          </p>
+        </section>
+
+        {/* 4. 공통 추가 지시사항 */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-1.5 h-8 bg-gray-300 rounded-full" />
+            <h3 className="text-xl font-black text-gray-900 italic">4. 공통 추가 지시사항 <span className="text-sm font-normal text-gray-400">(선택)</span></h3>
+          </div>
+          <div className="space-y-4">
+            {(['댓글', '키워드'] as const).map((key) => (
+              <div key={key}>
+                <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{key}</label>
+                <input type="text" value={sections[key] ?? ''} onChange={(e) => handleSectionChange(key, e.target.value)} placeholder={`예: ${key} 관련 지시사항`} className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
+              </div>
+            ))}
+            {/* 이미지 */}
+            <div>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">이미지</label>
+              <div className="flex flex-col gap-2">
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm">이미지 업로드 (참고용)</button>
+                {sections.이미지 && (
+                  <div className="relative inline-block max-w-[200px]">
+                    <img src={sections.이미지} alt="참고" className="rounded-xl border border-gray-100 max-h-32 object-contain" />
+                    <button type="button" onClick={() => setSections((s) => ({ ...s, 이미지: '' }))} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-black">×</button>
+                  </div>
+                )}
+                <input type="text" value={sections.이미지?.startsWith('data:') ? '' : (sections.이미지 ?? '')} onChange={(e) => handleSectionChange('이미지', e.target.value)} placeholder="또는 이미지 관련 지시사항 텍스트" className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none text-sm" />
+              </div>
+            </div>
+            {/* GIF */}
+            <div>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">GIF</label>
+              <div className="flex flex-col gap-2">
+                <input ref={gifInputRef} type="file" accept=".gif,image/gif" onChange={handleGifUpload} className="hidden" />
+                <button type="button" onClick={() => gifInputRef.current?.click()} className="w-full px-5 py-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-emerald-300 text-gray-500 font-bold text-sm">GIF 파일 업로드</button>
+                {sections.gif?.startsWith('data:') && (
+                  <div className="relative inline-block max-w-[200px]">
+                    <img src={sections.gif} alt="GIF 미리보기" className="rounded-xl border border-gray-100 max-h-32" />
+                    <button type="button" onClick={() => setSections((s) => ({ ...s, gif: '' }))} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-black">×</button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
