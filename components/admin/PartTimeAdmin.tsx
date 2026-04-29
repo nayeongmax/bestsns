@@ -37,6 +37,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
   const [withdrawRequests, setWithdrawRequests] = useState<import('@/constants').FreelancerWithdrawRequest[]>([]);
+  const [withdrawFilter, setWithdrawFilter] = useState<'all' | 'pending' | 'completed' | 'failed'>('pending');
   const [rejectModal, setRejectModal] = useState<{ jr: PartTimeJobRequest; reason: string } | null>(null);
   const [revisionModal, setRevisionModal] = useState<{ task: PartTimeTask; userId: string; nickname: string; text: string } | null>(null);
   const [detailJr, setDetailJr] = useState<PartTimeJobRequest | null>(null);
@@ -60,7 +61,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
         const [taskList, jrList, withdrawList] = await Promise.all([
           fetchPartTimeTasks(),
           fetchPartTimeJobRequests(),
-          adminFetchWithdrawals('pending'),
+          adminFetchWithdrawals('all'),
         ]);
         if (!cancelled) {
           setTasks(taskList);
@@ -97,7 +98,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     return pushModalState('adminEstimateView', () => setEstimateViewJr(null));
   }, [estimateViewJr]);
 
-  const refreshWithdrawRequests = () => adminFetchWithdrawals('pending').then(setWithdrawRequests).catch(console.error);
+  const refreshWithdrawRequests = () => adminFetchWithdrawals('all').then(setWithdrawRequests).catch(console.error);
 
   const pendingReviewsBase = jobRequests.filter((jr) => jr.status === 'pending_review');
 
@@ -366,6 +367,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   };
 
   const pendingWithdrawals = withdrawRequests.filter((r) => r.status === 'pending');
+  const filteredWithdrawals = withdrawFilter === 'all'
+    ? withdrawRequests
+    : withdrawRequests.filter((r) => r.status === withdrawFilter);
 
   const todayStr = () => {
     const d = new Date();
@@ -574,11 +578,50 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       <div className="space-y-6 md:space-y-10">
       {/* 수익탭: 프리랜서 출금 신청 목록 */}
       <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
-        <p className="text-sm text-gray-500 mb-6">수익통장에서 출금을 신청한 프리랜서 목록입니다. 신청일 기준 익일에 출금됩니다. 전문가정보에 등록된 통장으로 PortOne을 통해 입금 처리해 주세요.</p>
-        {pendingWithdrawals.length === 0 ? (
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
+            <p className="text-sm text-gray-500">수익통장에서 출금을 신청한 프리랜서 목록입니다. 신청일 기준 익일에 출금됩니다. 전문가정보에 등록된 통장으로 PortOne을 통해 입금 처리해 주세요.</p>
+          </div>
+          <button
+            type="button"
+            onClick={refreshWithdrawRequests}
+            className="shrink-0 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-black text-sm hover:bg-gray-200 flex items-center gap-1.5"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            새로고침
+          </button>
+        </div>
+        {/* 필터 탭 */}
+        <div className="flex gap-1.5 mb-6 flex-wrap">
+          {([
+            { key: 'pending', label: '대기중', color: 'amber' },
+            { key: 'completed', label: '완료', color: 'emerald' },
+            { key: 'failed', label: '실패', color: 'red' },
+            { key: 'all', label: '전체', color: 'gray' },
+          ] as const).map(({ key, label, color }) => {
+            const count = key === 'all' ? withdrawRequests.length : withdrawRequests.filter((r) => r.status === key).length;
+            const isActive = withdrawFilter === key;
+            const activeClass = color === 'amber' ? 'bg-amber-500 text-white' : color === 'emerald' ? 'bg-emerald-600 text-white' : color === 'red' ? 'bg-red-500 text-white' : 'bg-gray-700 text-white';
+            const inactiveClass = 'bg-gray-100 text-gray-600 hover:bg-gray-200';
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setWithdrawFilter(key)}
+                className={`px-4 py-2 rounded-xl font-black text-sm transition-all flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
+              >
+                {label}
+                {count > 0 && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${isActive ? 'bg-white/30' : 'bg-gray-300 text-gray-700'}`}>{count}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {filteredWithdrawals.length === 0 ? (
           <div className="py-8 text-center text-gray-500 font-bold rounded-2xl bg-gray-50 border border-gray-100">
-            대기 중인 출금 신청이 없습니다.
+            {withdrawFilter === 'pending' ? '대기 중인 출금 신청이 없습니다.' : withdrawFilter === 'completed' ? '완료된 출금 신청이 없습니다.' : withdrawFilter === 'failed' ? '실패한 출금 신청이 없습니다.' : '출금 신청 내역이 없습니다.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -594,11 +637,11 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                   <th className="px-4 py-4 text-right">카드수수료<br /><span className="font-normal normal-case">(3.3%)</span></th>
                   <th className="px-4 py-4 text-right bg-emerald-50 text-emerald-700">실 지급금액<br /><span className="font-normal normal-case">(이체액)</span></th>
                   <th className="px-4 py-4">입금 계좌</th>
-                  <th className="px-4 py-4 text-center">처리</th>
+                  <th className="px-4 py-4 text-center">상태 / 처리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {pendingWithdrawals.map((r) => {
+                {filteredWithdrawals.map((r) => {
                   const reqDate = new Date(r.requestedAt);
                   const nextDay = new Date(reqDate);
                   nextDay.setDate(reqDate.getDate() + 1);
@@ -607,7 +650,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                   const withholdingFee = Math.round(gross * FREELANCER_WITHHOLDING_RATE);
                   const cardFee = Math.round(gross * PAYMENT_GATEWAY_FEE_RATE);
                   return (
-                  <tr key={r.id} className="hover:bg-emerald-50/20">
+                  <tr key={r.id} className={r.status === 'completed' ? 'bg-emerald-50/30' : r.status === 'failed' ? 'bg-red-50/30' : 'hover:bg-emerald-50/20'}>
                     <td className="px-4 py-4 font-bold text-sm text-gray-700">
                       {new Date(r.requestedAt).toLocaleString('ko-KR')}
                     </td>
@@ -626,43 +669,49 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       <span className="text-gray-500 text-xs">예금주: {r.ownerName}</span>
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              await adminCompleteWithdrawal(r.id);
-                              await refreshWithdrawRequests();
-                              if (addNotif) addNotif(r.userId, 'freelancer', '출금 완료', `${r.amount.toLocaleString()}원이 ${r.bankName} ${r.accountNo} 계좌로 입금되었습니다.`);
-                              alert('입금 완료로 표시했습니다.');
-                            } catch (e) {
-                              console.error(e);
-                              alert('처리에 실패했습니다.');
-                            }
-                          }}
-                          className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700"
-                        >
-                          입금 완료
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!confirm('입금 실패로 표시하시겠습니까? 수익통장에 해당 금액이 다시 충전됩니다.')) return;
-                            try {
-                              await adminFailWithdrawal(r.id, r.userId, r.amount);
-                              await refreshWithdrawRequests();
-                              if (addNotif) addNotif(r.userId, 'freelancer', '출금 실패', `출금 신청이 실패하여 ${r.amount.toLocaleString()}원이 수익통장에 환급되었습니다. 통장 정보를 확인 후 다시 출금 신청해 주세요.`);
-                              alert('실패로 표시했습니다. 수익통장에 금액이 환급되었습니다.');
-                            } catch (e) {
-                              console.error(e);
-                              alert('처리에 실패했습니다.');
-                            }
-                          }}
-                          className="px-4 py-2 rounded-lg bg-red-100 text-red-700 font-black text-xs hover:bg-red-200"
-                        >
-                          실패
-                        </button>
-                      </div>
+                      {r.status === 'completed' ? (
+                        <span className="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 font-black text-xs">입금완료</span>
+                      ) : r.status === 'failed' ? (
+                        <span className="px-3 py-1.5 rounded-lg bg-red-100 text-red-700 font-black text-xs">실패</span>
+                      ) : (
+                        <div className="flex justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await adminCompleteWithdrawal(r.id);
+                                await refreshWithdrawRequests();
+                                if (addNotif) addNotif(r.userId, 'freelancer', '출금 완료', `${r.amount.toLocaleString()}원이 ${r.bankName} ${r.accountNo} 계좌로 입금되었습니다.`);
+                                alert('입금 완료로 표시했습니다.');
+                              } catch (e) {
+                                console.error(e);
+                                alert('처리에 실패했습니다.');
+                              }
+                            }}
+                            className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700"
+                          >
+                            입금 완료
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm('입금 실패로 표시하시겠습니까? 수익통장에 해당 금액이 다시 충전됩니다.')) return;
+                              try {
+                                await adminFailWithdrawal(r.id, r.userId, r.amount);
+                                await refreshWithdrawRequests();
+                                if (addNotif) addNotif(r.userId, 'freelancer', '출금 실패', `출금 신청이 실패하여 ${r.amount.toLocaleString()}원이 수익통장에 환급되었습니다. 통장 정보를 확인 후 다시 출금 신청해 주세요.`);
+                                alert('실패로 표시했습니다. 수익통장에 금액이 환급되었습니다.');
+                              } catch (e) {
+                                console.error(e);
+                                alert('처리에 실패했습니다.');
+                              }
+                            }}
+                            className="px-4 py-2 rounded-lg bg-red-100 text-red-700 font-black text-xs hover:bg-red-200"
+                          >
+                            실패
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                   );
