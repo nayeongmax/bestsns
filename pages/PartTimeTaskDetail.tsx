@@ -8,11 +8,8 @@ import {
   fetchPartTimeJobRequests,
   upsertPartTimeTasks,
   processAutoApprovalsInDb,
-  fetchFreelancerBalance,
-  setFreelancerBalance,
-  addFreelancerEarningToDb,
+  adminPayFreelancers,
 } from '../parttimeDb';
-import { FREELANCER_FEE_RATE } from '@/constants';
 
 interface Props {
   user: UserProfile | null;
@@ -295,12 +292,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     }
     if (!confirm(`작업 링크를 확인하셨나요? ${target.length}명에게 각 ${task.reward.toLocaleString()}원을 즉시 지급합니다.`)) return;
     try {
-      const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
-      for (const a of target) {
-        const cur = await fetchFreelancerBalance(a.userId);
-        await setFreelancerBalance(a.userId, cur + netAmount);
-        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
-      }
+      await adminPayFreelancers(
+        target.map((a) => ({ userId: a.userId, reward: task.reward, taskTitle: task.title }))
+      );
       if (addNotif) {
         target.forEach((a) =>
           addNotif(a.userId, 'freelancer', '알바비 지급 완료', `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`, `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`)

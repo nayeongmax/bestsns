@@ -406,3 +406,56 @@ export async function processAutoApprovalsInDb(): Promise<boolean> {
   if (changed) await upsertPartTimeTasks(next);
   return changed;
 }
+
+// ─── 어드민 전용: Netlify freelancer-admin 함수 호출 ────────────────────────
+const ADMIN_FN_URL = '/.netlify/functions/freelancer-admin';
+
+function getAdminKey(): string {
+  return (import.meta as Record<string, any>).env?.VITE_ADMIN_PANEL_PASSWORD
+    || (import.meta as Record<string, any>).env?.VITE_ADMIN_PASSWORD
+    || '';
+}
+
+async function callFreelancerAdmin(body: Record<string, unknown>): Promise<unknown> {
+  const res = await fetch(ADMIN_FN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error || `freelancer-admin ${res.status}`);
+  return json;
+}
+
+/** 어드민: 즉시지급 */
+export async function adminPayFreelancers(
+  applicants: Array<{ userId: string; reward: number; taskTitle: string }>
+): Promise<void> {
+  await callFreelancerAdmin({ action: 'pay', applicants });
+}
+
+/** 어드민: 출금 신청 목록 조회 (pending) */
+export async function adminFetchWithdrawals(status = 'pending'): Promise<FreelancerWithdrawRequest[]> {
+  const json = await callFreelancerAdmin({ action: 'fetchWithdrawals', status }) as { data: Record<string, unknown>[] };
+  return (json.data ?? []).map((row) => ({
+    id: String(row.id),
+    userId: String(row.user_id),
+    nickname: String(row.nickname),
+    amount: Number(row.amount ?? 0),
+    bankName: String(row.bank_name),
+    accountNo: String(row.account_no),
+    ownerName: String(row.owner_name),
+    requestedAt: row.requested_at != null ? new Date(row.requested_at as string).toISOString() : new Date().toISOString(),
+    status: (row.status as 'pending' | 'completed' | 'failed') ?? 'pending',
+  }));
+}
+
+/** 어드민: 출금 완료 처리 */
+export async function adminCompleteWithdrawal(id: string): Promise<void> {
+  await callFreelancerAdmin({ action: 'completeWithdrawal', id });
+}
+
+/** 어드민: 출금 실패 + 잔액 환급 */
+export async function adminFailWithdrawal(id: string, userId: string, amount: number): Promise<void> {
+  await callFreelancerAdmin({ action: 'failWithdrawal', id, userId, amount });
+}
