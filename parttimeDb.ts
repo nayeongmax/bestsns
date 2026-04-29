@@ -411,9 +411,9 @@ export async function processAutoApprovalsInDb(): Promise<boolean> {
 const ADMIN_FN_URL = '/.netlify/functions/freelancer-admin';
 
 function getAdminKey(): string {
-  return (import.meta as Record<string, any>).env?.VITE_ADMIN_PANEL_PASSWORD
-    || (import.meta as Record<string, any>).env?.VITE_ADMIN_PASSWORD
-    || '';
+  return (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PANEL_PASSWORD
+    ?? (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PASSWORD
+    ?? '';
 }
 
 async function callFreelancerAdmin(body: Record<string, unknown>): Promise<unknown> {
