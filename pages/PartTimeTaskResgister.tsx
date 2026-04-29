@@ -26,7 +26,7 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
   const [title, setTitle] = useState(editTask?.title ?? '');
   const [description, setDescription] = useState(editTask?.description ?? '');
   const [category, setCategory] = useState(editTask?.category ?? CATEGORIES[0]);
-  const [reward, setReward] = useState(editTask?.reward ?? 300);
+  const [rewardStr, setRewardStr] = useState(String(editTask?.reward ?? 300));
   const [maxApplicants, setMaxApplicants] = useState(editTask?.maxApplicants ?? 0);
   const [sections, setSections] = useState<Record<string, string>>({
     댓글: editTask?.sections?.댓글 ?? '',
@@ -55,7 +55,7 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
     setTitle(editTask.title ?? '');
     setDescription(editTask.description ?? '');
     setCategory(editTask.category ?? CATEGORIES[0]);
-    setReward(editTask.reward ?? 300);
+    setRewardStr(String(editTask.reward ?? 300));
     setMaxApplicants(editTask.maxApplicants ?? 0);
     setSections({
       댓글: editTask.sections?.댓글 ?? '',
@@ -137,7 +137,7 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
       title: title.trim(),
       description: description.trim() || title.trim(),
       category,
-      reward: Math.max(0, reward),
+      reward: Math.max(0, parseInt(rewardStr, 10) || 0),
       maxApplicants: maxApplicants > 0 ? maxApplicants : undefined,
       sections: {
         ...(editTask?.sections ?? {}),
@@ -200,11 +200,8 @@ const PartTimeTaskRegister: React.FC<Props> = ({ user }) => {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={reward === 0 ? '' : String(reward)}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/[^0-9]/g, '');
-                  setReward(raw === '' ? 0 : parseInt(raw, 10));
-                }}
+                value={rewardStr}
+                onChange={(e) => setRewardStr(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="예: 300"
                 className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none font-bold"
               />
