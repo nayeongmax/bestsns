@@ -198,7 +198,15 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
       }
     } catch (err) {
       setIsSaving(false);
-      alert('서버 저장에 실패했습니다. 잠시 후 다시 시도해주세요.\n\n오류: ' + (err instanceof Error ? err.message : String(err)));
+      let errMsg: string;
+      if (err instanceof Error) {
+        errMsg = err.message || '(오류 메시지 없음)';
+      } else if (err && typeof err === 'object') {
+        errMsg = JSON.stringify(err);
+      } else {
+        errMsg = String(err ?? '알 수 없는 오류');
+      }
+      alert('서버 저장에 실패했습니다. 잠시 후 다시 시도해주세요.\n\n오류: ' + errMsg);
       return;
     }
     setIsSaving(false);
