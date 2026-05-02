@@ -100,8 +100,29 @@ export async function fetchPublicStoreProducts(): Promise<EbookProduct[]> {
 }
 
 export async function upsertStoreProduct(p: EbookProduct): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (session?.access_token) {
+    const res = await fetch('/.netlify/functions/store-seller', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ action: 'upsertProduct', product: productToRow(p) }),
+    });
+    const text = await res.text();
+    let json: Record<string, unknown> | null = null;
+    try { json = JSON.parse(text); } catch { /* ignore */ }
+    if (!res.ok) {
+      throw new Error((json as { error?: string })?.error || `저장 실패 (HTTP ${res.status}): ${text.slice(0, 300)}`);
+    }
+    return;
+  }
+
+  // 세션 없음 → 직접 Supabase 호출 (RLS 정책이 허용하는 경우에만 동작)
   const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
-  if (error) throw error;
+  if (error) throw new Error((error as { message?: string }).message || JSON.stringify(error));
 }
 
 export async function upsertStoreProducts(list: EbookProduct[]): Promise<void> {
