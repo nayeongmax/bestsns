@@ -147,33 +147,32 @@ async function storeAdminPost(body: Record<string, unknown>): Promise<void> {
   if (!res.ok) throw new Error(await res.text());
 }
 
-/** 어드민 전용: 비밀 상품 포함 전체 상품 목록 조회 */
+/** 어드민 전용: 비밀 상품 포함 전체 상품 목록 조회 (RLS 비활성화 → 직접 Supabase 호출) */
 export async function fetchStoreProductsAdmin(): Promise<EbookProduct[]> {
-  const data = await storeAdminGet('products');
-  return data.map((row) => rowToProduct(row as Record<string, unknown>));
+  const { data, error } = await supabase.from('store_products').select('*').order('created_at', { ascending: false });
+  if (error) throw new Error(error.message || JSON.stringify(error));
+  return (data ?? []).map((row) => rowToProduct(row as Record<string, unknown>));
 }
 
-/** 어드민 전용: 단일 상품 upsert (비밀 상품 토글 등) */
+/** 어드민 전용: 단일 상품 upsert */
 export async function upsertStoreProductAdmin(p: EbookProduct): Promise<void> {
   const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
   if (error) throw new Error(error.message || JSON.stringify(error));
 }
 
-/** 어드민 전용: 복수 상품 upsert — base64 이미지 포함 시 일괄 전송 payload 한도 초과를 방지하기 위해 개별 전송
- *  개별 실패 시 경고만 출력하고 나머지 상품은 계속 저장 */
+/** 어드민 전용: 복수 상품 upsert */
 export async function upsertStoreProductsAdmin(list: EbookProduct[]): Promise<void> {
+  if (list.length === 0) return;
   for (const p of list) {
-    try {
-      await storeAdminPost({ action: 'upsertProduct', product: productToRow(p) });
-    } catch (e) {
-      console.warn('store_products 어드민 개별 저장 실패:', p.id, e);
-    }
+    const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
+    if (error) console.warn('store_products 어드민 개별 저장 실패:', p.id, error.message);
   }
 }
 
 /** 어드민 전용: 상품 삭제 */
 export async function deleteStoreProductAdmin(id: string): Promise<void> {
-  await storeAdminPost({ action: 'deleteProduct', id });
+  const { error } = await supabase.from('store_products').delete().eq('id', id);
+  if (error) throw new Error(error.message || JSON.stringify(error));
 }
 
 // ─── store_orders ─────────────────────────────────────────────────────
