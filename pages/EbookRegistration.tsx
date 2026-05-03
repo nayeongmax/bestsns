@@ -199,7 +199,7 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
       serviceMethod: (storeType === 'marketing' || storeType === 'lecture' || storeType === 'consulting') ? serviceMethod : undefined,
       faqs: faqs.filter(f => f.question.trim() && f.answer.trim()),
       attachedImages,
-      status: 'pending',
+      status: user.role === 'admin' ? 'approved' : (editingEbook?.status ?? 'pending'),
       createdAt: editingEbook?.createdAt || new Date().toISOString(),
     };
 
