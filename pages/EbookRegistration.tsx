@@ -10,6 +10,21 @@ interface Props {
   setEbooks: React.Dispatch<React.SetStateAction<EbookProduct[]>>;
 }
 
+function getByteLength(str: string): number {
+  let bytes = 0;
+  for (let i = 0; i < str.length; i++) bytes += str.charCodeAt(i) > 127 ? 2 : 1;
+  return bytes;
+}
+
+function truncateByBytes(str: string, maxBytes: number): string {
+  let bytes = 0;
+  for (let i = 0; i < str.length; i++) {
+    bytes += str.charCodeAt(i) > 127 ? 2 : 1;
+    if (bytes > maxBytes) return str.slice(0, i);
+  }
+  return str;
+}
+
 const STORE_TABS: { id: StoreType; label: string; icon: string }[] = [
   { id: 'marketing', label: '마케팅', icon: '📢' },
   { id: 'lecture', label: '강의', icon: '🎓' },
@@ -323,10 +338,15 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
               )}
 
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700">서비스 제목</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-gray-700">서비스 제목</label>
+                  <span className={`text-xs font-medium ${getByteLength(title) >= 40 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {getByteLength(title)} / 40 byte
+                  </span>
+                </div>
                 <input
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => setTitle(truncateByBytes(e.target.value, 40))}
                   placeholder={`${STORE_TABS.find(t => t.id === storeType)?.label} 서비스의 제목을 입력하세요`}
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg font-medium text-gray-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
                   required
