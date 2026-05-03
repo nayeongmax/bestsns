@@ -25,6 +25,16 @@ const STORE_TABS: { id: StoreTypeFilter; label: string; icon: string; color: str
   { id: 'ebook', label: '전자책', icon: '📖', color: 'orange' },
 ];
 
+// EUC-KR 기준 바이트 계산: 한글/CJK = 2바이트, 나머지 = 1바이트
+function truncateByBytes(str: string, maxBytes: number): string {
+  let bytes = 0;
+  for (let i = 0; i < str.length; i++) {
+    bytes += str.charCodeAt(i) > 127 ? 2 : 1;
+    if (bytes > maxBytes) return str.slice(0, i);
+  }
+  return str;
+}
+
 const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onToggleWishlist, members = [], gradeConfigs = [] }) => {
   const [activeStoreType, setActiveStoreType] = useState<StoreTypeFilter>('all');
   const [activeCategory, setActiveCategory] = useState('전체');
@@ -203,7 +213,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                   {ebook.isHot && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">HOT</span>}
                   {ebook.isNew && <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">NEW</span>}
                 </div>
-                <h3 className={`font-bold text-gray-900 mt-0.5 line-clamp-2 text-sm sm:text-base leading-snug ${!ebook.isPaused && 'hover:text-blue-600'}`}>{ebook.title}</h3>
+                <h3 className={`font-bold text-gray-900 mt-0.5 text-sm sm:text-base leading-snug whitespace-nowrap overflow-hidden ${!ebook.isPaused && 'hover:text-blue-600'}`}>{truncateByBytes(ebook.title, 40)}</h3>
                 <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
                   <span>{members.find(m => m.id.toLowerCase() === (ebook.authorId ?? '').toLowerCase())?.nickname || ebook.author}</span>
                   <span className="font-bold text-blue-600">₩{(Number(ebook.price) || 0).toLocaleString()}</span>
@@ -263,8 +273,8 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
                   <div className="flex gap-1 mb-2 min-w-0">
                     <span className="text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">{STORE_TABS.find(t => t.id === (ebook.storeType || 'ebook'))?.label || '전자책'}</span>
                   </div>
-                  <h3 className={`font-black text-gray-900 mb-3 transition-colors line-clamp-1 text-[14px] italic tracking-tight truncate ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
-                    {ebook.title}
+                  <h3 className={`font-black text-gray-900 mb-3 transition-colors text-[14px] italic tracking-tight whitespace-nowrap overflow-hidden ${!ebook.isPaused && 'group-hover:text-blue-600'}`} title={ebook.title}>
+                    {truncateByBytes(ebook.title, 40)}
                   </h3>
                   <div className="flex justify-between items-end gap-3 border-t border-gray-50 pt-3 min-w-0">
                     <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
