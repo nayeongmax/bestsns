@@ -26,7 +26,8 @@ const STORE_TABS: { id: StoreTypeFilter; label: string; icon: string; color: str
 ];
 
 // EUC-KR 기준 바이트 계산: 한글/CJK = 2바이트, 나머지 = 1바이트
-function truncateByBytes(str: string, maxBytes: number): string {
+function truncateByBytes(str: string | null | undefined, maxBytes: number): string {
+  if (!str) return '';
   let bytes = 0;
   for (let i = 0; i < str.length; i++) {
     bytes += str.charCodeAt(i) > 127 ? 2 : 1;
