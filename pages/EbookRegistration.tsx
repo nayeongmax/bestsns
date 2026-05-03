@@ -529,7 +529,12 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="font-bold text-gray-800 text-base">미디어 등록</h3>
-              <p className="text-xs md:text-sm text-gray-500 mt-0.5">대표 썸네일 1장과 상세 이미지를 최대 5장까지 등록할 수 있습니다</p>
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5">
+                대표 썸네일 1장과 상세 이미지를 최대 5장까지 등록할 수 있습니다
+                <span className="inline-flex items-center gap-1 ml-2 bg-blue-50 text-blue-600 text-xs font-semibold px-2 py-0.5 rounded-full border border-blue-200">
+                  📐 썸네일 권장 사이즈: 650 × 480px
+                </span>
+              </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
               <button
@@ -556,6 +561,10 @@ const EbookRegistration: React.FC<Props> = ({ user, setEbooks }) => {
               <div className="border-2 border-dashed border-gray-200 rounded-xl py-10 flex flex-col items-center justify-center gap-2 text-gray-400">
                 <span className="text-3xl">🖼️</span>
                 <p className="text-sm font-medium">썸네일과 상세 이미지를 등록해 주세요</p>
+                <div className="mt-1 flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                  <span className="text-xs text-gray-500">대표 썸네일 권장 사이즈</span>
+                  <span className="text-xs font-bold text-blue-600">650 × 480 px</span>
+                </div>
               </div>
             ) : (
               <div className="flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-6 md:overflow-visible md:pb-0" style={{scrollbarWidth: 'none'}}>
