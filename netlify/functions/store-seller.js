@@ -1,13 +1,16 @@
 /**
- * store-seller.js — 판매자 상품 저장 (서버사이드 service_role, RLS 우회)
+ * store-seller.js — 판매자/어드민 상품 저장 (서버사이드 service_role, RLS 우회)
  *
- * 인증: Authorization: Bearer <Supabase JWT>
+ * 인증 방식 (둘 중 하나):
+ *   1. Authorization: Bearer <Supabase JWT>  (일반 판매자)
+ *   2. x-admin-key: <VITE_ADMIN_PANEL_PASSWORD>  (어드민)
+ *
  * POST { action:'upsertProduct', product }
  */
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-key',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json; charset=UTF-8',
 };
@@ -28,20 +31,36 @@ exports.handler = async (event) => {
     return resp(500, { error: 'Supabase 환경변수가 없습니다. (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)' });
   }
 
-  // 사용자 JWT 검증
+  // ── 인증: 어드민 키 OR 사용자 JWT ──
+  const adminKey = event.headers['x-admin-key'] || event.headers['X-Admin-Key'] || '';
+  const expectedAdminKey =
+    process.env.VITE_ADMIN_PANEL_PASSWORD ||
+    process.env.VITE_ADMIN_PASSWORD ||
+    process.env.ADMIN_PASSWORD ||
+    '';
+
   const authHeader = event.headers['authorization'] || event.headers['Authorization'] || '';
   const userJwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
 
-  if (!userJwt) {
-    return resp(401, { error: '로그인이 필요합니다.' });
+  let authenticated = false;
+
+  // 방법 1: 어드민 키
+  if (expectedAdminKey && adminKey === expectedAdminKey) {
+    authenticated = true;
   }
 
-  const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-    headers: { Authorization: `Bearer ${userJwt}`, apikey: serviceKey },
-  });
+  // 방법 2: Supabase JWT 검증
+  if (!authenticated && userJwt) {
+    try {
+      const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: { Authorization: `Bearer ${userJwt}`, apikey: serviceKey },
+      });
+      if (userRes.ok) authenticated = true;
+    } catch (_) { /* network error → authenticated remains false */ }
+  }
 
-  if (!userRes.ok) {
-    return resp(401, { error: '유효하지 않은 로그인 정보입니다. 다시 로그인해 주세요.' });
+  if (!authenticated) {
+    return resp(401, { error: '로그인이 필요합니다. 다시 로그인해 주세요.' });
   }
 
   const h = {
@@ -66,14 +85,16 @@ exports.handler = async (event) => {
       });
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(errText);
+        let detail = errText;
+        try { detail = JSON.parse(errText).message || errText; } catch (_) {}
+        throw new Error(detail || `DB 저장 실패 (HTTP ${res.status})`);
       }
       return resp(200, { success: true });
     }
 
     return resp(400, { error: `알 수 없는 action: ${action}` });
   } catch (err) {
-    console.error('[store-seller]', err);
-    return resp(500, { error: err.message || '서버 오류' });
+    console.error('[store-seller]', err.message);
+    return resp(500, { error: err.message || '서버 오류가 발생했습니다.' });
   }
 };
