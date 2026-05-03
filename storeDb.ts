@@ -100,32 +100,8 @@ export async function fetchPublicStoreProducts(): Promise<EbookProduct[]> {
 }
 
 export async function upsertStoreProduct(p: EbookProduct): Promise<void> {
-  await callSellerSave(productToRow(p));
-}
-
-/** 판매자/어드민 공용: store-seller Netlify 함수를 통해 service_role로 저장 (RLS 우회) */
-async function callSellerSave(product: Record<string, unknown>): Promise<void> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const adminKey = getAdminKey();
-
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (session?.access_token) {
-    headers['Authorization'] = `Bearer ${session.access_token}`;
-  } else if (adminKey) {
-    headers['x-admin-key'] = adminKey;
-  }
-
-  const res = await fetch('/.netlify/functions/store-seller', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ action: 'upsertProduct', product }),
-  });
-  const text = await res.text();
-  let json: Record<string, unknown> | null = null;
-  try { json = JSON.parse(text); } catch { /* ignore */ }
-  if (!res.ok) {
-    throw new Error((json as { error?: string })?.error || `저장 실패 (HTTP ${res.status}): ${text.slice(0, 300)}`);
-  }
+  const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
+  if (error) throw new Error(error.message || JSON.stringify(error));
 }
 
 export async function upsertStoreProducts(list: EbookProduct[]): Promise<void> {
@@ -179,7 +155,8 @@ export async function fetchStoreProductsAdmin(): Promise<EbookProduct[]> {
 
 /** 어드민 전용: 단일 상품 upsert (비밀 상품 토글 등) */
 export async function upsertStoreProductAdmin(p: EbookProduct): Promise<void> {
-  await callSellerSave(productToRow(p));
+  const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
+  if (error) throw new Error(error.message || JSON.stringify(error));
 }
 
 /** 어드민 전용: 복수 상품 upsert — base64 이미지 포함 시 일괄 전송 payload 한도 초과를 방지하기 위해 개별 전송
