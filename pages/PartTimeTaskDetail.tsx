@@ -12,6 +12,7 @@ import {
   setFreelancerBalance,
   addFreelancerEarningToDb,
 } from '../parttimeDb';
+import { supabase } from '../supabase';
 import { FREELANCER_FEE_RATE } from '@/constants';
 
 interface Props {
@@ -46,6 +47,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
   const [agree4, setAgree4] = useState(false);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
 
   const task = tasks.find((t) => t.id === taskId);
 
@@ -252,9 +255,46 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     alert('작업링크가 제출되었습니다.\n제대로 작업이 되었는지 확인 후 수익통장에 충전됩니다.\n수고많으셨습니다.');
   };
 
+  /** 영상제공: 선정된 회원이 영상 파일을 Supabase Storage에 업로드하고 URL을 저장 */
+  const handleSubmitVideo = async () => {
+    if (!user || !task || !videoFile) return;
+    setIsUploadingVideo(true);
+    try {
+      const ext = videoFile.name.split('.').pop() ?? 'mp4';
+      const path = `${task.id}/${user.id}_${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('parttime-videos')
+        .upload(path, videoFile, { upsert: true, cacheControl: '3600' });
+      if (uploadError) throw new Error(uploadError.message);
+      const { data: { publicUrl } } = supabase.storage.from('parttime-videos').getPublicUrl(uploadData.path);
+      const now = new Date().toISOString();
+      const next = tasks.map((t) =>
+        t.id !== task.id ? t : {
+          ...t,
+          applicants: t.applicants.map((a) =>
+            a.userId === user.id
+              ? { ...a, videoUrl: publicUrl, workLinkSubmittedAt: now }
+              : a
+          ),
+        }
+      );
+      saveTasks(next);
+      setVideoFile(null);
+      if (addNotif) addNotif(user.id, 'freelancer', '영상 제출 완료', '영상이 제출되었습니다. 확인 후 포인트가 지급됩니다.');
+      if (task.createdBy && addNotif) addNotif(task.createdBy, 'approval', '영상이 제출되었습니다', `[${task.title}] 회원이 영상을 제출했습니다. 어드민 패널에서 확인 후 포인트를 지급해 주세요.`);
+      alert('영상이 제출되었습니다!\n확인 후 포인트가 지급됩니다. 감사합니다.');
+    } catch (err) {
+      alert('영상 업로드에 실패했습니다.\n' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsUploadingVideo(false);
+    }
+  };
+
   /** 운영자: 통과 (링크 제출 후 6일 경과 시 자동 지급, 안내 문구는 4~7일 이내) */
-  const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
-    (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
+  const hasWorkLink = (a: { workLink?: string; workLinks?: string[]; videoUrl?: string }) =>
+    task?.category === '영상제공'
+      ? !!a.videoUrl
+      : (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
   const handleApprovePass = (userId: string) => {
     if (!task) return;
     const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
@@ -680,8 +720,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">3</div>
               <div>
-                <h3 className="font-black text-gray-900">업로드한 링크 제출하기</h3>
-                <p className="text-xs text-gray-500 mt-0.5">링크를 복사해서 아래에 붙여넣고 제출 버튼을 눌러주세요</p>
+                <h3 className="font-black text-gray-900">{task.category === '영상제공' ? '촬영 영상 제출하기' : '업로드한 링크 제출하기'}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{task.category === '영상제공' ? '촬영한 영상 파일을 선택하고 제출 버튼을 눌러주세요' : '링크를 복사해서 아래에 붙여넣고 제출 버튼을 눌러주세요'}</p>
               </div>
             </div>
             {user ? (() => {
@@ -689,10 +729,46 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               if (!me?.selected || task.pointPaid) {
                 return (
                   <p className="text-sm text-gray-400 italic">
-                    {task.pointPaid ? '✓ 지급 완료된 작업입니다.' : me ? '선정된 후 이 곳에서 링크를 제출할 수 있습니다.' : '신청 후 선정되면 이 곳에서 링크를 제출할 수 있습니다.'}
+                    {task.pointPaid ? '✓ 지급 완료된 작업입니다.' : me ? '선정된 후 이 곳에서 제출할 수 있습니다.' : '신청 후 선정되면 이 곳에서 제출할 수 있습니다.'}
                   </p>
                 );
               }
+
+              /* ── 영상제공 카테고리: 영상 파일 업로드 ── */
+              if (task.category === '영상제공') {
+                return (
+                  <div className="space-y-3">
+                    {me.videoUrl ? (
+                      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
+                        <p className="text-sm font-black text-emerald-700">✅ 영상이 제출되었습니다</p>
+                        <a href={me.videoUrl} target="_blank" rel="noopener noreferrer" download
+                          className="inline-flex items-center gap-1 text-xs text-emerald-600 underline font-bold">
+                          ⬇ 영상 다운로드
+                        </a>
+                        <p className="text-xs text-gray-400">영상을 다시 제출하려면 아래에서 새 파일을 선택하세요.</p>
+                      </div>
+                    ) : null}
+                    <div className="flex flex-col gap-3">
+                      <label className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-rose-200 cursor-pointer hover:border-rose-400 transition-all bg-rose-50">
+                        <span className="text-2xl">🎬</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-gray-800">{videoFile ? videoFile.name : '영상 파일 선택'}</p>
+                          <p className="text-xs text-gray-400">{videoFile ? `${(videoFile.size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, AVI 등 지원'}</p>
+                        </div>
+                        <input type="file" accept="video/*" className="hidden"
+                          onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)} />
+                      </label>
+                      <button type="button" onClick={handleSubmitVideo}
+                        disabled={!videoFile || isUploadingVideo}
+                        className="px-6 py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isUploadingVideo ? '업로드 중...' : me.videoUrl ? '영상 재제출' : '영상 제출'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              /* ── 일반 카테고리: 작업 링크 제출 ── */
               const submitted = me.workLinks?.length ? me.workLinks : (me.workLink ? [me.workLink] : []);
               return (
                 <div className="space-y-3">
@@ -744,7 +820,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 </div>
               );
             })() : (
-              <p className="text-sm text-gray-400 italic">로그인 후 신청 및 선정되면 링크를 제출할 수 있습니다.</p>
+              <p className="text-sm text-gray-400 italic">로그인 후 신청 및 선정되면 제출할 수 있습니다.</p>
             )}
           </div>
 

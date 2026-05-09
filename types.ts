@@ -89,6 +89,8 @@ export interface PartTimeApplicant {
   reApprovalRequestedAt?: string;
   /** 수익통장 적립일 (ISO). 즉시 지급 또는 자동 지급 시 기록 */
   paidAt?: string;
+  /** 영상제공 카테고리: 제출한 영상 Supabase Storage URL */
+  videoUrl?: string;
 }
 
 /** 게시글 한 건 (제목+내용) - 여러 개 넣을 때 사용 */
