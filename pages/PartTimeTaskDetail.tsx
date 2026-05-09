@@ -49,6 +49,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const [agree4, setAgree4] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [showDailyLimitModal, setShowDailyLimitModal] = useState(false);
 
   const task = tasks.find((t) => t.id === taskId);
 
@@ -255,34 +256,37 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     alert('작업링크가 제출되었습니다.\n제대로 작업이 되었는지 확인 후 수익통장에 충전됩니다.\n수고많으셨습니다.');
   };
 
-  /** 영상제공: 선정된 회원이 영상 파일을 Supabase Storage에 업로드하고 URL을 저장 */
+  /** 영상제공: 회원이 직접 영상 파일을 업로드 (신청/선정 불필요, 일별 인원 제한 적용) */
   const handleSubmitVideo = async () => {
     if (!user || !task || !videoFile) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const uploads = task.videoUploads ?? [];
+    const todayUploaderIds = new Set(uploads.filter((v) => v.date === today).map((v) => v.userId));
+    // 오늘 처음 업로드하는 사람이고 인원 제한에 걸리면 모달
+    if (!todayUploaderIds.has(user.id) && task.dailyLimit && todayUploaderIds.size >= task.dailyLimit) {
+      setShowDailyLimitModal(true);
+      return;
+    }
     setIsUploadingVideo(true);
     try {
       const ext = videoFile.name.split('.').pop() ?? 'mp4';
-      const path = `${task.id}/${user.id}_${Date.now()}.${ext}`;
+      const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const path = `${task.id}/${user.id}_${uploadId}.${ext}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('parttime-videos')
-        .upload(path, videoFile, { upsert: true, cacheControl: '3600' });
+        .upload(path, videoFile, { upsert: false, cacheControl: '3600' });
       if (uploadError) throw new Error(uploadError.message);
       const { data: { publicUrl } } = supabase.storage.from('parttime-videos').getPublicUrl(uploadData.path);
       const now = new Date().toISOString();
+      const newUpload = { id: uploadId, userId: user.id, nickname: user.nickname, videoUrl: publicUrl, fileName: videoFile.name, uploadedAt: now, date: today };
       const next = tasks.map((t) =>
-        t.id !== task.id ? t : {
-          ...t,
-          applicants: t.applicants.map((a) =>
-            a.userId === user.id
-              ? { ...a, videoUrl: publicUrl, workLinkSubmittedAt: now }
-              : a
-          ),
-        }
+        t.id !== task.id ? t : { ...t, videoUploads: [...(t.videoUploads ?? []), newUpload] }
       );
       saveTasks(next);
       setVideoFile(null);
-      if (addNotif) addNotif(user.id, 'freelancer', '영상 제출 완료', '영상이 제출되었습니다. 확인 후 포인트가 지급됩니다.');
-      if (task.createdBy && addNotif) addNotif(task.createdBy, 'approval', '영상이 제출되었습니다', `[${task.title}] 회원이 영상을 제출했습니다. 어드민 패널에서 확인 후 포인트를 지급해 주세요.`);
-      alert('영상이 제출되었습니다!\n확인 후 포인트가 지급됩니다. 감사합니다.');
+      if (addNotif) addNotif(user.id, 'freelancer', '영상 제출 완료', `[${task.title}] 영상이 제출되었습니다. 확인 후 포인트가 지급됩니다.`);
+      if (task.createdBy && addNotif) addNotif(task.createdBy, 'approval', '새 영상이 제출됐습니다', `[${task.title}] ${user.nickname}님이 영상을 제출했습니다. 어드민 패널에서 확인해 주세요.`);
+      alert('영상이 제출되었습니다! 확인 후 포인트가 지급됩니다 :)');
     } catch (err) {
       alert('영상 업로드에 실패했습니다.\n' + (err instanceof Error ? err.message : String(err)));
     } finally {
@@ -372,6 +376,63 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     }
   };
 
+  /** 운영자: 영상제공 - 특정 영상 반려 처리 */
+  const handleRejectVideo = (videoId: string) => {
+    if (!task) return;
+    if (!confirm('이 영상을 반려 처리하시겠습니까? 해당 회원에게 알림이 전송됩니다.')) return;
+    const targetVideo = task.videoUploads?.find((v) => v.id === videoId);
+    const next = tasks.map((t) =>
+      t.id !== task.id ? t : {
+        ...t,
+        videoUploads: (t.videoUploads ?? []).map((v) =>
+          v.id === videoId ? { ...v, status: 'rejected' as const } : v
+        ),
+      }
+    );
+    saveTasks(next);
+    if (targetVideo && addNotif) {
+      addNotif(targetVideo.userId, 'revision', '영상 반려 안내', `[${task.title}] 제출하신 영상(${targetVideo.fileName})이 반려되었습니다. 중복 제출 또는 검토 기준 미달 영상은 포인트가 지급되지 않습니다.`);
+    }
+  };
+
+  /** 운영자: 영상제공 - 반려 취소 (실수 시 복구) */
+  const handleUnrejectVideo = (videoId: string) => {
+    if (!task) return;
+    const next = tasks.map((t) =>
+      t.id !== task.id ? t : {
+        ...t,
+        videoUploads: (t.videoUploads ?? []).map((v) =>
+          v.id === videoId ? { ...v, status: 'pending' as const } : v
+        ),
+      }
+    );
+    saveTasks(next);
+  };
+
+  /** 운영자: 영상제공 - 영상 제출자에게 포인트 지급 */
+  const handlePayVideoUploader = async (userId: string, nickname: string) => {
+    if (!task) return;
+    const freshTask = tasks.find((x) => x.id === task.id);
+    const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
+    if (currentPaid.includes(userId)) { alert('이미 지급 완료된 상태입니다.'); return; }
+    if (!confirm(`${nickname}님에게 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
+    try {
+      const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
+      const cur = await fetchFreelancerBalance(userId);
+      await setFreelancerBalance(userId, cur + netAmount);
+      await addFreelancerEarningToDb(userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
+      if (addNotif) addNotif(userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 영상 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`);
+      const allPaid = [...currentPaid, userId];
+      const next = tasks.map((t) => t.id !== task.id ? t : { ...t, paidUserIds: allPaid });
+      setTasks(next);
+      await upsertPartTimeTasks(next);
+      alert('포인트가 지급되었습니다.');
+    } catch (err) {
+      console.error(err);
+      alert(`지급 처리 중 오류가 발생했습니다.\n${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
   /** 운영자: 수정요청 → 프리랜서에게 알림 */
   const handleRevisionRequest = (userId: string, text: string) => {
     if (!task || !text.trim()) return;
@@ -421,8 +482,104 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           </button>
         </div>
 
-        {/* ── 3단계 진행 안내 ─────────────────────────────────── */}
-        <div className="space-y-0">
+        {/* ── 영상제공 전용: 직접 업로드 UI ─────────────────── */}
+        {task.category === '영상제공' && (() => {
+          const today = new Date().toISOString().slice(0, 10);
+          const uploads = task.videoUploads ?? [];
+          const todayUploaderIds = new Set(uploads.filter((v) => v.date === today).map((v) => v.userId));
+          const myUploads = uploads.filter((v) => v.userId === user?.id);
+          const myUploadsToday = myUploads.filter((v) => v.date === today);
+          const canUpload = !user ? false : !task.dailyLimit || todayUploaderIds.has(user.id) || todayUploaderIds.size < task.dailyLimit;
+          return (
+            <div className="space-y-6">
+              {/* 오늘 현황 */}
+              {task.dailyLimit ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-black text-gray-600">오늘 제출 현황</span>
+                  <span className={`px-3 py-1 rounded-full font-black text-xs ${todayUploaderIds.size >= task.dailyLimit ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {todayUploaderIds.size} / {task.dailyLimit}명
+                  </span>
+                </div>
+              ) : null}
+
+              {/* 내 제출 영상 목록 */}
+              {myUploads.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-black text-gray-700">내가 제출한 영상 ({myUploads.length}개)</p>
+                  <p className="text-xs text-amber-600 font-bold">🔍 제출된 영상은 검토 후 포인트가 지급됩니다. 중복 제출된 영상은 반려될 수 있습니다.</p>
+                  <div className="space-y-2">
+                    {myUploads.map((v) => {
+                      const isPaid = task.paidUserIds?.includes(v.userId);
+                      const isRejected = v.status === 'rejected';
+                      return (
+                        <div key={v.id} className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${isRejected ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-gray-800 truncate">🎬 {v.fileName}</p>
+                            <p className="text-[10px] text-gray-400">{v.date} {v.uploadedAt.slice(11, 16)}</p>
+                            {isPaid ? (
+                              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">✅ 포인트 지급 완료</span>
+                            ) : isRejected ? (
+                              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-600">❌ 반려됨</span>
+                            ) : (
+                              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">🔍 검토중</span>
+                            )}
+                          </div>
+                          {!isRejected && (
+                            <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" download={v.fileName}
+                              className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-black hover:bg-blue-700">
+                              ⬇ 다운로드
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 업로드 섹션 */}
+              {user ? (
+                canUpload ? (
+                  <div className="border-2 border-rose-200 rounded-2xl p-5 bg-rose-50/30 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0">📹</div>
+                      <div>
+                        <h3 className="font-black text-gray-900">촬영 영상 제출하기</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">영상 파일을 선택하고 제출 버튼을 눌러주세요. 여러 영상을 순서대로 제출할 수 있습니다.</p>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-rose-300 cursor-pointer hover:border-rose-500 transition-all bg-white">
+                      <span className="text-2xl">🎬</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-gray-800 truncate">{videoFile ? videoFile.name : '영상 파일 선택 (MP4, MOV 등)'}</p>
+                        <p className="text-xs text-gray-400">{videoFile ? `${(videoFile.size / 1024 / 1024).toFixed(1)} MB` : '파일을 클릭하여 선택하세요'}</p>
+                      </div>
+                      <input type="file" accept="video/*" className="hidden" onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                    {myUploadsToday.length > 0 && (
+                      <p className="text-xs text-emerald-600 font-bold">✅ 오늘 {myUploadsToday.length}개 제출 완료 · 추가 영상도 제출 가능합니다</p>
+                    )}
+                    <button type="button" onClick={handleSubmitVideo} disabled={!videoFile || isUploadingVideo}
+                      className="w-full py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isUploadingVideo ? '업로드 중...' : '영상 제출하기'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-5 rounded-2xl bg-orange-50 border-2 border-orange-200 text-center space-y-2">
+                    <p className="text-lg">⏰</p>
+                    <p className="font-black text-orange-800">오늘 영상 제출 마감</p>
+                    <p className="text-sm text-orange-600">오늘({today}) 최대 {task.dailyLimit}명이 이미 제출했습니다.<br />내일 다시 방문해 주세요!</p>
+                  </div>
+                )
+              ) : (
+                <p className="text-sm text-gray-400 italic text-center py-4">로그인 후 영상을 제출할 수 있습니다.</p>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── 3단계 진행 안내 (영상제공 외 카테고리) ──────── */}
+        {task.category !== '영상제공' && <div className="space-y-0">
 
           {/* STEP 1 ─ 회원가입하기 */}
           <div className="border-2 border-emerald-200 rounded-2xl p-5 md:p-6 bg-emerald-50/30">
@@ -824,7 +981,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             )}
           </div>
 
-        </div>{/* close space-y-0 (3단계 flow) */}
+        </div>}{/* close space-y-0 (3단계 flow) */}
 
         <div className="flex flex-wrap gap-3">
           <div className="inline-flex items-center gap-2 bg-amber-50 rounded-xl px-4 py-3 border border-amber-100">
@@ -853,7 +1010,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           </div>
         )}
 
-        {/* 신청 댓글 — 모두 닉네임·댓글만 표시 (연락처는 운영자 전용 목록에서만) */}
+        {/* 신청 댓글 — 영상제공 외 카테고리만 표시 */}
+        {task.category !== '영상제공' && (
         <div className="border-t border-gray-100 pt-6">
           <h3 className="text-lg font-black text-gray-800 mb-3">신청 댓글</h3>
           {task.applicants.length === 0 ? (
@@ -869,9 +1027,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             </ul>
           )}
         </div>
+        )}
 
-        {/* 신청하기 — 미신청자 전용 */}
-        {user && !task.pointPaid && !isApplicant && (
+        {/* 신청하기 — 영상제공 외, 미신청자 전용 */}
+        {task.category !== '영상제공' && user && !task.pointPaid && !isApplicant && (
           <div className="border-t border-gray-100 pt-6">
             <p className="text-sm font-bold text-gray-700 mb-2">내 신청 댓글 (선택)</p>
             <input
@@ -916,8 +1075,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             </button>
           </div>
         )}
-        {/* 신청 완료 상태 메시지 */}
-        {user && isApplicant && !task.pointPaid && (() => {
+        {/* 신청 완료 상태 메시지 — 영상제공 외 */}
+        {task.category !== '영상제공' && user && isApplicant && !task.pointPaid && (() => {
           const me = task.applicants.find((a) => a.userId === user?.id);
           if (!me?.selected) {
             return (
@@ -947,104 +1106,170 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           );
         })()}
 
-        {/* 운영자 전용 목록 — 로그인한 운영자에게만 항상 표시 (닉네임·댓글·연락처·선정) */}
+        {/* 운영자 전용 목록 */}
         {user && isOperator && (
           <div className="border-t border-gray-100 pt-6">
-            <h3 className="text-lg font-black text-gray-800 mb-3">프리랜서 신청자 목록 (운영자 전용)</h3>
-            <p className="text-sm text-gray-500 mb-3">링크 확인 후 포인트 지급. 일반 회원은 이 목록·선정·지급 결과를 볼 수 없습니다.</p>
-            {task.applicants.length === 0 ? (
-              <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
-            ) : (
-              <ul className="space-y-4">
-                {task.applicants.map((a) => {
-                  const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
-                  const paid = task.paidUserIds?.includes(a.userId);
-                  return (
-                    <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div>
-                          <p className="font-black text-gray-800">{a.nickname}</p>
-                          <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
-                          {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => handleSelect(a.userId)}
-                            disabled={!!a.selected}
-                            className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${a.selected ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
-                          >
-                            선정
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeselect(a.userId)}
-                            disabled={!a.selected}
-                            className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${!a.selected ? 'bg-amber-50 text-amber-300 cursor-not-allowed' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
-                          >
-                            선정취소
-                          </button>
-                          {a.selected && (
-                            <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => navigate('/chat', { state: { targetUser: { id: a.userId, nickname: a.nickname, profileImage: '' } } })}
-                            className="px-4 py-2 rounded-lg text-sm font-black bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all"
-                          >
-                            채팅하기
-                          </button>
-                        </div>
-                      </div>
-                      {a.selected && (
-                        <div className="text-sm space-y-2">
-                          {links.length > 0 ? (
+            {task.category === '영상제공' ? (
+              <>
+                <h3 className="text-lg font-black text-gray-800 mb-1">제출된 영상 목록 (운영자 전용)</h3>
+                <p className="text-sm text-gray-500 mb-3">영상을 확인하고 포인트를 지급하세요.</p>
+                {(task.videoUploads ?? []).length === 0 ? (
+                  <p className="text-gray-500 py-4">아직 제출된 영상이 없습니다.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {[...(task.videoUploads ?? [])].reverse().map((v) => {
+                      const paid = task.paidUserIds?.includes(v.userId);
+                      const isRejected = v.status === 'rejected';
+                      return (
+                        <li key={v.id} className={`p-4 rounded-xl border ${isRejected ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'}`}>
+                          <div className="flex items-start justify-between gap-4 flex-wrap">
                             <div>
-                              <p className="text-gray-700 font-bold">작업 링크 ({links.length}개):</p>
-                              {links.map((url, i) => (
-                                <p key={i}><a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{url}</a></p>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-amber-600 font-bold">작업 링크 미제출</p>
-                          )}
-                          {links.length > 0 && !paid && (
-                            <div className="flex gap-2 flex-wrap items-center">
-                              <button type="button" onClick={() => setRevisionModal({ userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200">
-                                수정요청
-                              </button>
-                              {a.deliveryAt && a.autoApproveAt ? (
-                                new Date(a.autoApproveAt) > new Date() ? (
-                                  <span className="text-blue-600 font-bold text-xs">4~7일 이내 자동 지급 예정</span>
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <p className="font-black text-gray-800">{v.nickname}</p>
+                                {paid ? (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">✅ 지급완료</span>
+                                ) : isRejected ? (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-600">❌ 반려됨</span>
                                 ) : (
-                                  <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중...</span>
-                                )
-                              ) : (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">🔍 검토중</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-400">{v.date} {v.uploadedAt.slice(11, 16)}</p>
+                              <p className="text-sm text-gray-600 max-w-xs truncate">🎬 {v.fileName}</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" download={v.fileName}
+                                className="px-3 py-1.5 rounded-lg text-sm font-black bg-blue-600 text-white hover:bg-blue-700 transition-all">
+                                ⬇ 다운로드
+                              </a>
+                              {!paid && !isRejected && (
                                 <>
-                                  <button type="button" onClick={() => handleApprovePass(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">
-                                    통과
+                                  <button type="button" onClick={() => handleRejectVideo(v.id)}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-black bg-red-100 text-red-600 hover:bg-red-200 transition-all">
+                                    반려
                                   </button>
-                                  <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
-                                    즉시 지급
+                                  <button type="button" onClick={() => handlePayVideoUploader(v.userId, v.nickname)}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-black bg-emerald-600 text-white hover:bg-emerald-700 transition-all">
+                                    포인트 지급
                                   </button>
                                 </>
                               )}
+                              {isRejected && (
+                                <button type="button" onClick={() => handleUnrejectVideo(v.id)}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+                                  반려 취소
+                                </button>
+                              )}
+                              {paid && (
+                                <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-100 text-gray-500">✓ 지급 완료</span>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-black text-gray-800 mb-3">프리랜서 신청자 목록 (운영자 전용)</h3>
+                <p className="text-sm text-gray-500 mb-3">링크 확인 후 포인트 지급. 일반 회원은 이 목록·선정·지급 결과를 볼 수 없습니다.</p>
+                {task.applicants.length === 0 ? (
+                  <p className="text-gray-500 py-4">아직 신청자가 없습니다.</p>
+                ) : (
+                  <ul className="space-y-4">
+                    {task.applicants.map((a) => {
+                      const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
+                      const paid = task.paidUserIds?.includes(a.userId);
+                      return (
+                        <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
+                          <div className="flex items-center justify-between gap-4 flex-wrap">
+                            <div>
+                              <p className="font-black text-gray-800">{a.nickname}</p>
+                              <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
+                              {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleSelect(a.userId)}
+                                disabled={!!a.selected}
+                                className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${a.selected ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                              >
+                                선정
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeselect(a.userId)}
+                                disabled={!a.selected}
+                                className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${!a.selected ? 'bg-amber-50 text-amber-300 cursor-not-allowed' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+                              >
+                                선정취소
+                              </button>
+                              {a.selected && (
+                                <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => navigate('/chat', { state: { targetUser: { id: a.userId, nickname: a.nickname, profileImage: '' } } })}
+                                className="px-4 py-2 rounded-lg text-sm font-black bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all"
+                              >
+                                채팅하기
+                              </button>
+                            </div>
+                          </div>
+                          {a.selected && (
+                            <div className="text-sm space-y-2">
+                              {links.length > 0 ? (
+                                <div>
+                                  <p className="text-gray-700 font-bold">작업 링크 ({links.length}개):</p>
+                                  {links.map((url, i) => (
+                                    <p key={i}><a href={url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{url}</a></p>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-amber-600 font-bold">작업 링크 미제출</p>
+                              )}
+                              {links.length > 0 && !paid && (
+                                <div className="flex gap-2 flex-wrap items-center">
+                                  <button type="button" onClick={() => setRevisionModal({ userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200">
+                                    수정요청
+                                  </button>
+                                  {a.deliveryAt && a.autoApproveAt ? (
+                                    new Date(a.autoApproveAt) > new Date() ? (
+                                      <span className="text-blue-600 font-bold text-xs">4~7일 이내 자동 지급 예정</span>
+                                    ) : (
+                                      <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중...</span>
+                                    )
+                                  ) : (
+                                    <>
+                                      <button type="button" onClick={() => handleApprovePass(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">
+                                        통과
+                                      </button>
+                                      <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
+                                        즉시 지급
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              {paid && (
+                                <span className="text-gray-500 font-bold text-xs">
+                                  ✓ 지급 완료{a.paidAt ? ` (적립일: ${new Date(a.paidAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })})` : ''}
+                                </span>
+                              )}
                             </div>
                           )}
-                          {paid && (
-                              <span className="text-gray-500 font-bold text-xs">
-                                ✓ 지급 완료{a.paidAt ? ` (적립일: ${new Date(a.paidAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })})` : ''}
-                              </span>
-                            )}
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {task.applicants.length > 0 && (
-              <p className="text-sm text-gray-500 mt-3">링크를 클릭해 확인 후, 수정요청이 필요하면 수정요청 버튼으로 알림을 보내거나 포인트 지급해 주세요.</p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {task.applicants.length > 0 && (
+                  <p className="text-sm text-gray-500 mt-3">링크를 클릭해 확인 후, 수정요청이 필요하면 수정요청 버튼으로 알림을 보내거나 포인트 지급해 주세요.</p>
+                )}
+              </>
             )}
           </div>
         )}
@@ -1057,6 +1282,22 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           <p className="text-center text-gray-500 font-bold">로그인 후 신청할 수 있습니다.</p>
         )}
       </div>
+
+      {showDailyLimitModal && task && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowDailyLimitModal(false)}>
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-5xl">⏰</p>
+            <h4 className="font-black text-gray-900 text-xl">오늘 제출 마감</h4>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              오늘 최대 <span className="font-black text-rose-600">{task.dailyLimit}명</span>이 이미 영상을 제출했습니다.<br />
+              내일 다시 방문하여 제출해 주세요!
+            </p>
+            <button onClick={() => setShowDailyLimitModal(false)} className="w-full py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-all">
+              확인
+            </button>
+          </div>
+        </div>
+      )}
 
       {revisionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
