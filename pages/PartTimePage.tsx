@@ -106,7 +106,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
     return map;
   }, [tasks, weekDates]);
 
-  const effectiveDate = selectedDate || weekDates[0] || todayStrVal;
+  const effectiveDate = selectedDate || (weekDates.includes(todayStrVal) ? todayStrVal : weekDates[0]);
   const tasksForDate = useMemo(() => {
     return tasks.filter((t) => {
       const start = t.applicationPeriod?.start;
@@ -467,6 +467,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   const [applicantUserId, setApplicantUserId] = useState(editTask?.applicantUserId ?? '');
   const [signupLink, setSignupLink] = useState(editTask?.signupLink ?? '');
   const [postVisibility, setPostVisibility] = useState<'전체공개' | '멤버공개'>(editTask?.postVisibility ?? '전체공개');
+  const [dailyLimit, setDailyLimit] = useState(editTask?.dailyLimit ?? 2);
   const [workTimeSlot, setWorkTimeSlot] = useState<'오전' | '오후' | ''>(
     editTask?.workTimeSlot === '오전 (09:00~12:00)' ? '오전' : editTask?.workTimeSlot === '오후 (13:00~17:00)' ? '오후' : ''
   );
@@ -645,6 +646,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           ...(signupLink.trim() ? { signupLink: signupLink.trim() } : {}),
           postVisibility,
           ...(workTimeSlot ? { workTimeSlot: workTimeSlot === '오전' ? '오전 (09:00~12:00)' : '오후 (13:00~17:00)' } : {}),
+          ...(category === '영상제공' ? { dailyLimit: dailyLimit > 0 ? dailyLimit : undefined } : {}),
         }
       : {
           id: `t_${Date.now()}`,
@@ -666,6 +668,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           ...(signupLink.trim() ? { signupLink: signupLink.trim() } : {}),
           postVisibility,
           ...(workTimeSlot ? { workTimeSlot: workTimeSlot === '오전' ? '오전 (09:00~12:00)' : '오후 (13:00~17:00)' } : {}),
+          ...(category === '영상제공' ? { dailyLimit: dailyLimit > 0 ? dailyLimit : undefined } : {}),
         };
     try {
       await upsertPartTimeTask(newTask);
@@ -781,6 +784,13 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">모집 인원</label>
               <input type="number" min={0} value={maxApplicants || ''} onChange={(e) => setMaxApplicants(Number(e.target.value) || 0)} placeholder="0" className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none font-bold text-sm" />
             </div>
+            {category === '영상제공' && (
+              <div>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">하루 최대 업로드 인원</label>
+                <input type="number" min={1} value={dailyLimit || ''} onChange={(e) => setDailyLimit(Number(e.target.value) || 2)} placeholder="2" className="w-full px-3 py-3 rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-200 outline-none font-bold text-sm bg-blue-50" />
+                <p className="text-[10px] text-blue-500 mt-1">하루에 영상을 제출할 수 있는 최대 인원 수 (각 인원은 여러 영상 제출 가능)</p>
+              </div>
+            )}
             <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
             <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
             <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>

@@ -200,6 +200,18 @@ export interface PartTimeJobRequest {
   createdAt: string;
 }
 
+/** 영상제공 카테고리: 제출된 영상 1건 */
+export interface VideoUpload {
+  id: string;
+  userId: string;
+  nickname: string;
+  videoUrl: string;
+  fileName: string;
+  uploadedAt: string; // ISO timestamp
+  date: string;       // YYYY-MM-DD (daily limit 계산용)
+  status?: 'pending' | 'rejected'; // 검토중 or 반려됨 (미설정 = 검토중)
+}
+
 /** 누구나알바 작업 */
 export interface PartTimeTask {
   id: string;
@@ -236,6 +248,10 @@ export interface PartTimeTask {
   signupLink?: string;
   /** 게시물 공개 설정 (전체공개 / 멤버공개) */
   postVisibility?: '전체공개' | '멤버공개';
+  /** 영상제공: 하루 최대 업로드 가능 인원 (0 또는 미설정 = 제한 없음) */
+  dailyLimit?: number;
+  /** 영상제공: 제출된 영상 목록 */
+  videoUploads?: VideoUpload[];
 }
 
 export interface SellerApplication {

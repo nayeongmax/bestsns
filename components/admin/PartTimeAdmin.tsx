@@ -765,9 +765,15 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                 const hasWorkLinkSelected = selectedOne && hasWorkLink(selectedOne);
                 const isPaid = selectedOne && t.paidUserIds?.includes(selectedOne.userId);
                 const hasReApproval = selectedOne?.reApprovalRequestedAt;
-                const sentToAdvertiser = !!t.sentToAdvertiserAt;
-                const status = getTaskStatus(t);
+                const isVideoTask = t.category === '영상제공';
+                const todayMob = new Date().toISOString().slice(0, 10);
+                const videoUploadsMob = t.videoUploads ?? [];
+                const pendingVideosMob = videoUploadsMob.filter((v) => v.status !== 'rejected');
+                const todayVideosMob = videoUploadsMob.filter((v) => v.date === todayMob && v.status !== 'rejected');
+                const status = isVideoTask ? (videoUploadsMob.length > 0 ? '영상검토' : '영상모집') : getTaskStatus(t);
                 const statusLabels: Record<string, { label: string; msg: string }> = {
+                  영상모집: { label: '영상모집', msg: '제출 대기' },
+                  영상검토: { label: '영상검토', msg: `${pendingVideosMob.length}개 · 오늘 ${todayVideosMob.length}개` },
                   프리모집: { label: '프리모집', msg: `${t.applicants.length}명 신청` },
                   프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨` },
                   작업진행: { label: '링크확인', msg: hasReApproval ? '재승인요청' : '링크제출됨' },
@@ -776,7 +782,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                   지급완료: { label: '지급완료', msg: '지급 완료' },
                 };
                 const { label: statusLabel, msg } = statusLabels[status] || { label: status, msg: '' };
-                const statusColor = status === '프리모집' ? 'bg-amber-500' : status === '프리선정' ? 'bg-blue-500' : status === '작업진행' ? 'bg-blue-600' : status === '작업완료' ? 'bg-indigo-500' : status === '구매확정' ? 'bg-purple-500' : status === '지급완료' ? 'bg-emerald-500' : 'bg-gray-400';
+                const statusColor = status === '영상모집' ? 'bg-rose-400' : status === '영상검토' ? 'bg-rose-600' : status === '프리모집' ? 'bg-amber-500' : status === '프리선정' ? 'bg-blue-500' : status === '작업진행' ? 'bg-blue-600' : status === '작업완료' ? 'bg-indigo-500' : status === '구매확정' ? 'bg-purple-500' : status === '지급완료' ? 'bg-emerald-500' : 'bg-gray-400';
                 return (
                   <div key={t.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                     <div className={`${statusColor} px-3 py-1.5 flex items-center justify-between`}>
@@ -787,7 +793,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       <p className="font-black text-gray-900 text-[13px] leading-tight line-clamp-2 mb-1.5">{t.title}</p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-gray-400 font-bold">신청 {t.applicants.length}명</span>
+                          <span className="text-[10px] text-gray-400 font-bold">{isVideoTask ? `영상 ${pendingVideosMob.length}개` : `신청 ${t.applicants.length}명`}</span>
                           {t.projectNo && <span className="text-[9px] text-gray-300 font-bold">{t.projectNo}</span>}
                         </div>
                         <span className="text-[13px] font-black text-emerald-600 italic">₩{t.reward.toLocaleString()}</span>
@@ -795,7 +801,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                     </div>
                     <div className="grid grid-cols-2 border-t border-gray-50">
                       <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true }} className="py-2.5 text-center bg-emerald-600 text-white font-black text-[10px] hover:bg-emerald-700 transition-all italic uppercase">내용확인</Link>
-                      {!needsSelection && selectedOne ? (
+                      {isVideoTask ? (
+                        <Link to={`/part-time/register`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white font-black text-[10px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
+                      ) : !needsSelection && selectedOne ? (
                         <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: selectedOne.userId, nickname: selectedOne.nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white font-black text-[10px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
                       ) : needsSelection && t.applicants[0] ? (
                         <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: t.applicants[0].userId, nickname: t.applicants[0].nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white font-black text-[10px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
@@ -804,16 +812,16 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       )}
                     </div>
                     <div className="grid grid-cols-3 border-t border-gray-50">
-                      {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                      {!isVideoTask && selectedOne && hasWorkLinkSelected && !isPaid ? (
                         <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="py-2 bg-orange-50 text-orange-600 font-black text-[9px] hover:bg-orange-100 transition-all">수정요청</button>
-                      ) : (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
+                      ) : !isVideoTask && (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
                         <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true }} className="py-2 text-center bg-amber-50 text-amber-700 font-black text-[9px] hover:bg-amber-100 transition-all">링크확인</Link>
                       ) : (
                         <span className="py-2 text-center bg-gray-50 text-gray-300 font-bold text-[9px]">-</span>
                       )}
-                      {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                      {!isVideoTask && selectedOne && hasWorkLinkSelected && !isPaid ? (
                         <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="py-2 bg-amber-50 text-amber-700 font-black text-[9px] hover:bg-amber-100 transition-all">비상지급</button>
-                      ) : isPaid ? (
+                      ) : !isVideoTask && isPaid ? (
                         <span className="py-2 text-center bg-emerald-50 text-emerald-600 font-black text-[9px]">지급완료</span>
                       ) : (
                         <span className="py-2 text-center bg-gray-50 text-gray-300 font-bold text-[9px]">-</span>
@@ -836,18 +844,24 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                 const isPaid = selectedOne && t.paidUserIds?.includes(selectedOne.userId);
                 const hasReApproval = selectedOne?.reApprovalRequestedAt;
                 const sentToAdvertiser = !!t.sentToAdvertiserAt;
-                const status = getTaskStatus(t);
+                const isVideoTask = t.category === '영상제공';
+                const today = new Date().toISOString().slice(0, 10);
+                const videoUploads = t.videoUploads ?? [];
+                const pendingVideos = videoUploads.filter((v) => v.status !== 'rejected');
+                const todayVideos = videoUploads.filter((v) => v.date === today && v.status !== 'rejected');
+                const status = isVideoTask ? (videoUploads.length > 0 ? '영상검토' : '영상모집') : getTaskStatus(t);
                 const statusLabels: Record<string, { label: string; msg: string }> = {
+                  영상모집: { label: '영상모집', msg: '영상 제출 대기 중입니다.' },
+                  영상검토: { label: '영상검토', msg: `전체 ${pendingVideos.length}개 · 오늘 ${todayVideos.length}개 제출됨` },
                   프리모집: { label: '프리모집', msg: `${t.applicants.length}명 신청. 프리랜서 선정이 필요합니다.` },
-                  프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨. ${t.category === '영상제공' ? '영상 제출 대기 중입니다.' : '작업 링크 제출 대기 중입니다.'}` },
-                  작업진행: { label: t.category === '영상제공' ? '영상확인' : '링크확인', msg: t.category === '영상제공' ? '영상이 제출되었습니다. 확인 후 포인트를 지급해 주세요.' : (hasReApproval ? '링크를 재제출했습니다. 재승인요청을 했습니다. 확인바랍니다.' : '링크를 제출했습니다. 확인바랍니다.') },
+                  프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨. 작업 링크 제출 대기 중입니다.` },
+                  작업진행: { label: '링크확인', msg: hasReApproval ? '링크를 재제출했습니다. 재승인요청을 했습니다. 확인바랍니다.' : '링크를 제출했습니다. 확인바랍니다.' },
                   작업완료: { label: '작업완료', msg: '광고주 전송 완료. 구매확정 대기 중입니다.' },
                   구매확정: { label: '구매확정', msg: '광고주 구매확정 완료. 알바비 지급 대기 중입니다.' },
                   지급완료: { label: '지급완료', msg: '알바비 지급 완료되었습니다.' },
                 };
                 const { label: statusLabel, msg } = statusLabels[status] || { label: status, msg: '' };
-                const statusColor = status === '프리모집' ? 'bg-amber-500' : status === '프리선정' ? 'bg-blue-500' : status === '작업진행' ? 'bg-blue-600' : status === '작업완료' ? 'bg-indigo-500' : status === '구매확정' ? 'bg-purple-500' : status === '지급완료' ? 'bg-emerald-500' : 'bg-gray-400';
-                const statusBadge = status === '프리모집' ? 'bg-amber-200 text-amber-800' : status === '프리선정' ? 'bg-blue-100 text-blue-700' : status === '작업진행' ? 'bg-blue-100 text-blue-700' : status === '작업완료' ? 'bg-indigo-100 text-indigo-700' : status === '지급완료' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600';
+                const statusColor = status === '영상모집' ? 'bg-rose-400' : status === '영상검토' ? 'bg-rose-600' : status === '프리모집' ? 'bg-amber-500' : status === '프리선정' ? 'bg-blue-500' : status === '작업진행' ? 'bg-blue-600' : status === '작업완료' ? 'bg-indigo-500' : status === '구매확정' ? 'bg-purple-500' : status === '지급완료' ? 'bg-emerald-500' : 'bg-gray-400';
                 return (
                   <div key={t.id} className="bg-white rounded-[28px] overflow-hidden shadow-sm border border-gray-100 hover:-translate-y-1 transition-all flex flex-col">
                     <div className={`${statusColor} px-4 py-3 flex items-center justify-between`}>
@@ -861,8 +875,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       </div>
                       <div className="flex items-center justify-between border-t border-gray-50 pt-3 mb-4">
                         <div className="flex flex-col">
-                          <span className="text-[9px] text-gray-300 font-black uppercase tracking-widest italic mb-0.5">신청자</span>
-                          <span className="text-[12px] font-black text-gray-700">{t.applicants.length}명</span>
+                          <span className="text-[9px] text-gray-300 font-black uppercase tracking-widest italic mb-0.5">{isVideoTask ? '제출영상' : '신청자'}</span>
+                          <span className="text-[12px] font-black text-gray-700">{isVideoTask ? `${pendingVideos.length}개` : `${t.applicants.length}명`}</span>
                         </div>
                         <div className="flex flex-col items-end">
                           <span className="text-[9px] text-gray-300 font-black uppercase tracking-widest italic mb-0.5">알바비</span>
@@ -871,7 +885,9 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       </div>
                       <div className="grid grid-cols-2 gap-2 mt-auto">
                         <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true }} className="py-2.5 text-center bg-emerald-600 text-white rounded-xl font-black text-[11px] hover:bg-emerald-700 transition-all italic uppercase">내용확인</Link>
-                        {!needsSelection && selectedOne ? (
+                        {isVideoTask ? (
+                          <Link to={`/part-time/register`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white rounded-xl font-black text-[11px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
+                        ) : !needsSelection && selectedOne ? (
                           <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: selectedOne.userId, nickname: selectedOne.nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white rounded-xl font-black text-[11px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
                         ) : needsSelection && t.applicants[0] ? (
                           <button type="button" onClick={() => navigate('/chat', { state: { targetUser: { id: t.applicants[0].userId, nickname: t.applicants[0].nickname, profileImage: '' } } })} className="py-2.5 bg-blue-500 text-white rounded-xl font-black text-[11px] hover:bg-blue-600 transition-all italic uppercase">채팅하기</button>
@@ -879,24 +895,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                           <Link to={`/part-time/register`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white rounded-xl font-black text-[11px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
                         )}
                       </div>
-                      {/* 영상제공: 영상 다운로드 버튼 */}
-                      {t.category === '영상제공' && selectedOne?.videoUrl && (
-                        <a href={selectedOne.videoUrl} target="_blank" rel="noopener noreferrer" download
-                          className="mt-2 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-50 text-blue-700 font-black text-[11px] hover:bg-blue-100 transition-all border border-blue-200">
-                          ⬇ 영상 다운로드
-                        </a>
-                      )}
                       <div className="grid grid-cols-3 gap-1.5 mt-2">
-                        {t.category !== '영상제공' && selectedOne && hasWorkLinkSelected && !isPaid ? (
+                        {!isVideoTask && selectedOne && hasWorkLinkSelected && !isPaid ? (
                           <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="py-2 rounded-lg bg-orange-100 text-orange-700 font-black text-[10px] hover:bg-orange-200 transition-all">수정요청</button>
-                        ) : t.category !== '영상제공' && (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
+                        ) : !isVideoTask && (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
                           <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true }} className="py-2 text-center rounded-lg bg-amber-100 text-amber-700 font-black text-[10px] hover:bg-amber-200 transition-all">링크확인</Link>
                         ) : (
                           <span className="py-2 text-center rounded-lg bg-gray-50 text-gray-300 font-bold text-[10px]">-</span>
                         )}
-                        {selectedOne && hasWorkLinkSelected && !isPaid ? (
-                          <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-[10px] hover:bg-emerald-200 transition-all">{t.category === '영상제공' ? '포인트지급' : '비상지급'}</button>
-                        ) : isPaid ? (
+                        {!isVideoTask && selectedOne && hasWorkLinkSelected && !isPaid ? (
+                          <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-[10px] hover:bg-emerald-200 transition-all">비상지급</button>
+                        ) : !isVideoTask && isPaid ? (
                           <span className="py-2 text-center rounded-lg bg-emerald-50 text-emerald-600 font-black text-[10px]">지급완료</span>
                         ) : (
                           <span className="py-2 text-center rounded-lg bg-gray-50 text-gray-300 font-bold text-[10px]">-</span>
