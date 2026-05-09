@@ -8,7 +8,7 @@ interface Props {
   user: UserProfile | null;
 }
 
-const CATEGORIES = ['설문', 'SNS', '카페', '리뷰', '검수', '라벨링', '번역', '기타'];
+const CATEGORIES = ['설문', 'SNS', '카페', '리뷰', '검수', '라벨링', '번역', '영상제공', '기타'];
 
 const today = () => {
   const d = new Date();

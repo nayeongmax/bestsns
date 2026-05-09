@@ -230,8 +230,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     upsertPartTimeTasks(next).catch((e) => console.error('saveTasks:', e));
   };
 
-  const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) =>
-    (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
+  const hasWorkLink = (a: { workLink?: string; workLinks?: string[]; videoUrl?: string }) =>
+    (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim() || !!a.videoUrl;
 
   const handleApprovePass = (task: PartTimeTask, userId: string) => {
     const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
@@ -839,8 +839,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                 const status = getTaskStatus(t);
                 const statusLabels: Record<string, { label: string; msg: string }> = {
                   프리모집: { label: '프리모집', msg: `${t.applicants.length}명 신청. 프리랜서 선정이 필요합니다.` },
-                  프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨. 작업 링크 제출 대기 중입니다.` },
-                  작업진행: { label: '링크확인', msg: hasReApproval ? '링크를 재제출했습니다. 재승인요청을 했습니다. 확인바랍니다.' : '링크를 제출했습니다. 확인바랍니다.' },
+                  프리선정: { label: '프리선정', msg: `${selectedOne?.nickname ?? '-'} 선정됨. ${t.category === '영상제공' ? '영상 제출 대기 중입니다.' : '작업 링크 제출 대기 중입니다.'}` },
+                  작업진행: { label: t.category === '영상제공' ? '영상확인' : '링크확인', msg: t.category === '영상제공' ? '영상이 제출되었습니다. 확인 후 포인트를 지급해 주세요.' : (hasReApproval ? '링크를 재제출했습니다. 재승인요청을 했습니다. 확인바랍니다.' : '링크를 제출했습니다. 확인바랍니다.') },
                   작업완료: { label: '작업완료', msg: '광고주 전송 완료. 구매확정 대기 중입니다.' },
                   구매확정: { label: '구매확정', msg: '광고주 구매확정 완료. 알바비 지급 대기 중입니다.' },
                   지급완료: { label: '지급완료', msg: '알바비 지급 완료되었습니다.' },
@@ -879,16 +879,23 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                           <Link to={`/part-time/register`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white rounded-xl font-black text-[11px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
                         )}
                       </div>
+                      {/* 영상제공: 영상 다운로드 버튼 */}
+                      {t.category === '영상제공' && selectedOne?.videoUrl && (
+                        <a href={selectedOne.videoUrl} target="_blank" rel="noopener noreferrer" download
+                          className="mt-2 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-50 text-blue-700 font-black text-[11px] hover:bg-blue-100 transition-all border border-blue-200">
+                          ⬇ 영상 다운로드
+                        </a>
+                      )}
                       <div className="grid grid-cols-3 gap-1.5 mt-2">
-                        {selectedOne && hasWorkLinkSelected && !isPaid ? (
+                        {t.category !== '영상제공' && selectedOne && hasWorkLinkSelected && !isPaid ? (
                           <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="py-2 rounded-lg bg-orange-100 text-orange-700 font-black text-[10px] hover:bg-orange-200 transition-all">수정요청</button>
-                        ) : (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
+                        ) : t.category !== '영상제공' && (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
                           <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true }} className="py-2 text-center rounded-lg bg-amber-100 text-amber-700 font-black text-[10px] hover:bg-amber-200 transition-all">링크확인</Link>
                         ) : (
                           <span className="py-2 text-center rounded-lg bg-gray-50 text-gray-300 font-bold text-[10px]">-</span>
                         )}
                         {selectedOne && hasWorkLinkSelected && !isPaid ? (
-                          <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="py-2 rounded-lg bg-amber-100 text-amber-700 font-black text-[10px] hover:bg-amber-200 transition-all">비상지급</button>
+                          <button type="button" onClick={() => handlePayPoints(t, selectedOne.userId)} className="py-2 rounded-lg bg-emerald-100 text-emerald-700 font-black text-[10px] hover:bg-emerald-200 transition-all">{t.category === '영상제공' ? '포인트지급' : '비상지급'}</button>
                         ) : isPaid ? (
                           <span className="py-2 text-center rounded-lg bg-emerald-50 text-emerald-600 font-black text-[10px]">지급완료</span>
                         ) : (
