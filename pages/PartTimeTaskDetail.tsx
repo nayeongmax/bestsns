@@ -614,6 +614,61 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           );
         })()}
 
+        {/* ── 영상제공 전용: 작업 안내 내용 표시 ──────────── */}
+        {task.category === '영상제공' && (() => {
+          const hasSections =
+            (sections.내용목록?.length ?? 0) > 0 ||
+            (sections.게시글목록?.length ?? 0) > 0 ||
+            (sections.댓글목록?.length ?? 0) > 0 ||
+            (sections.이미지목록?.length ?? 0) > 0 ||
+            !!sections.작업안내 || !!sections.이미지 || !!sections.gif;
+          if (!hasSections) return null;
+          return (
+            <div className="border-2 border-blue-100 rounded-2xl p-5 md:p-6 bg-blue-50/20 space-y-4">
+              <h3 className="font-black text-gray-900">📋 작업 안내</h3>
+              {sections.내용목록 && sections.내용목록.length > 0 && (
+                <div className="space-y-3">
+                  {sections.내용목록.map((text, i) => (
+                    <div key={i} className="bg-white rounded-xl p-4 border border-gray-100">
+                      {sections.내용목록!.length > 1 && <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {i + 1}</p>}
+                      <p className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">{text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {sections.게시글목록 && sections.게시글목록.length > 0 && (
+                <div className="space-y-3">
+                  {sections.게시글목록.map((block, i) => (
+                    <div key={i} className="bg-white rounded-xl p-4 border border-gray-100">
+                      {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
+                      {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {sections.댓글목록 && sections.댓글목록.length > 0 && sections.댓글목록.map((text, i) => (
+                <div key={i} className="bg-white rounded-xl p-4 border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
+                </div>
+              ))}
+              {sections.이미지목록 && sections.이미지목록.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {sections.이미지목록.map((src, i) => (
+                    <img key={i} src={src} alt={`참고 ${i + 1}`} className="max-h-40 rounded-lg border border-gray-200 cursor-zoom-in hover:opacity-90" onClick={() => setZoomedImage(src)} />
+                  ))}
+                </div>
+              )}
+              {sections.작업안내 && (
+                <div className="bg-white rounded-xl p-4 border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업안내</p>
+                  <p className="text-gray-800 whitespace-pre-wrap text-sm">{sections.작업안내}</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── 3단계 진행 안내 (영상제공 외 카테고리) ──────── */}
         {task.category !== '영상제공' && <div className="space-y-0">
 
