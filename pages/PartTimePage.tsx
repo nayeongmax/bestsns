@@ -93,18 +93,27 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
       map[d] = { total: 0, done: 0 };
     });
     tasks.forEach((t) => {
-      const key = t.workPeriod?.start || t.applicationPeriod?.start;
-      if (map[key]) {
-        map[key].total++;
-        if (t.pointPaid) map[key].done++;
-      }
+      const start = t.applicationPeriod?.start;
+      const end = t.applicationPeriod?.end || start;
+      if (!start) return;
+      weekDates.forEach((d) => {
+        if (d >= start && d <= (end ?? start)) {
+          map[d].total++;
+          if (t.pointPaid) map[d].done++;
+        }
+      });
     });
     return map;
   }, [tasks, weekDates]);
 
   const effectiveDate = selectedDate || weekDates[0] || todayStrVal;
   const tasksForDate = useMemo(() => {
-    return tasks.filter((t) => (t.workPeriod?.start || t.applicationPeriod?.start) === effectiveDate);
+    return tasks.filter((t) => {
+      const start = t.applicationPeriod?.start;
+      const end = t.applicationPeriod?.end || start;
+      if (!start) return false;
+      return effectiveDate >= start && effectiveDate <= (end ?? start);
+    });
   }, [tasks, effectiveDate]);
 
   const sortedTasks = useMemo(() => {
