@@ -47,10 +47,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
   const [agree4, setAgree4] = useState(false);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [videoLocation, setVideoLocation] = useState('');
   const [videoStoreName, setVideoStoreName] = useState('');
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
   const [showDailyLimitModal, setShowDailyLimitModal] = useState(false);
 
   const task = tasks.find((t) => t.id === taskId);
@@ -258,48 +259,52 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     alert('작업링크가 제출되었습니다.\n제대로 작업이 되었는지 확인 후 수익통장에 충전됩니다.\n수고많으셨습니다.');
   };
 
-  /** 영상제공: 회원이 직접 영상 파일을 업로드 (신청/선정 불필요, 일별 인원 제한 적용) */
+  /** 영상제공: 여러 영상 파일 동시 업로드 (일별 인원 제한 적용) */
   const handleSubmitVideo = async () => {
-    if (!user || !task || !videoFile) return;
+    if (!user || !task || videoFiles.length === 0) return;
     if (!videoLocation.trim()) { alert('촬영 지역을 입력해 주세요.'); return; }
     if (!videoStoreName.trim()) { alert('매장명을 입력해 주세요.'); return; }
     const today = new Date().toISOString().slice(0, 10);
     const uploads = task.videoUploads ?? [];
     const todayUploaderIds = new Set(uploads.filter((v) => v.date === today).map((v) => v.userId));
-    // 오늘 처음 업로드하는 사람이고 인원 제한에 걸리면 모달
     if (!todayUploaderIds.has(user.id) && task.dailyLimit && todayUploaderIds.size >= task.dailyLimit) {
       setShowDailyLimitModal(true);
       return;
     }
     setIsUploadingVideo(true);
+    const newUploads: typeof uploads = [];
     try {
-      const ext = videoFile.name.split('.').pop() ?? 'mp4';
-      const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      const path = `${task.id}/${user.id}_${uploadId}.${ext}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('parttime-videos')
-        .upload(path, videoFile, { upsert: false, cacheControl: '3600' });
-      if (uploadError) throw new Error(uploadError.message);
-      const { data: { publicUrl } } = supabase.storage.from('parttime-videos').getPublicUrl(uploadData.path);
-      const now = new Date().toISOString();
-      const newUpload = {
-        id: uploadId, userId: user.id, nickname: user.nickname,
-        videoUrl: publicUrl, fileName: videoFile.name,
-        uploadedAt: now, date: today,
-        location: videoLocation.trim(), storeName: videoStoreName.trim(),
-      };
+      for (let i = 0; i < videoFiles.length; i++) {
+        const file = videoFiles[i];
+        setUploadProgressText(`업로드 중... (${i + 1} / ${videoFiles.length})`);
+        const ext = file.name.split('.').pop() ?? 'mp4';
+        const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const path = `${task.id}/${user.id}_${uploadId}.${ext}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('parttime-videos')
+          .upload(path, file, { upsert: false, cacheControl: '3600' });
+        if (uploadError) throw new Error(`${file.name}: ${uploadError.message}`);
+        const { data: { publicUrl } } = supabase.storage.from('parttime-videos').getPublicUrl(uploadData.path);
+        newUploads.push({
+          id: uploadId, userId: user.id, nickname: user.nickname,
+          videoUrl: publicUrl, fileName: file.name,
+          uploadedAt: new Date().toISOString(), date: today,
+          location: videoLocation.trim(), storeName: videoStoreName.trim(),
+        });
+      }
       const next = tasks.map((t) =>
-        t.id !== task.id ? t : { ...t, videoUploads: [...(t.videoUploads ?? []), newUpload] }
+        t.id !== task.id ? t : { ...t, videoUploads: [...(t.videoUploads ?? []), ...newUploads] }
       );
       saveTasks(next);
-      setVideoFile(null);
-      if (addNotif) addNotif(user.id, 'freelancer', '영상 제출 완료', `[${task.title}] 영상이 제출되었습니다. 확인 후 포인트가 지급됩니다.`);
-      if (task.createdBy && addNotif) addNotif(task.createdBy, 'approval', '새 영상이 제출됐습니다', `[${task.title}] ${user.nickname}님이 영상(${videoStoreName.trim()})을 제출했습니다. 어드민 패널에서 확인해 주세요.`);
-      alert('영상이 제출되었습니다! 확인 후 포인트가 지급됩니다 :)');
+      setVideoFiles([]);
+      if (addNotif) addNotif(user.id, 'freelancer', '영상 제출 완료', `[${task.title}] ${newUploads.length}개 영상이 제출되었습니다. 확인 후 포인트가 지급됩니다.`);
+      if (task.createdBy && addNotif) addNotif(task.createdBy, 'approval', '새 영상이 제출됐습니다', `[${task.title}] ${user.nickname}님이 영상 ${newUploads.length}개(${videoStoreName.trim()})를 제출했습니다.`);
+      alert(`${newUploads.length}개 영상이 모두 제출되었습니다!\n확인 후 포인트가 지급됩니다 :)`);
     } catch (err) {
       alert('영상 업로드에 실패했습니다.\n' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsUploadingVideo(false);
+      setUploadProgressText('');
     }
   };
 
@@ -583,21 +588,43 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                         />
                       </div>
                     </div>
-                    {/* 파일 선택 */}
+                    {/* 파일 선택 (여러 개) */}
                     <label className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-rose-300 cursor-pointer hover:border-rose-500 transition-all bg-white">
                       <span className="text-2xl">🎬</span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-gray-800 truncate">{videoFile ? videoFile.name : '영상 파일 선택 (MP4, MOV 등)'}</p>
-                        <p className="text-xs text-gray-400">{videoFile ? `${(videoFile.size / 1024 / 1024).toFixed(1)} MB` : '파일을 클릭하여 선택하세요'}</p>
+                        {videoFiles.length === 0 ? (
+                          <>
+                            <p className="text-sm font-black text-gray-800">영상 파일 선택 (MP4, MOV 등)</p>
+                            <p className="text-xs text-gray-400">여러 개 동시 선택 가능 · 용량 제한 없음</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-black text-gray-800">{videoFiles.length}개 선택됨</p>
+                            <p className="text-xs text-gray-400">총 {(videoFiles.reduce((s, f) => s + f.size, 0) / 1024 / 1024).toFixed(1)} MB</p>
+                          </>
+                        )}
                       </div>
-                      <input type="file" accept="video/*" className="hidden" onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)} />
+                      <span className="shrink-0 text-xs font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200">파일 선택</span>
+                      <input type="file" accept="video/*" multiple className="hidden"
+                        onChange={(e) => setVideoFiles(Array.from(e.target.files ?? []))} />
                     </label>
+                    {/* 선택된 파일 목록 */}
+                    {videoFiles.length > 0 && (
+                      <div className="space-y-1">
+                        {videoFiles.map((f, i) => (
+                          <div key={i} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-white border border-rose-100 text-xs">
+                            <span className="font-bold text-gray-700 truncate">🎬 {f.name}</span>
+                            <span className="shrink-0 text-gray-400">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {myUploadsToday.length > 0 && (
                       <p className="text-xs text-emerald-600 font-bold">✅ 오늘 {myUploadsToday.length}개 제출 완료 · 추가 영상도 제출 가능합니다</p>
                     )}
-                    <button type="button" onClick={handleSubmitVideo} disabled={!videoFile || isUploadingVideo}
+                    <button type="button" onClick={handleSubmitVideo} disabled={videoFiles.length === 0 || isUploadingVideo}
                       className="w-full py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                      {isUploadingVideo ? '업로드 중...' : '영상 제출하기'}
+                      {isUploadingVideo ? (uploadProgressText || '업로드 중...') : videoFiles.length > 1 ? `영상 ${videoFiles.length}개 모두 제출하기` : '영상 제출하기'}
                     </button>
                   </div>
                 ) : (
@@ -1000,14 +1027,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                       <label className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-rose-200 cursor-pointer hover:border-rose-400 transition-all bg-rose-50">
                         <span className="text-2xl">🎬</span>
                         <div className="min-w-0">
-                          <p className="text-sm font-black text-gray-800">{videoFile ? videoFile.name : '영상 파일 선택'}</p>
-                          <p className="text-xs text-gray-400">{videoFile ? `${(videoFile.size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, AVI 등 지원'}</p>
+                          <p className="text-sm font-black text-gray-800">{videoFiles[0] ? videoFiles[0].name : '영상 파일 선택'}</p>
+                          <p className="text-xs text-gray-400">{videoFiles[0] ? `${(videoFiles[0].size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, AVI 등 지원'}</p>
                         </div>
-                        <input type="file" accept="video/*" className="hidden"
-                          onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)} />
+                        <input type="file" accept="video/*" multiple className="hidden"
+                          onChange={(e) => setVideoFiles(Array.from(e.target.files ?? []))} />
                       </label>
                       <button type="button" onClick={handleSubmitVideo}
-                        disabled={!videoFile || isUploadingVideo}
+                        disabled={videoFiles.length === 0 || isUploadingVideo}
                         className="px-6 py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         {isUploadingVideo ? '업로드 중...' : me.videoUrl ? '영상 재제출' : '영상 제출'}
                       </button>
