@@ -167,9 +167,12 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       const taskList = await fetchPartTimeTasks();
       if (cancelled) return;
       const mySelected = taskList.filter(
-      (t) => !t.pointPaid && t.applicants.some((a) => a.userId === user.id && a.selected)
-    );
-    setSelectedTasks(mySelected);
+        (t) => !t.pointPaid && (
+          t.applicants.some((a) => a.userId === user.id && a.selected) ||
+          (t.category === '영상제공' && (t.videoUploads ?? []).some((v) => v.userId === user.id))
+        )
+      );
+      setSelectedTasks(mySelected);
     })();
     return () => { cancelled = true; };
   }, [user.id]);
@@ -306,10 +309,48 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
           </div>
       {selectedTasks.length > 0 && (
         <div>
-          <h4 className="font-black text-gray-800 mb-3">선정된 작업</h4>
-          <p className="text-sm text-gray-500 mb-3">작업 완료 후 링크를 제출하면 광고주 또는 운영자 확인 후 수익통장에 알바비가 적립됩니다.</p>
+          <h4 className="font-black text-gray-800 mb-3">진행중인 작업</h4>
+          <p className="text-sm text-gray-500 mb-3">작업 완료 후 링크를 제출하거나 영상을 업로드하면 운영자 확인 후 수익통장에 알바비가 적립됩니다.</p>
           <ul className="space-y-2">
             {selectedTasks.map((t) => {
+              const isVideoTask = t.category === '영상제공';
+
+              if (isVideoTask) {
+                const myVideos = (t.videoUploads ?? []).filter((v) => v.userId === user.id);
+                const pendingCount = myVideos.filter((v) => !v.status || v.status === 'pending').length;
+                const rejectedCount = myVideos.filter((v) => v.status === 'rejected').length;
+                const videoStatus = myVideos.length === 0
+                  ? '영상 없음'
+                  : rejectedCount > 0 && pendingCount === 0
+                    ? `반려됨 (${rejectedCount}개)`
+                    : pendingCount > 0
+                      ? `검토중 (${pendingCount}개)`
+                      : '지급완료';
+                return (
+                  <li key={t.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-rose-200">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-black text-gray-900">{t.title}</p>
+                        {t.projectNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t.projectNo}</span>}
+                        <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">영상제공</span>
+                      </div>
+                      <p className="text-xs text-gray-500">+{t.reward.toLocaleString()}원/건 · {videoStatus}</p>
+                      {pendingCount > 0 && (
+                        <p className="text-xs text-blue-600 font-bold mt-1">검토 후 포인트가 지급됩니다.</p>
+                      )}
+                      {rejectedCount > 0 && (
+                        <p className="text-xs text-red-500 font-bold mt-1">반려된 영상이 있습니다. 다시 제출해 주세요.</p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 shrink-0">
+                      <Link to={`/part-time/${t.id}`} className="px-4 py-2 rounded-lg bg-rose-100 text-rose-700 font-black text-sm hover:bg-rose-200">
+                        상세보기
+                      </Link>
+                    </div>
+                  </li>
+                );
+              }
+
               const me = t.applicants.find((a) => a.userId === user.id);
               const hasLink = (me?.workLinks?.length ?? 0) > 0 || !!me?.workLink;
               const hasRevision = !!me?.revisionRequest;
