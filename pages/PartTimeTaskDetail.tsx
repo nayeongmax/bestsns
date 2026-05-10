@@ -48,6 +48,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const [agree3, setAgree3] = useState(false);
   const [agree4, setAgree4] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoLocation, setVideoLocation] = useState('');
+  const [videoStoreName, setVideoStoreName] = useState('');
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [showDailyLimitModal, setShowDailyLimitModal] = useState(false);
 
@@ -259,6 +261,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   /** 영상제공: 회원이 직접 영상 파일을 업로드 (신청/선정 불필요, 일별 인원 제한 적용) */
   const handleSubmitVideo = async () => {
     if (!user || !task || !videoFile) return;
+    if (!videoLocation.trim()) { alert('촬영 지역을 입력해 주세요.'); return; }
+    if (!videoStoreName.trim()) { alert('매장명을 입력해 주세요.'); return; }
     const today = new Date().toISOString().slice(0, 10);
     const uploads = task.videoUploads ?? [];
     const todayUploaderIds = new Set(uploads.filter((v) => v.date === today).map((v) => v.userId));
@@ -278,14 +282,19 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       if (uploadError) throw new Error(uploadError.message);
       const { data: { publicUrl } } = supabase.storage.from('parttime-videos').getPublicUrl(uploadData.path);
       const now = new Date().toISOString();
-      const newUpload = { id: uploadId, userId: user.id, nickname: user.nickname, videoUrl: publicUrl, fileName: videoFile.name, uploadedAt: now, date: today };
+      const newUpload = {
+        id: uploadId, userId: user.id, nickname: user.nickname,
+        videoUrl: publicUrl, fileName: videoFile.name,
+        uploadedAt: now, date: today,
+        location: videoLocation.trim(), storeName: videoStoreName.trim(),
+      };
       const next = tasks.map((t) =>
         t.id !== task.id ? t : { ...t, videoUploads: [...(t.videoUploads ?? []), newUpload] }
       );
       saveTasks(next);
       setVideoFile(null);
       if (addNotif) addNotif(user.id, 'freelancer', '영상 제출 완료', `[${task.title}] 영상이 제출되었습니다. 확인 후 포인트가 지급됩니다.`);
-      if (task.createdBy && addNotif) addNotif(task.createdBy, 'approval', '새 영상이 제출됐습니다', `[${task.title}] ${user.nickname}님이 영상을 제출했습니다. 어드민 패널에서 확인해 주세요.`);
+      if (task.createdBy && addNotif) addNotif(task.createdBy, 'approval', '새 영상이 제출됐습니다', `[${task.title}] ${user.nickname}님이 영상(${videoStoreName.trim()})을 제출했습니다. 어드민 패널에서 확인해 주세요.`);
       alert('영상이 제출되었습니다! 확인 후 포인트가 지급됩니다 :)');
     } catch (err) {
       alert('영상 업로드에 실패했습니다.\n' + (err instanceof Error ? err.message : String(err)));
@@ -515,6 +524,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                         <div key={v.id} className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${isRejected ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold text-gray-800 truncate">🎬 {v.fileName}</p>
+                            {(v.location || v.storeName) && (
+                              <p className="text-xs font-bold text-gray-600">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
+                            )}
                             <p className="text-[10px] text-gray-400">{v.date} {v.uploadedAt.slice(11, 16)}</p>
                             {isPaid ? (
                               <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">✅ 포인트 지급 완료</span>
@@ -545,9 +557,33 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                       <div className="w-8 h-8 rounded-full bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0">📹</div>
                       <div>
                         <h3 className="font-black text-gray-900">촬영 영상 제출하기</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">영상 파일을 선택하고 제출 버튼을 눌러주세요. 여러 영상을 순서대로 제출할 수 있습니다.</p>
+                        <p className="text-xs text-gray-500 mt-0.5">지역, 매장명, 영상 파일을 입력 후 제출해 주세요.</p>
                       </div>
                     </div>
+                    {/* 지역 입력 */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-black text-gray-600 mb-1">촬영 지역 <span className="text-rose-500">*</span></label>
+                        <input
+                          type="text"
+                          value={videoLocation}
+                          onChange={(e) => setVideoLocation(e.target.value)}
+                          placeholder="예: 서울 강남구"
+                          className="w-full px-3 py-2.5 rounded-xl border border-rose-200 focus:ring-2 focus:ring-rose-200 outline-none text-sm bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-gray-600 mb-1">매장명 <span className="text-rose-500">*</span></label>
+                        <input
+                          type="text"
+                          value={videoStoreName}
+                          onChange={(e) => setVideoStoreName(e.target.value)}
+                          placeholder="예: OO식당"
+                          className="w-full px-3 py-2.5 rounded-xl border border-rose-200 focus:ring-2 focus:ring-rose-200 outline-none text-sm bg-white"
+                        />
+                      </div>
+                    </div>
+                    {/* 파일 선택 */}
                     <label className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-rose-300 cursor-pointer hover:border-rose-500 transition-all bg-white">
                       <span className="text-2xl">🎬</span>
                       <div className="min-w-0 flex-1">
@@ -573,6 +609,61 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 )
               ) : (
                 <p className="text-sm text-gray-400 italic text-center py-4">로그인 후 영상을 제출할 수 있습니다.</p>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── 영상제공 전용: 작업 안내 내용 표시 ──────────── */}
+        {task.category === '영상제공' && (() => {
+          const hasSections =
+            (sections.내용목록?.length ?? 0) > 0 ||
+            (sections.게시글목록?.length ?? 0) > 0 ||
+            (sections.댓글목록?.length ?? 0) > 0 ||
+            (sections.이미지목록?.length ?? 0) > 0 ||
+            !!sections.작업안내 || !!sections.이미지 || !!sections.gif;
+          if (!hasSections) return null;
+          return (
+            <div className="border-2 border-blue-100 rounded-2xl p-5 md:p-6 bg-blue-50/20 space-y-4">
+              <h3 className="font-black text-gray-900">📋 작업 안내</h3>
+              {sections.내용목록 && sections.내용목록.length > 0 && (
+                <div className="space-y-3">
+                  {sections.내용목록.map((text, i) => (
+                    <div key={i} className="bg-white rounded-xl p-4 border border-gray-100">
+                      {sections.내용목록!.length > 1 && <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {i + 1}</p>}
+                      <p className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">{text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {sections.게시글목록 && sections.게시글목록.length > 0 && (
+                <div className="space-y-3">
+                  {sections.게시글목록.map((block, i) => (
+                    <div key={i} className="bg-white rounded-xl p-4 border border-gray-100">
+                      {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
+                      {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {sections.댓글목록 && sections.댓글목록.length > 0 && sections.댓글목록.map((text, i) => (
+                <div key={i} className="bg-white rounded-xl p-4 border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
+                </div>
+              ))}
+              {sections.이미지목록 && sections.이미지목록.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {sections.이미지목록.map((src, i) => (
+                    <img key={i} src={src} alt={`참고 ${i + 1}`} className="max-h-40 rounded-lg border border-gray-200 cursor-zoom-in hover:opacity-90" onClick={() => setZoomedImage(src)} />
+                  ))}
+                </div>
+              )}
+              {sections.작업안내 && (
+                <div className="bg-white rounded-xl p-4 border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업안내</p>
+                  <p className="text-gray-800 whitespace-pre-wrap text-sm">{sections.작업안내}</p>
+                </div>
               )}
             </div>
           );
@@ -1135,6 +1226,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                                 )}
                               </div>
                               <p className="text-xs text-gray-400">{v.date} {v.uploadedAt.slice(11, 16)}</p>
+                              {(v.location || v.storeName) && (
+                                <p className="text-xs font-bold text-gray-700">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
+                              )}
                               <p className="text-sm text-gray-600 max-w-xs truncate">🎬 {v.fileName}</p>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
