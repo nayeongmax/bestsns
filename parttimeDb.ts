@@ -74,6 +74,9 @@ function taskToRow(t: PartTimeTask): Record<string, unknown> {
     sent_to_advertiser_at: t.sentToAdvertiserAt ?? null,
     signup_link: t.signupLink ?? null,
     post_visibility: t.postVisibility ?? null,
+    work_time_slot: t.workTimeSlot ?? null,
+    daily_limit: t.dailyLimit ?? null,
+    video_uploads: (t.videoUploads ?? []) as unknown[],
   };
 }
 
@@ -108,6 +111,9 @@ function rowToTask(row: Record<string, unknown>): PartTimeTask {
     sentToAdvertiserAt: row.sent_to_advertiser_at != null ? new Date(row.sent_to_advertiser_at as string).toISOString() : undefined,
     signupLink: row.signup_link != null ? String(row.signup_link) : undefined,
     postVisibility: row.post_visibility != null ? (String(row.post_visibility) as '전체공개' | '멤버공개') : undefined,
+    workTimeSlot: row.work_time_slot != null ? String(row.work_time_slot) : undefined,
+    dailyLimit: row.daily_limit != null ? Number(row.daily_limit) : undefined,
+    videoUploads: Array.isArray(row.video_uploads) ? (row.video_uploads as import('@/types').VideoUpload[]) : [],
   };
 }
 
