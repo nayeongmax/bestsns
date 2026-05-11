@@ -372,14 +372,14 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                       done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm'
                     }`}
                   >
-                    <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className="flex-1 text-left">
+                    <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate } })} className="flex-1 text-left">
                       <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
                       <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
                       <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
                     </button>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="font-black text-blue-600 text-base">+{task.reward.toLocaleString()}원</span>
-                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
+                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate } })} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
                         {buttonLabel}
                       </button>
                       {user?.role === 'admin' && (

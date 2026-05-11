@@ -33,8 +33,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const focusWorkLink = (location.state as { focusWorkLink?: boolean; fromAdmin?: boolean })?.focusWorkLink;
+  const focusWorkLink = (location.state as { focusWorkLink?: boolean; fromAdmin?: boolean; selectedDate?: string })?.focusWorkLink;
   const fromAdmin = (location.state as { fromAdmin?: boolean })?.fromAdmin;
+  const passedDate = (location.state as { selectedDate?: string } | null)?.selectedDate;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const activeDate = passedDate || todayStr;
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [jobRequests, setJobRequests] = useState<Awaited<ReturnType<typeof fetchPartTimeJobRequests>>>([]);
@@ -264,10 +267,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     if (!user || !task || videoFiles.length === 0) return;
     if (!videoLocation.trim()) { alert('촬영 지역을 입력해 주세요.'); return; }
     if (!videoStoreName.trim()) { alert('매장명을 입력해 주세요.'); return; }
-    const today = new Date().toISOString().slice(0, 10);
     const uploads = task.videoUploads ?? [];
-    const todayUploaderIds = new Set(uploads.filter((v) => v.date === today).map((v) => v.userId));
-    if (!todayUploaderIds.has(user.id) && task.dailyLimit && todayUploaderIds.size >= task.dailyLimit) {
+    const activeDateUploaderIds = new Set(uploads.filter((v) => v.date === activeDate).map((v) => v.userId));
+    if (!activeDateUploaderIds.has(user.id) && task.dailyLimit && activeDateUploaderIds.size >= task.dailyLimit) {
       setShowDailyLimitModal(true);
       return;
     }
@@ -288,7 +290,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
         newUploads.push({
           id: uploadId, userId: user.id, nickname: user.nickname,
           videoUrl: publicUrl, fileName: file.name,
-          uploadedAt: new Date().toISOString(), date: today,
+          uploadedAt: new Date().toISOString(), date: activeDate,
           location: videoLocation.trim(), storeName: videoStoreName.trim(),
         });
       }
@@ -498,20 +500,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
 
         {/* ── 영상제공 전용: 직접 업로드 UI ─────────────────── */}
         {task.category === '영상제공' && (() => {
-          const today = new Date().toISOString().slice(0, 10);
           const uploads = task.videoUploads ?? [];
-          const todayUploaderIds = new Set(uploads.filter((v) => v.date === today).map((v) => v.userId));
-          const myUploads = uploads.filter((v) => v.userId === user?.id);
-          const myUploadsToday = myUploads.filter((v) => v.date === today);
-          const canUpload = !user ? false : !task.dailyLimit || todayUploaderIds.has(user.id) || todayUploaderIds.size < task.dailyLimit;
+          const activeDateUploaderIds = new Set(uploads.filter((v) => v.date === activeDate).map((v) => v.userId));
+          const myUploads = uploads.filter((v) => v.userId === user?.id && v.date === activeDate);
+          const canUpload = !user ? false : !task.dailyLimit || activeDateUploaderIds.has(user.id) || activeDateUploaderIds.size < task.dailyLimit;
           return (
             <div className="space-y-6">
-              {/* 오늘 현황 */}
+              {/* 날짜별 제출 현황 */}
               {task.dailyLimit ? (
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="font-black text-gray-600">오늘 제출 현황</span>
-                  <span className={`px-3 py-1 rounded-full font-black text-xs ${todayUploaderIds.size >= task.dailyLimit ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
-                    {todayUploaderIds.size} / {task.dailyLimit}명
+                  <span className="font-black text-gray-600">{activeDate} 제출 현황</span>
+                  <span className={`px-3 py-1 rounded-full font-black text-xs ${activeDateUploaderIds.size >= task.dailyLimit ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {activeDateUploaderIds.size} / {task.dailyLimit}명
                   </span>
                 </div>
               ) : null}
@@ -619,8 +619,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                         ))}
                       </div>
                     )}
-                    {myUploadsToday.length > 0 && (
-                      <p className="text-xs text-emerald-600 font-bold">✅ 오늘 {myUploadsToday.length}개 제출 완료 · 추가 영상도 제출 가능합니다</p>
+                    {myUploads.length > 0 && (
+                      <p className="text-xs text-emerald-600 font-bold">✅ {activeDate} {myUploads.length}개 제출 완료 · 추가 영상도 제출 가능합니다</p>
                     )}
                     <button type="button" onClick={handleSubmitVideo} disabled={videoFiles.length === 0 || isUploadingVideo}
                       className="w-full py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
@@ -631,7 +631,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                   <div className="p-5 rounded-2xl bg-orange-50 border-2 border-orange-200 text-center space-y-2">
                     <p className="text-lg">⏰</p>
                     <p className="font-black text-orange-800">오늘 영상 제출 마감</p>
-                    <p className="text-sm text-orange-600">오늘({today}) 최대 {task.dailyLimit}명이 이미 제출했습니다.<br />내일 다시 방문해 주세요!</p>
+                    <p className="text-sm text-orange-600">{activeDate} 최대 {task.dailyLimit}명이 이미 제출했습니다.<br />다른 날짜를 선택해 주세요!</p>
                   </div>
                 )
               ) : (
@@ -1230,12 +1230,13 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             {task.category === '영상제공' ? (
               <>
                 <h3 className="text-lg font-black text-gray-800 mb-1">제출된 영상 목록 (운영자 전용)</h3>
-                <p className="text-sm text-gray-500 mb-3">영상을 확인하고 포인트를 지급하세요.</p>
-                {(task.videoUploads ?? []).length === 0 ? (
-                  <p className="text-gray-500 py-4">아직 제출된 영상이 없습니다.</p>
+                <p className="text-sm text-gray-500 mb-1">영상을 확인하고 포인트를 지급하세요.</p>
+                <p className="text-xs text-blue-600 font-bold mb-3">📅 {activeDate} 날짜 제출분만 표시됩니다.</p>
+                {(task.videoUploads ?? []).filter((v) => v.date === activeDate).length === 0 ? (
+                  <p className="text-gray-500 py-4">해당 날짜({activeDate})에 제출된 영상이 없습니다.</p>
                 ) : (
                   <ul className="space-y-3">
-                    {[...(task.videoUploads ?? [])].reverse().map((v) => {
+                    {[...(task.videoUploads ?? [])].filter((v) => v.date === activeDate).reverse().map((v) => {
                       const paid = task.paidUserIds?.includes(v.userId);
                       const isRejected = v.status === 'rejected';
                       return (
