@@ -45,6 +45,9 @@
 [functions."auto-post-board"]
   schedule = "*/5 * * * *"
 
+[functions."parttime-auto-approve"]
+  schedule = "0 * * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
