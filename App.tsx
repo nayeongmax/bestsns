@@ -503,20 +503,18 @@ const App: React.FC = () => {
         const { data, error } = await supabase.from('site_notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
         if (cancelled) return;
         if (error) return; // 에러 시 setNotifications 호출 안 함 → 기존 값 유지
-        if (data && data.length > 0) {
-          const list: SiteNotification[] = (data as any[]).map((r: any) => ({
-            id: r.id,
-            userId: r.user_id,
-            type: r.type,
-            title: r.title,
-            message: r.message,
-            reason: r.reason,
-            isRead: r.is_read ?? false,
-            createdAt: r.created_at || new Date().toISOString(),
-          }));
-          setNotifications(list);
-        }
-        // data가 빈 배열이면 setNotifications 호출 안 함 → 기존 값 유지
+        // DB 결과(빈 배열 포함)를 그대로 반영 — Supabase에서 직접 삭제해도 즉시 반영
+        const list: SiteNotification[] = (data as any[]).map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          type: r.type,
+          title: r.title,
+          message: r.message,
+          reason: r.reason,
+          isRead: r.is_read ?? false,
+          createdAt: r.created_at || new Date().toISOString(),
+        }));
+        setNotifications(list);
       } catch (_) {}
     })();
     return () => { cancelled = true; };
