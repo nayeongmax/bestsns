@@ -99,7 +99,14 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
       weekDates.forEach((d) => {
         if (d >= start && d <= (end ?? start)) {
           map[d].total++;
-          if (t.pointPaid) map[d].done++;
+          if (t.category === '영상제공') {
+            const dayUploaderIds = new Set(
+              (t.videoUploads ?? []).filter((v) => v.date === d && v.status !== 'rejected').map((v) => v.userId)
+            );
+            if (dayUploaderIds.size >= (t.dailyLimit ?? 2)) map[d].done++;
+          } else if (t.pointPaid) {
+            map[d].done++;
+          }
         }
       });
     });
@@ -116,11 +123,22 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
     });
   }, [tasks, effectiveDate]);
 
+  const isVideoTaskDateFull = (task: PartTimeTask, date: string) => {
+    const uploaderIds = new Set(
+      (task.videoUploads ?? [])
+        .filter((v) => v.date === date && v.status !== 'rejected')
+        .map((v) => v.userId)
+    );
+    return uploaderIds.size >= (task.dailyLimit ?? 2);
+  };
+
   const sortedTasks = useMemo(() => {
-    const incomplete = tasksForDate.filter((t) => !isTaskDone(t));
-    const complete = tasksForDate.filter((t) => isTaskDone(t));
+    const isDone = (t: PartTimeTask) =>
+      t.category === '영상제공' ? isVideoTaskDateFull(t, effectiveDate) : isTaskDone(t);
+    const incomplete = tasksForDate.filter((t) => !isDone(t));
+    const complete = tasksForDate.filter((t) => isDone(t));
     return [...incomplete, ...complete];
-  }, [tasksForDate, isTaskDone]);
+  }, [tasksForDate, isTaskDone, effectiveDate]);
 
   if (loading) {
     return (
@@ -331,7 +349,22 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
           ) : (
             <div className="space-y-4">
               {sortedTasks.map((task) => {
-                const done = isTaskDone(task);
+                const isVideoTask = task.category === '영상제공';
+                const done = isVideoTask ? isVideoTaskDateFull(task, effectiveDate) : isTaskDone(task);
+                const buttonLabel = done
+                  ? (isVideoTask ? '마감됨' : '완료됨')
+                  : isVideoTask
+                    ? '영상 제출 →'
+                    : task.applicants?.some((a) => a.selected)
+                      ? '선정완료 →'
+                      : '상세보기 →';
+                const buttonClass = done
+                  ? 'bg-gray-200 text-gray-500'
+                  : isVideoTask
+                    ? 'bg-rose-100 text-rose-700'
+                    : task.applicants?.some((a) => a.selected)
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-blue-100 text-blue-700';
                 return (
                   <div
                     key={task.id}
@@ -346,8 +379,8 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                     </button>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="font-black text-blue-600 text-base">+{task.reward.toLocaleString()}원</span>
-                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className={`px-4 py-2 rounded-xl text-sm font-black ${done ? 'bg-gray-200 text-gray-500' : task.applicants?.some((a) => a.selected) ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {done ? '완료됨' : task.applicants?.some((a) => a.selected) ? '선정완료 →' : '상세보기 →'}
+                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`)} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
+                        {buttonLabel}
                       </button>
                       {user?.role === 'admin' && (
                         <>
