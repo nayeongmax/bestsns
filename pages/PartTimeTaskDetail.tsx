@@ -251,7 +251,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     setWorkLinks(['']);
     setIsEditingWorkLinks(false);
     if (addNotif) {
-      addNotif(user.id, 'freelancer', '링크 제출 완료', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다. 수고많으셨습니다.', '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.');
+      addNotif(user.id, 'freelancer', '링크 제출 완료', '광고주 확인 후 4일 이내 수익통장에 충전됩니다. 수고많으셨습니다.', '광고주 확인 후 4일 이내 수익통장에 충전됩니다.');
     }
     if (task.applicantUserId && addNotif) {
       addNotif(task.applicantUserId, 'approval', '작업 완료', `[${task.title}] 프리랜서가 작업 링크를 제출했습니다. 마이페이지 → 알바의뢰에서 확인해 주세요.`);
@@ -310,7 +310,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     }
   };
 
-  /** 운영자: 통과 (링크 제출 후 6일 경과 시 자동 지급, 안내 문구는 4~7일 이내) */
+  /** 운영자: 통과 (4일 후 자동 지급) */
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[]; videoUrl?: string }) =>
     task?.category === '영상제공'
       ? !!a.videoUrl
@@ -320,7 +320,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
     if (!a) return;
     const now = new Date();
-    const autoAt = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000); // 6일 후 자동 지급
+    const autoAt = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000); // 4일 후 자동 지급
     const next = tasks.map((t) =>
       t.id !== task.id ? t : {
         ...t,
@@ -331,9 +331,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     );
     saveTasks(next);
     if (addNotif) {
-      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 4~7일 이내 수익통장에 ${task.reward.toLocaleString()}원이 적립됩니다.`, '4~7일 이내 수익통장에 적립됩니다.');
+      addNotif(userId, 'freelancer', '작업 통과', `[${task.title}] 작업이 통과되었습니다. 4일 이내 수익통장에 ${task.reward.toLocaleString()}원이 적립됩니다.`, '4일 이내 수익통장에 적립됩니다.');
     }
-    alert('통과 처리되었습니다. 4~7일 이내 수익통장에 지급됩니다.');
+    alert('통과 처리되었습니다. 4일 이내 자동으로 수익통장에 지급됩니다.');
   };
 
   /** 운영자: 즉시 지급 (기존 포인트 지급) - 작업건당 1회만 수익통장 입금 */
@@ -1360,20 +1360,20 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                                   </button>
                                   {a.deliveryAt && a.autoApproveAt ? (
                                     new Date(a.autoApproveAt) > new Date() ? (
-                                      <span className="text-blue-600 font-bold text-xs">4~7일 이내 자동 지급 예정</span>
+                                      <span className="text-blue-600 font-bold text-xs">
+                                        4일 이내 자동 지급 예정 ({new Date(a.autoApproveAt).toLocaleDateString('ko-KR')} 까지)
+                                      </span>
                                     ) : (
                                       <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중...</span>
                                     )
                                   ) : (
-                                    <>
-                                      <button type="button" onClick={() => handleApprovePass(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">
-                                        통과
-                                      </button>
-                                      <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
-                                        즉시 지급
-                                      </button>
-                                    </>
+                                    <button type="button" onClick={() => handleApprovePass(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">
+                                      통과
+                                    </button>
                                   )}
+                                  <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
+                                    즉시 지급
+                                  </button>
                                 </div>
                               )}
                               {paid && (

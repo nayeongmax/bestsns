@@ -365,12 +365,12 @@ export async function removePartTimeCompletedCheck(userId: string, taskId: strin
   if (error) throw error;
 }
 
-// ─── 자동 승인 (링크 제출 후 6일 경과 시 수익통장 지급) - DB 버전 ────────────────────────
-/** 6일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. DB에서 tasks/balance/history 반영 */
+// ─── 자동 승인 (통과 후 4일 경과 시 수익통장 지급) - DB 버전 ────────────────────────
+/** 4일 경과 자동 승인: autoApproveAt 지난 선정자에게 대금 지급. DB에서 tasks/balance/history 반영 */
 export async function processAutoApprovalsInDb(): Promise<boolean> {
   const tasks = await fetchPartTimeTasks();
   const now = Date.now();
-  const sixDaysMs = 6 * 24 * 60 * 60 * 1000;
+  const fourDaysMs = 4 * 24 * 60 * 60 * 1000;
   let changed = false;
   const next: PartTimeTask[] = [];
 
@@ -387,7 +387,7 @@ export async function processAutoApprovalsInDb(): Promise<boolean> {
       if (a.autoApproveAt) {
         if (new Date(a.autoApproveAt).getTime() <= now) shouldPay = true;
       } else if (t.applicantUserId && a.workLinkSubmittedAt) {
-        if (now >= new Date(a.workLinkSubmittedAt).getTime() + sixDaysMs) shouldPay = true;
+        if (now >= new Date(a.workLinkSubmittedAt).getTime() + fourDaysMs) shouldPay = true;
       }
       if (shouldPay) {
         const grossAmount = t.reward;
