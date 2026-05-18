@@ -518,13 +518,20 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     <tr><th className="px-5 py-3">날짜</th><th className="px-5 py-3">작업내역</th><th className="px-5 py-3 text-right">금액</th></tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {depositEntries.filter((e) => e.at.startsWith(settlementMonth)).map((entry) => (
-                      <tr key={entry.id} className="hover:bg-emerald-50/30">
-                        <td className="px-5 py-3 font-bold text-gray-700">{new Date(entry.at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
-                        <td className="px-5 py-3 font-black text-gray-900">{entry.label}</td>
-                        <td className="px-5 py-3 text-right font-black text-emerald-600">+{getNetAmount(entry).toLocaleString()}원</td>
-                      </tr>
-                    ))}
+                    {depositEntries.filter((e) => e.at.startsWith(settlementMonth)).map((entry) => {
+                      const matchedTask = tasks.find((t) => t.title === entry.label);
+                      return (
+                        <tr key={entry.id} className="hover:bg-emerald-50/30">
+                          <td className="px-5 py-3 font-bold text-gray-700">{new Date(entry.at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                          <td className="px-5 py-3 font-black text-gray-900">
+                            {matchedTask ? (
+                              <Link to={`/part-time/${matchedTask.id}`} className="text-emerald-700 hover:underline">{entry.label}</Link>
+                            ) : entry.label}
+                          </td>
+                          <td className="px-5 py-3 text-right font-black text-emerald-600">+{getNetAmount(entry).toLocaleString()}원</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -552,12 +559,17 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     const isRefund = entry.label?.includes('환급');
                     const isTaskEarn = entry.type === 'task' && entry.amount > 0 && !isRefund;
                     const netAmount = isTaskEarn ? Math.round(entry.amount * (1 - FREELANCER_FEE_RATE)) : entry.amount;
+                    const matchedTask = tasks.find((t) => t.title === entry.label);
                     return (
                       <li key={entry.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50">
                   <div className="flex items-center gap-3">
                     <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
                     <div>
-                      <p className="font-bold text-gray-800">{entry.label}</p>
+                      {matchedTask ? (
+                        <Link to={`/part-time/${matchedTask.id}`} className="font-bold text-emerald-700 hover:underline">{entry.label}</Link>
+                      ) : (
+                        <p className="font-bold text-gray-800">{entry.label}</p>
+                      )}
                             <p className="text-[11px] text-gray-400">{new Date(entry.at).toLocaleString('ko-KR')}</p>
                           </div>
                         </div>
