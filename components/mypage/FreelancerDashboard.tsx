@@ -82,11 +82,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     return (isSelected && hasLink) || hasPassedVideo;
   }), [tasks, user.id]);
 
-  /** 입금 내역: entry와 matchedTask로 작업 날짜를 구함 */
+  /** 입금 내역: 링크 제출 날짜 기준 */
   const getWorkDate = (matchedTask: PartTimeTask | undefined, userId: string): string | null => {
     if (!matchedTask) return null;
     const me = matchedTask.applicants.find((a) => a.userId === userId);
-    if (me?.deliveryAt) return me.deliveryAt;
     if (me?.workLinkSubmittedAt) return me.workLinkSubmittedAt;
     const myVideo = (matchedTask.videoUploads ?? []).find((v) => v.userId === userId);
     if (myVideo?.date) return myVideo.date;
