@@ -800,7 +800,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 border-t border-gray-50">
-                      <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true }} className="py-2.5 text-center bg-emerald-600 text-white font-black text-[10px] hover:bg-emerald-700 transition-all italic uppercase">내용확인</Link>
+                      <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true, initialTask: t }} className="py-2.5 text-center bg-emerald-600 text-white font-black text-[10px] hover:bg-emerald-700 transition-all italic uppercase">내용확인</Link>
                       {isVideoTask ? (
                         <Link to={`/part-time/register`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white font-black text-[10px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
                       ) : !needsSelection && selectedOne ? (
@@ -815,7 +815,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                       {!isVideoTask && selectedOne && hasWorkLinkSelected && !isPaid ? (
                         <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="py-2 bg-orange-50 text-orange-600 font-black text-[9px] hover:bg-orange-100 transition-all">수정요청</button>
                       ) : !isVideoTask && (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
-                        <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true }} className="py-2 text-center bg-amber-50 text-amber-700 font-black text-[9px] hover:bg-amber-100 transition-all">링크확인</Link>
+                        <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true, initialTask: t }} className="py-2 text-center bg-amber-50 text-amber-700 font-black text-[9px] hover:bg-amber-100 transition-all">링크확인</Link>
                       ) : (
                         <span className="py-2 text-center bg-gray-50 text-gray-300 font-bold text-[9px]">-</span>
                       )}
@@ -884,7 +884,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 mt-auto">
-                        <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true }} className="py-2.5 text-center bg-emerald-600 text-white rounded-xl font-black text-[11px] hover:bg-emerald-700 transition-all italic uppercase">내용확인</Link>
+                        <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true, initialTask: t }} className="py-2.5 text-center bg-emerald-600 text-white rounded-xl font-black text-[11px] hover:bg-emerald-700 transition-all italic uppercase">내용확인</Link>
                         {isVideoTask ? (
                           <Link to={`/part-time/register`} state={{ editTask: t }} className="py-2.5 text-center bg-gray-700 text-white rounded-xl font-black text-[11px] hover:bg-gray-800 transition-all italic uppercase">수정</Link>
                         ) : !needsSelection && selectedOne ? (
@@ -899,7 +899,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                         {!isVideoTask && selectedOne && hasWorkLinkSelected && !isPaid ? (
                           <button type="button" onClick={() => setRevisionModal({ task: t, userId: selectedOne.userId, nickname: selectedOne.nickname, text: selectedOne.revisionRequest || '' })} className="py-2 rounded-lg bg-orange-100 text-orange-700 font-black text-[10px] hover:bg-orange-200 transition-all">수정요청</button>
                         ) : !isVideoTask && (status === '작업진행' || status === '작업완료') && hasWorkLinkSelected ? (
-                          <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true }} className="py-2 text-center rounded-lg bg-amber-100 text-amber-700 font-black text-[10px] hover:bg-amber-200 transition-all">링크확인</Link>
+                          <Link to={`/part-time/${t.id}`} state={{ focusWorkLink: true, fromAdmin: true, initialTask: t }} className="py-2 text-center rounded-lg bg-amber-100 text-amber-700 font-black text-[10px] hover:bg-amber-200 transition-all">링크확인</Link>
                         ) : (
                           <span className="py-2 text-center rounded-lg bg-gray-50 text-gray-300 font-bold text-[10px]">-</span>
                         )}
@@ -996,7 +996,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
                           </button>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true }} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200">
+                          <Link to={`/part-time/${t.id}`} state={{ fromAdmin: true, initialTask: t }} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200">
                             상세확인
                           </Link>
                         </td>
