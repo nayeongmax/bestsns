@@ -58,6 +58,7 @@ export interface FreelancerEarningEntry {
   amount: number;
   label: string;
   at: string;
+  taskId?: string;
 }
 
 /** 누구나알바 작업 신청자 */

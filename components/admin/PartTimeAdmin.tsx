@@ -274,7 +274,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       for (const a of target) {
         const cur = await fetchFreelancerBalance(a.userId);
         await setFreelancerBalance(a.userId, cur + netAmount);
-        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
+        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title, task.id);
       }
       if (addNotif) {
         target.forEach((a) =>

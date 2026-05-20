@@ -548,14 +548,14 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     {[...depositEntries]
                       .filter((e) => e.at.startsWith(settlementMonth))
                       .sort((a, b) => {
-                        const taskA = tasks.find((t) => t.title === a.label);
-                        const taskB = tasks.find((t) => t.title === b.label);
+                        const taskA = a.taskId ? tasks.find((t) => t.id === a.taskId) : tasks.find((t) => t.title === a.label);
+                        const taskB = b.taskId ? tasks.find((t) => t.id === b.taskId) : tasks.find((t) => t.title === b.label);
                         const dateA = getWorkDate(taskA, user.id) ?? a.at;
                         const dateB = getWorkDate(taskB, user.id) ?? b.at;
                         return new Date(dateB).getTime() - new Date(dateA).getTime();
                       })
                       .map((entry) => {
-                        const matchedTask = tasks.find((t) => t.title === entry.label);
+                        const matchedTask = entry.taskId ? tasks.find((t) => t.id === entry.taskId) : tasks.find((t) => t.title === entry.label);
                         const workDate = getWorkDate(matchedTask, user.id);
                         return (
                           <tr key={entry.id} className="hover:bg-emerald-50/30">

@@ -242,6 +242,7 @@ function rowToEarningEntry(row: Record<string, unknown>): FreelancerEarningEntry
     amount: Number(row.amount ?? 0),
     label: row.label != null ? String(row.label) : '',
     at,
+    taskId: row.task_id != null ? String(row.task_id) : undefined,
   };
 }
 
@@ -261,7 +262,8 @@ export async function addFreelancerEarningToDb(
   id: string,
   type: 'task' | 'withdraw',
   amount: number,
-  label: string
+  label: string,
+  taskId?: string
 ): Promise<void> {
   const { error } = await supabase.from('freelancer_earnings_history').insert({
     id,
@@ -269,6 +271,7 @@ export async function addFreelancerEarningToDb(
     type,
     amount,
     label: label || null,
+    task_id: taskId ?? null,
   });
   if (error) throw error;
 }
@@ -395,7 +398,7 @@ export async function processAutoApprovalsInDb(): Promise<boolean> {
         const curBalance = await fetchFreelancerBalance(a.userId);
         await setFreelancerBalance(a.userId, curBalance + Math.max(0, netAmount));
         const entryId = `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        await addFreelancerEarningToDb(a.userId, entryId, 'task', grossAmount, t.title);
+        await addFreelancerEarningToDb(a.userId, entryId, 'task', grossAmount, t.title, t.id);
         const paidAtIso = new Date().toISOString();
         updated.paidUserIds = [...(updated.paidUserIds ?? []), a.userId];
         updated.applicants = updated.applicants.map((ap) =>
