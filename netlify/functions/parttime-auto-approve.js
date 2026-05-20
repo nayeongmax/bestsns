@@ -93,6 +93,7 @@ exports.handler = async () => {
           type: 'task',
           amount: gross,
           label: task.title,
+          task_id: task.id,
         }),
       });
 

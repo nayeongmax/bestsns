@@ -362,7 +362,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       for (const a of target) {
         const cur = await fetchFreelancerBalance(a.userId);
         await setFreelancerBalance(a.userId, cur + netAmount);
-        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
+        await addFreelancerEarningToDb(a.userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title, task.id);
       }
       if (addNotif) {
         target.forEach((a) =>
@@ -439,7 +439,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
       const cur = await fetchFreelancerBalance(userId);
       await setFreelancerBalance(userId, cur + netAmount);
-      await addFreelancerEarningToDb(userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title);
+      await addFreelancerEarningToDb(userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title, task.id);
       if (addNotif) addNotif(userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 영상 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`);
       const allPaid = [...currentPaid, userId];
       const next = tasks.map((t) => t.id !== task.id ? t : { ...t, paidUserIds: allPaid });
