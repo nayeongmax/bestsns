@@ -62,6 +62,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
+  const [settlementFilter, setSettlementFilter] = useState<'정산완료' | '미정산'>('정산완료');
 
   const myJobRequests = useMemo(() => jobRequests.filter((jr) => jr.applicantUserId === user.id), [jobRequests, user.id]);
   const myApprovedRequests = useMemo(() => myJobRequests.filter((jr) => jr.status === 'pending' && !jr.paid), [myJobRequests]);
@@ -69,6 +70,28 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const myRejectedRequests = useMemo(() => myJobRequests.filter((jr) => jr.status === 'not_selected'), [myJobRequests]);
   const myPendingReviewRequests = useMemo(() => myJobRequests.filter((jr) => jr.status === 'pending_review'), [myJobRequests]);
   const myTasksAsApplicant = useMemo(() => tasks.filter((t) => t.applicantUserId === user.id), [tasks, user.id]);
+
+  /** 미정산: 작업 완료했지만 아직 포인트 미지급 */
+  const unpaidTasks = useMemo(() => tasks.filter((t) => {
+    if (t.paidUserIds?.includes(user.id)) return false;
+    const me = t.applicants.find((a) => a.userId === user.id);
+    const isSelected = me?.selected;
+    const hasLink = (me?.workLinks?.length ?? 0) > 0 || !!me?.workLink?.trim();
+    const hasPassedVideo = t.category === '영상제공' &&
+      (t.videoUploads ?? []).some((v) => v.userId === user.id && v.status !== 'rejected');
+    return (isSelected && hasLink) || hasPassedVideo;
+  }), [tasks, user.id]);
+
+  /** 입금 내역: entry와 matchedTask로 작업 날짜를 구함 */
+  const getWorkDate = (matchedTask: PartTimeTask | undefined, userId: string): string | null => {
+    if (!matchedTask) return null;
+    const me = matchedTask.applicants.find((a) => a.userId === userId);
+    if (me?.deliveryAt) return me.deliveryAt;
+    if (me?.workLinkSubmittedAt) return me.workLinkSubmittedAt;
+    const myVideo = (matchedTask.videoUploads ?? []).find((v) => v.userId === userId);
+    if (myVideo?.date) return myVideo.date;
+    return null;
+  };
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) => (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
 
   /** 의뢰 진행 현황: 선정 후 2시간 지난 작업만 표시 */
@@ -513,22 +536,38 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               {depositEntries.filter((e) => e.at.startsWith(settlementMonth)).length === 0 ? (
                 <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 입금 내역이 없습니다.</div>
               ) : (
-                <table className="w-full text-left text-sm min-w-[320px]">
+                <table className="w-full text-left text-sm min-w-[480px]">
                   <thead className="bg-gray-50 text-xs font-black text-gray-500 uppercase">
-                    <tr><th className="px-5 py-3">날짜</th><th className="px-5 py-3">작업내역</th><th className="px-5 py-3 text-right">금액</th></tr>
+                    <tr>
+                      <th className="px-4 py-3">작업 날짜</th>
+                      <th className="px-4 py-3">작업번호 · 작업내역</th>
+                      <th className="px-4 py-3 text-right">금액</th>
+                      <th className="px-4 py-3 text-right">지급 일시</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {depositEntries.filter((e) => e.at.startsWith(settlementMonth)).map((entry) => {
                       const matchedTask = tasks.find((t) => t.title === entry.label);
+                      const workDate = getWorkDate(matchedTask, user.id);
                       return (
                         <tr key={entry.id} className="hover:bg-emerald-50/30">
-                          <td className="px-5 py-3 font-bold text-gray-700">{new Date(entry.at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
-                          <td className="px-5 py-3 font-black text-gray-900">
-                            {matchedTask ? (
-                              <Link to={`/part-time/${matchedTask.id}`} className="text-emerald-700 hover:underline">{entry.label}</Link>
-                            ) : entry.label}
+                          <td className="px-4 py-3 font-bold text-gray-700 whitespace-nowrap">
+                            {workDate
+                              ? new Date(workDate).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+                              : '-'}
                           </td>
-                          <td className="px-5 py-3 text-right font-black text-emerald-600">+{getNetAmount(entry).toLocaleString()}원</td>
+                          <td className="px-4 py-3">
+                            {matchedTask?.projectNo && (
+                              <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mr-1">{matchedTask.projectNo}</span>
+                            )}
+                            {matchedTask ? (
+                              <Link to={`/part-time/${matchedTask.id}`} state={{ initialTask: matchedTask }} className="font-black text-emerald-700 hover:underline">{entry.label}</Link>
+                            ) : <span className="font-black text-gray-900">{entry.label}</span>}
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-emerald-600 whitespace-nowrap">+{getNetAmount(entry).toLocaleString()}원</td>
+                          <td className="px-4 py-3 text-right text-xs text-gray-400 whitespace-nowrap">
+                            {new Date(entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </td>
                         </tr>
                       );
                     })}
@@ -539,51 +578,119 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
           </div>
 
       <div>
-            <h5 className="font-black text-gray-800 mb-2">수익통장 내역 (전체)</h5>
-            <div className="flex items-center gap-2 mb-3">
-              <select value={settlementMonth} onChange={(e) => setSettlementMonth(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
-                {Array.from({ length: 24 }, (_, i) => {
-                  const d = new Date();
-                  d.setMonth(d.getMonth() - i);
-                  const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                  return <option key={v} value={v}>{d.getFullYear()}년 {d.getMonth() + 1}월</option>;
-                })}
-              </select>
+            <h5 className="font-black text-gray-800 mb-3">수익통장 내역 (전체)</h5>
+            {/* 필터 탭 */}
+            <div className="flex gap-2 mb-3 flex-wrap items-center">
+              {(['정산완료', '미정산'] as const).map((f) => (
+                <button key={f} type="button" onClick={() => setSettlementFilter(f)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-black transition-all ${settlementFilter === f ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                  {f}
+                  {f === '미정산' && unpaidTasks.length > 0 && (
+                    <span className="ml-1.5 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{unpaidTasks.length}</span>
+                  )}
+                </button>
+              ))}
+              {settlementFilter === '정산완료' && (
+                <select value={settlementMonth} onChange={(e) => setSettlementMonth(e.target.value)} className="ml-auto px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-bold bg-white">
+                  {Array.from({ length: 24 }, (_, i) => {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() - i);
+                    const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    return <option key={v} value={v}>{d.getFullYear()}년 {d.getMonth() + 1}월</option>;
+                  })}
+                </select>
+              )}
             </div>
             <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white">
-              {history.filter((e) => e.at.startsWith(settlementMonth)).length === 0 ? (
-                <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 내역이 없습니다.</div>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-                  {history.filter((e) => e.at.startsWith(settlementMonth)).map((entry) => {
-                    const isRefund = entry.label?.includes('환급');
-                    const isTaskEarn = entry.type === 'task' && entry.amount > 0 && !isRefund;
-                    const netAmount = isTaskEarn ? Math.round(entry.amount * (1 - FREELANCER_FEE_RATE)) : entry.amount;
-                    const matchedTask = tasks.find((t) => t.title === entry.label);
-                    return (
-                      <li key={entry.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
-                    <div>
-                      {matchedTask ? (
-                        <Link to={`/part-time/${matchedTask.id}`} className="font-bold text-emerald-700 hover:underline">{entry.label}</Link>
-                      ) : (
-                        <p className="font-bold text-gray-800">{entry.label}</p>
-                      )}
-                            <p className="text-[11px] text-gray-400">{new Date(entry.at).toLocaleString('ko-KR')}</p>
+              {settlementFilter === '정산완료' ? (
+                history.filter((e) => e.at.startsWith(settlementMonth)).length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 내역이 없습니다.</div>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {history.filter((e) => e.at.startsWith(settlementMonth)).map((entry) => {
+                      const isRefund = entry.label?.includes('환급');
+                      const isTaskEarn = entry.type === 'task' && entry.amount > 0 && !isRefund;
+                      const netAmount = isTaskEarn ? Math.round(entry.amount * (1 - FREELANCER_FEE_RATE)) : entry.amount;
+                      const matchedTask = tasks.find((t) => t.title === entry.label);
+                      const workDate = getWorkDate(matchedTask, user.id);
+                      return (
+                        <li key={entry.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50">
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{entry.type === 'task' ? '💰' : '📤'}</span>
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {matchedTask?.projectNo && (
+                                  <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{matchedTask.projectNo}</span>
+                                )}
+                                {matchedTask ? (
+                                  <Link to={`/part-time/${matchedTask.id}`} state={{ initialTask: matchedTask }} className="font-bold text-emerald-700 hover:underline">{entry.label}</Link>
+                                ) : (
+                                  <p className="font-bold text-gray-800">{entry.label}</p>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-gray-400">
+                                {workDate
+                                  ? `작업일 ${new Date(workDate).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} · `
+                                  : ''}
+                                지급 {new Date(entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          {isTaskEarn ? (
-                            <p className="font-black text-emerald-600">받는 {entry.amount.toLocaleString()}원 / 실지급 {netAmount.toLocaleString()}원</p>
-                          ) : (
-                            <p className={`font-black ${entry.amount >= 0 ? 'text-emerald-600' : 'text-gray-500'}`}>{entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}원</p>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                          <div className="text-right shrink-0">
+                            {isTaskEarn ? (
+                              <p className="font-black text-emerald-600 text-sm">실지급 {netAmount.toLocaleString()}원</p>
+                            ) : (
+                              <p className={`font-black text-sm ${entry.amount >= 0 ? 'text-emerald-600' : 'text-gray-500'}`}>{entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}원</p>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )
+              ) : (
+                unpaidTasks.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 font-bold text-sm">미정산 작업이 없습니다.</div>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {unpaidTasks.map((t) => {
+                      const me = t.applicants.find((a) => a.userId === user.id);
+                      const isVideoTask = t.category === '영상제공';
+                      const myVideos = (t.videoUploads ?? []).filter((v) => v.userId === user.id && v.status !== 'rejected');
+                      const net = Math.round(t.reward * (1 - FREELANCER_FEE_RATE));
+                      const workDate = me?.deliveryAt ?? me?.workLinkSubmittedAt ?? myVideos[0]?.date ?? null;
+                      const hasPassed = !!me?.autoApproveAt;
+                      return (
+                        <li key={t.id} className="flex items-center justify-between px-5 py-3 hover:bg-amber-50/30">
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">⏳</span>
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {t.projectNo && (
+                                  <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{t.projectNo}</span>
+                                )}
+                                <Link to={`/part-time/${t.id}`} state={{ initialTask: t }} className="font-bold text-amber-700 hover:underline">{t.title}</Link>
+                                {isVideoTask && <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded">영상제공</span>}
+                              </div>
+                              <p className="text-[11px] text-gray-400">
+                                {workDate ? `작업일 ${new Date(workDate).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} · ` : ''}
+                                {hasPassed && me?.autoApproveAt
+                                  ? `자동지급 예정 ${new Date(me.autoApproveAt).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}`
+                                  : isVideoTask
+                                    ? `영상 ${myVideos.length}개 검토중`
+                                    : '지급 대기중'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-black text-amber-600 text-sm">+{t.reward.toLocaleString()}원</p>
+                            <p className="text-[10px] text-gray-400">실지급 {net.toLocaleString()}원</p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )
               )}
             </div>
           </div>
