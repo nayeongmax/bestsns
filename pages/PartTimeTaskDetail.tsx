@@ -33,13 +33,15 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const focusWorkLink = (location.state as { focusWorkLink?: boolean; fromAdmin?: boolean; selectedDate?: string })?.focusWorkLink;
+  const focusWorkLink = (location.state as { focusWorkLink?: boolean; fromAdmin?: boolean; selectedDate?: string; initialTask?: PartTimeTask })?.focusWorkLink;
   const fromAdmin = (location.state as { fromAdmin?: boolean })?.fromAdmin;
   const passedDate = (location.state as { selectedDate?: string } | null)?.selectedDate;
+  const initialTask = (location.state as { initialTask?: PartTimeTask } | null)?.initialTask;
   const todayStr = new Date().toISOString().slice(0, 10);
   const activeDate = passedDate || todayStr;
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
-  const [tasks, setTasks] = useState<PartTimeTask[]>([]);
+  const [tasks, setTasks] = useState<PartTimeTask[]>(initialTask ? [initialTask] : []);
+  const [loading, setLoading] = useState(!initialTask);
   const [jobRequests, setJobRequests] = useState<Awaited<ReturnType<typeof fetchPartTimeJobRequests>>>([]);
   const [isEditingWorkLinks, setIsEditingWorkLinks] = useState(false);
   const [applyComment, setApplyComment] = useState('');
@@ -68,9 +70,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
         if (!cancelled) {
           setTasks(taskList);
           setJobRequests(jrList);
+          setLoading(false);
         }
       } catch (e) {
-        if (!cancelled) console.error('PartTimeTaskDetail load:', e);
+        if (!cancelled) { console.error('PartTimeTaskDetail load:', e); setLoading(false); }
       }
     })();
     return () => { cancelled = true; };
@@ -469,10 +472,17 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   };
 
   if (!task) {
+    if (loading) {
+      return (
+        <div className="max-w-3xl mx-auto py-12 px-4 flex items-center justify-center min-h-[200px]">
+          <p className="text-gray-400 font-bold">로딩 중...</p>
+        </div>
+      );
+    }
     return (
       <div className="max-w-3xl mx-auto py-12 px-4 text-center">
         <p className="text-gray-500 font-bold">작업을 찾을 수 없습니다.</p>
-        <button onClick={() => { fromAdmin ? navigate(-1) : navigate('/part-time'); }} className="mt-4 text-emerald-600 font-black hover:underline">
+        <button onClick={() => navigate(-1)} className="mt-4 text-emerald-600 font-black hover:underline">
           목록으로
         </button>
       </div>
@@ -493,8 +503,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-black text-lg">+{task.reward.toLocaleString()}원</span>
             </div>
           </div>
-          <button onClick={() => { fromAdmin ? navigate(-1) : navigate('/part-time'); }} className="shrink-0 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-bold text-sm transition-colors">
-            {fromAdmin ? '← 이전' : '← 목록'}
+          <button onClick={() => navigate(-1)} className="shrink-0 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 font-bold text-sm transition-colors">
+            ← 목록
           </button>
         </div>
 

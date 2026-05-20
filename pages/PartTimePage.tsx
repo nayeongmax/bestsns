@@ -372,14 +372,14 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                       done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm'
                     }`}
                   >
-                    <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate } })} className="flex-1 text-left">
+                    <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className="flex-1 text-left">
                       <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
                       <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
                       <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
                     </button>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="font-black text-blue-600 text-base">+{task.reward.toLocaleString()}원</span>
-                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate } })} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
+                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
                         {buttonLabel}
                       </button>
                       {user?.role === 'admin' && (
@@ -406,7 +406,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
           </p>
         </div>
 
-        <button onClick={() => navigate('/sns')} className="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-black hover:bg-gray-200 transition-all">
+        <button onClick={() => navigate(-1)} className="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-black hover:bg-gray-200 transition-all">
           돌아가기
         </button>
       </div>
@@ -719,7 +719,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   return (
     <div className="max-w-4xl mx-auto pb-32 px-4">
       <div className="flex items-center gap-3 mb-8 sm:mb-10">
-        <button onClick={() => navigate('/part-time')} className="flex items-center gap-1.5 text-gray-400 font-bold hover:text-gray-900 transition-colors shrink-0 text-sm sm:text-base">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-gray-400 font-bold hover:text-gray-900 transition-colors shrink-0 text-sm sm:text-base">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           돌아가기
         </button>
@@ -1022,7 +1022,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
         </section>
         <div className="flex gap-4 pt-6">
           <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? (editTask ? '수정 중...' : '등록 중...') : (editTask ? '작업 수정하기' : '작업 등록하기')}</button>
-          <button type="button" onClick={() => navigate('/part-time')} className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-600 font-black hover:bg-gray-200 transition-all">취소</button>
+          <button type="button" onClick={() => navigate(-1)} className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-600 font-black hover:bg-gray-200 transition-all">취소</button>
         </div>
       </form>
     </div>
