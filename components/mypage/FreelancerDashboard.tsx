@@ -75,13 +75,15 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
   /** 미정산: 작업 완료했지만 아직 포인트 미지급 */
   const unpaidTasks = useMemo(() => tasks.filter((t) => {
+    if (t.category === '영상제공') {
+      // 영상제공: video-level 지급 추적 — 미지급(미검토) 영상이 1개 이상 있으면 표시
+      return (t.videoUploads ?? []).some(
+        (v) => v.userId === user.id && v.status !== 'rejected' && v.status !== 'paid'
+      );
+    }
     if (t.paidUserIds?.includes(user.id)) return false;
     const me = t.applicants.find((a) => a.userId === user.id);
-    const isSelected = me?.selected;
-    const hasLink = (me?.workLinks?.length ?? 0) > 0 || !!me?.workLink?.trim();
-    const hasPassedVideo = t.category === '영상제공' &&
-      (t.videoUploads ?? []).some((v) => v.userId === user.id && v.status !== 'rejected');
-    return (isSelected && hasLink) || hasPassedVideo;
+    return (me?.selected && ((me.workLinks?.length ?? 0) > 0 || !!me.workLink?.trim())) ?? false;
   }), [tasks, user.id]);
 
   /** 입금 내역: 링크 제출 날짜 기준. 없으면 작업기간 종료일로 폴백 */
@@ -141,22 +143,36 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       ? Math.round(e.amount * (1 - FREELANCER_FEE_RATE))
       : e.amount;
 
-  /** 지급 예정 행: 링크 제출했지만 아직 미지급인 작업 */
+  /** 지급 예정 행: 링크 제출했지만 아직 미지급인 작업 (영상제공은 영상별 1행) */
   const pendingRows = useMemo(() => {
-    return unpaidTasks.map((t) => {
-      const me = t.applicants.find((a) => a.userId === user.id);
-      const workDate = me?.workLinkSubmittedAt
-        ?? (t.videoUploads ?? []).find((v) => v.userId === user.id)?.date
-        ?? null;
-      return {
-        taskId: t.id,
-        task: t,
-        workDate,
-        autoApproveAt: me?.autoApproveAt ?? null,
-        gross: t.reward,
-        net: Math.round(t.reward * (1 - FREELANCER_FEE_RATE)),
-      };
-    });
+    const rows: Array<{
+      taskId: string; videoId?: string; task: PartTimeTask;
+      workDate: string | null; autoApproveAt: string | null;
+      gross: number; net: number;
+    }> = [];
+    for (const t of unpaidTasks) {
+      if (t.category === '영상제공') {
+        const myUnpaidVideos = (t.videoUploads ?? []).filter(
+          (v) => v.userId === user.id && v.status !== 'rejected' && v.status !== 'paid'
+        );
+        for (const v of myUnpaidVideos) {
+          rows.push({
+            taskId: t.id, videoId: v.id, task: t,
+            workDate: v.date ?? null, autoApproveAt: null,
+            gross: t.reward, net: Math.round(t.reward * (1 - FREELANCER_FEE_RATE)),
+          });
+        }
+      } else {
+        const me = t.applicants.find((a) => a.userId === user.id);
+        rows.push({
+          taskId: t.id, task: t,
+          workDate: me?.workLinkSubmittedAt ?? null,
+          autoApproveAt: me?.autoApproveAt ?? null,
+          gross: t.reward, net: Math.round(t.reward * (1 - FREELANCER_FEE_RATE)),
+        });
+      }
+    }
+    return rows;
   }, [unpaidTasks, user.id]);
 
   /** 입금 내역 + 지급 예정 통합 행 (작업날짜 내림차순) */
@@ -215,7 +231,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     // 링크 제출한 미지급 항목은 월 필터 없이 무조건 전부 표시
     for (const r of pendingRows) {
       rows.push({
-        id: `pending-${r.taskId}`, kind: 'pending', task: r.task,
+        id: r.videoId ? `pending-${r.taskId}-${r.videoId}` : `pending-${r.taskId}`,
+        kind: 'pending', task: r.task,
         workDate: r.workDate, sortDate: r.workDate ?? '',
         autoApproveAt: r.autoApproveAt,
         gross: r.gross, net: r.net,

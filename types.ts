@@ -210,7 +210,7 @@ export interface VideoUpload {
   fileName: string;
   uploadedAt: string; // ISO timestamp
   date: string;       // YYYY-MM-DD (daily limit 계산용)
-  status?: 'pending' | 'rejected'; // 검토중 or 반려됨 (미설정 = 검토중)
+  status?: 'pending' | 'rejected' | 'paid'; // 검토중 or 반려됨 or 지급완료 (미설정 = 검토중)
   location?: string;  // 촬영 지역 (예: 서울 강남구)
   storeName?: string; // 매장명
 }
