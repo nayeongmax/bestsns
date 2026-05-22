@@ -223,21 +223,64 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     return rows.sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
   }, [depositEntries, pendingRows, settlementMonth, tasks, user.id]);
 
-  /** 일별/월별 알바비 차트 데이터 (실지급 기준) */
+  /**
+   * 차트용: 지급완료 + 지급예정 모두 포함, 작업날짜(workDate) 기준으로 집계
+   * - depositEntries: 실제 지급된 내역 (지급일 기준 아닌 작업날짜 기준)
+   * - pendingRows: 아직 미지급이지만 링크 제출된 작업
+   */
+  const chartRows = useMemo(() => {
+    const result: Array<{ workDate: string; net: number }> = [];
+
+    for (const entry of depositEntries) {
+      if (!entry.taskId) {
+        // task_id 없는 구 데이터: 스마트 매칭
+        const candidates = tasks.filter(
+          (t) => t.title === entry.label &&
+            t.applicants.some((a) => a.userId === user.id && ((a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim()))
+        );
+        let matchedTask: PartTimeTask | undefined = candidates[0] ?? tasks.find((t) => t.title === entry.label);
+        if (candidates.length > 1) {
+          const paymentTime = new Date(entry.at).getTime();
+          let bestDiff = Infinity;
+          for (const t of candidates) {
+            const me = t.applicants.find((a) => a.userId === user.id);
+            if (!me?.workLinkSubmittedAt) continue;
+            const workTime = new Date(me.workLinkSubmittedAt).getTime();
+            if (workTime > paymentTime) continue;
+            const diff = paymentTime - workTime;
+            if (diff < bestDiff) { bestDiff = diff; matchedTask = t; }
+          }
+        }
+        const workDate = getWorkDate(matchedTask, user.id);
+        if (workDate) result.push({ workDate: workDate.slice(0, 10), net: getNetAmount(entry) });
+      } else {
+        const matchedTask = tasks.find((t) => t.id === entry.taskId);
+        const workDate = getWorkDate(matchedTask, user.id);
+        if (workDate) result.push({ workDate: workDate.slice(0, 10), net: getNetAmount(entry) });
+      }
+    }
+
+    for (const r of pendingRows) {
+      if (r.workDate) result.push({ workDate: r.workDate.slice(0, 10), net: r.net });
+    }
+
+    return result;
+  }, [depositEntries, pendingRows, tasks, user.id]);
+
+  /** 일별/월별 알바비 차트 데이터 — 작업날짜 기준 집계 */
   const chartData = useMemo(() => {
     if (chartTab === 'daily') {
       const data: { name: string; 금액: number }[] = [];
       const now = new Date();
-      // 당일 기준 이전 6일 포함 총 7일, chartWeekOffset으로 이전 주 탐색
       const baseDay = new Date(now);
       baseDay.setDate(baseDay.getDate() + chartWeekOffset * 7);
       for (let i = 6; i >= 0; i--) {
         const d = new Date(baseDay);
         d.setDate(baseDay.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        const daySum = depositEntries
-          .filter((e) => e.at.startsWith(dateStr))
-          .reduce((sum, e) => sum + getNetAmount(e), 0);
+        const daySum = chartRows
+          .filter((r) => r.workDate === dateStr)
+          .reduce((sum, r) => sum + r.net, 0);
         data.push({
           name: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`,
           금액: daySum,
@@ -249,14 +292,14 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       const year = new Date().getFullYear();
       for (let m = 0; m < 12; m++) {
         const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
-        const monthSum = depositEntries
-          .filter((e) => e.at.startsWith(prefix))
-          .reduce((sum, e) => sum + getNetAmount(e), 0);
+        const monthSum = chartRows
+          .filter((r) => r.workDate.startsWith(prefix))
+          .reduce((sum, r) => sum + r.net, 0);
         data.push({ name: `${m + 1}월`, 금액: monthSum });
       }
       return data;
     }
-  }, [chartTab, depositEntries, chartWeekOffset]);
+  }, [chartTab, chartRows, chartWeekOffset]);
 
   const refresh = async () => {
     try {
