@@ -428,21 +428,25 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     saveTasks(next);
   };
 
-  /** 운영자: 영상제공 - 영상 제출자에게 포인트 지급 */
-  const handlePayVideoUploader = async (userId: string, nickname: string) => {
+  /** 운영자: 영상제공 - 개별 영상에 포인트 지급 */
+  const handlePayVideoUploader = async (videoId: string, nickname: string) => {
     if (!task) return;
     const freshTask = tasks.find((x) => x.id === task.id);
-    const currentPaid = freshTask?.paidUserIds ?? task.paidUserIds ?? [];
-    if (currentPaid.includes(userId)) { alert('이미 지급 완료된 상태입니다.'); return; }
+    const targetVideo = (freshTask?.videoUploads ?? task.videoUploads ?? []).find((v) => v.id === videoId);
+    if (!targetVideo) { alert('영상을 찾을 수 없습니다.'); return; }
+    if (targetVideo.status === 'paid') { alert('이미 지급 완료된 상태입니다.'); return; }
     if (!confirm(`${nickname}님에게 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
     try {
+      const userId = targetVideo.userId;
       const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
       const cur = await fetchFreelancerBalance(userId);
       await setFreelancerBalance(userId, cur + netAmount);
       await addFreelancerEarningToDb(userId, `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 'task', task.reward, task.title, task.id);
       if (addNotif) addNotif(userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 영상 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`);
-      const allPaid = [...currentPaid, userId];
-      const next = tasks.map((t) => t.id !== task.id ? t : { ...t, paidUserIds: allPaid });
+      const next = tasks.map((t) => t.id !== task.id ? t : {
+        ...t,
+        videoUploads: (t.videoUploads ?? []).map((v) => v.id === videoId ? { ...v, status: 'paid' as const } : v),
+      });
       setTasks(next);
       await upsertPartTimeTasks(next);
       alert('포인트가 지급되었습니다.');
@@ -533,7 +537,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                   <p className="text-xs text-amber-600 font-bold">🔍 제출된 영상은 검토 후 포인트가 지급됩니다. 중복 제출된 영상은 반려될 수 있습니다.</p>
                   <div className="space-y-2">
                     {myUploads.map((v) => {
-                      const isPaid = task.paidUserIds?.includes(v.userId);
+                      const isPaid = v.status === 'paid';
                       const isRejected = v.status === 'rejected';
                       return (
                         <div key={v.id} className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${isRejected ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
@@ -1247,7 +1251,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 ) : (
                   <ul className="space-y-3">
                     {[...(task.videoUploads ?? [])].filter((v) => v.date === activeDate).reverse().map((v) => {
-                      const paid = task.paidUserIds?.includes(v.userId);
+                      const paid = v.status === 'paid';
                       const isRejected = v.status === 'rejected';
                       return (
                         <li key={v.id} className={`p-4 rounded-xl border ${isRejected ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'}`}>
@@ -1280,7 +1284,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                                     className="px-3 py-1.5 rounded-lg text-sm font-black bg-red-100 text-red-600 hover:bg-red-200 transition-all">
                                     반려
                                   </button>
-                                  <button type="button" onClick={() => handlePayVideoUploader(v.userId, v.nickname)}
+                                  <button type="button" onClick={() => handlePayVideoUploader(v.id, v.nickname)}
                                     className="px-3 py-1.5 rounded-lg text-sm font-black bg-emerald-600 text-white hover:bg-emerald-700 transition-all">
                                     포인트 지급
                                   </button>
