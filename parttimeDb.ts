@@ -452,28 +452,24 @@ export async function adminPayFreelancers(
   await callFreelancerAdmin({ action: 'pay', applicants });
 }
 
-/** 어드민: 출금 신청 목록 조회 (pending) */
+/** 어드민: 출금 신청 목록 조회 — Netlify 함수 대신 직접 Supabase 조회 (RLS 정책에 admin_read_withdraw 필요) */
 export async function adminFetchWithdrawals(status = 'pending'): Promise<FreelancerWithdrawRequest[]> {
-  const json = await callFreelancerAdmin({ action: 'fetchWithdrawals', status }) as { data: Record<string, unknown>[] };
-  return (json.data ?? []).map((row) => ({
-    id: String(row.id),
-    userId: String(row.user_id),
-    nickname: String(row.nickname),
-    amount: Number(row.amount ?? 0),
-    bankName: String(row.bank_name),
-    accountNo: String(row.account_no),
-    ownerName: String(row.owner_name),
-    requestedAt: row.requested_at != null ? new Date(row.requested_at as string).toISOString() : new Date().toISOString(),
-    status: (row.status as 'pending' | 'completed' | 'failed') ?? 'pending',
-  }));
+  let query = supabase.from('freelancer_withdraw_requests').select('*').order('requested_at', { ascending: false });
+  if (status !== 'all') {
+    query = query.eq('status', status);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToWithdrawRequest(row as Record<string, unknown>));
 }
 
 /** 어드민: 출금 완료 처리 */
 export async function adminCompleteWithdrawal(id: string): Promise<void> {
-  await callFreelancerAdmin({ action: 'completeWithdrawal', id });
+  await updateFreelancerWithdrawRequestStatusToDb(id, 'completed');
 }
 
 /** 어드민: 출금 실패 + 잔액 환급 */
 export async function adminFailWithdrawal(id: string, userId: string, amount: number): Promise<void> {
-  await callFreelancerAdmin({ action: 'failWithdrawal', id, userId, amount });
+  await updateFreelancerWithdrawRequestStatusToDb(id, 'failed');
+  await refundFreelancerWithdrawalInDb(userId, amount, '출금 실패 환급');
 }
