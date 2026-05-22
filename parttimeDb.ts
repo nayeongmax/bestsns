@@ -329,7 +329,7 @@ export async function refundFreelancerWithdrawalInDb(userId: string, amount: num
   await addFreelancerEarningToDb(userId, id, 'task', amount, label);
 }
 
-/** 출금 신청: 잔액 차감 + 내역 추가 + 출금 요청 행 생성 */
+/** 출금 신청: 신청 기록 먼저 저장 → 잔액 차감 (순서 중요: 잔액 차감 전에 기록 없어지는 버그 방지) */
 export async function withdrawFreelancerEarningsInDb(
   userId: string,
   amount: number,
@@ -340,11 +340,24 @@ export async function withdrawFreelancerEarningsInDb(
   if (amount < minWithdraw || amount > cur) {
     return { success: false, newBalance: cur };
   }
+
+  // 1. 출금 신청 기록 먼저 저장 (이 단계에서 실패하면 잔액은 그대로)
+  const reqId = await addFreelancerWithdrawRequestToDb({
+    userId, nickname: req.nickname, amount,
+    bankName: req.bankName, accountNo: req.accountNo, ownerName: req.ownerName,
+  });
+
+  // 2. 잔액 차감 + 내역 기록 (실패 시 출금 신청 취소 후 throw)
   const next = cur - amount;
-  await setFreelancerBalance(userId, next);
-  const entryId = `wd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  await addFreelancerEarningToDb(userId, entryId, 'withdraw', -amount, '출금 신청');
-  await addFreelancerWithdrawRequestToDb({ userId, nickname: req.nickname, amount, bankName: req.bankName, accountNo: req.accountNo, ownerName: req.ownerName });
+  try {
+    await setFreelancerBalance(userId, next);
+    const entryId = `wd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    await addFreelancerEarningToDb(userId, entryId, 'withdraw', -amount, '출금 신청');
+  } catch (e) {
+    await supabase.from('freelancer_withdraw_requests').delete().eq('id', reqId);
+    throw e;
+  }
+
   return { success: true, newBalance: next };
 }
 
