@@ -137,6 +137,62 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       ? Math.round(e.amount * (1 - FREELANCER_FEE_RATE))
       : e.amount;
 
+  /** 지급 예정 행: 링크 제출했지만 아직 미지급인 작업 */
+  const pendingRows = useMemo(() => {
+    return unpaidTasks.map((t) => {
+      const me = t.applicants.find((a) => a.userId === user.id);
+      const workDate = me?.workLinkSubmittedAt
+        ?? (t.videoUploads ?? []).find((v) => v.userId === user.id)?.date
+        ?? null;
+      return {
+        taskId: t.id,
+        task: t,
+        workDate,
+        autoApproveAt: me?.autoApproveAt ?? null,
+        gross: t.reward,
+        net: Math.round(t.reward * (1 - FREELANCER_FEE_RATE)),
+      };
+    });
+  }, [unpaidTasks, user.id]);
+
+  /** 입금 내역 + 지급 예정 통합 행 (작업날짜 내림차순) */
+  const allDepositRows = useMemo(() => {
+    const rows: Array<{
+      id: string; kind: 'paid' | 'pending';
+      task: PartTimeTask | undefined; entry?: FreelancerEarningEntry;
+      workDate: string | null; sortDate: string;
+      autoApproveAt?: string | null;
+      gross: number; net: number;
+    }> = [];
+
+    for (const entry of depositEntries.filter((e) => e.at.startsWith(settlementMonth))) {
+      const matchedTask = entry.taskId
+        ? tasks.find((t) => t.id === entry.taskId)
+        : tasks.find((t) => t.title === entry.label);
+      const rawWorkDate = getWorkDate(matchedTask, user.id);
+      // task_id 없는 구 데이터는 title 기반 매칭이 틀릴 수 있으므로
+      // workDate가 payment date보다 나중이면 신뢰 불가 → '-' 처리
+      const workDate = rawWorkDate && new Date(rawWorkDate) <= new Date(entry.at) ? rawWorkDate : null;
+      rows.push({
+        id: entry.id, kind: 'paid', entry, task: matchedTask,
+        workDate, sortDate: workDate ?? entry.at,
+        gross: entry.amount, net: getNetAmount(entry),
+      });
+    }
+
+    // 링크 제출한 미지급 항목은 월 필터 없이 무조건 전부 표시
+    for (const r of pendingRows) {
+      rows.push({
+        id: `pending-${r.taskId}`, kind: 'pending', task: r.task,
+        workDate: r.workDate, sortDate: r.workDate ?? '',
+        autoApproveAt: r.autoApproveAt,
+        gross: r.gross, net: r.net,
+      });
+    }
+
+    return rows.sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
+  }, [depositEntries, pendingRows, settlementMonth, tasks, user.id]);
+
   /** 일별/월별 알바비 차트 데이터 (실지급 기준) */
   const chartData = useMemo(() => {
     if (chartTab === 'daily') {
@@ -520,7 +576,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
           </div>
 
           <div>
-            <h5 className="font-black text-gray-800 mb-2">입금 내역</h5>
+            <div className="flex items-center justify-between mb-2">
+              <h5 className="font-black text-gray-800">입금 내역</h5>
+              <span className="text-xs text-amber-600 font-bold">지급 예정 항목은 월 구분 없이 항상 표시됩니다</span>
+            </div>
             <div className="flex items-center gap-2 mb-3">
               <select value={settlementMonth} onChange={(e) => setSettlementMonth(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
                 {Array.from({ length: 24 }, (_, i) => {
@@ -532,7 +591,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               </select>
             </div>
             <div className="rounded-2xl border border-gray-100 overflow-x-auto bg-white">
-              {depositEntries.filter((e) => e.at.startsWith(settlementMonth)).length === 0 ? (
+              {allDepositRows.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 입금 내역이 없습니다.</div>
               ) : (
                 <table className="w-full text-left text-sm min-w-[480px]">
@@ -540,45 +599,54 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     <tr>
                       <th className="px-4 py-3">작업 날짜</th>
                       <th className="px-4 py-3">작업번호 · 작업내역</th>
-                      <th className="px-4 py-3 text-right">금액</th>
+                      <th className="px-4 py-3 text-right">원금액 / 실지급액</th>
                       <th className="px-4 py-3 text-right">지급 일시</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {[...depositEntries]
-                      .filter((e) => e.at.startsWith(settlementMonth))
-                      .sort((a, b) => {
-                        const taskA = a.taskId ? tasks.find((t) => t.id === a.taskId) : tasks.find((t) => t.title === a.label);
-                        const taskB = b.taskId ? tasks.find((t) => t.id === b.taskId) : tasks.find((t) => t.title === b.label);
-                        const dateA = getWorkDate(taskA, user.id) ?? a.at;
-                        const dateB = getWorkDate(taskB, user.id) ?? b.at;
-                        return new Date(dateB).getTime() - new Date(dateA).getTime();
-                      })
-                      .map((entry) => {
-                        const matchedTask = entry.taskId ? tasks.find((t) => t.id === entry.taskId) : tasks.find((t) => t.title === entry.label);
-                        const workDate = getWorkDate(matchedTask, user.id);
-                        return (
-                          <tr key={entry.id} className="hover:bg-emerald-50/30">
-                            <td className="px-4 py-3 font-bold text-gray-700 whitespace-nowrap">
-                              {workDate
-                                ? new Date(workDate).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
-                                : '-'}
-                            </td>
-                            <td className="px-4 py-3">
-                              {matchedTask?.projectNo && (
-                                <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mr-1">{matchedTask.projectNo}</span>
-                              )}
-                              {matchedTask ? (
-                                <Link to={`/part-time/${matchedTask.id}`} state={{ initialTask: matchedTask }} className="font-black text-emerald-700 hover:underline">{entry.label}</Link>
-                              ) : <span className="font-black text-gray-900">{entry.label}</span>}
-                            </td>
-                            <td className="px-4 py-3 text-right font-black text-emerald-600 whitespace-nowrap">+{getNetAmount(entry).toLocaleString()}원</td>
-                            <td className="px-4 py-3 text-right text-xs text-gray-400 whitespace-nowrap">
-                              {new Date(entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                    {allDepositRows.map((row) => (
+                      <tr key={row.id} className={row.kind === 'pending' ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-emerald-50/30'}>
+                        <td className="px-4 py-3 font-bold text-gray-700 whitespace-nowrap">
+                          {row.workDate
+                            ? new Date(row.workDate).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+                            : '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {row.task?.projectNo && (
+                            <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mr-1">{row.task.projectNo}</span>
+                          )}
+                          {row.kind === 'pending' && (
+                            <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-1">지급 예정</span>
+                          )}
+                          {row.task ? (
+                            <Link to={`/part-time/${row.task.id}`} state={{ initialTask: row.task }} className="font-black text-emerald-700 hover:underline">
+                              {row.task.title}
+                            </Link>
+                          ) : (
+                            <span className="font-black text-gray-900">{row.entry?.label ?? '-'}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <div className="text-xs text-gray-400 font-bold">{row.gross.toLocaleString()}원</div>
+                          <div className={`font-black ${row.kind === 'pending' ? 'text-amber-500' : 'text-emerald-600'}`}>
+                            {row.kind === 'pending' ? '' : '+'}{row.net.toLocaleString()}원
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right text-xs whitespace-nowrap">
+                          {row.kind === 'paid' && row.entry ? (
+                            <span className="text-gray-400">
+                              {new Date(row.entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          ) : row.autoApproveAt ? (
+                            <span className="text-amber-500 font-bold">
+                              {new Date(row.autoApproveAt).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} 예정
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 font-bold">검토 중</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               )}
