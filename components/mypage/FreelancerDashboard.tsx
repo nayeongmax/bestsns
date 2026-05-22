@@ -63,6 +63,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [settlementFilter, setSettlementFilter] = useState<'정산완료' | '미정산'>('정산완료');
+  const [depositPage, setDepositPage] = useState(1);
+  const DEPOSIT_PAGE_SIZE = 10;
 
   const myJobRequests = useMemo(() => jobRequests.filter((jr) => jr.applicantUserId === user.id), [jobRequests, user.id]);
   const myApprovedRequests = useMemo(() => myJobRequests.filter((jr) => jr.status === 'pending' && !jr.paid), [myJobRequests]);
@@ -654,7 +656,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               <span className="text-xs text-amber-600 font-bold">지급 예정 항목은 월 구분 없이 항상 표시됩니다</span>
             </div>
             <div className="flex items-center gap-2 mb-3">
-              <select value={settlementMonth} onChange={(e) => setSettlementMonth(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
+              <select value={settlementMonth} onChange={(e) => { setSettlementMonth(e.target.value); setDepositPage(1); }} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
                 {Array.from({ length: 24 }, (_, i) => {
                   const d = new Date();
                   d.setMonth(d.getMonth() - i);
@@ -663,67 +665,96 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                 })}
               </select>
             </div>
-            <div className="rounded-2xl border border-gray-100 overflow-x-auto bg-white">
-              {allDepositRows.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 입금 내역이 없습니다.</div>
-              ) : (
-                <table className="w-full text-left text-sm min-w-[480px]">
-                  <thead className="bg-gray-50 text-xs font-black text-gray-500 uppercase">
-                    <tr>
-                      <th className="px-4 py-3">작업 날짜</th>
-                      <th className="px-4 py-3">작업번호 · 작업내역</th>
-                      <th className="px-4 py-3 text-right">원금액 / 실지급액</th>
-                      <th className="px-4 py-3 text-right">지급 일시</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {allDepositRows.map((row) => (
-                      <tr key={row.id} className={row.kind === 'pending' ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-emerald-50/30'}>
-                        <td className="px-4 py-3 font-bold text-gray-700 whitespace-nowrap">
-                          {row.workDate
-                            ? new Date(row.workDate).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
-                            : '-'}
-                        </td>
-                        <td className="px-4 py-3">
-                          {row.task?.projectNo && (
-                            <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mr-1">{row.task.projectNo}</span>
-                          )}
-                          {row.kind === 'pending' && (
-                            <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-1">지급 예정</span>
-                          )}
-                          {row.task ? (
-                            <Link to={`/part-time/${row.task.id}`} state={{ initialTask: row.task }} className="font-black text-emerald-700 hover:underline">
-                              {row.task.title}
-                            </Link>
-                          ) : (
-                            <span className="font-black text-gray-900">{row.entry?.label ?? '-'}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <div className="text-xs text-gray-400 font-bold">{row.gross.toLocaleString()}원</div>
-                          <div className={`font-black ${row.kind === 'pending' ? 'text-amber-500' : 'text-emerald-600'}`}>
-                            {row.kind === 'pending' ? '' : '+'}{row.net.toLocaleString()}원
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right text-xs whitespace-nowrap">
-                          {row.kind === 'paid' && row.entry ? (
-                            <span className="text-gray-400">
-                              {new Date(row.entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          ) : row.autoApproveAt ? (
-                            <span className="text-amber-500 font-bold">
-                              {new Date(row.autoApproveAt).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} 예정
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 font-bold">검토 중</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            {(() => {
+              const totalPages = Math.ceil(allDepositRows.length / DEPOSIT_PAGE_SIZE);
+              const pageRows = allDepositRows.slice((depositPage - 1) * DEPOSIT_PAGE_SIZE, depositPage * DEPOSIT_PAGE_SIZE);
+              return (
+                <>
+                  <div className="rounded-2xl border border-gray-100 overflow-x-auto bg-white">
+                    {allDepositRows.length === 0 ? (
+                      <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 입금 내역이 없습니다.</div>
+                    ) : (
+                      <table className="w-full text-left text-sm min-w-[480px]">
+                        <thead className="bg-gray-50 text-xs font-black text-gray-500 uppercase">
+                          <tr>
+                            <th className="px-4 py-3">작업 날짜</th>
+                            <th className="px-4 py-3">작업번호 · 작업내역</th>
+                            <th className="px-4 py-3 text-right">원금액 / 실지급액</th>
+                            <th className="px-4 py-3 text-right">지급 일시</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {pageRows.map((row) => (
+                            <tr key={row.id} className={row.kind === 'pending' ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-emerald-50/30'}>
+                              <td className="px-4 py-3 font-bold text-gray-700 whitespace-nowrap">
+                                {row.workDate
+                                  ? new Date(row.workDate).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+                                  : '-'}
+                              </td>
+                              <td className="px-4 py-3">
+                                {row.task?.projectNo && (
+                                  <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mr-1">{row.task.projectNo}</span>
+                                )}
+                                {row.kind === 'pending' && (
+                                  <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-1">지급 예정</span>
+                                )}
+                                {row.task ? (
+                                  <Link to={`/part-time/${row.task.id}`} state={{ initialTask: row.task }} className="font-black text-emerald-700 hover:underline">
+                                    {row.task.title}
+                                  </Link>
+                                ) : (
+                                  <span className="font-black text-gray-900">{row.entry?.label ?? '-'}</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap">
+                                <div className="text-xs text-gray-400 font-bold">{row.gross.toLocaleString()}원</div>
+                                <div className={`font-black ${row.kind === 'pending' ? 'text-amber-500' : 'text-emerald-600'}`}>
+                                  {row.kind === 'pending' ? '' : '+'}{row.net.toLocaleString()}원
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-right text-xs whitespace-nowrap">
+                                {row.kind === 'paid' && row.entry ? (
+                                  <span className="text-gray-400">
+                                    {new Date(row.entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                ) : row.autoApproveAt ? (
+                                  <span className="text-amber-500 font-bold">
+                                    {new Date(row.autoApproveAt).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} 예정
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 font-bold">검토 중</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-1 mt-3">
+                      <button
+                        onClick={() => setDepositPage((p) => Math.max(1, p - 1))}
+                        disabled={depositPage === 1}
+                        className="px-3 py-1.5 rounded-lg text-sm font-black bg-gray-100 text-gray-500 hover:bg-gray-200 disabled:opacity-30 transition-colors"
+                      >←</button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setDepositPage(p)}
+                          className={`w-8 h-8 rounded-lg text-sm font-black transition-colors ${depositPage === p ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                        >{p}</button>
+                      ))}
+                      <button
+                        onClick={() => setDepositPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={depositPage === totalPages}
+                        className="px-3 py-1.5 rounded-lg text-sm font-black bg-gray-100 text-gray-500 hover:bg-gray-200 disabled:opacity-30 transition-colors"
+                      >→</button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
       <div>
