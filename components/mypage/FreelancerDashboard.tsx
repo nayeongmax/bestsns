@@ -540,7 +540,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     <tr>
                       <th className="px-4 py-3">작업 날짜</th>
                       <th className="px-4 py-3">작업번호 · 작업내역</th>
-                      <th className="px-4 py-3 text-right">금액</th>
+                      <th className="px-4 py-3 text-right">원금액 / 실지급액</th>
                       <th className="px-4 py-3 text-right">지급 일시</th>
                     </tr>
                   </thead>
@@ -572,7 +572,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                                 <Link to={`/part-time/${matchedTask.id}`} state={{ initialTask: matchedTask }} className="font-black text-emerald-700 hover:underline">{entry.label}</Link>
                               ) : <span className="font-black text-gray-900">{entry.label}</span>}
                             </td>
-                            <td className="px-4 py-3 text-right font-black text-emerald-600 whitespace-nowrap">+{getNetAmount(entry).toLocaleString()}원</td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="text-xs text-gray-400 font-bold">{entry.amount.toLocaleString()}원</div>
+                              <div className="font-black text-emerald-600">+{getNetAmount(entry).toLocaleString()}원</div>
+                            </td>
                             <td className="px-4 py-3 text-right text-xs text-gray-400 whitespace-nowrap">
                               {new Date(entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                             </td>
