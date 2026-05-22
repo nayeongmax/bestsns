@@ -82,13 +82,15 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     return (isSelected && hasLink) || hasPassedVideo;
   }), [tasks, user.id]);
 
-  /** 입금 내역: 링크 제출 날짜 기준 */
+  /** 입금 내역: 링크 제출 날짜 기준. 없으면 작업기간 종료일로 폴백 */
   const getWorkDate = (matchedTask: PartTimeTask | undefined, userId: string): string | null => {
     if (!matchedTask) return null;
     const me = matchedTask.applicants.find((a) => a.userId === userId);
     if (me?.workLinkSubmittedAt) return me.workLinkSubmittedAt;
     const myVideo = (matchedTask.videoUploads ?? []).find((v) => v.userId === userId);
     if (myVideo?.date) return myVideo.date;
+    // 구 데이터 폴백: workLinkSubmittedAt 없으면 작업기간 종료일 사용
+    if (matchedTask.workPeriod?.end) return matchedTask.workPeriod.end;
     return null;
   };
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[] }) => (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim();
@@ -157,6 +159,39 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
   /** 입금 내역 + 지급 예정 통합 행 (작업날짜 내림차순) */
   const allDepositRows = useMemo(() => {
+    /**
+     * task_id가 없는 구 데이터: 제목이 같은 작업이 여러 개일 때 tasks.find()는 항상
+     * 첫 번째 작업만 반환 → 작업번호·날짜 전부 틀림.
+     * 해결: 해당 유저가 링크를 제출한 후보 중 지급일에 가장 가까운(이전) 링크제출일 작업을 선택.
+     */
+    const findMatchedTask = (entry: FreelancerEarningEntry): PartTimeTask | undefined => {
+      if (entry.taskId) return tasks.find((t) => t.id === entry.taskId);
+
+      // 유저가 링크를 제출한 같은 제목의 작업 후보
+      const candidates = tasks.filter(
+        (t) => t.title === entry.label &&
+          t.applicants.some((a) => a.userId === user.id &&
+            ((a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim()))
+      );
+
+      if (candidates.length === 0) return tasks.find((t) => t.title === entry.label);
+      if (candidates.length === 1) return candidates[0];
+
+      // 여러 후보 중 지급일 이전 가장 가까운 링크제출일 작업 선택
+      const paymentTime = new Date(entry.at).getTime();
+      let best: PartTimeTask | undefined;
+      let bestDiff = Infinity;
+      for (const t of candidates) {
+        const me = t.applicants.find((a) => a.userId === user.id);
+        if (!me?.workLinkSubmittedAt) continue;
+        const workTime = new Date(me.workLinkSubmittedAt).getTime();
+        if (workTime > paymentTime) continue; // 작업일이 지급일보다 나중이면 불가
+        const diff = paymentTime - workTime;
+        if (diff < bestDiff) { bestDiff = diff; best = t; }
+      }
+      return best ?? candidates[0];
+    };
+
     const rows: Array<{
       id: string; kind: 'paid' | 'pending';
       task: PartTimeTask | undefined; entry?: FreelancerEarningEntry;
@@ -166,13 +201,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     }> = [];
 
     for (const entry of depositEntries.filter((e) => e.at.startsWith(settlementMonth))) {
-      const matchedTask = entry.taskId
-        ? tasks.find((t) => t.id === entry.taskId)
-        : tasks.find((t) => t.title === entry.label);
-      const rawWorkDate = getWorkDate(matchedTask, user.id);
-      // task_id 없는 구 데이터는 title 기반 매칭이 틀릴 수 있으므로
-      // workDate가 payment date보다 나중이면 신뢰 불가 → '-' 처리
-      const workDate = rawWorkDate && new Date(rawWorkDate) <= new Date(entry.at) ? rawWorkDate : null;
+      const matchedTask = findMatchedTask(entry);
+      const workDate = getWorkDate(matchedTask, user.id);
       rows.push({
         id: entry.id, kind: 'paid', entry, task: matchedTask,
         workDate, sortDate: workDate ?? entry.at,
