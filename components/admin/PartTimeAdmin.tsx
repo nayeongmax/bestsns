@@ -56,20 +56,20 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // 작업·의뢰 로드 (자동 승인 포함)
       try {
         await processAutoApprovalsInDb();
-        const [taskList, jrList, withdrawList] = await Promise.all([
-          fetchPartTimeTasks(),
-          fetchPartTimeJobRequests(),
-          adminFetchWithdrawals('all'),
-        ]);
-        if (!cancelled) {
-          setTasks(taskList);
-          setJobRequests(jrList);
-          setWithdrawRequests(withdrawList);
-        }
+        const [taskList, jrList] = await Promise.all([fetchPartTimeTasks(), fetchPartTimeJobRequests()]);
+        if (!cancelled) { setTasks(taskList); setJobRequests(jrList); }
       } catch (e) {
-        if (!cancelled) console.error('PartTimeAdmin load:', e);
+        if (!cancelled) console.error('PartTimeAdmin load tasks:', e);
+      }
+      // 출금 신청 별도 로드 (실패해도 작업 목록은 유지)
+      try {
+        const withdrawList = await adminFetchWithdrawals('all');
+        if (!cancelled) setWithdrawRequests(withdrawList);
+      } catch (e) {
+        if (!cancelled) console.error('PartTimeAdmin load withdrawals:', e);
       }
     })();
     return () => { cancelled = true; };
@@ -580,8 +580,8 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
           <div>
-            <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청 (PortOne 입금 대상)</h3>
-            <p className="text-sm text-gray-500">수익통장에서 출금을 신청한 프리랜서 목록입니다. 신청일 기준 익일에 출금됩니다. 전문가정보에 등록된 통장으로 PortOne을 통해 입금 처리해 주세요.</p>
+            <h3 className="text-xl font-black text-gray-900 mb-1">프리랜서 출금 신청</h3>
+            <p className="text-sm text-gray-500">수익통장에서 출금을 신청한 프리랜서 목록입니다. 아래 계좌정보로 직접 계좌이체 후 <strong>입금 완료</strong> 버튼을 눌러주세요.</p>
           </div>
           <button
             type="button"
