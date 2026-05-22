@@ -180,7 +180,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       });
     }
 
-    for (const r of pendingRows.filter((r) => !r.workDate || r.workDate.startsWith(settlementMonth))) {
+    // 링크 제출한 미지급 항목은 월 필터 없이 무조건 전부 표시
+    for (const r of pendingRows) {
       rows.push({
         id: `pending-${r.taskId}`, kind: 'pending', task: r.task,
         workDate: r.workDate, sortDate: r.workDate ?? '',
@@ -575,7 +576,10 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
           </div>
 
           <div>
-            <h5 className="font-black text-gray-800 mb-2">입금 내역</h5>
+            <div className="flex items-center justify-between mb-2">
+              <h5 className="font-black text-gray-800">입금 내역</h5>
+              <span className="text-xs text-amber-600 font-bold">지급 예정 항목은 월 구분 없이 항상 표시됩니다</span>
+            </div>
             <div className="flex items-center gap-2 mb-3">
               <select value={settlementMonth} onChange={(e) => setSettlementMonth(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white">
                 {Array.from({ length: 24 }, (_, i) => {
