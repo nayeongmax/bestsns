@@ -291,6 +291,11 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
   /** 일별/월별 알바비 차트 데이터 — allDepositRows 기준 (입금내역과 완전히 동일한 날짜) */
   const chartData = useMemo(() => {
+    // 로컬(KST) 날짜 문자열 생성 — toISOString()은 UTC 기준이라 KST와 날짜가 달라질 수 있음
+    const toLocalDateStr = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // 검토중(pending) 항목은 차트에 반영하지 않음
+    const paidOnly = allDepositRows.filter((r) => r.kind === 'paid');
     if (chartTab === 'daily') {
       const data: { name: string; 금액: number }[] = [];
       const now = new Date();
@@ -299,8 +304,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       for (let i = 6; i >= 0; i--) {
         const d = new Date(baseDay);
         d.setDate(baseDay.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        const daySum = allDepositRows
+        const dateStr = toLocalDateStr(d);
+        const daySum = paidOnly
           .filter((r) => r.workDate?.slice(0, 10) === dateStr)
           .reduce((sum, r) => sum + r.net, 0);
         data.push({
@@ -314,7 +319,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       const year = new Date().getFullYear();
       for (let m = 0; m < 12; m++) {
         const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
-        const monthSum = allDepositRows
+        const monthSum = paidOnly
           .filter((r) => r.workDate?.startsWith(prefix))
           .reduce((sum, r) => sum + r.net, 0);
         data.push({ name: `${m + 1}월`, 금액: monthSum });
