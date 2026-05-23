@@ -14,6 +14,7 @@ import {
   FREELANCER_SETTLEMENT_FEE_RATE,
   FREELANCER_WITHHOLDING_RATE,
 } from '@/constants';
+import type { FreelancerWithdrawRequest } from '@/constants';
 import {
   fetchPartTimeTasks,
   fetchPartTimeJobRequests,
@@ -53,6 +54,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
   const [balance, setBalance] = useState(0);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [history, setHistory] = useState<FreelancerEarningEntry[]>([]);
+  const [myWithdrawRequests, setMyWithdrawRequests] = useState<FreelancerWithdrawRequest[]>([]);
   const [withdrawing, setWithdrawing] = useState(false);
   const [selectedTasks, setSelectedTasks] = useState<PartTimeTask[]>([]);
   const [chartTab, setChartTab] = useState<'daily' | 'monthly'>('daily');
@@ -360,9 +362,14 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
   const refresh = async () => {
     try {
-      const [b, h] = await Promise.all([fetchFreelancerBalance(user.id), fetchFreelancerHistory(user.id)]);
+      const [b, h, wdList] = await Promise.all([
+        fetchFreelancerBalance(user.id),
+        fetchFreelancerHistory(user.id),
+        fetchFreelancerWithdrawRequests().catch(() => [] as FreelancerWithdrawRequest[]),
+      ]);
       setBalance(b);
       setHistory(h);
+      setMyWithdrawRequests(wdList);
     } catch (e) {
       console.error('Freelancer refresh:', e);
     }
@@ -843,28 +850,55 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             </div>
             <div className="rounded-2xl border border-gray-100 overflow-hidden bg-white">
               {settlementFilter === '정산완료' ? (
-                /* 출금완료: 출금 신청 완료된 내역만 표시 */
                 (() => {
                   const withdrawEntries = history
                     .filter((e) => e.type === 'withdraw' && e.at.startsWith(settlementMonth));
+                  // entry.at 기준으로 동일 금액의 출금 요청 매칭해 status 판단
+                  const getWdStatus = (entry: FreelancerEarningEntry) => {
+                    const entryTime = new Date(entry.at).getTime();
+                    const candidates = myWithdrawRequests
+                      .filter((r) => r.amount === Math.abs(entry.amount));
+                    if (candidates.length === 0) return 'pending';
+                    const matched = candidates.sort(
+                      (a, b) => Math.abs(new Date(a.requestedAt).getTime() - entryTime)
+                              - Math.abs(new Date(b.requestedAt).getTime() - entryTime)
+                    )[0];
+                    return matched.status;
+                  };
                   return withdrawEntries.length === 0 ? (
                     <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 출금 내역이 없습니다.</div>
                   ) : (
                     <ul className="divide-y divide-gray-100">
-                      {withdrawEntries.map((entry) => (
-                        <li key={entry.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">📤</span>
-                            <div>
-                              <p className="font-bold text-gray-800">{entry.label || '출금 신청'}</p>
-                              <p className="text-[11px] text-gray-400">
-                                {new Date(entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                              </p>
+                      {withdrawEntries.map((entry) => {
+                        const wdStatus = getWdStatus(entry);
+                        return (
+                          <li key={entry.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50">
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg">{wdStatus === 'completed' ? '✅' : wdStatus === 'failed' ? '❌' : '⏳'}</span>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-bold text-gray-800">
+                                    {wdStatus === 'completed' ? '출금완료' : wdStatus === 'failed' ? '출금실패' : '출금 신청 (처리중)'}
+                                  </p>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                    wdStatus === 'completed' ? 'bg-emerald-100 text-emerald-700'
+                                    : wdStatus === 'failed' ? 'bg-red-100 text-red-600'
+                                    : 'bg-amber-100 text-amber-700'
+                                  }`}>
+                                    {wdStatus === 'completed' ? '입금 완료' : wdStatus === 'failed' ? '실패' : '대기중'}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-gray-400">
+                                  {new Date(entry.at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <p className="font-black text-gray-500 text-sm">{entry.amount.toLocaleString()}원</p>
-                        </li>
-                      ))}
+                            <p className={`font-black text-sm ${wdStatus === 'completed' ? 'text-gray-700' : wdStatus === 'failed' ? 'text-red-400 line-through' : 'text-gray-500'}`}>
+                              {entry.amount.toLocaleString()}원
+                            </p>
+                          </li>
+                        );
+                      })}
                     </ul>
                   );
                 })()
