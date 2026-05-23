@@ -255,7 +255,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       gross: number; net: number; displayNo?: string;
     }> = [];
 
-    for (const entry of depositEntries.filter((e) => e.at.startsWith(settlementMonth))) {
+    // 월 필터 없이 전체 지급 내역 — 그래프와 동일한 기준으로 날짜 계산
+    for (const entry of depositEntries) {
       const matchedTask = findMatchedTask(entry);
       const workDate = getWorkDate(matchedTask, user.id, entry);
       const displayNo = matchedTask?.category === '영상제공'
@@ -268,7 +269,6 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       });
     }
 
-    // 링크 제출한 미지급 항목은 월 필터 없이 무조건 전부 표시
     for (const r of pendingRows) {
       rows.push({
         id: r.videoId ? `pending-${r.taskId}-${r.videoId}` : `pending-${r.taskId}`,
@@ -280,53 +280,16 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     }
 
     return rows.sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime());
-  }, [depositEntries, pendingRows, settlementMonth, tasks, user.id]);
-
-  /**
-   * 차트용: 지급완료 + 지급예정 모두 포함, 작업날짜(workDate) 기준으로 집계
-   * - depositEntries: 실제 지급된 내역 (지급일 기준 아닌 작업날짜 기준)
-   * - pendingRows: 아직 미지급이지만 링크 제출된 작업
-   */
-  const chartRows = useMemo(() => {
-    const result: Array<{ workDate: string; net: number }> = [];
-
-    for (const entry of depositEntries) {
-      if (!entry.taskId) {
-        // task_id 없는 구 데이터: 스마트 매칭
-        const candidates = tasks.filter(
-          (t) => t.title === entry.label &&
-            t.applicants.some((a) => a.userId === user.id && ((a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim()))
-        );
-        let matchedTask: PartTimeTask | undefined = candidates[0] ?? tasks.find((t) => t.title === entry.label);
-        if (candidates.length > 1) {
-          const paymentTime = new Date(entry.at).getTime();
-          let bestDiff = Infinity;
-          for (const t of candidates) {
-            const me = t.applicants.find((a) => a.userId === user.id);
-            if (!me?.workLinkSubmittedAt) continue;
-            const workTime = new Date(me.workLinkSubmittedAt).getTime();
-            if (workTime > paymentTime) continue;
-            const diff = paymentTime - workTime;
-            if (diff < bestDiff) { bestDiff = diff; matchedTask = t; }
-          }
-        }
-        const workDate = getWorkDate(matchedTask, user.id, entry);
-        if (workDate) result.push({ workDate: workDate.slice(0, 10), net: getNetAmount(entry) });
-      } else {
-        const matchedTask = tasks.find((t) => t.id === entry.taskId);
-        const workDate = getWorkDate(matchedTask, user.id, entry);
-        if (workDate) result.push({ workDate: workDate.slice(0, 10), net: getNetAmount(entry) });
-      }
-    }
-
-    for (const r of pendingRows) {
-      if (r.workDate) result.push({ workDate: r.workDate.slice(0, 10), net: r.net });
-    }
-
-    return result;
   }, [depositEntries, pendingRows, tasks, user.id]);
 
-  /** 일별/월별 알바비 차트 데이터 — 작업날짜 기준 집계 */
+  /** 입금내역 테이블용: 선택된 월 + 지급예정만 표시 */
+  const depositRowsForMonth = useMemo(() => {
+    return allDepositRows.filter(
+      (row) => row.kind === 'pending' || (row.entry?.at?.startsWith(settlementMonth) ?? false)
+    );
+  }, [allDepositRows, settlementMonth]);
+
+  /** 일별/월별 알바비 차트 데이터 — allDepositRows 기준 (입금내역과 완전히 동일한 날짜) */
   const chartData = useMemo(() => {
     if (chartTab === 'daily') {
       const data: { name: string; 금액: number }[] = [];
@@ -337,8 +300,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         const d = new Date(baseDay);
         d.setDate(baseDay.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        const daySum = chartRows
-          .filter((r) => r.workDate === dateStr)
+        const daySum = allDepositRows
+          .filter((r) => r.workDate?.slice(0, 10) === dateStr)
           .reduce((sum, r) => sum + r.net, 0);
         data.push({
           name: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`,
@@ -351,14 +314,14 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       const year = new Date().getFullYear();
       for (let m = 0; m < 12; m++) {
         const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
-        const monthSum = chartRows
-          .filter((r) => r.workDate.startsWith(prefix))
+        const monthSum = allDepositRows
+          .filter((r) => r.workDate?.startsWith(prefix))
           .reduce((sum, r) => sum + r.net, 0);
         data.push({ name: `${m + 1}월`, 금액: monthSum });
       }
       return data;
     }
-  }, [chartTab, chartRows, chartWeekOffset]);
+  }, [chartTab, allDepositRows, chartWeekOffset]);
 
   const refresh = async () => {
     try {
@@ -736,12 +699,12 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               </select>
             </div>
             {(() => {
-              const totalPages = Math.ceil(allDepositRows.length / DEPOSIT_PAGE_SIZE);
-              const pageRows = allDepositRows.slice((depositPage - 1) * DEPOSIT_PAGE_SIZE, depositPage * DEPOSIT_PAGE_SIZE);
+              const totalPages = Math.ceil(depositRowsForMonth.length / DEPOSIT_PAGE_SIZE);
+              const pageRows = depositRowsForMonth.slice((depositPage - 1) * DEPOSIT_PAGE_SIZE, depositPage * DEPOSIT_PAGE_SIZE);
               return (
                 <>
                   <div className="rounded-2xl border border-gray-100 overflow-x-auto bg-white">
-                    {allDepositRows.length === 0 ? (
+                    {depositRowsForMonth.length === 0 ? (
                       <div className="p-8 text-center text-gray-400 font-bold text-sm">해당 월 입금 내역이 없습니다.</div>
                     ) : (
                       <table className="w-full text-left text-sm min-w-[480px]">
