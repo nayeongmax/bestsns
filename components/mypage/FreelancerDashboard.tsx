@@ -148,18 +148,24 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     const rows: Array<{
       taskId: string; videoId?: string; task: PartTimeTask;
       workDate: string | null; autoApproveAt: string | null;
-      gross: number; net: number;
+      gross: number; net: number; displayNo?: string;
     }> = [];
     for (const t of unpaidTasks) {
       if (t.category === '영상제공') {
-        const myUnpaidVideos = (t.videoUploads ?? []).filter(
-          (v) => v.userId === user.id && v.status !== 'rejected' && v.status !== 'paid'
+        // 제출 순서(uploadedAt)로 정렬해 고정 인덱스 부여
+        const myAllVideos = (t.videoUploads ?? [])
+          .filter((v) => v.userId === user.id)
+          .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
+        const myUnpaidVideos = myAllVideos.filter(
+          (v) => v.status !== 'rejected' && v.status !== 'paid'
         );
         for (const v of myUnpaidVideos) {
+          const idx = myAllVideos.findIndex((x) => x.id === v.id) + 1;
           rows.push({
             taskId: t.id, videoId: v.id, task: t,
             workDate: v.date ?? null, autoApproveAt: null,
             gross: t.reward, net: Math.round(t.reward * (1 - FREELANCER_FEE_RATE)),
+            displayNo: t.projectNo ? `${t.projectNo}-${idx}` : undefined,
           });
         }
       } else {
@@ -210,21 +216,38 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       return best ?? candidates[0];
     };
 
+    /** 영상제공 지급 내역: 지급 순서(entry.at)와 영상 업로드 순서(uploadedAt)를 매칭해 개별 번호 부여 */
+    const getVideoDisplayNo = (task: PartTimeTask, entryId: string): string | undefined => {
+      if (!task.projectNo) return undefined;
+      const allMyVideos = (task.videoUploads ?? [])
+        .filter((v) => v.userId === user.id)
+        .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
+      const paidEntriesForTask = depositEntries
+        .filter((e) => e.taskId === task.id)
+        .sort((a, b) => a.at.localeCompare(b.at));
+      const eIdx = paidEntriesForTask.findIndex((e) => e.id === entryId);
+      if (eIdx < 0 || eIdx >= allMyVideos.length) return task.projectNo;
+      return `${task.projectNo}-${eIdx + 1}`;
+    };
+
     const rows: Array<{
       id: string; kind: 'paid' | 'pending';
       task: PartTimeTask | undefined; entry?: FreelancerEarningEntry;
       workDate: string | null; sortDate: string;
       autoApproveAt?: string | null;
-      gross: number; net: number;
+      gross: number; net: number; displayNo?: string;
     }> = [];
 
     for (const entry of depositEntries.filter((e) => e.at.startsWith(settlementMonth))) {
       const matchedTask = findMatchedTask(entry);
       const workDate = getWorkDate(matchedTask, user.id);
+      const displayNo = matchedTask?.category === '영상제공'
+        ? getVideoDisplayNo(matchedTask, entry.id)
+        : undefined;
       rows.push({
         id: entry.id, kind: 'paid', entry, task: matchedTask,
         workDate, sortDate: workDate ?? entry.at,
-        gross: entry.amount, net: getNetAmount(entry),
+        gross: entry.amount, net: getNetAmount(entry), displayNo,
       });
     }
 
@@ -235,7 +258,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
         kind: 'pending', task: r.task,
         workDate: r.workDate, sortDate: r.workDate ?? '',
         autoApproveAt: r.autoApproveAt,
-        gross: r.gross, net: r.net,
+        gross: r.gross, net: r.net, displayNo: r.displayNo,
       });
     }
 
@@ -486,17 +509,22 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               const isVideoTask = t.category === '영상제공';
 
               if (isVideoTask) {
+                const myAllVideos = (t.videoUploads ?? [])
+                  .filter((v) => v.userId === user.id)
+                  .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
                 const myActiveVideos = (t.videoUploads ?? []).filter(
                   (v) => v.userId === user.id && v.status !== 'paid'
                 );
                 return myActiveVideos.map((v) => {
                   const isRejected = v.status === 'rejected';
+                  const videoIdx = myAllVideos.findIndex((x) => x.id === v.id) + 1;
+                  const displayNo = t.projectNo ? `${t.projectNo}-${videoIdx}` : null;
                   return (
                     <li key={v.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-rose-200">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-black text-gray-900">{t.title}</p>
-                          {t.projectNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t.projectNo}</span>}
+                          {displayNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{displayNo}</span>}
                           <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">영상제공</span>
                         </div>
                         <p className="text-xs text-gray-500">{v.date} · +{t.reward.toLocaleString()}원</p>
@@ -709,8 +737,8 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                                   : '-'}
                               </td>
                               <td className="px-4 py-3">
-                                {row.task?.projectNo && (
-                                  <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mr-1">{row.task.projectNo}</span>
+                                {(row.displayNo ?? row.task?.projectNo) && (
+                                  <span className="text-[10px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded mr-1">{row.displayNo ?? row.task?.projectNo}</span>
                                 )}
                                 {row.kind === 'pending' && (
                                   <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-1">지급 예정</span>

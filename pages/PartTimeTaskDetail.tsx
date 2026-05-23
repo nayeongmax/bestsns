@@ -557,10 +557,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
         {task.category === '영상제공' && (() => {
           const uploads = task.videoUploads ?? [];
           const activeDateUploaderIds = new Set(uploads.filter((v) => v.date === activeDate).map((v) => v.userId));
-          const myAllUploads = uploads
-            .filter((v) => v.userId === user?.id)
-            .sort((a, b) => b.date.localeCompare(a.date) || b.uploadedAt.localeCompare(a.uploadedAt));
-          const myUploads = myAllUploads.filter((v) => v.date === activeDate);
+          const myUploads = uploads.filter((v) => v.userId === user?.id && v.date === activeDate);
           const canUpload = !user ? false : !task.dailyLimit || activeDateUploaderIds.has(user.id) || activeDateUploaderIds.size < task.dailyLimit;
           return (
             <div className="space-y-6">
@@ -574,12 +571,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 </div>
               ) : null}
 
-              {/* 내 제출 영상 내역 (전체 날짜) */}
-              {myAllUploads.length > 0 && (
+              {/* 내 제출 영상 목록 (이 날짜) */}
+              {myUploads.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-black text-gray-700">내 제출 영상 내역 ({myAllUploads.length}개)</p>
+                  <p className="text-sm font-black text-gray-700">내가 제출한 영상 ({myUploads.length}개)</p>
                   <div className="space-y-2">
-                    {myAllUploads.map((v) => {
+                    {myUploads.map((v) => {
                       const isPaid = v.status === 'paid';
                       const isRejected = v.status === 'rejected';
                       const isPending = !v.status || v.status === 'pending';
