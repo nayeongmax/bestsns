@@ -86,22 +86,21 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     return (me?.selected && ((me.workLinks?.length ?? 0) > 0 || !!me.workLink?.trim())) ?? false;
   }), [tasks, user.id]);
 
-  /** 입금 내역: 링크 제출 날짜 기준. 영상제공은 지급 순서로 영상 매칭 */
+  /** 입금 내역: 링크 제출 날짜 기준. 영상제공은 지급 순서로 날짜 매칭 */
   const getWorkDate = (matchedTask: PartTimeTask | undefined, userId: string, entry?: FreelancerEarningEntry): string | null => {
     if (!matchedTask) return null;
 
-    // 영상제공: 지급(entry.at) 순서와 영상 업로드(uploadedAt) 순서를 매칭해 정확한 작업날짜 반환
+    // 영상제공: 지급일 순서(n번째 지급) → 날짜 순서(n번째 날짜)로 매칭
     if (matchedTask.category === '영상제공' && entry?.taskId === matchedTask.id) {
-      const allMyVideos = (matchedTask.videoUploads ?? [])
-        .filter((v) => v.userId === userId)
-        .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
-      if (allMyVideos.length > 0) {
+      const allDates = [...new Set(
+        (matchedTask.videoUploads ?? []).filter((v) => v.userId === userId).map((v) => v.date)
+      )].sort();
+      if (allDates.length > 0) {
         const paidEntriesForTask = depositEntries
           .filter((e) => e.taskId === matchedTask.id)
           .sort((a, b) => a.at.localeCompare(b.at));
         const eIdx = paidEntriesForTask.findIndex((e) => e.id === entry.id);
-        const matched = allMyVideos[eIdx >= 0 ? eIdx : 0];
-        return matched?.date ?? null;
+        return allDates[eIdx >= 0 ? Math.min(eIdx, allDates.length - 1) : 0] ?? null;
       }
     }
 
@@ -167,20 +166,21 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     }> = [];
     for (const t of unpaidTasks) {
       if (t.category === '영상제공') {
-        // 제출 순서(uploadedAt)로 정렬해 고정 인덱스 부여
-        const myAllVideos = (t.videoUploads ?? [])
-          .filter((v) => v.userId === user.id)
-          .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
-        const myUnpaidVideos = myAllVideos.filter(
-          (v) => v.status !== 'rejected' && v.status !== 'paid'
-        );
-        for (const v of myUnpaidVideos) {
-          const idx = myAllVideos.findIndex((x) => x.id === v.id) + 1;
+        // 영상제공: 날짜별 1회 지급 → pending row도 날짜별 1개
+        const myAllVideos = (t.videoUploads ?? []).filter((v) => v.userId === user.id);
+        const allDates = [...new Set(myAllVideos.map((v) => v.date))].sort();
+        const pendingDates = [...new Set(
+          myAllVideos.filter((v) => v.status !== 'rejected' && v.status !== 'paid').map((v) => v.date)
+        )].sort();
+        for (const date of pendingDates) {
+          const dateIdx = allDates.indexOf(date) + 1;
           rows.push({
-            taskId: t.id, videoId: v.id, task: t,
-            workDate: v.date ?? null, autoApproveAt: null,
+            taskId: t.id,
+            videoId: myAllVideos.find((v) => v.date === date)?.id,
+            task: t,
+            workDate: date, autoApproveAt: null,
             gross: t.reward, net: Math.round(t.reward * (1 - FREELANCER_FEE_RATE)),
-            displayNo: t.projectNo ? `${t.projectNo}-${idx}` : undefined,
+            displayNo: t.projectNo ? `${t.projectNo}-${dateIdx}` : undefined,
           });
         }
       } else {
@@ -231,17 +231,17 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
       return best ?? candidates[0];
     };
 
-    /** 영상제공 지급 내역: 지급 순서(entry.at)와 영상 업로드 순서(uploadedAt)를 매칭해 개별 번호 부여 */
+    /** 영상제공 지급 내역: 지급 순서(n번째) → 날짜 순서(n번째 날짜)로 번호 부여 */
     const getVideoDisplayNo = (task: PartTimeTask, entryId: string): string | undefined => {
       if (!task.projectNo) return undefined;
-      const allMyVideos = (task.videoUploads ?? [])
-        .filter((v) => v.userId === user.id)
-        .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
+      const allDates = [...new Set(
+        (task.videoUploads ?? []).filter((v) => v.userId === user.id).map((v) => v.date)
+      )].sort();
       const paidEntriesForTask = depositEntries
         .filter((e) => e.taskId === task.id)
         .sort((a, b) => a.at.localeCompare(b.at));
       const eIdx = paidEntriesForTask.findIndex((e) => e.id === entryId);
-      if (eIdx < 0 || eIdx >= allMyVideos.length) return task.projectNo;
+      if (eIdx < 0 || eIdx >= allDates.length) return task.projectNo;
       return `${task.projectNo}-${eIdx + 1}`;
     };
 
@@ -524,40 +524,43 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               const isVideoTask = t.category === '영상제공';
 
               if (isVideoTask) {
-                const myAllVideos = (t.videoUploads ?? [])
-                  .filter((v) => v.userId === user.id)
-                  .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
-                const myActiveVideos = (t.videoUploads ?? []).filter(
-                  (v) => v.userId === user.id && v.status !== 'paid'
-                );
-                return myActiveVideos.map((v) => {
-                  const isRejected = v.status === 'rejected';
-                  const videoIdx = myAllVideos.findIndex((x) => x.id === v.id) + 1;
-                  const displayNo = t.projectNo ? `${t.projectNo}-${videoIdx}` : null;
+                // 날짜별 1회 지급 → 진행중인 작업도 날짜별 1개 항목
+                const myAllVideos = (t.videoUploads ?? []).filter((v) => v.userId === user.id);
+                const allDates = [...new Set(myAllVideos.map((v) => v.date))].sort();
+                const activeDates = [...new Set(
+                  myAllVideos.filter((v) => v.status !== 'paid').map((v) => v.date)
+                )].sort();
+                return activeDates.map((date) => {
+                  const dateVideos = myAllVideos.filter((v) => v.date === date);
+                  const hasPending = dateVideos.some((v) => !v.status || v.status === 'pending');
+                  const isAllRejected = !hasPending;
+                  const dateIdx = allDates.indexOf(date) + 1;
+                  const displayNo = t.projectNo ? `${t.projectNo}-${dateIdx}` : null;
+                  const firstVideo = dateVideos[0];
                   return (
-                    <li key={v.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-rose-200">
+                    <li key={`${t.id}-${date}`} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-rose-200">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-black text-gray-900">{t.title}</p>
                           {displayNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{displayNo}</span>}
                           <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">영상제공</span>
                         </div>
-                        <p className="text-xs text-gray-500">{v.date} · +{t.reward.toLocaleString()}원</p>
-                        {(v.location || v.storeName) && (
-                          <p className="text-xs text-gray-400">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
+                        <p className="text-xs text-gray-500">{date} · 영상 {dateVideos.length}개 · +{t.reward.toLocaleString()}원</p>
+                        {(firstVideo?.location || firstVideo?.storeName) && (
+                          <p className="text-xs text-gray-400">📍 {[firstVideo.location, firstVideo.storeName].filter(Boolean).join(' · ')}</p>
                         )}
-                        {isRejected ? (
-                          <p className="text-xs text-red-500 font-bold mt-1">❌ 반려됨 · 수정 후 재제출해 주세요.</p>
+                        {isAllRejected ? (
+                          <p className="text-xs text-red-500 font-bold mt-1">❌ 반려됨 · 재제출해 주세요.</p>
                         ) : (
                           <p className="text-xs text-blue-600 font-bold mt-1">🔍 검토 후 포인트가 지급됩니다.</p>
                         )}
                       </div>
                       <Link
                         to={`/part-time/${t.id}`}
-                        state={{ selectedDate: v.date }}
+                        state={{ selectedDate: date }}
                         className="shrink-0 px-4 py-2 rounded-lg bg-rose-100 text-rose-700 font-black text-sm hover:bg-rose-200"
                       >
-                        {isRejected ? '재제출' : '확인/수정'}
+                        {isAllRejected ? '재제출' : '확인/수정'}
                       </Link>
                     </li>
                   );
