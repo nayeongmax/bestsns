@@ -469,16 +469,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     saveTasks(next);
   };
 
-  /** 운영자: 영상제공 - 개별 영상에 포인트 지급 */
-  const handlePayVideoUploader = async (videoId: string, nickname: string) => {
+  /** 운영자: 영상제공 - 해당 날짜에 제출한 영상 전체 지급 (1인 1일 1회) */
+  const handlePayVideoUploader = async (userId: string, nickname: string, date: string) => {
     if (!task) return;
     const freshTask = tasks.find((x) => x.id === task.id);
-    const targetVideo = (freshTask?.videoUploads ?? task.videoUploads ?? []).find((v) => v.id === videoId);
-    if (!targetVideo) { alert('영상을 찾을 수 없습니다.'); return; }
-    if (targetVideo.status === 'paid') { alert('이미 지급 완료된 상태입니다.'); return; }
-    if (!confirm(`${nickname}님에게 ${task.reward.toLocaleString()}원을 지급합니다.`)) return;
+    const dateVideos = (freshTask?.videoUploads ?? task.videoUploads ?? []).filter(
+      (v) => v.userId === userId && v.date === date
+    );
+    if (dateVideos.some((v) => v.status === 'paid')) { alert('이미 지급 완료된 상태입니다.'); return; }
+    const toPay = dateVideos.filter((v) => v.status !== 'rejected');
+    if (toPay.length === 0) { alert('지급할 영상이 없습니다. (전부 반려됨)'); return; }
+    if (!confirm(`${nickname}님의 ${date} 제출 영상 ${toPay.length}개에 대해\n${task.reward.toLocaleString()}원을 지급합니다.`)) return;
     try {
-      const userId = targetVideo.userId;
       const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
       const cur = await fetchFreelancerBalance(userId);
       await setFreelancerBalance(userId, cur + netAmount);
@@ -486,7 +488,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       if (addNotif) addNotif(userId, 'freelancer', '포인트 지급 완료', `[${task.title}] 영상 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`);
       const next = tasks.map((t) => t.id !== task.id ? t : {
         ...t,
-        videoUploads: (t.videoUploads ?? []).map((v) => v.id === videoId ? { ...v, status: 'paid' as const } : v),
+        videoUploads: (t.videoUploads ?? []).map((v) =>
+          v.userId === userId && v.date === date && v.status !== 'rejected'
+            ? { ...v, status: 'paid' as const }
+            : v
+        ),
       });
       setTasks(next);
       await upsertPartTimeTasks(next);
@@ -1337,61 +1343,90 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 {(task.videoUploads ?? []).filter((v) => v.date === activeDate).length === 0 ? (
                   <p className="text-gray-500 py-4">해당 날짜({activeDate})에 제출된 영상이 없습니다.</p>
                 ) : (
-                  <ul className="space-y-3">
-                    {[...(task.videoUploads ?? [])].filter((v) => v.date === activeDate).reverse().map((v) => {
-                      const paid = v.status === 'paid';
-                      const isRejected = v.status === 'rejected';
-                      return (
-                        <li key={v.id} className={`p-4 rounded-xl border ${isRejected ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'}`}>
-                          <div className="flex items-start justify-between gap-4 flex-wrap">
-                            <div>
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <p className="font-black text-gray-800">{v.nickname}</p>
-                                {paid ? (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">✅ 지급완료</span>
-                                ) : isRejected ? (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-600">❌ 반려됨</span>
-                                ) : (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">🔍 검토중</span>
+                  <ul className="space-y-4">
+                    {(() => {
+                      const dateVideos = (task.videoUploads ?? []).filter((v) => v.date === activeDate);
+                      const userMap = new Map<string, typeof dateVideos>();
+                      for (const v of dateVideos) {
+                        if (!userMap.has(v.userId)) userMap.set(v.userId, []);
+                        userMap.get(v.userId)!.push(v);
+                      }
+                      return [...userMap.entries()].map(([uid, videos]) => {
+                        const nickname = videos[0].nickname;
+                        const isPaid = videos.some((v) => v.status === 'paid');
+                        const hasPending = videos.some((v) => !v.status || v.status === 'pending');
+                        return (
+                          <li key={uid} className="p-4 rounded-xl border bg-gray-50 border-gray-100">
+                            {/* 사용자 헤더 + 지급 버튼 */}
+                            <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-black text-gray-800">{nickname}</p>
+                                  {isPaid ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">✅ 지급완료</span>
+                                  ) : hasPending ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">🔍 검토중</span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-600">❌ 전부 반려됨</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-400">영상 {videos.length}개 제출 · 지급액 {task.reward.toLocaleString()}원 (1일 1회)</p>
+                              </div>
+                              <div className="flex gap-2 shrink-0">
+                                {!isPaid && hasPending && (
+                                  <button type="button"
+                                    onClick={() => handlePayVideoUploader(uid, nickname, activeDate)}
+                                    className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white hover:bg-emerald-700 transition-all">
+                                    포인트 지급 ({task.reward.toLocaleString()}원)
+                                  </button>
+                                )}
+                                {isPaid && (
+                                  <span className="px-3 py-2 rounded-lg text-xs font-black bg-gray-100 text-gray-500">✓ {task.reward.toLocaleString()}원 지급 완료</span>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-400">{v.date} {v.uploadedAt.slice(11, 16)}</p>
-                              {(v.location || v.storeName) && (
-                                <p className="text-xs font-bold text-gray-700">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
-                              )}
-                              <p className="text-sm text-gray-600 max-w-xs truncate">🎬 {v.fileName}</p>
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" download={v.fileName}
-                                className="px-3 py-1.5 rounded-lg text-sm font-black bg-blue-600 text-white hover:bg-blue-700 transition-all">
-                                ⬇ 다운로드
-                              </a>
-                              {!paid && !isRejected && (
-                                <>
-                                  <button type="button" onClick={() => handleRejectVideo(v.id)}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-black bg-red-100 text-red-600 hover:bg-red-200 transition-all">
-                                    반려
-                                  </button>
-                                  <button type="button" onClick={() => handlePayVideoUploader(v.id, v.nickname)}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-black bg-emerald-600 text-white hover:bg-emerald-700 transition-all">
-                                    포인트 지급
-                                  </button>
-                                </>
-                              )}
-                              {isRejected && (
-                                <button type="button" onClick={() => handleUnrejectVideo(v.id)}
-                                  className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
-                                  반려 취소
-                                </button>
-                              )}
-                              {paid && (
-                                <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-100 text-gray-500">✓ 지급 완료</span>
-                              )}
+                            {/* 영상 목록 */}
+                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                              {videos.map((v) => {
+                                const isRejected = v.status === 'rejected';
+                                const vPaid = v.status === 'paid';
+                                return (
+                                  <div key={v.id} className={`flex items-start justify-between gap-3 p-2.5 rounded-lg ${isRejected ? 'bg-red-50 border border-red-100' : vPaid ? 'bg-emerald-50 border border-emerald-100' : 'bg-white border border-gray-100'}`}>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-bold text-gray-700 truncate">🎬 {v.fileName}</p>
+                                      {(v.location || v.storeName) && (
+                                        <p className="text-xs text-gray-500">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
+                                      )}
+                                      <p className="text-[10px] text-gray-400">{v.uploadedAt.slice(11, 16)}</p>
+                                      {isRejected && <span className="text-[10px] font-black text-red-500">❌ 반려됨</span>}
+                                      {vPaid && <span className="text-[10px] font-black text-emerald-600">✅ 지급됨</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" download={v.fileName}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700 transition-all">
+                                        ⬇ 다운로드
+                                      </a>
+                                      {!isRejected && !vPaid && (
+                                        <button type="button" onClick={() => handleRejectVideo(v.id)}
+                                          className="px-3 py-1.5 rounded-lg text-xs font-black bg-red-100 text-red-600 hover:bg-red-200 transition-all">
+                                          반려
+                                        </button>
+                                      )}
+                                      {isRejected && (
+                                        <button type="button" onClick={() => handleUnrejectVideo(v.id)}
+                                          className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+                                          반려 취소
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          </div>
-                        </li>
-                      );
-                    })}
+                          </li>
+                        );
+                      });
+                    })()}
                   </ul>
                 )}
               </>
