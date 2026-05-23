@@ -58,6 +58,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState('');
   const [showDailyLimitModal, setShowDailyLimitModal] = useState(false);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [replaceVideoFile, setReplaceVideoFile] = useState<File | null>(null);
+  const [isReplacingVideo, setIsReplacingVideo] = useState(false);
 
   const task = tasks.find((t) => t.id === taskId);
 
@@ -313,6 +316,44 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     }
   };
 
+  /** 프리랜서: 검토중 영상 파일 교체 */
+  const handleReplaceVideo = async (oldVideoId: string) => {
+    if (!user || !task || !replaceVideoFile) return;
+    const oldVideo = (task.videoUploads ?? []).find((v) => v.id === oldVideoId);
+    if (!oldVideo) return;
+    setIsReplacingVideo(true);
+    try {
+      const file = replaceVideoFile;
+      const ext = file.name.split('.').pop() ?? 'mp4';
+      const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const path = `${task.id}/${user.id}_${uploadId}.${ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('parttime-videos')
+        .upload(path, file, { upsert: false, cacheControl: '3600' });
+      if (uploadError) throw new Error(uploadError.message);
+      const { data: { publicUrl } } = supabase.storage.from('parttime-videos').getPublicUrl(uploadData.path);
+      const next = tasks.map((t) =>
+        t.id !== task.id ? t : {
+          ...t,
+          videoUploads: (t.videoUploads ?? []).map((v) =>
+            v.id !== oldVideoId ? v : {
+              ...v, videoUrl: publicUrl, fileName: file.name,
+              uploadedAt: new Date().toISOString(), status: undefined,
+            }
+          ),
+        }
+      );
+      saveTasks(next);
+      setEditingVideoId(null);
+      setReplaceVideoFile(null);
+      alert('영상이 교체되었습니다. 검토 후 포인트가 지급됩니다.');
+    } catch (err) {
+      alert('영상 교체에 실패했습니다.\n' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsReplacingVideo(false);
+    }
+  };
+
   /** 운영자: 통과 (4일 후 자동 지급) */
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[]; videoUrl?: string }) =>
     task?.category === '영상제공'
@@ -516,7 +557,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
         {task.category === '영상제공' && (() => {
           const uploads = task.videoUploads ?? [];
           const activeDateUploaderIds = new Set(uploads.filter((v) => v.date === activeDate).map((v) => v.userId));
-          const myUploads = uploads.filter((v) => v.userId === user?.id && v.date === activeDate);
+          const myAllUploads = uploads
+            .filter((v) => v.userId === user?.id)
+            .sort((a, b) => b.date.localeCompare(a.date) || b.uploadedAt.localeCompare(a.uploadedAt));
+          const myUploads = myAllUploads.filter((v) => v.date === activeDate);
           const canUpload = !user ? false : !task.dailyLimit || activeDateUploaderIds.has(user.id) || activeDateUploaderIds.size < task.dailyLimit;
           return (
             <div className="space-y-6">
@@ -530,36 +574,83 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 </div>
               ) : null}
 
-              {/* 내 제출 영상 목록 */}
-              {myUploads.length > 0 && (
+              {/* 내 제출 영상 내역 (전체 날짜) */}
+              {myAllUploads.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-black text-gray-700">내가 제출한 영상 ({myUploads.length}개)</p>
-                  <p className="text-xs text-amber-600 font-bold">🔍 제출된 영상은 검토 후 포인트가 지급됩니다. 중복 제출된 영상은 반려될 수 있습니다.</p>
+                  <p className="text-sm font-black text-gray-700">내 제출 영상 내역 ({myAllUploads.length}개)</p>
                   <div className="space-y-2">
-                    {myUploads.map((v) => {
+                    {myAllUploads.map((v) => {
                       const isPaid = v.status === 'paid';
                       const isRejected = v.status === 'rejected';
+                      const isPending = !v.status || v.status === 'pending';
+                      const isEditing = editingVideoId === v.id;
                       return (
-                        <div key={v.id} className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${isRejected ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-gray-800 truncate">🎬 {v.fileName}</p>
-                            {(v.location || v.storeName) && (
-                              <p className="text-xs font-bold text-gray-600">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
-                            )}
-                            <p className="text-[10px] text-gray-400">{v.date} {v.uploadedAt.slice(11, 16)}</p>
-                            {isPaid ? (
-                              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">✅ 포인트 지급 완료</span>
-                            ) : isRejected ? (
-                              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-600">❌ 반려됨</span>
-                            ) : (
-                              <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">🔍 검토중</span>
-                            )}
+                        <div key={v.id} className={`flex flex-col gap-2 p-3 rounded-xl border ${isRejected ? 'bg-red-50 border-red-200' : isPaid ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-200'}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-gray-800 truncate">🎬 {v.fileName}</p>
+                              {(v.location || v.storeName) && (
+                                <p className="text-xs font-bold text-gray-600">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
+                              )}
+                              <p className="text-[10px] text-gray-400">{v.date} {v.uploadedAt.slice(11, 16)}</p>
+                              {isPaid ? (
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">✅ 포인트 지급 완료</span>
+                              ) : isRejected ? (
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-600">❌ 반려됨</span>
+                              ) : (
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">🔍 검토중</span>
+                              )}
+                            </div>
+                            <div className="flex gap-2 shrink-0 flex-wrap">
+                              {!isRejected && (
+                                <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" download={v.fileName}
+                                  className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-black hover:bg-blue-700">
+                                  ⬇ 다운로드
+                                </a>
+                              )}
+                              {isPending && !isEditing && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setEditingVideoId(v.id); setReplaceVideoFile(null); }}
+                                  className="px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-black hover:bg-amber-200"
+                                >
+                                  수정
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          {!isRejected && (
-                            <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" download={v.fileName}
-                              className="shrink-0 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-black hover:bg-blue-700">
-                              ⬇ 다운로드
-                            </a>
+                          {/* 영상 교체 폼 */}
+                          {isPending && isEditing && (
+                            <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 space-y-2">
+                              <p className="text-xs font-black text-amber-700">교체할 영상 파일을 선택하세요</p>
+                              <label className="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed border-amber-300 cursor-pointer hover:border-amber-500 bg-white">
+                                <span className="text-sm font-bold text-gray-700 truncate">{replaceVideoFile ? replaceVideoFile.name : '파일 선택 (MP4, MOV 등)'}</span>
+                                <input type="file" accept="video/*" className="hidden"
+                                  onChange={(e) => setReplaceVideoFile(e.target.files?.[0] ?? null)} />
+                                <span className="shrink-0 text-xs font-black text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">파일 선택</span>
+                              </label>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleReplaceVideo(v.id)}
+                                  disabled={!replaceVideoFile || isReplacingVideo}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-black bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50"
+                                >
+                                  {isReplacingVideo ? '교체 중...' : '영상 교체하기'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setEditingVideoId(null); setReplaceVideoFile(null); }}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          {/* 반려됨: 재제출 안내 */}
+                          {isRejected && (
+                            <p className="text-xs text-red-600 font-bold">아래 제출 양식에서 새 영상을 제출해 주세요.</p>
                           )}
                         </div>
                       );

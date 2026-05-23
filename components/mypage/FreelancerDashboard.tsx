@@ -482,43 +482,43 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
           <h4 className="font-black text-gray-800 mb-3">진행중인 작업</h4>
           <p className="text-sm text-gray-500 mb-3">작업 완료 후 링크를 제출하거나 영상을 업로드하면 운영자 확인 후 수익통장에 알바비가 적립됩니다.</p>
           <ul className="space-y-2">
-            {selectedTasks.map((t) => {
+            {selectedTasks.flatMap((t) => {
               const isVideoTask = t.category === '영상제공';
 
               if (isVideoTask) {
-                const myVideos = (t.videoUploads ?? []).filter((v) => v.userId === user.id);
-                const pendingCount = myVideos.filter((v) => !v.status || v.status === 'pending').length;
-                const rejectedCount = myVideos.filter((v) => v.status === 'rejected').length;
-                const videoStatus = myVideos.length === 0
-                  ? '영상 없음'
-                  : rejectedCount > 0 && pendingCount === 0
-                    ? `반려됨 (${rejectedCount}개)`
-                    : pendingCount > 0
-                      ? `검토중 (${pendingCount}개)`
-                      : '지급완료';
-                return (
-                  <li key={t.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-rose-200">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-black text-gray-900">{t.title}</p>
-                        {t.projectNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t.projectNo}</span>}
-                        <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">영상제공</span>
-                      </div>
-                      <p className="text-xs text-gray-500">+{t.reward.toLocaleString()}원/건 · {videoStatus}</p>
-                      {pendingCount > 0 && (
-                        <p className="text-xs text-blue-600 font-bold mt-1">검토 후 포인트가 지급됩니다.</p>
-                      )}
-                      {rejectedCount > 0 && (
-                        <p className="text-xs text-red-500 font-bold mt-1">반려된 영상이 있습니다. 다시 제출해 주세요.</p>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                      <Link to={`/part-time/${t.id}`} className="px-4 py-2 rounded-lg bg-rose-100 text-rose-700 font-black text-sm hover:bg-rose-200">
-                        상세보기
-                      </Link>
-                    </div>
-                  </li>
+                const myActiveVideos = (t.videoUploads ?? []).filter(
+                  (v) => v.userId === user.id && v.status !== 'paid'
                 );
+                return myActiveVideos.map((v) => {
+                  const isRejected = v.status === 'rejected';
+                  return (
+                    <li key={v.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-rose-200">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-black text-gray-900">{t.title}</p>
+                          {t.projectNo && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{t.projectNo}</span>}
+                          <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">영상제공</span>
+                        </div>
+                        <p className="text-xs text-gray-500">{v.date} · +{t.reward.toLocaleString()}원</p>
+                        {(v.location || v.storeName) && (
+                          <p className="text-xs text-gray-400">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
+                        )}
+                        {isRejected ? (
+                          <p className="text-xs text-red-500 font-bold mt-1">❌ 반려됨 · 수정 후 재제출해 주세요.</p>
+                        ) : (
+                          <p className="text-xs text-blue-600 font-bold mt-1">🔍 검토 후 포인트가 지급됩니다.</p>
+                        )}
+                      </div>
+                      <Link
+                        to={`/part-time/${t.id}`}
+                        state={{ selectedDate: v.date }}
+                        className="shrink-0 px-4 py-2 rounded-lg bg-rose-100 text-rose-700 font-black text-sm hover:bg-rose-200"
+                      >
+                        {isRejected ? '재제출' : '확인/수정'}
+                      </Link>
+                    </li>
+                  );
+                });
               }
 
               const me = t.applicants.find((a) => a.userId === user.id);
@@ -535,7 +535,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
               const statusDesc = hasLink && !t.paidUserIds?.includes(user.id) && !hasRevision
                 ? '광고주 확인 후 4~7일이내 수익통장에 충전됩니다.'
                 : null;
-              return (
+              return [
                 <li key={t.id} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-white border border-gray-100 hover:border-emerald-200">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -575,7 +575,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                     )}
                   </div>
                 </li>
-              );
+              ];
             })}
           </ul>
         </div>
@@ -716,7 +716,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                                   <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-1">지급 예정</span>
                                 )}
                                 {row.task ? (
-                                  <Link to={`/part-time/${row.task.id}`} state={{ initialTask: row.task }} className="font-black text-emerald-700 hover:underline">
+                                  <Link to={`/part-time/${row.task.id}`} state={{ initialTask: row.task, selectedDate: row.workDate?.slice(0, 10) }} className="font-black text-emerald-700 hover:underline">
                                     {row.task.title}
                                   </Link>
                                 ) : (
