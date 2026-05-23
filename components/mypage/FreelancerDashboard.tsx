@@ -86,14 +86,29 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
     return (me?.selected && ((me.workLinks?.length ?? 0) > 0 || !!me.workLink?.trim())) ?? false;
   }), [tasks, user.id]);
 
-  /** 입금 내역: 링크 제출 날짜 기준. 없으면 작업기간 종료일로 폴백 */
-  const getWorkDate = (matchedTask: PartTimeTask | undefined, userId: string): string | null => {
+  /** 입금 내역: 링크 제출 날짜 기준. 영상제공은 지급 순서로 영상 매칭 */
+  const getWorkDate = (matchedTask: PartTimeTask | undefined, userId: string, entry?: FreelancerEarningEntry): string | null => {
     if (!matchedTask) return null;
+
+    // 영상제공: 지급(entry.at) 순서와 영상 업로드(uploadedAt) 순서를 매칭해 정확한 작업날짜 반환
+    if (matchedTask.category === '영상제공' && entry?.taskId === matchedTask.id) {
+      const allMyVideos = (matchedTask.videoUploads ?? [])
+        .filter((v) => v.userId === userId)
+        .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
+      if (allMyVideos.length > 0) {
+        const paidEntriesForTask = depositEntries
+          .filter((e) => e.taskId === matchedTask.id)
+          .sort((a, b) => a.at.localeCompare(b.at));
+        const eIdx = paidEntriesForTask.findIndex((e) => e.id === entry.id);
+        const matched = allMyVideos[eIdx >= 0 ? eIdx : 0];
+        return matched?.date ?? null;
+      }
+    }
+
     const me = matchedTask.applicants.find((a) => a.userId === userId);
     if (me?.workLinkSubmittedAt) return me.workLinkSubmittedAt;
     const myVideo = (matchedTask.videoUploads ?? []).find((v) => v.userId === userId);
     if (myVideo?.date) return myVideo.date;
-    // 구 데이터 폴백: workLinkSubmittedAt 없으면 작업기간 종료일 사용
     if (matchedTask.workPeriod?.end) return matchedTask.workPeriod.end;
     return null;
   };
@@ -240,7 +255,7 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
 
     for (const entry of depositEntries.filter((e) => e.at.startsWith(settlementMonth))) {
       const matchedTask = findMatchedTask(entry);
-      const workDate = getWorkDate(matchedTask, user.id);
+      const workDate = getWorkDate(matchedTask, user.id, entry);
       const displayNo = matchedTask?.category === '영상제공'
         ? getVideoDisplayNo(matchedTask, entry.id)
         : undefined;
@@ -293,11 +308,11 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
             if (diff < bestDiff) { bestDiff = diff; matchedTask = t; }
           }
         }
-        const workDate = getWorkDate(matchedTask, user.id);
+        const workDate = getWorkDate(matchedTask, user.id, entry);
         if (workDate) result.push({ workDate: workDate.slice(0, 10), net: getNetAmount(entry) });
       } else {
         const matchedTask = tasks.find((t) => t.id === entry.taskId);
-        const workDate = getWorkDate(matchedTask, user.id);
+        const workDate = getWorkDate(matchedTask, user.id, entry);
         if (workDate) result.push({ workDate: workDate.slice(0, 10), net: getNetAmount(entry) });
       }
     }
