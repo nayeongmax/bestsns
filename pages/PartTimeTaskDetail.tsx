@@ -815,7 +815,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">1</div>
               <div>
                 <h3 className="font-black text-gray-900">회원가입하기</h3>
-                <p className="text-xs text-gray-500 mt-0.5">작업링크에 접속해서 카페 회원가입 양식에 맞춰 작성 후 가입 하세요!</p>
+                <p className="text-sm font-black text-emerald-700 mt-0.5">작업링크에 접속해서 카페 회원가입 양식에 맞춰 작성 후 가입 하세요!</p>
               </div>
             </div>
           </div>
@@ -858,7 +858,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             <div className="flex items-start gap-3 bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 mb-2">
               <span className="text-xl shrink-0">⚠️</span>
               <p className="text-sm font-black text-amber-800 leading-relaxed">
-                각 게시글마다 <span className="text-amber-600 underline decoration-amber-400">멤버공개</span>로 설정 후 업로드하고, 글을 다 쓴 뒤 <span className="text-purple-700 underline decoration-purple-400">1분간 머물렀다</span> 글을 업로드하세요!
+                각 게시글마다 <span className="text-amber-600 underline decoration-amber-400">멤버공개</span>로 설정 후 업로드 필수입니다!<br />글을 쓴 뒤 <span className="text-purple-700 underline decoration-purple-400">1분간 머무르고</span>, 업로드 후 또 <span className="text-purple-700 underline decoration-purple-400">1분간 게시글에 머물렀다가</span> 창을 닫으시길 권장합니다!
               </p>
             </div>
             <div className="grid gap-4">
@@ -1280,8 +1280,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               placeholder="신청합니다"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
             />
-            <p className="text-sm font-bold text-gray-700 mb-1">카페 아이디 <span className="text-red-500">*</span></p>
-            <p className="text-xs text-gray-400 mb-2">게시글을 작성할 네이버 카페 아이디를 입력해 주세요. 운영자가 게시글 확인 시 사용합니다.</p>
+            <p className="text-sm font-bold text-gray-700 mb-1">네이버 아이디 <span className="text-red-500">*</span></p>
+            <p className="text-xs text-gray-400 mb-2">게시글을 작성할 네이버 아이디를 입력해 주세요. 운영자가 게시글 확인 시 사용합니다.</p>
             <input
               type="text"
               value={applyCafeId}
@@ -1470,7 +1470,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                             <div>
                               <p className="font-black text-gray-800">{a.nickname}</p>
                               <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
-                              {a.cafeId && <p className="text-sm text-emerald-700 font-bold">카페 아이디: {a.cafeId}</p>}
+                              {a.cafeId && <p className="text-sm text-emerald-700 font-bold">네이버 아이디: {a.cafeId}</p>}
                               {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
