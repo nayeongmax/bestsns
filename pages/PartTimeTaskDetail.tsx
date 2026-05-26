@@ -46,6 +46,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   const [isEditingWorkLinks, setIsEditingWorkLinks] = useState(false);
   const [applyComment, setApplyComment] = useState('');
   const [applyContact, setApplyContact] = useState('');
+  const [applyCafeId, setApplyCafeId] = useState('');
   const [workLinks, setWorkLinks] = useState<string[]>(['']);
   const [revisionModal, setRevisionModal] = useState<{ userId: string; nickname: string; text: string } | null>(null);
   const [agree1, setAgree1] = useState(false);
@@ -160,13 +161,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             ...t,
             applicants: [
               ...t.applicants,
-              { userId: user.id, nickname: user.nickname, comment: applyComment.trim() || '신청합니다', contact: applyContact.trim() || undefined, selected: false, appliedAt: new Date().toISOString() },
+              { userId: user.id, nickname: user.nickname, comment: applyComment.trim() || '신청합니다', contact: applyContact.trim() || undefined, cafeId: applyCafeId.trim() || undefined, selected: false, appliedAt: new Date().toISOString() },
             ],
           }
     );
     saveTasks(next);
     setApplyComment('');
     setApplyContact('');
+    setApplyCafeId('');
     alert('신청되었습니다.');
   };
 
@@ -846,11 +848,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 shrink-0">
-                <span className={`px-3 py-1 rounded-full text-xs font-black border ${(task.postVisibility ?? '전체공개') === '멤버공개' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                <span className={`px-3 py-1.5 rounded-full text-sm font-black border shadow-sm ${(task.postVisibility ?? '전체공개') === '멤버공개' ? 'bg-amber-400 text-white border-amber-500' : 'bg-blue-500 text-white border-blue-600'}`}>
                   {task.postVisibility ?? '전체공개'}
                 </span>
-                <span className="px-3 py-1 rounded-full text-xs font-black bg-purple-100 text-purple-700 border border-purple-200">1분간 체류하기</span>
+                <span className="px-3 py-1.5 rounded-full text-sm font-black bg-purple-500 text-white border border-purple-600 shadow-sm">1분간 체류하기</span>
               </div>
+            </div>
+            {/* 필수 안내 배너 */}
+            <div className="flex items-start gap-3 bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 mb-2">
+              <span className="text-xl shrink-0">⚠️</span>
+              <p className="text-sm font-black text-amber-800 leading-relaxed">
+                각 게시글마다 <span className="text-amber-600 underline decoration-amber-400">멤버공개</span>로 설정 후 업로드하고, 글을 다 쓴 뒤 <span className="text-purple-700 underline decoration-purple-400">1분간 머물렀다</span> 글을 업로드하세요!
+              </p>
             </div>
             <div className="grid gap-4">
           <h3 className="text-sm font-black text-gray-500 uppercase">작업 내용 (작업자가 할 일)</h3>
@@ -1244,12 +1253,17 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             <p className="text-gray-500 py-3">아직 신청한 사람이 없습니다.</p>
           ) : (
             <ul className="space-y-2">
-              {task.applicants.map((a) => (
-                <li key={a.userId} className="flex items-start gap-2 py-2 px-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <span className="font-black text-gray-800 shrink-0">{a.nickname}</span>
-                  <span className="text-gray-600 text-sm">{a.comment || '신청합니다'}</span>
-                </li>
-              ))}
+              {task.applicants.map((a) => {
+                const masked = a.nickname
+                  ? a.nickname[0] + '*'.repeat(Math.max(1, a.nickname.length - 1))
+                  : '익명';
+                return (
+                  <li key={a.userId} className="flex items-start gap-2 py-2 px-3 rounded-xl bg-gray-50 border border-gray-100">
+                    <span className="font-black text-gray-800 shrink-0">{masked}</span>
+                    <span className="text-gray-600 text-sm">{a.comment || '신청합니다'}</span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -1265,6 +1279,15 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               onChange={(e) => setApplyComment(e.target.value)}
               placeholder="신청합니다"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
+            />
+            <p className="text-sm font-bold text-gray-700 mb-1">카페 아이디 <span className="text-red-500">*</span></p>
+            <p className="text-xs text-gray-400 mb-2">게시글을 작성할 네이버 카페 아이디를 입력해 주세요. 운영자가 게시글 확인 시 사용합니다.</p>
+            <input
+              type="text"
+              value={applyCafeId}
+              onChange={(e) => setApplyCafeId(e.target.value)}
+              placeholder="예) naver_id123"
+              className="w-full px-4 py-3 rounded-xl border border-emerald-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3 bg-emerald-50/40"
             />
             <p className="text-sm font-bold text-gray-700 mb-2">연락처 (급할 때 연락 가능)</p>
             <input
@@ -1447,6 +1470,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                             <div>
                               <p className="font-black text-gray-800">{a.nickname}</p>
                               <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
+                              {a.cafeId && <p className="text-sm text-emerald-700 font-bold">카페 아이디: {a.cafeId}</p>}
                               {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
