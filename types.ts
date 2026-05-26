@@ -92,6 +92,8 @@ export interface PartTimeApplicant {
   paidAt?: string;
   /** 영상제공 카테고리: 제출한 영상 Supabase Storage URL */
   videoUrl?: string;
+  /** 신청 시 작성한 카페 아이디 */
+  cafeId?: string;
 }
 
 /** 게시글 한 건 (제목+내용) - 여러 개 넣을 때 사용 */
