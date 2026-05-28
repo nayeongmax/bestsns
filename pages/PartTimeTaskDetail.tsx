@@ -852,13 +852,18 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                   {task.postVisibility ?? '전체공개'}
                 </span>
                 <span className="px-3 py-1.5 rounded-full text-sm font-black bg-purple-500 text-white border border-purple-600 shadow-sm">1분간 체류하기</span>
+                {task.workTimeSlot && (
+                  <span className="px-3 py-1.5 rounded-full text-sm font-black bg-indigo-500 text-white border border-indigo-600 shadow-sm">
+                    🕐 {task.workTimeSlot}
+                  </span>
+                )}
               </div>
             </div>
             {/* 필수 안내 배너 */}
             <div className="flex items-start gap-3 bg-amber-50 border-2 border-amber-300 rounded-xl px-4 py-3 mb-2">
               <span className="text-xl shrink-0">⚠️</span>
               <p className="text-sm font-black text-amber-800 leading-relaxed">
-                각 게시글마다 <span className="text-amber-600 underline decoration-amber-400">멤버공개</span>로 설정 후 업로드 필수입니다!<br />글을 쓴 뒤 <span className="text-purple-700 underline decoration-purple-400">1분간 머무르고</span>, 업로드 후 또 <span className="text-purple-700 underline decoration-purple-400">1분간 게시글에 머물렀다가</span> 창을 닫으시길 권장합니다!
+                각 게시글마다 <span className="text-amber-600 underline decoration-amber-400">{task.postVisibility ?? '전체공개'}</span>로 설정 후 업로드 필수입니다!<br />글을 쓴 뒤 <span className="text-purple-700 underline decoration-purple-400">1분간 머무르고</span>, 업로드 후 또 <span className="text-purple-700 underline decoration-purple-400">1분간 게시글에 머물렀다가</span> 창을 닫으시길 권장합니다!
               </p>
             </div>
             <div className="grid gap-4">

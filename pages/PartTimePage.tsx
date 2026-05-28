@@ -749,19 +749,8 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
             <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">한 줄 설명</label>
             <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="작업 한 줄 요약" className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none" />
           </div>
-          {/* Step 1 회원가입 링크 + 게시물 공개 설정 */}
+          {/* 게시물 공개 설정 + 작업 시간대 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Step 1 회원가입 링크 (플랫폼 가입 URL)</label>
-              <input
-                type="url"
-                value={signupLink}
-                onChange={(e) => setSignupLink(e.target.value)}
-                placeholder="https://example.com/join"
-                className="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
-              />
-              <p className="text-[10px] text-gray-400 mt-1">작업 상세페이지 Step 1에 표시되는 가입 링크</p>
-            </div>
             <div>
               <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">게시물 공개 설정</label>
               <div className="flex gap-3 pt-1">
