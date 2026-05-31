@@ -875,7 +875,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 if (type === '게시글' && sections.게시글목록?.[index]) {
                   const block = sections.게시글목록[index];
                   return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
                       <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {index + 1}</p>
                       {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
                       {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
@@ -885,7 +885,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 if (type === '댓글' && sections.댓글목록?.[index]) {
                   const text = sections.댓글목록[index];
                   return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
                       <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {index + 1}</p>
                       <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
                     </div>
@@ -895,7 +895,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                   const text = sections.작업링크목록[index];
                   const isUrl = text.startsWith('http://') || text.startsWith('https://');
                   return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
                       <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {index + 1}</p>
                       {isUrl ? (
                         <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
@@ -907,7 +907,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 }
                 if (type === '제목' && sections.제목목록?.[index]) {
                   return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
                       <p className="text-[10px] font-black text-gray-400 uppercase mb-1">제목 {index + 1}</p>
                       <p className="font-black text-gray-800">{sections.제목목록[index]}</p>
                     </div>
@@ -915,7 +915,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 }
                 if (type === '내용' && sections.내용목록?.[index]) {
                   return (
-                    <div key={`${type}-${index}`} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
                       <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {index + 1}</p>
                       <p className="text-gray-800 whitespace-pre-wrap text-sm">{sections.내용목록[index]}</p>
                     </div>
@@ -930,7 +930,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 {sections.작업세트목록 && sections.작업세트목록.length > 0 && (
                   <div className="space-y-4">
                     {sections.작업세트목록.map((ws, i) => (
-                      <div key={i} className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100 space-y-3">
+                      <div key={i} className="bg-white rounded-2xl p-5 border border-emerald-200 space-y-3">
                         <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">세트 {i + 1}</p>
                         {ws.링크 && (
                           <div>
@@ -963,7 +963,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 {sections.게시글목록 && sections.게시글목록.length > 0 && !sections.작업세트목록?.length && (
                   <div className="space-y-4">
                     {sections.게시글목록.map((block, i) => (
-                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
                         <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {i + 1}</p>
                         {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
                         {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
@@ -974,7 +974,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 {sections.댓글목록 && sections.댓글목록.length > 0 && (
                   <div className="space-y-4">
                     {sections.댓글목록.map((text, i) => (
-                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
                         <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
                         <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
                       </div>
@@ -984,7 +984,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 {sections.제목목록 && sections.제목목록.length > 0 && (
                   <div className="space-y-4">
                     {sections.제목목록.map((text, i) => (
-                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
                         <p className="text-[10px] font-black text-gray-400 uppercase mb-1">제목 {i + 1}</p>
                         <p className="font-black text-gray-800">{text}</p>
                       </div>
@@ -994,7 +994,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 {sections.내용목록 && sections.내용목록.length > 0 && (
                   <div className="space-y-4">
                     {sections.내용목록.map((text, i) => (
-                      <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
                         <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {i + 1}</p>
                         <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
                       </div>
@@ -1006,7 +1006,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                     {sections.작업링크목록.map((text, i) => {
                       const isUrl = text.startsWith('http://') || text.startsWith('https://');
                       return (
-                        <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
                           <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {i + 1}</p>
                           {isUrl ? (
                             <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
@@ -1048,7 +1048,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                 });
               };
               return (
-                <div key={key} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div key={key} className="bg-white rounded-xl p-4 border border-gray-200">
                   <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{key}</p>
                   {key === '이미지' ? (
                     <>
