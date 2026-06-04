@@ -1258,13 +1258,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
             <p className="text-gray-500 py-3">아직 신청한 사람이 없습니다.</p>
           ) : (
             <ul className="space-y-2">
-              {task.applicants.map((a) => {
-                const masked = a.nickname
-                  ? a.nickname[0] + '*'.repeat(Math.max(1, a.nickname.length - 1))
-                  : '익명';
+              {task.applicants.map((a, idx) => {
+                const isMe = user?.id === a.userId;
+                const displayName = isMe
+                  ? (a.nickname || '나')
+                  : `신청자 ${idx + 1}`;
                 return (
                   <li key={a.userId} className="flex items-start gap-2 py-2 px-3 rounded-xl bg-gray-50 border border-gray-100">
-                    <span className="font-black text-gray-800 shrink-0">{masked}</span>
+                    <span className={`font-black shrink-0 ${isMe ? 'text-emerald-700' : 'text-gray-800'}`}>{displayName}</span>
                     <span className="text-gray-600 text-sm">{a.comment || '신청합니다'}</span>
                   </li>
                 );
