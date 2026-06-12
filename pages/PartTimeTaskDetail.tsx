@@ -13,6 +13,7 @@ import {
   addFreelancerEarningToDb,
 } from '../parttimeDb';
 import { supabase } from '../supabase';
+import { updateProfile } from '../profileDb';
 import { FREELANCER_FEE_RATE } from '@/constants';
 
 interface Props {
@@ -24,7 +25,7 @@ interface Props {
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', 'gif', '작업링크', '작업안내'];
 
-const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) => {
+const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser, addNotif }) => {
   const displayUser = useMemo(() => {
     if (!user) return null;
     const m = members.find((x) => x.id === user.id);
@@ -207,9 +208,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     });
   };
 
-  /** 운영자: 선정 취소 → 해당 신청자에게 알림 */
+  /** 운영자: 선정 취소 (경고 부여 여부 선택) */
   const handleDeselect = (userId: string) => {
     if (!taskId) return;
+    const memberProfile = members.find((m) => m.id === userId);
+    const currentWarnings = memberProfile?.violationCount ?? 0;
+    const giveWarning = window.confirm(
+      `선정 취소 시 이 프리랜서에게 경고를 부여하시겠습니까?\n현재 경고: ${currentWarnings}회 → ${currentWarnings + 1}회\n\n확인: 경고 부여 + 선정 취소\n취소: 경고 없이 선정 취소`
+    );
     setTasks((prev) => {
       const currentTask = prev.find((t) => t.id === taskId);
       if (!currentTask) return prev;
@@ -224,10 +230,16 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
         alert('선정 취소가 저장에 실패했습니다. 새로고침 후 다시 시도해 주세요.');
       });
       if (applicant && addNotif) {
-        addNotif(userId, 'freelancer', '선정 취소', `[${currentTask.title}] 작업에서 선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.`, '선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.');
+        addNotif(userId, 'freelancer', '선정 취소', `[${currentTask.title}] 작업에서 선정이 취소되었습니다.`, '선정이 취소되었습니다.');
       }
       return next;
     });
+    if (giveWarning && memberProfile) {
+      const newCount = currentWarnings + 1;
+      const updated = { ...memberProfile, violationCount: newCount };
+      updateProfile(userId, { violationCount: newCount }).catch((e) => console.error('경고 저장 실패:', e));
+      onUpdateUser?.(updated);
+    }
   };
 
   /** 선정된 프리랜서: 작업링크 여러 개 제출 */
@@ -543,6 +555,19 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
   }
 
   const sections = task.sections || {};
+  const meSelected = user && task.applicants.some((a) => a.userId === user.id && a.selected);
+  const downloadMedia = (src: string, filename: string) => {
+    if (!meSelected) return;
+    fetch(src).then((r) => r.blob()).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }).catch(() => {
+      const a = document.createElement('a');
+      a.href = src; a.download = filename; a.click();
+    });
+  };
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 md:px-8 animate-in fade-in duration-300">
@@ -921,6 +946,36 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                     </div>
                   );
                 }
+                if (type === '이미지') {
+                  const sec = sections.이미지섹션목록?.[index];
+                  if (!sec) return null;
+                  return (
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-2">이미지 {index + 1}</p>
+                      {sec.text && <p className="text-gray-800 whitespace-pre-wrap text-sm mb-2">{sec.text}</p>}
+                      {sec.images && sec.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {sec.images.map((src, imgIdx) => (
+                            <div key={imgIdx} className="relative">
+                              <img src={src} alt={`참고 ${imgIdx + 1}`} className="max-h-32 rounded-lg object-contain border border-gray-200 cursor-zoom-in hover:opacity-90 transition-opacity" onClick={() => setZoomedImage(src)} />
+                              {meSelected && <button type="button" onClick={() => downloadMedia(src, `이미지${index + 1}_${imgIdx + 1}.png`)} className="absolute bottom-1 right-1 px-2 py-1 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                if (type === '작업안내') {
+                  const text = sections.작업안내목록?.[index];
+                  if (!text) return null;
+                  return (
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업안내</p>
+                      <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
+                    </div>
+                  );
+                }
                 return null;
               });
             }
@@ -1023,6 +1078,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
           })()}
           {SECTIONS_ORDER.filter((key) => key !== '제목' && key !== '내용').map(
             (key) => {
+              // 이미지·작업안내는 sectionOrder에 포함된 경우 위에서 이미 렌더링됨 → 스킵
+              if (key === '이미지' && sections.이미지섹션목록?.length) return null;
+              if (key === '작업안내' && sections.작업안내목록?.length) return null;
               const hasImageList = key === '이미지' && sections.이미지목록?.length;
               const hasImageContent = key === '이미지' && (sections[key] || hasImageList);
               if (key === '이미지' && !hasImageContent) return null;
@@ -1030,23 +1088,6 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
               if (key === '작업링크' && (sections.작업링크목록?.length || !sections.작업링크)) return null;
               if (key !== '이미지' && key !== '댓글' && key !== '작업링크' && key !== 'gif' && !sections[key]) return null;
               if (key === 'gif' && !sections.gif) return null;
-              const meSelected = user && task.applicants.some((a) => a.userId === user.id && a.selected);
-              const downloadMedia = (src: string, filename: string) => {
-                if (!meSelected) return;
-                fetch(src).then((r) => r.blob()).then((blob) => {
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = filename;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }).catch(() => {
-                  const a = document.createElement('a');
-                  a.href = src;
-                  a.download = filename;
-                  a.click();
-                });
-              };
               return (
                 <div key={key} className="bg-white rounded-xl p-4 border border-gray-200">
                   <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{key}</p>
@@ -1470,11 +1511,21 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                     {task.applicants.map((a) => {
                       const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
                       const paid = task.paidUserIds?.includes(a.userId);
+                      const memberProfile = members.find((m) => m.id === a.userId);
+                      const warnings = memberProfile?.violationCount ?? 0;
+                      const isBanned = warnings >= 5;
                       return (
                         <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
                           <div className="flex items-center justify-between gap-4 flex-wrap">
                             <div>
-                              <p className="font-black text-gray-800">{a.nickname}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-black text-gray-800">{a.nickname}</p>
+                                {warnings > 0 && (
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isBanned ? 'bg-red-600 text-white' : warnings >= 3 ? 'bg-orange-500 text-white' : 'bg-yellow-400 text-gray-900'}`}>
+                                    경고 {warnings}회{isBanned ? ' 🚫 선정 불가' : ''}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
                               {a.cafeId && <p className="text-sm text-emerald-700 font-bold">네이버 아이디: {a.cafeId}</p>}
                               {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
@@ -1483,8 +1534,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                               <button
                                 type="button"
                                 onClick={() => handleSelect(a.userId)}
-                                disabled={!!a.selected}
-                                className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${a.selected ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                                disabled={!!a.selected || isBanned}
+                                className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${a.selected || isBanned ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                                title={isBanned ? '경고 5회로 선정이 불가합니다' : undefined}
                               >
                                 선정
                               </button>
@@ -1615,19 +1667,20 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
       {/* 이미지 원본 크게 보기 팝업 */}
       {zoomedImage && (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90"
+          className="fixed inset-0 z-[70] bg-black/90 overflow-y-auto"
           onClick={() => setZoomedImage(null)}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Escape' && setZoomedImage(null)}
           aria-label="닫기"
         >
-          <button type="button" onClick={() => setZoomedImage(null)} className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none">×</button>
-          <div className="p-4" onClick={(e) => e.stopPropagation()}>
+          <button type="button" onClick={() => setZoomedImage(null)} className="sticky top-4 left-full mr-4 z-10 w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none float-right">×</button>
+          <div className="flex justify-center p-6 min-h-full" onClick={(e) => e.stopPropagation()}>
             <img
               src={zoomedImage}
               alt="이미지 크게 보기"
-              className="block max-w-[92vw] max-h-[88vh] rounded-lg shadow-2xl"
+              className="block w-auto h-auto max-w-[95vw] rounded-lg shadow-2xl self-start"
+              style={{ imageRendering: 'crisp-edges' }}
             />
           </div>
         </div>

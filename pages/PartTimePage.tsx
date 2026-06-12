@@ -611,7 +611,9 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
 
     const titleList: string[] = [];
     const contentList: string[] = [];
-    const sectionOrder: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용'; index: number }> = [];
+    const imageSecList: Array<{ text?: string; images?: string[] }> = [];
+    const workGuideList: string[] = [];
+    const sectionOrder: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용' | '이미지' | '작업안내'; index: number }> = [];
     sectionItems.forEach((item) => {
       if (item.type === '제목' && item.value?.trim()) {
         const idx = titleList.length;
@@ -632,8 +634,14 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
         sectionOrder.push({ type: '댓글', index: idx });
       } else if (item.type === '키워드' && item.value?.trim()) sectionsOut.키워드 = item.value.trim();
       else if (item.type === '이미지') {
-        if (item.value?.trim()) sectionsOut.이미지 = item.value.trim();
-        if (item.images?.length) sectionsOut.이미지목록 = item.images;
+        const sec: { text?: string; images?: string[] } = {};
+        if (item.value?.trim()) sec.text = item.value.trim();
+        if (item.images?.length) sec.images = [...item.images];
+        if (sec.text || sec.images) {
+          const idx = imageSecList.length;
+          imageSecList.push(sec);
+          sectionOrder.push({ type: '이미지', index: idx });
+        }
       } else if (item.type === '동영상') {
         if (item.videoFile) sectionsOut.동영상 = item.videoFile;
         else if (item.value?.trim()) sectionsOut.동영상 = item.value.trim();
@@ -645,13 +653,29 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
         const idx = workLinkList.length;
         workLinkList.push(item.value.trim());
         sectionOrder.push({ type: '작업링크', index: idx });
-      } else if (item.type === '작업안내' && item.value?.trim()) sectionsOut.작업안내 = item.value.trim();
+      } else if (item.type === '작업안내' && item.value?.trim()) {
+        const idx = workGuideList.length;
+        workGuideList.push(item.value.trim());
+        sectionOrder.push({ type: '작업안내', index: idx });
+      }
     });
 
     if (postBlocksOut.length) sectionsOut.게시글목록 = postBlocksOut;
     if (commentList.length) sectionsOut.댓글목록 = commentList;
     if (workLinkList.length) sectionsOut.작업링크목록 = workLinkList;
     if (titleList.length) sectionsOut.제목목록 = titleList;
+    if (imageSecList.length) {
+      sectionsOut.이미지섹션목록 = imageSecList;
+      // 하위 호환: 단일 이미지 섹션이면 기존 필드도 채움
+      if (imageSecList.length === 1) {
+        if (imageSecList[0].text) sectionsOut.이미지 = imageSecList[0].text;
+        if (imageSecList[0].images?.length) sectionsOut.이미지목록 = imageSecList[0].images;
+      }
+    }
+    if (workGuideList.length) {
+      sectionsOut.작업안내목록 = workGuideList;
+      if (workGuideList.length === 1) sectionsOut.작업안내 = workGuideList[0];
+    }
     if (contentList.length) sectionsOut.내용목록 = contentList;
     if (sectionOrder.length) sectionsOut.sectionOrder = sectionOrder;
     const projectNo = (() => {
