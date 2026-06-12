@@ -13,6 +13,7 @@ import {
   addFreelancerEarningToDb,
 } from '../parttimeDb';
 import { supabase } from '../supabase';
+import { updateProfile } from '../profileDb';
 import { FREELANCER_FEE_RATE } from '@/constants';
 
 interface Props {
@@ -24,7 +25,7 @@ interface Props {
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', 'gif', '작업링크', '작업안내'];
 
-const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) => {
+const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser, addNotif }) => {
   const displayUser = useMemo(() => {
     if (!user) return null;
     const m = members.find((x) => x.id === user.id);
@@ -207,9 +208,14 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
     });
   };
 
-  /** 운영자: 선정 취소 → 해당 신청자에게 알림 */
+  /** 운영자: 선정 취소 (경고 부여 여부 선택) */
   const handleDeselect = (userId: string) => {
     if (!taskId) return;
+    const memberProfile = members.find((m) => m.id === userId);
+    const currentWarnings = memberProfile?.violationCount ?? 0;
+    const giveWarning = window.confirm(
+      `선정 취소 시 이 프리랜서에게 경고를 부여하시겠습니까?\n현재 경고: ${currentWarnings}회 → ${currentWarnings + 1}회\n\n확인: 경고 부여 + 선정 취소\n취소: 경고 없이 선정 취소`
+    );
     setTasks((prev) => {
       const currentTask = prev.find((t) => t.id === taskId);
       if (!currentTask) return prev;
@@ -224,10 +230,16 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
         alert('선정 취소가 저장에 실패했습니다. 새로고침 후 다시 시도해 주세요.');
       });
       if (applicant && addNotif) {
-        addNotif(userId, 'freelancer', '선정 취소', `[${currentTask.title}] 작업에서 선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.`, '선정이 취소되었습니다. 일정이 맞지 않을 경우 다른 작업을 신청해 주세요.');
+        addNotif(userId, 'freelancer', '선정 취소', `[${currentTask.title}] 작업에서 선정이 취소되었습니다.`, '선정이 취소되었습니다.');
       }
       return next;
     });
+    if (giveWarning && memberProfile) {
+      const newCount = currentWarnings + 1;
+      const updated = { ...memberProfile, violationCount: newCount };
+      updateProfile(userId, { violationCount: newCount }).catch((e) => console.error('경고 저장 실패:', e));
+      onUpdateUser?.(updated);
+    }
   };
 
   /** 선정된 프리랜서: 작업링크 여러 개 제출 */
@@ -1470,11 +1482,21 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                     {task.applicants.map((a) => {
                       const links = a.workLinks?.length ? a.workLinks : (a.workLink ? [a.workLink] : []);
                       const paid = task.paidUserIds?.includes(a.userId);
+                      const memberProfile = members.find((m) => m.id === a.userId);
+                      const warnings = memberProfile?.violationCount ?? 0;
+                      const isBanned = warnings >= 5;
                       return (
                         <li key={a.userId} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
                           <div className="flex items-center justify-between gap-4 flex-wrap">
                             <div>
-                              <p className="font-black text-gray-800">{a.nickname}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-black text-gray-800">{a.nickname}</p>
+                                {warnings > 0 && (
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isBanned ? 'bg-red-600 text-white' : warnings >= 3 ? 'bg-orange-500 text-white' : 'bg-yellow-400 text-gray-900'}`}>
+                                    경고 {warnings}회{isBanned ? ' 🚫 선정 불가' : ''}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-gray-500">{a.comment || '신청합니다'}</p>
                               {a.cafeId && <p className="text-sm text-emerald-700 font-bold">네이버 아이디: {a.cafeId}</p>}
                               {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
@@ -1483,8 +1505,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], addNotif }) =
                               <button
                                 type="button"
                                 onClick={() => handleSelect(a.userId)}
-                                disabled={!!a.selected}
-                                className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${a.selected ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                                disabled={!!a.selected || isBanned}
+                                className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${a.selected || isBanned ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                                title={isBanned ? '경고 5회로 선정이 불가합니다' : undefined}
                               >
                                 선정
                               </button>
