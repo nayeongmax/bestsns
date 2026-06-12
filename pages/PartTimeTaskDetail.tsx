@@ -1697,7 +1697,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
               onClick={() => downloadMedia(zoomedImage, '이미지')}
               className="px-4 py-2 rounded-full bg-emerald-500 text-white text-sm font-black hover:bg-emerald-600 shadow-xl"
             >
-              ⬇ .jpg 저장
+              ⬇ {getImgExt(zoomedImage.startsWith('data:') ? zoomedImage.split(';')[0].split(':')[1] ?? '' : zoomedImage)} 저장
             </button>
             <button type="button" onClick={() => setZoomedImage(null)} className="w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none">×</button>
           </div>
