@@ -555,6 +555,19 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
   }
 
   const sections = task.sections || {};
+  const meSelected = user && task.applicants.some((a) => a.userId === user.id && a.selected);
+  const downloadMedia = (src: string, filename: string) => {
+    if (!meSelected) return;
+    fetch(src).then((r) => r.blob()).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }).catch(() => {
+      const a = document.createElement('a');
+      a.href = src; a.download = filename; a.click();
+    });
+  };
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 md:px-8 animate-in fade-in duration-300">
@@ -933,6 +946,36 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                     </div>
                   );
                 }
+                if (type === '이미지') {
+                  const sec = sections.이미지섹션목록?.[index];
+                  if (!sec) return null;
+                  return (
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-2">이미지 {index + 1}</p>
+                      {sec.text && <p className="text-gray-800 whitespace-pre-wrap text-sm mb-2">{sec.text}</p>}
+                      {sec.images && sec.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {sec.images.map((src, imgIdx) => (
+                            <div key={imgIdx} className="relative">
+                              <img src={src} alt={`참고 ${imgIdx + 1}`} className="max-h-32 rounded-lg object-contain border border-gray-200 cursor-zoom-in hover:opacity-90 transition-opacity" onClick={() => setZoomedImage(src)} />
+                              {meSelected && <button type="button" onClick={() => downloadMedia(src, `이미지${index + 1}_${imgIdx + 1}.png`)} className="absolute bottom-1 right-1 px-2 py-1 rounded bg-emerald-600 text-white text-xs font-black">다운로드</button>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                if (type === '작업안내') {
+                  const text = sections.작업안내목록?.[index];
+                  if (!text) return null;
+                  return (
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업안내</p>
+                      <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
+                    </div>
+                  );
+                }
                 return null;
               });
             }
@@ -1035,6 +1078,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
           })()}
           {SECTIONS_ORDER.filter((key) => key !== '제목' && key !== '내용').map(
             (key) => {
+              // 이미지·작업안내는 sectionOrder에 포함된 경우 위에서 이미 렌더링됨 → 스킵
+              if (key === '이미지' && sections.이미지섹션목록?.length) return null;
+              if (key === '작업안내' && sections.작업안내목록?.length) return null;
               const hasImageList = key === '이미지' && sections.이미지목록?.length;
               const hasImageContent = key === '이미지' && (sections[key] || hasImageList);
               if (key === '이미지' && !hasImageContent) return null;
@@ -1042,23 +1088,6 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
               if (key === '작업링크' && (sections.작업링크목록?.length || !sections.작업링크)) return null;
               if (key !== '이미지' && key !== '댓글' && key !== '작업링크' && key !== 'gif' && !sections[key]) return null;
               if (key === 'gif' && !sections.gif) return null;
-              const meSelected = user && task.applicants.some((a) => a.userId === user.id && a.selected);
-              const downloadMedia = (src: string, filename: string) => {
-                if (!meSelected) return;
-                fetch(src).then((r) => r.blob()).then((blob) => {
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = filename;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }).catch(() => {
-                  const a = document.createElement('a');
-                  a.href = src;
-                  a.download = filename;
-                  a.click();
-                });
-              };
               return (
                 <div key={key} className="bg-white rounded-xl p-4 border border-gray-200">
                   <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{key}</p>

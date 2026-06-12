@@ -129,6 +129,8 @@ export interface PartTimeTaskSections {
   이미지?: string;
   /** 참고 이미지 최대 10개 (data URL) */
   이미지목록?: string[];
+  /** 이미지 섹션 여러 개 (순서 유지). sectionOrder에 '이미지' 타입으로 등록됨 */
+  이미지섹션목록?: Array<{ text?: string; images?: string[] }>;
   /** 동영상 지시사항 또는 동영상 파일 data URL */
   동영상?: string;
   /** gif 지시사항 또는 gif 파일 data URL */
@@ -139,10 +141,12 @@ export interface PartTimeTaskSections {
   작업링크목록?: string[];
   /** 작업 안내 (전체 가이드) */
   작업안내?: string;
+  /** 작업 안내 여러 개 (순서 유지). sectionOrder에 '작업안내' 타입으로 등록됨 */
+  작업안내목록?: string[];
   /** 링크+게시글+링크확인 세트 여러 개 (있으면 개별 필드 대신 이걸 사용) */
   작업세트목록?: WorkItemSet[];
   /** 섹션 표시 순서 (등록 시 넣은 순서 유지) [{ type, index }] */
-  sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용'; index: number }>;
+  sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용' | '이미지' | '작업안내'; index: number }>;
 }
 
 /** 누구나알바 작업의뢰 (광고주→운영진 신청) */
