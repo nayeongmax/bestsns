@@ -18,6 +18,8 @@ export interface UserProfile {
   totalPurchaseAmount?: number;
   totalSalesAmount?: number;
   violationCount?: number;
+  /** 블랙리스트 여부 — true면 로그인 차단 */
+  isBlacklisted?: boolean;
   isOnline?: boolean;
   manualGrade?: string;
   /** 포인트 충전 보너스 비율 (%) — 관리자가 특정 회원에게 부여, 0이면 비활성 */
