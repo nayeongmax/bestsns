@@ -556,17 +556,34 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
 
   const sections = task.sections || {};
   const meSelected = user && task.applicants.some((a) => a.userId === user.id && a.selected);
+  const getImgExt = (mimeOrSrc: string): string => {
+    const m = mimeOrSrc.toLowerCase();
+    if (m.includes('png')) return '.png';
+    if (m.includes('gif')) return '.gif';
+    if (m.includes('webp')) return '.webp';
+    return '.jpg'; // jpeg / jfif / 기타 모두 .jpg
+  };
   const downloadMedia = (src: string, filename: string) => {
     if (!meSelected) return;
-    fetch(src).then((r) => r.blob()).then((blob) => {
-      const url = URL.createObjectURL(blob);
+    const baseName = filename.replace(/\.[^.]+$/, '');
+    if (src.startsWith('data:')) {
+      // data URL: MIME 타입을 헤더에서 직접 추출
+      const mime = src.split(';')[0].split(':')[1] ?? '';
+      const ext = getImgExt(mime);
       const a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-    }).catch(() => {
-      const a = document.createElement('a');
-      a.href = src; a.download = filename; a.click();
-    });
+      a.href = src; a.download = baseName + ext; a.click();
+    } else {
+      fetch(src).then((r) => r.blob()).then((blob) => {
+        const ext = getImgExt(blob.type);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = baseName + ext; a.click();
+        URL.revokeObjectURL(url);
+      }).catch(() => {
+        const a = document.createElement('a');
+        a.href = src; a.download = baseName + '.jpg'; a.click();
+      });
+    }
   };
 
   return (
@@ -1674,8 +1691,17 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
           onKeyDown={(e) => e.key === 'Escape' && setZoomedImage(null)}
           aria-label="닫기"
         >
-          <button type="button" onClick={() => setZoomedImage(null)} className="sticky top-4 left-full mr-4 z-10 w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none float-right">×</button>
-          <div className="flex justify-center p-6 min-h-full" onClick={(e) => e.stopPropagation()}>
+          <div className="sticky top-4 z-10 flex justify-end gap-2 px-4 float-right" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => downloadMedia(zoomedImage, '이미지')}
+              className="px-4 py-2 rounded-full bg-emerald-500 text-white text-sm font-black hover:bg-emerald-600 shadow-xl"
+            >
+              ⬇ .jpg 저장
+            </button>
+            <button type="button" onClick={() => setZoomedImage(null)} className="w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none">×</button>
+          </div>
+          <div className="flex justify-center p-6 pt-2 min-h-full" onClick={(e) => e.stopPropagation()}>
             <img
               src={zoomedImage}
               alt="이미지 크게 보기"
