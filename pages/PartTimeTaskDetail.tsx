@@ -1667,19 +1667,20 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
       {/* 이미지 원본 크게 보기 팝업 */}
       {zoomedImage && (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90"
+          className="fixed inset-0 z-[70] bg-black/90 overflow-y-auto"
           onClick={() => setZoomedImage(null)}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Escape' && setZoomedImage(null)}
           aria-label="닫기"
         >
-          <button type="button" onClick={() => setZoomedImage(null)} className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none">×</button>
-          <div className="p-4" onClick={(e) => e.stopPropagation()}>
+          <button type="button" onClick={() => setZoomedImage(null)} className="sticky top-4 left-full mr-4 z-10 w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none float-right">×</button>
+          <div className="flex justify-center p-6 min-h-full" onClick={(e) => e.stopPropagation()}>
             <img
               src={zoomedImage}
               alt="이미지 크게 보기"
-              className="block max-w-[92vw] max-h-[88vh] rounded-lg shadow-2xl"
+              className="block w-auto h-auto max-w-[95vw] rounded-lg shadow-2xl self-start"
+              style={{ imageRendering: 'crisp-edges' }}
             />
           </div>
         </div>
