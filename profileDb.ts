@@ -21,6 +21,7 @@ function toSnakePayload(partial: Partial<{
   totalSalesAmount: number;
   freelancerEarnings: number;
   violationCount: number;
+  isBlacklisted: boolean;
 }>) {
   const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (partial.points !== undefined) row.points = partial.points;
@@ -38,6 +39,7 @@ function toSnakePayload(partial: Partial<{
   if (partial.totalSalesAmount !== undefined) row.total_sales_amount = partial.totalSalesAmount;
   if (partial.freelancerEarnings !== undefined) row.total_freelancer_earnings = partial.freelancerEarnings;
   if (partial.violationCount !== undefined) row.violation_count = partial.violationCount;
+  if (partial.isBlacklisted !== undefined) row.is_blacklisted = partial.isBlacklisted;
   return row;
 }
 

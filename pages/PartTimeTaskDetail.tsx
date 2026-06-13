@@ -1537,7 +1537,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-black text-gray-800">{a.nickname}</p>
-                                {warnings > 0 && (
+                                {warnings === 0 ? (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-black bg-emerald-500 text-white">✅ 인증회원</span>
+                                ) : (
                                   <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isBanned ? 'bg-red-600 text-white' : warnings >= 3 ? 'bg-orange-500 text-white' : 'bg-yellow-400 text-gray-900'}`}>
                                     경고 {warnings}회{isBanned ? ' 🚫 선정 불가' : ''}
                                   </span>

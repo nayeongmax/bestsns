@@ -46,6 +46,7 @@ function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
     pendingApplication: (row.pending_application as UserProfile['pendingApplication']) ?? undefined,
     freelancerApplication: (row.freelancer_application as UserProfile['freelancerApplication']) ?? undefined,
     violationCount: Number(row.violation_count ?? 0),
+    isBlacklisted: Boolean(row.is_blacklisted ?? false),
   };
 }
 
@@ -879,6 +880,10 @@ const App: React.FC = () => {
       const dbRow = await fetchProfileRow(userData.id);
       if (dbRow) {
         const dbProfile = profileRowToUserProfile(dbRow);
+        if (dbProfile.isBlacklisted) {
+          alert('이 계정은 운영 정책 위반으로 활동이 정지되었습니다.\n문의: 관리자에게 연락해 주세요.');
+          return;
+        }
         targetProfile = {
           ...targetProfile,
           nickname: dbProfile.nickname || targetProfile.nickname,
@@ -888,6 +893,8 @@ const App: React.FC = () => {
           totalSalesAmount: dbProfile.totalSalesAmount,
           freelancerEarnings: dbProfile.freelancerEarnings,
           coupons: dbProfile.coupons ?? targetProfile.coupons,
+          isBlacklisted: dbProfile.isBlacklisted,
+          violationCount: dbProfile.violationCount,
         };
       }
     } catch (_) { /* RLS 등으로 조회 실패 시 기본 targetProfile 유지 */ }

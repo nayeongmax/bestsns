@@ -3,6 +3,7 @@ import { UserProfile, SiteNotification, SellerApplication, SMMOrder, EbookProduc
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { fetchFreelancerBalance } from '../../parttimeDb';
+import { updateProfile } from '../../profileDb';
 import MyPage from '@/pages/MyPage';
 
 interface Props {
@@ -208,6 +209,35 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
     setEditingMember(null);
   };
 
+  const handleToggleBan = async (target: UserProfile) => {
+    const nextBan = !target.isBlacklisted;
+    const msg = nextBan
+      ? `[${target.nickname}] 회원을 블랙리스트에 등록하시겠습니까?\n로그인이 차단됩니다.`
+      : `[${target.nickname}] 회원의 블랙리스트를 해제하시겠습니까?`;
+    if (!window.confirm(msg)) return;
+    try {
+      await updateProfile(target.id, { isBlacklisted: nextBan });
+    } catch (e: any) {
+      alert('DB 저장 실패: ' + (e?.message || '오류'));
+      return;
+    }
+    const updated = { ...target, isBlacklisted: nextBan };
+    setMembers(prev => prev.map(m => m.id === target.id ? updated : m));
+    if (editingMember?.id === target.id) setEditingMember(updated);
+    if (onUpdateUser) onUpdateUser(updated);
+    alert(nextBan ? '블랙리스트 등록 완료' : '블랙리스트 해제 완료');
+  };
+
+  const handleSetViolation = async (target: UserProfile, count: number) => {
+    const next = Math.max(0, count);
+    try {
+      await updateProfile(target.id, { violationCount: next });
+    } catch (e: any) { alert('저장 실패: ' + (e?.message || '오류')); return; }
+    const updated = { ...target, violationCount: next };
+    setMembers(prev => prev.map(m => m.id === target.id ? updated : m));
+    if (editingMember?.id === target.id) setEditingMember(updated);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="overflow-x-auto mx-0 md:mx-4" style={{WebkitOverflowScrolling: 'touch'}}>
@@ -283,11 +313,18 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                </thead>
                <tbody className="divide-y divide-gray-50">
                  {filteredMembers.map(m => (
-                   <tr key={m.id} className="hover:bg-blue-50/20 font-bold">
+                   <tr key={m.id} className={`hover:bg-blue-50/20 font-bold ${m.isBlacklisted ? 'bg-red-50/60' : ''}`}>
                      <td className="px-8 py-4">
                         <div className="flex items-center gap-3">
-                           <img src={m.profileImage} className="w-10 h-10 rounded-xl object-cover" alt="p" />
-                           <div><p className="text-gray-900">{m.nickname}</p><p className="text-[10px] text-gray-400">@{m.id}</p></div>
+                           <img src={m.profileImage} className={`w-10 h-10 rounded-xl object-cover ${m.isBlacklisted ? 'grayscale opacity-50' : ''}`} alt="p" />
+                           <div>
+                             <div className="flex items-center gap-2">
+                               <p className={`text-gray-900 ${m.isBlacklisted ? 'line-through text-red-400' : ''}`}>{m.nickname}</p>
+                               {m.isBlacklisted && <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-red-600 text-white">🚫 블랙리스트</span>}
+                               {(m.violationCount ?? 0) > 0 && !m.isBlacklisted && <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-orange-400 text-white">경고 {m.violationCount}회</span>}
+                             </div>
+                             <p className="text-[10px] text-gray-400">@{m.id}</p>
+                           </div>
                         </div>
                      </td>
                      <td className="px-8 py-4 text-center">
@@ -298,7 +335,15 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                      <td className="px-8 py-4 text-right text-blue-600">{(m.points || 0).toLocaleString()}P</td>
                      <td className="px-8 py-4 text-right text-emerald-600">₩{(freelancerBalances[m.id] ?? 0).toLocaleString()}</td>
                      <td className="px-8 py-4 text-center">
-                        <button onClick={() => setEditingMember({ ...m })} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black">관리</button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button onClick={() => setEditingMember({ ...m })} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black">관리</button>
+                          <button
+                            onClick={() => handleToggleBan(m)}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${m.isBlacklisted ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                          >
+                            {m.isBlacklisted ? '차단해제' : '차단'}
+                          </button>
+                        </div>
                      </td>
                    </tr>
                  ))}
@@ -530,6 +575,19 @@ const MemberAdmin: React.FC<Props> = ({ members, setMembers, setNotifications, s
                  {gradeConfigs.filter(g => (g.name || '').trim()).map(g => <option key={g.id} value={g.name}>{g.name}</option>)}
                </select>
              </div>
+             <div className="flex items-center gap-2 bg-red-50 px-3 py-2 rounded-xl border border-red-200">
+               <label className="text-[11px] font-black text-red-700">경고 횟수</label>
+               <button type="button" onClick={() => handleSetViolation(editingMember, (editingMember.violationCount ?? 0) - 1)} className="w-6 h-6 rounded-lg bg-gray-200 text-gray-600 font-black text-sm hover:bg-gray-300">−</button>
+               <span className="text-[13px] font-black text-red-700 min-w-[20px] text-center">{editingMember.violationCount ?? 0}</span>
+               <button type="button" onClick={() => handleSetViolation(editingMember, (editingMember.violationCount ?? 0) + 1)} className="w-6 h-6 rounded-lg bg-gray-200 text-gray-600 font-black text-sm hover:bg-gray-300">＋</button>
+             </div>
+             <button
+               type="button"
+               onClick={() => handleToggleBan(editingMember)}
+               className={`px-4 py-2 rounded-xl text-[11px] font-black transition-all ${editingMember.isBlacklisted ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-red-600 text-white hover:bg-red-700'}`}
+             >
+               {editingMember.isBlacklisted ? '🔓 블랙리스트 해제' : '🚫 블랙리스트 차단'}
+             </button>
              <div className="flex flex-wrap items-center gap-2 bg-orange-50 px-3 py-2 rounded-xl border border-orange-200">
                <label className="text-[11px] font-black text-orange-700">🎁 충전 보너스 이벤트</label>
                <button
