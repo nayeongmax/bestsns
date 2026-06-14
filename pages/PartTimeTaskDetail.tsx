@@ -41,6 +41,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
   const todayStr = new Date().toISOString().slice(0, 10);
   const activeDate = passedDate || todayStr;
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [zoomedImagePng, setZoomedImagePng] = useState<string | null>(null);
   const [tasks, setTasks] = useState<PartTimeTask[]>(initialTask ? [initialTask] : []);
   const [loading, setLoading] = useState(!initialTask);
   const [jobRequests, setJobRequests] = useState<Awaited<ReturnType<typeof fetchPartTimeJobRequests>>>([]);
@@ -585,6 +586,29 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
       });
     }
   };
+
+  // 줌 모달 이미지 → PNG 변환 (다른이름으로저장 시 .jfif 대신 .png로 저장되도록)
+  useEffect(() => {
+    if (!zoomedImage) { setZoomedImagePng(null); return; }
+    if (zoomedImage.startsWith('data:image/png')) { setZoomedImagePng(zoomedImage); return; }
+    let cancelled = false;
+    const img = new window.Image();
+    img.onload = () => {
+      if (cancelled) return;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { setZoomedImagePng(zoomedImage); return; }
+        ctx.drawImage(img, 0, 0);
+        setZoomedImagePng(canvas.toDataURL('image/png'));
+      } catch { setZoomedImagePng(zoomedImage); }
+    };
+    img.onerror = () => { if (!cancelled) setZoomedImagePng(zoomedImage); };
+    img.src = zoomedImage;
+    return () => { cancelled = true; };
+  }, [zoomedImage]);
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 md:px-8 animate-in fade-in duration-300">
@@ -1696,16 +1720,23 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
           <div className="sticky top-4 z-10 flex justify-end gap-2 px-4 float-right" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              onClick={() => downloadMedia(zoomedImage, '이미지')}
+              onClick={() => {
+                const src = zoomedImagePng || zoomedImage;
+                if (!src) return;
+                const a = document.createElement('a');
+                a.href = src;
+                a.download = '이미지.png';
+                a.click();
+              }}
               className="px-4 py-2 rounded-full bg-emerald-500 text-white text-sm font-black hover:bg-emerald-600 shadow-xl"
             >
-              ⬇ {getImgExt(zoomedImage.startsWith('data:') ? zoomedImage.split(';')[0].split(':')[1] ?? '' : zoomedImage)} 저장
+              ⬇ .png 저장
             </button>
             <button type="button" onClick={() => setZoomedImage(null)} className="w-12 h-12 rounded-full bg-white/95 text-gray-800 text-2xl font-black hover:bg-white shadow-xl leading-none">×</button>
           </div>
           <div className="flex justify-center p-6 pt-2 min-h-full" onClick={(e) => e.stopPropagation()}>
             <img
-              src={zoomedImage}
+              src={zoomedImagePng || zoomedImage}
               alt="이미지 크게 보기"
               className="block w-auto h-auto max-w-[95vw] rounded-lg shadow-2xl self-start"
               style={{ imageRendering: 'crisp-edges' }}
