@@ -5,16 +5,24 @@ import { UserProfile } from '../types';
 
 interface Props {
   user: UserProfile;
+  members?: UserProfile[];
 }
 
-const CouponBox: React.FC<Props> = ({ user }) => {
+const CouponBox: React.FC<Props> = ({ user, members }) => {
   const navigate = useNavigate();
+
+  // members 배열에서 최신 쿠폰 데이터 병합 (MyPage와 동일한 effectiveUser 패턴)
+  const effectiveUser = useMemo(() => {
+    if (!members?.length) return user;
+    const m = members.find((x) => x.id === user.id);
+    return m ? { ...user, ...m } : user;
+  }, [user, members]);
 
   // 유효기간이 지나지 않은 쿠폰만 필터링 (로컬 날짜 기준)
   const displayCoupons = useMemo(() => {
     const now = new Date().toISOString().split('T')[0];
-    return (user.coupons || []).filter(cp => cp.expiry >= now);
-  }, [user.coupons]);
+    return (effectiveUser.coupons || []).filter(cp => cp.expiry >= now);
+  }, [effectiveUser.coupons]);
 
   return (
     <div className="max-w-4xl mx-auto pb-32 px-4 animate-in fade-in duration-500">
