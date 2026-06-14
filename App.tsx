@@ -732,9 +732,10 @@ const App: React.FC = () => {
       (fromDb.pointBonusActive ?? false) === (user.pointBonusActive ?? false) &&
       (fromDb.pointBonusPercent ?? 0) === (user.pointBonusPercent ?? 0) &&
       (fromDb.pointBonusExpiryDays ?? null) === (user.pointBonusExpiryDays ?? null) &&
-      (fromDb.pointBonusStartDate ?? null) === (user.pointBonusStartDate ?? null);
-    if (!same) setUser(prev => prev ? { ...prev, points: fromDb.points, totalPurchaseAmount: fromDb.totalPurchaseAmount, totalSalesAmount: fromDb.totalSalesAmount, freelancerEarnings: fromDb.freelancerEarnings, coupons: fromDb.coupons ?? prev.coupons, pointBonusActive: fromDb.pointBonusActive, pointBonusPercent: fromDb.pointBonusPercent, pointBonusExpiryDays: fromDb.pointBonusExpiryDays, pointBonusStartDate: fromDb.pointBonusStartDate } : null);
-  }, [members, user?.id, user?.points, user?.totalPurchaseAmount, user?.totalSalesAmount, user?.freelancerEarnings, user?.pointBonusActive, user?.pointBonusPercent, user?.pointBonusExpiryDays, user?.pointBonusStartDate]);
+      (fromDb.pointBonusStartDate ?? null) === (user.pointBonusStartDate ?? null) &&
+      (fromDb.coupons?.length ?? 0) === (user.coupons?.length ?? 0);
+    if (!same) setUser(prev => prev ? { ...prev, points: fromDb.points, totalPurchaseAmount: fromDb.totalPurchaseAmount, totalSalesAmount: fromDb.totalSalesAmount, freelancerEarnings: fromDb.freelancerEarnings, coupons: (Array.isArray(fromDb.coupons) && fromDb.coupons.length > 0) ? fromDb.coupons : (prev.coupons || []), pointBonusActive: fromDb.pointBonusActive, pointBonusPercent: fromDb.pointBonusPercent, pointBonusExpiryDays: fromDb.pointBonusExpiryDays, pointBonusStartDate: fromDb.pointBonusStartDate } : null);
+  }, [members, user?.id, user?.points, user?.totalPurchaseAmount, user?.totalSalesAmount, user?.freelancerEarnings, user?.pointBonusActive, user?.pointBonusPercent, user?.pointBonusExpiryDays, user?.pointBonusStartDate, user?.coupons?.length]);
 
   useEffect(() => {
     try {
@@ -871,7 +872,7 @@ const App: React.FC = () => {
         role: isAdminLogin ? 'admin' : (userData.role ?? 'user'),
         sellerStatus: isAdminLogin ? 'approved' : (userData.sellerStatus ?? 'none'),
         points: userData.id?.toLowerCase() === 'test' ? 12500 : 0,
-        joinDate: new Date().toISOString().split('T')[0], coupons: []
+        joinDate: new Date().toISOString().split('T')[0], coupons: userData.coupons || []
       };
       setMembers(prev => [...prev, targetProfile]);
     }
@@ -892,13 +893,14 @@ const App: React.FC = () => {
           totalPurchaseAmount: dbProfile.totalPurchaseAmount,
           totalSalesAmount: dbProfile.totalSalesAmount,
           freelancerEarnings: dbProfile.freelancerEarnings,
-          coupons: dbProfile.coupons ?? targetProfile.coupons,
+          coupons: (Array.isArray(dbProfile.coupons) && dbProfile.coupons.length > 0) ? dbProfile.coupons : targetProfile.coupons,
           isBlacklisted: dbProfile.isBlacklisted,
           violationCount: dbProfile.violationCount,
         };
       }
     } catch (_) { /* RLS 등으로 조회 실패 시 기본 targetProfile 유지 */ }
     setUser(targetProfile);
+    setMembers(prev => prev.map(m => m.id.toLowerCase() === targetProfile.id.toLowerCase() ? targetProfile : m));
     // 로그인 직후 채널/스토어 재로드 (첫 로드는 세션 복구 전이라 빈 결과였을 수 있음)
     // 어드민: 비밀 상품 포함 전체 목록(service_role), 일반 사용자: 공개 상품만(RLS 필터)
     Promise.all([
