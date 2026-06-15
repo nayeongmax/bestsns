@@ -537,6 +537,30 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
     alert('수정요청 알림이 전송되었습니다.');
   };
 
+  // 줌 모달 이미지 → PNG 변환 (다른이름으로저장 시 .jfif 대신 .png로 저장되도록)
+  // 반드시 조기 return 이전에 위치해야 Hooks 규칙 준수
+  useEffect(() => {
+    if (!zoomedImage) { setZoomedImagePng(null); return; }
+    if (zoomedImage.startsWith('data:image/png')) { setZoomedImagePng(zoomedImage); return; }
+    let cancelled = false;
+    const img = new window.Image();
+    img.onload = () => {
+      if (cancelled) return;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { setZoomedImagePng(zoomedImage); return; }
+        ctx.drawImage(img, 0, 0);
+        setZoomedImagePng(canvas.toDataURL('image/png'));
+      } catch { setZoomedImagePng(zoomedImage); }
+    };
+    img.onerror = () => { if (!cancelled) setZoomedImagePng(zoomedImage); };
+    img.src = zoomedImage;
+    return () => { cancelled = true; };
+  }, [zoomedImage]);
+
   if (!task) {
     if (loading) {
       return (
@@ -586,29 +610,6 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
       });
     }
   };
-
-  // 줌 모달 이미지 → PNG 변환 (다른이름으로저장 시 .jfif 대신 .png로 저장되도록)
-  useEffect(() => {
-    if (!zoomedImage) { setZoomedImagePng(null); return; }
-    if (zoomedImage.startsWith('data:image/png')) { setZoomedImagePng(zoomedImage); return; }
-    let cancelled = false;
-    const img = new window.Image();
-    img.onload = () => {
-      if (cancelled) return;
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { setZoomedImagePng(zoomedImage); return; }
-        ctx.drawImage(img, 0, 0);
-        setZoomedImagePng(canvas.toDataURL('image/png'));
-      } catch { setZoomedImagePng(zoomedImage); }
-    };
-    img.onerror = () => { if (!cancelled) setZoomedImagePng(zoomedImage); };
-    img.src = zoomedImage;
-    return () => { cancelled = true; };
-  }, [zoomedImage]);
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 md:px-8 animate-in fade-in duration-300">
