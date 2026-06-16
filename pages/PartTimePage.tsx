@@ -33,8 +33,11 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
     let cancelled = false;
     (async () => {
       try {
-        await processAutoApprovalsInDb();
-        const [taskList, completedSet] = await Promise.all([fetchPartTimeTasks(), user?.id ? fetchPartTimeCompletedIds(user.id) : Promise.resolve(new Set<string>())]);
+        // tasks를 먼저 로드해서 즉시 화면 표시 (auto-approval 기다리지 않음)
+        const [taskList, completedSet] = await Promise.all([
+          fetchPartTimeTasks(),
+          user?.id ? fetchPartTimeCompletedIds(user.id) : Promise.resolve(new Set<string>()),
+        ]);
         if (!cancelled) {
           setTasks(taskList);
           setCompletedIds(completedSet);
@@ -44,6 +47,12 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
       } finally {
         if (!cancelled) setLoading(false);
       }
+      // auto-approval은 백그라운드에서 실행 — 변경 발생 시 tasks만 재조회
+      processAutoApprovalsInDb().then((changed) => {
+        if (changed && !cancelled) {
+          fetchPartTimeTasks().then((updated) => { if (!cancelled) setTasks(updated); }).catch(() => {});
+        }
+      }).catch(() => {});
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
