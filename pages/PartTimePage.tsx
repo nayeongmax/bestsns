@@ -506,6 +506,40 @@ const SECTION_TYPES: { key: SectionItemType; label: string }[] = [
 
 const MAX_IMAGES_PER_SECTION = 10;
 
+const sectionsToItems = (s: PartTimeTaskSections): SectionItem[] => {
+  const uid = () => `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const items: SectionItem[] = [];
+  const order = s.sectionOrder ?? [];
+  if (order.length > 0) {
+    order.forEach(({ type, index }) => {
+      const id = uid();
+      if (type === '제목' && s.제목목록?.[index] !== undefined) {
+        items.push({ id, type: '제목', value: s.제목목록[index] });
+      } else if (type === '내용' && s.내용목록?.[index] !== undefined) {
+        items.push({ id, type: '내용', value: s.내용목록[index] });
+      } else if (type === '게시글' && s.게시글목록?.[index] !== undefined) {
+        items.push({ id, type: '게시글', postBlock: { ...s.게시글목록[index] } });
+      } else if (type === '댓글' && s.댓글목록?.[index] !== undefined) {
+        items.push({ id, type: '댓글', value: s.댓글목록[index] });
+      } else if (type === '작업링크' && s.작업링크목록?.[index] !== undefined) {
+        items.push({ id, type: '작업링크', value: s.작업링크목록[index] });
+      }
+    });
+  } else {
+    if (s.제목목록?.length) s.제목목록.forEach((v) => items.push({ id: uid(), type: '제목', value: v }));
+    if (s.내용목록?.length) s.내용목록.forEach((v) => items.push({ id: uid(), type: '내용', value: v }));
+    if (s.게시글목록?.length) s.게시글목록.forEach((pb) => items.push({ id: uid(), type: '게시글', postBlock: { ...pb } }));
+    if (s.댓글목록?.length) s.댓글목록.forEach((v) => items.push({ id: uid(), type: '댓글', value: v }));
+    if (s.작업링크목록?.length) s.작업링크목록.forEach((v) => items.push({ id: uid(), type: '작업링크', value: v }));
+  }
+  if (s.키워드) items.push({ id: uid(), type: '키워드', value: s.키워드 });
+  if (s.이미지 || s.이미지목록?.length) items.push({ id: uid(), type: '이미지', value: s.이미지 ?? '', images: s.이미지목록 ?? [] });
+  if (s.동영상) items.push({ id: uid(), type: '동영상', value: s.동영상 });
+  if (s.gif) items.push({ id: uid(), type: 'gif', value: s.gif });
+  if (s.작업안내) items.push({ id: uid(), type: '작업안내', value: s.작업안내 });
+  return items;
+};
+
 export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?: UserProfile[] }> = ({ user, members = [] }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -516,40 +550,9 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   const [category, setCategory] = useState(editTask?.category ?? REGISTER_CATEGORIES[0]);
   const [reward, setReward] = useState(editTask?.reward ?? 300);
   const [maxApplicants, setMaxApplicants] = useState(editTask?.maxApplicants ?? 0);
-  const [sectionItems, setSectionItems] = useState<SectionItem[]>(() => {
-    if (!editTask?.sections) return [];
-    const s = editTask.sections;
-    const items: SectionItem[] = [];
-    const order = s.sectionOrder ?? [];
-    if (order.length > 0) {
-      order.forEach(({ type, index }) => {
-        const id = `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        if (type === '제목' && s.제목목록?.[index] !== undefined) {
-          items.push({ id, type: '제목', value: s.제목목록[index] });
-        } else if (type === '내용' && s.내용목록?.[index] !== undefined) {
-          items.push({ id, type: '내용', value: s.내용목록[index] });
-        } else if (type === '게시글' && s.게시글목록?.[index] !== undefined) {
-          items.push({ id, type: '게시글', postBlock: { ...s.게시글목록[index] } });
-        } else if (type === '댓글' && s.댓글목록?.[index] !== undefined) {
-          items.push({ id, type: '댓글', value: s.댓글목록[index] });
-        } else if (type === '작업링크' && s.작업링크목록?.[index] !== undefined) {
-          items.push({ id, type: '작업링크', value: s.작업링크목록[index] });
-        }
-      });
-    } else {
-      if (s.제목목록?.length) s.제목목록.forEach((v) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '제목', value: v }));
-      if (s.내용목록?.length) s.내용목록.forEach((v) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '내용', value: v }));
-      if (s.게시글목록?.length) s.게시글목록.forEach((pb) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '게시글', postBlock: { ...pb } }));
-      if (s.댓글목록?.length) s.댓글목록.forEach((v) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '댓글', value: v }));
-      if (s.작업링크목록?.length) s.작업링크목록.forEach((v) => items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '작업링크', value: v }));
-    }
-    if (s.키워드) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '키워드', value: s.키워드 });
-    if (s.이미지 || s.이미지목록?.length) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '이미지', value: s.이미지 ?? '', images: s.이미지목록 ?? [] });
-    if (s.동영상) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '동영상', value: s.동영상 });
-    if (s.gif) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: 'gif', value: s.gif });
-    if (s.작업안내) items.push({ id: `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, type: '작업안내', value: s.작업안내 });
-    return items;
-  });
+  const [sectionItems, setSectionItems] = useState<SectionItem[]>(() =>
+    editTask?.sections ? sectionsToItems(editTask.sections) : []
+  );
   const [appStart, setAppStart] = useState(editTask?.applicationPeriod?.start ?? todayStr());
   const [appEnd, setAppEnd] = useState(editTask?.applicationPeriod?.end ?? todayStr());
   const [workStart, setWorkStart] = useState(editTask?.workPeriod?.start ?? todayStr());
@@ -570,6 +573,16 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
     fetchPartTimeTasks().then(setTasks).catch((e) => console.error('PartTime tasks load:', e));
     fetchPartTimeJobRequests().then(setJobRequests).catch((e) => console.error('Job requests load:', e));
   }, []);
+
+  // 목록 조회(경량)에서 sections가 누락된 채 editTask가 넘어온 경우,
+  // fetchPartTimeTasks() 완료 후 전체 데이터로 섹션 복원
+  useEffect(() => {
+    if (!editTask?.id || !tasks.length) return;
+    if (editTask.sections && Object.keys(editTask.sections).length > 0) return;
+    const full = tasks.find((t) => t.id === editTask.id);
+    if (!full?.sections || Object.keys(full.sections).length === 0) return;
+    setSectionItems(sectionsToItems(full.sections));
+  }, [tasks]);
 
   /** 결제 완료된 견적의 광고주 목록 (닉네임 표시, 드롭다운용) */
   const paidAdvertiserOptions = useMemo(() => {
