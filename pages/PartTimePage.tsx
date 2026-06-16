@@ -28,7 +28,14 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState('');
   const [weekOffset, setWeekOffset] = useState(0);
+  // 8시 오픈 규칙: 1분마다 재계산
+  const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
   const touchStartX = useRef<number | null>(null);
+
+  useEffect(() => {
+    const id = setInterval(() => setCurrentHour(new Date().getHours()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,7 +114,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
       const end = t.applicationPeriod?.end || start;
       if (!start) return;
       weekDates.forEach((d) => {
-        if (d >= start && d <= (end ?? start)) {
+        if (d >= start && d <= (end ?? start) && !(d === todayStrVal && start === todayStrVal && user?.role !== 'admin' && currentHour < 8)) {
           map[d].total++;
           if (t.category === '영상제공') {
             const dayUploaderIds = new Set(
@@ -121,7 +128,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
       });
     });
     return map;
-  }, [tasks, weekDates]);
+  }, [tasks, weekDates, todayStrVal, currentHour, user?.role]);
 
   const effectiveDate = selectedDate || (weekDates.includes(todayStrVal) ? todayStrVal : weekDates[0]);
   const tasksForDate = useMemo(() => {
@@ -129,9 +136,14 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
       const start = t.applicationPeriod?.start;
       const end = t.applicationPeriod?.end || start;
       if (!start) return false;
-      return effectiveDate >= start && effectiveDate <= (end ?? start);
+      if (effectiveDate < start || effectiveDate > (end ?? start)) return false;
+      // 오늘 탭 + 오늘이 작업 시작일이면 오전 8시 이후에만 회원에게 공개
+      if (effectiveDate === todayStrVal && start === todayStrVal && user?.role !== 'admin') {
+        if (currentHour < 8) return false;
+      }
+      return true;
     });
-  }, [tasks, effectiveDate]);
+  }, [tasks, effectiveDate, todayStrVal, currentHour, user?.role]);
 
   const isVideoTaskDateFull = (task: PartTimeTask, date: string) => {
     const uploaderIds = new Set(
@@ -872,11 +884,14 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                 <p className="text-[10px] text-blue-500 mt-1">하루에 영상을 제출할 수 있는 최대 인원 수 (각 인원은 여러 영상 제출 가능)</p>
               </div>
             )}
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => setAppStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} onChange={(e) => setWorkStart(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
-            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청시작</label><input type="date" value={appStart} onChange={(e) => { setAppStart(e.target.value); if (e.target.value > appEnd) setAppEnd(e.target.value); if (e.target.value > workStart) { setWorkStart(e.target.value); setWorkEnd(e.target.value); } }} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">신청종료</label><input type="date" value={appEnd} min={appStart} onChange={(e) => setAppEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업시작</label><input type="date" value={workStart} min={appStart} onChange={(e) => { setWorkStart(e.target.value); if (e.target.value > workEnd) setWorkEnd(e.target.value); }} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
+            <div><label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">작업종료</label><input type="date" value={workEnd} min={workStart} onChange={(e) => setWorkEnd(e.target.value)} className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm [color-scheme:light]" /></div>
           </div>
+          <p className="text-xs text-blue-600 font-bold bg-blue-50 px-4 py-2.5 rounded-xl">
+            📅 미리 등록 가능 — 신청시작일 오전 8시에 회원들에게 자동 공개됩니다. 운영자는 시간 제한 없이 항상 확인 가능.
+          </p>
         </section>
         <section className="space-y-6">
           <div className="flex items-center gap-4"><div className="w-1.5 h-8 bg-blue-600 rounded-full" /><h3 className="text-xl font-black text-gray-900 italic">3. 작업 내용</h3></div>
