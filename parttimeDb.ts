@@ -123,6 +123,14 @@ export async function fetchPartTimeTasks(): Promise<PartTimeTask[]> {
   return (data ?? []).map((row) => rowToTask(row as Record<string, unknown>));
 }
 
+/** 목록 페이지용 경량 조회 — sections(이미지 등 대용량 데이터) 제외하여 빠른 로드 */
+export async function fetchPartTimeTasksList(): Promise<PartTimeTask[]> {
+  const cols = 'id,title,description,category,reward,max_applicants,application_period_start,application_period_end,work_period_start,work_period_end,applicants,point_paid,paid_user_ids,applicant_user_id,job_request_id,project_no,created_at,created_by,sent_to_advertiser_at,signup_link,post_visibility,work_time_slot,daily_limit,video_uploads';
+  const { data, error } = await supabase.from('parttime_tasks').select(cols).order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row) => rowToTask(row as Record<string, unknown>));
+}
+
 export async function upsertPartTimeTask(task: PartTimeTask): Promise<void> {
   const row = taskToRow(task);
   const { error } = await supabase.from('parttime_tasks').upsert(row, { onConflict: 'id' });
