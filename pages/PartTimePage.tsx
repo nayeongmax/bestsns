@@ -5,6 +5,7 @@ import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePo
 import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '@/constants';
 import {
   fetchPartTimeTasks,
+  fetchPartTimeTasksList,
   fetchPartTimeJobRequests,
   upsertPartTimeTask,
   deletePartTimeTask,
@@ -33,9 +34,9 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
     let cancelled = false;
     (async () => {
       try {
-        // tasks를 먼저 로드해서 즉시 화면 표시 (auto-approval 기다리지 않음)
+        // sections(이미지 등) 제외한 경량 조회로 빠르게 목록 표시
         const [taskList, completedSet] = await Promise.all([
-          fetchPartTimeTasks(),
+          fetchPartTimeTasksList(),
           user?.id ? fetchPartTimeCompletedIds(user.id) : Promise.resolve(new Set<string>()),
         ]);
         if (!cancelled) {
@@ -50,7 +51,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
       // auto-approval은 백그라운드에서 실행 — 변경 발생 시 tasks만 재조회
       processAutoApprovalsInDb().then((changed) => {
         if (changed && !cancelled) {
-          fetchPartTimeTasks().then((updated) => { if (!cancelled) setTasks(updated); }).catch(() => {});
+          fetchPartTimeTasksList().then((updated) => { if (!cancelled) setTasks(updated); }).catch(() => {});
         }
       }).catch(() => {});
     })();
