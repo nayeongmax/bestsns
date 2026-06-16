@@ -346,54 +346,79 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
 
           {sortedTasks.length === 0 ? (
             <p className="text-gray-500 text-center py-10 text-base">해당 날짜의 작업이 없습니다.</p>
-          ) : (
-            <div className="space-y-4">
-              {sortedTasks.map((task) => {
-                const isVideoTask = task.category === '영상제공';
-                const done = isVideoTask ? isVideoTaskDateFull(task, effectiveDate) : isTaskDone(task);
-                const buttonLabel = done
-                  ? (isVideoTask ? '마감됨' : '완료됨')
-                  : isVideoTask
-                    ? '영상 제출 →'
-                    : task.applicants?.some((a) => a.selected)
-                      ? '선정완료 →'
-                      : '상세보기 →';
-                const buttonClass = done
-                  ? 'bg-gray-200 text-gray-500'
-                  : isVideoTask
-                    ? 'bg-rose-100 text-rose-700'
-                    : task.applicants?.some((a) => a.selected)
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-blue-100 text-blue-700';
-                return (
-                  <div
-                    key={task.id}
-                    className={`w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
-                      done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm'
-                    }`}
-                  >
-                    <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className="flex-1 text-left">
-                      <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
-                      <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
-                      <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
+          ) : (() => {
+            const morningTasks = sortedTasks.filter(t => t.workTimeSlot === '오전 (09:00~12:00)');
+            const afternoonTasks = sortedTasks.filter(t => t.workTimeSlot === '오후 (13:00~17:00)');
+            const unsetTasks = sortedTasks.filter(t => !t.workTimeSlot || (t.workTimeSlot !== '오전 (09:00~12:00)' && t.workTimeSlot !== '오후 (13:00~17:00)'));
+            const hasTimedGroups = morningTasks.length > 0 || afternoonTasks.length > 0;
+            const groups: { label: string | null; emoji: string; badgeClass: string; tasks: typeof sortedTasks }[] = [
+              { label: '오전 (09:00~12:00)', emoji: '🌅', badgeClass: 'bg-sky-100 text-sky-700', tasks: morningTasks },
+              { label: '오후 (13:00~17:00)', emoji: '🌇', badgeClass: 'bg-amber-100 text-amber-700', tasks: afternoonTasks },
+              { label: hasTimedGroups && unsetTasks.length > 0 ? '시간 미지정' : null, emoji: '⏱', badgeClass: 'bg-gray-100 text-gray-500', tasks: unsetTasks },
+            ].filter(g => g.tasks.length > 0);
+            const renderTask = (task: PartTimeTask) => {
+              const isVideoTask = task.category === '영상제공';
+              const done = isVideoTask ? isVideoTaskDateFull(task, effectiveDate) : isTaskDone(task);
+              const buttonLabel = done
+                ? (isVideoTask ? '마감됨' : '완료됨')
+                : isVideoTask
+                  ? '영상 제출 →'
+                  : task.applicants?.some((a) => a.selected)
+                    ? '선정완료 →'
+                    : '상세보기 →';
+              const buttonClass = done
+                ? 'bg-gray-200 text-gray-500'
+                : isVideoTask
+                  ? 'bg-rose-100 text-rose-700'
+                  : task.applicants?.some((a) => a.selected)
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-blue-100 text-blue-700';
+              return (
+                <div
+                  key={task.id}
+                  className={`w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
+                    done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm'
+                  }`}
+                >
+                  <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className="flex-1 text-left">
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
+                    <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
+                    <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
+                  </button>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="font-black text-blue-600 text-base">+{task.reward.toLocaleString()}원</span>
+                    <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
+                      {buttonLabel}
                     </button>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="font-black text-blue-600 text-base">+{task.reward.toLocaleString()}원</span>
-                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
-                        {buttonLabel}
-                      </button>
-                      {user?.role === 'admin' && (
-                        <>
-                          <Link to={`/part-time/register`} state={{ editTask: task }} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100">수정</Link>
-                          <button type="button" onClick={async (e) => { e.stopPropagation(); if (!confirm(`"${task.title}" 작업을 삭제할까요?`)) return; await deletePartTimeTask(task.id); setTasks(prev => prev.filter(x => x.id !== task.id)); }} className="px-3 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-black hover:bg-red-100">삭제</button>
-                        </>
-                      )}
-                    </div>
+                    {user?.role === 'admin' && (
+                      <>
+                        <Link to={`/part-time/register`} state={{ editTask: task }} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100">수정</Link>
+                        <button type="button" onClick={async (e) => { e.stopPropagation(); if (!confirm(`"${task.title}" 작업을 삭제할까요?`)) return; await deletePartTimeTask(task.id); setTasks(prev => prev.filter(x => x.id !== task.id)); }} className="px-3 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-black hover:bg-red-100">삭제</button>
+                      </>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            };
+            return (
+              <div className="space-y-6">
+                {groups.map(({ label, emoji, badgeClass, tasks }) => (
+                  <div key={label ?? 'unset'} className="space-y-4">
+                    {label && (
+                      <div className="flex items-center gap-3">
+                        <div className="h-px flex-1 bg-gray-200" />
+                        <span className={`text-xs font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 ${badgeClass}`}>
+                          <span>{emoji}</span>{label}
+                        </span>
+                        <div className="h-px flex-1 bg-gray-200" />
+                      </div>
+                    )}
+                    {tasks.map(renderTask)}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         <div className="bg-blue-50/80 p-4 sm:p-6 rounded-2xl border border-blue-100 space-y-2">
