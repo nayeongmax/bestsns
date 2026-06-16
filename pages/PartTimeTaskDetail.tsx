@@ -61,6 +61,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState('');
   const [showDailyLimitModal, setShowDailyLimitModal] = useState(false);
+  const [showApplyWarning, setShowApplyWarning] = useState(false);
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [replaceVideoFile, setReplaceVideoFile] = useState<File | null>(null);
   const [isReplacingVideo, setIsReplacingVideo] = useState(false);
@@ -171,7 +172,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
     setApplyComment('');
     setApplyContact('');
     setApplyCafeId('');
-    alert('신청되었습니다.');
+    setShowApplyWarning(true);
   };
 
   /** 운영자: 신청자 선정 → 선정자에게 알림, jobRequestId 자동 연결 */
@@ -1704,6 +1705,30 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 수정요청 전송
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 신청 완료 후 경고 안내 모달 */}
+      {showApplyWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center space-y-5">
+            <p className="text-4xl">⚠️</p>
+            <h4 className="font-black text-gray-900 text-lg">신청이 완료되었습니다</h4>
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl px-5 py-4 text-left space-y-1">
+              <p className="text-sm font-black text-red-700 leading-relaxed">
+                시간약속을 어기거나 노쇼 하게되면<br />
+                추후 신청 불가, 사이트 내 수익출금 불가입니다.
+              </p>
+              <p className="text-xs font-black text-red-500">(경고 3회)</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowApplyWarning(false)}
+              className="w-full py-3 rounded-xl bg-gray-900 text-white font-black text-base hover:bg-red-600 transition-all"
+            >
+              확인
+            </button>
           </div>
         </div>
       )}

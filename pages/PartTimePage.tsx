@@ -381,20 +381,25 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
             const renderTask = (task: PartTimeTask) => {
               const isVideoTask = task.category === '영상제공';
               const done = isVideoTask ? isVideoTaskDateFull(task, effectiveDate) : isTaskDone(task);
+              const isMeSelected = !isVideoTask && !done && !!user?.id && task.applicants?.some((a) => a.userId === user!.id && a.selected);
               const buttonLabel = done
                 ? (isVideoTask ? '마감됨' : '완료됨')
                 : isVideoTask
                   ? '영상 제출 →'
-                  : task.applicants?.some((a) => a.selected)
-                    ? '선정완료 →'
-                    : '상세보기 →';
+                  : isMeSelected
+                    ? '작업시작 →'
+                    : task.applicants?.some((a) => a.selected)
+                      ? '선정완료 →'
+                      : '상세보기 →';
               const buttonClass = done
                 ? 'bg-gray-200 text-gray-500'
                 : isVideoTask
                   ? 'bg-rose-100 text-rose-700'
-                  : task.applicants?.some((a) => a.selected)
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-blue-100 text-blue-700';
+                  : isMeSelected
+                    ? 'bg-green-600 text-white'
+                    : task.applicants?.some((a) => a.selected)
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-blue-100 text-blue-700';
               return (
                 <div
                   key={task.id}
@@ -409,9 +414,14 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                   </button>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="font-black text-blue-600 text-base">+{task.reward.toLocaleString()}원</span>
-                    <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
-                      {buttonLabel}
-                    </button>
+                    <div className="flex flex-col items-end gap-1">
+                      {isMeSelected && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-500 text-white">선정되었습니다!</span>
+                      )}
+                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
+                        {buttonLabel}
+                      </button>
+                    </div>{/* badge+button wrapper */}
                     {user?.role === 'admin' && (
                       <>
                         <Link to={`/part-time/register`} state={{ editTask: task }} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100">수정</Link>
