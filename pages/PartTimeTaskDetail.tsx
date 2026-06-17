@@ -1661,6 +1661,22 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
           </div>
         )}
 
+        {/* 운영자 전용 원고 디버그 패널 */}
+        {isOperator && (
+          <details className="border border-dashed border-gray-300 rounded-xl p-4">
+            <summary className="text-xs font-black text-gray-400 cursor-pointer select-none">🔧 관리자: 원고 데이터 확인 (클릭해서 펼치기)</summary>
+            <div className="mt-3">
+              {Object.keys(sections).length === 0 ? (
+                <p className="text-red-600 font-black text-sm">⚠️ DB에 원고 데이터가 없습니다. 수정 버튼을 눌러 원고를 다시 입력해주세요.</p>
+              ) : (
+                <pre className="text-[10px] text-gray-600 overflow-auto max-h-60 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap break-all">
+                  {JSON.stringify(sections, null, 2)}
+                </pre>
+              )}
+            </div>
+          </details>
+        )}
+
         {task.pointPaid && (
           <p className="text-center text-gray-500 font-bold py-4">이 작업은 마감되었습니다.</p>
         )}

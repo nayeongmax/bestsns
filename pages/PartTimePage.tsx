@@ -5,6 +5,7 @@ import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePo
 import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '@/constants';
 import {
   fetchPartTimeTasks,
+  fetchPartTimeTaskById,
   fetchPartTimeTasksList,
   fetchPartTimeJobRequests,
   upsertPartTimeTask,
@@ -575,14 +576,15 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   }, []);
 
   // 목록 조회(경량)에서 sections가 누락된 채 editTask가 넘어온 경우,
-  // fetchPartTimeTasks() 완료 후 전체 데이터로 섹션 복원
+  // DB에서 해당 작업의 전체 데이터(sections 포함)를 직접 조회해 섹션 복원
   useEffect(() => {
-    if (!editTask?.id || !tasks.length) return;
+    if (!editTask?.id) return;
     if (editTask.sections && Object.keys(editTask.sections).length > 0) return;
-    const full = tasks.find((t) => t.id === editTask.id);
-    if (!full?.sections || Object.keys(full.sections).length === 0) return;
-    setSectionItems(sectionsToItems(full.sections));
-  }, [tasks]);
+    fetchPartTimeTaskById(editTask.id).then((full) => {
+      if (!full?.sections || Object.keys(full.sections).length === 0) return;
+      setSectionItems(sectionsToItems(full.sections));
+    }).catch(() => {});
+  }, [editTask?.id]);
 
   /** 결제 완료된 견적의 광고주 목록 (닉네임 표시, 드롭다운용) */
   const paidAdvertiserOptions = useMemo(() => {

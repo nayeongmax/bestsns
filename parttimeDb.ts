@@ -131,6 +131,12 @@ export async function fetchPartTimeTasksList(): Promise<PartTimeTask[]> {
   return (data ?? []).map((row) => rowToTask(row as Record<string, unknown>));
 }
 
+export async function fetchPartTimeTaskById(id: string): Promise<PartTimeTask | null> {
+  const { data, error } = await supabase.from('parttime_tasks').select('*').eq('id', id).single();
+  if (error) return null;
+  return data ? rowToTask(data as Record<string, unknown>) : null;
+}
+
 export async function upsertPartTimeTask(task: PartTimeTask): Promise<void> {
   const row = taskToRow(task);
   const { error } = await supabase.from('parttime_tasks').upsert(row, { onConflict: 'id' });
