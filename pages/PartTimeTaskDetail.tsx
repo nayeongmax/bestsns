@@ -6,7 +6,7 @@ import { NotificationType } from '@/types';
 import {
   fetchPartTimeTasks,
   fetchPartTimeJobRequests,
-  upsertPartTimeTasksNoSections,
+  upsertPartTimeTasks,
   processAutoApprovalsInDb,
   fetchFreelancerBalance,
   setFreelancerBalance,
@@ -42,8 +42,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
   const activeDate = passedDate || todayStr;
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [zoomedImagePng, setZoomedImagePng] = useState<string | null>(null);
-  const [tasks, setTasks] = useState<PartTimeTask[]>(initialTask ? [initialTask] : []);
-  const [loading, setLoading] = useState(!initialTask);
+  const [tasks, setTasks] = useState<PartTimeTask[]>([]);
+  const [loading, setLoading] = useState(true);
   const [jobRequests, setJobRequests] = useState<Awaited<ReturnType<typeof fetchPartTimeJobRequests>>>([]);
   const [isEditingWorkLinks, setIsEditingWorkLinks] = useState(false);
   const [applyComment, setApplyComment] = useState('');
@@ -133,7 +133,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
 
   const saveTasks = (next: PartTimeTask[]) => {
     setTasks(next);
-    upsertPartTimeTasksNoSections(next).catch((e) => console.error('saveTasks:', e));
+    upsertPartTimeTasks(next).catch((e) => console.error('saveTasks:', e));
   };
 
   const isApplicant = user && task?.applicants.some((a) => a.userId === user.id);
@@ -197,7 +197,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
         if (unlinked) updatedTask = { ...updatedTask, jobRequestId: unlinked.id };
       }
       const next = prev.map((t) => (t.id !== taskId ? t : updatedTask));
-      upsertPartTimeTasksNoSections(next).catch((e) => {
+      upsertPartTimeTasks(next).catch((e) => {
         console.error('선정 저장 실패:', e);
         alert('선정은 반영됐으나 저장에 실패했습니다. 새로고침 시 되돌아갈 수 있습니다.');
       });
@@ -228,7 +228,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
           ? t
           : { ...t, applicants: t.applicants.map((a) => (a.userId === userId ? { ...a, selected: false } : a)) }
       );
-      upsertPartTimeTasksNoSections(next).catch((e) => {
+      upsertPartTimeTasks(next).catch((e) => {
         console.error('선정취소 저장 실패:', e);
         alert('선정 취소가 저장에 실패했습니다. 새로고침 후 다시 시도해 주세요.');
       });
@@ -443,7 +443,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
         }
       );
       setTasks(next);
-      await upsertPartTimeTasksNoSections(next);
+      await upsertPartTimeTasks(next);
       alert('알바비가 지급되었습니다.');
       if (!userId) navigate('/part-time');
     } catch (err) {
@@ -512,7 +512,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
         ),
       });
       setTasks(next);
-      await upsertPartTimeTasksNoSections(next);
+      await upsertPartTimeTasks(next);
       alert('포인트가 지급되었습니다.');
     } catch (err) {
       console.error(err);
