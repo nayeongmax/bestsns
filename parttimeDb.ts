@@ -144,6 +144,17 @@ export async function upsertPartTimeTasks(tasks: PartTimeTask[]): Promise<void> 
   if (error) throw error;
 }
 
+/** 상세 페이지 전용: sections 컬럼을 건드리지 않고 나머지 필드만 업데이트 */
+export async function upsertPartTimeTasksNoSections(tasks: PartTimeTask[]): Promise<void> {
+  if (tasks.length === 0) return;
+  const rows = tasks.map((t) => {
+    const { sections: _sections, ...row } = taskToRow(t) as Record<string, unknown> & { sections?: unknown };
+    return row;
+  });
+  const { error } = await supabase.from('parttime_tasks').upsert(rows as Record<string, unknown>[], { onConflict: 'id' });
+  if (error) throw error;
+}
+
 export async function deletePartTimeTask(id: string): Promise<void> {
   const { error } = await supabase.from('parttime_tasks').delete().eq('id', id);
   if (error) throw error;
