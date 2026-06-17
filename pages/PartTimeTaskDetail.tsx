@@ -72,7 +72,6 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
     let cancelled = false;
     (async () => {
       try {
-        await processAutoApprovalsInDb();
         const [taskList, jrList] = await Promise.all([fetchPartTimeTasks(), fetchPartTimeJobRequests()]);
         if (!cancelled) {
           setTasks(taskList);
@@ -82,6 +81,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
       } catch (e) {
         if (!cancelled) { console.error('PartTimeTaskDetail load:', e); setLoading(false); }
       }
+      // auto-approval은 백그라운드에서 실행 (작업 데이터 로딩을 막지 않음)
+      processAutoApprovalsInDb().catch(() => {});
     })();
     return () => { cancelled = true; };
   }, [taskId]);
