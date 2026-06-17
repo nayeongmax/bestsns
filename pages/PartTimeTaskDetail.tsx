@@ -6,7 +6,7 @@ import { NotificationType } from '@/types';
 import {
   fetchPartTimeTasks,
   fetchPartTimeJobRequests,
-  upsertPartTimeTasksNoSectionsNoSections,
+  upsertPartTimeTasksNoSections,
   processAutoApprovalsInDb,
   fetchFreelancerBalance,
   setFreelancerBalance,
