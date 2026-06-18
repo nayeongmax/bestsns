@@ -4,6 +4,7 @@ import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
 import { NotificationType } from '@/types';
 import {
+  fetchPartTimeTaskById,
   fetchPartTimeTasks,
   fetchPartTimeJobRequests,
   upsertPartTimeTasks,
@@ -72,9 +73,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
     let cancelled = false;
     (async () => {
       try {
-        const [taskList, jrList] = await Promise.all([fetchPartTimeTasks(), fetchPartTimeJobRequests()]);
+        // 해당 작업 하나만 조회 (전체 목록 대신) → sections 포함하면서도 빠르게 로드
+        const [single, jrList] = await Promise.all([fetchPartTimeTaskById(taskId!), fetchPartTimeJobRequests()]);
         if (!cancelled) {
-          setTasks(taskList);
+          setTasks(single ? [single] : []);
           setJobRequests(jrList);
           setLoading(false);
         }
