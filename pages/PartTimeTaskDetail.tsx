@@ -1605,12 +1605,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                               {a.cafeId && <p className="text-sm text-emerald-700 font-bold">네이버 아이디: {a.cafeId}</p>}
                               {a.contact && <p className="text-sm text-blue-600 font-bold">연락처: {a.contact}</p>}
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <button
                                 type="button"
                                 onClick={() => handleSelect(a.userId)}
                                 disabled={!!a.selected || isBanned}
-                                className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${a.selected || isBanned ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all whitespace-nowrap ${a.selected || isBanned ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'}`}
                                 title={isBanned ? '경고 5회로 선정이 불가합니다' : undefined}
                               >
                                 선정
@@ -1619,17 +1619,17 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                                 type="button"
                                 onClick={() => handleDeselect(a.userId)}
                                 disabled={!a.selected}
-                                className={`px-4 py-2 rounded-lg text-sm font-black transition-all ${!a.selected ? 'bg-amber-50 text-amber-300 cursor-not-allowed' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all whitespace-nowrap ${!a.selected ? 'bg-amber-50 text-amber-300 cursor-not-allowed' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
                               >
                                 선정취소
                               </button>
                               {a.selected && (
-                                <span className="px-4 py-2 rounded-lg text-sm font-black bg-emerald-600 text-white">선정됨</span>
+                                <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white whitespace-nowrap">선정됨</span>
                               )}
                               <button
                                 type="button"
                                 onClick={() => navigate('/chat', { state: { targetUser: { id: a.userId, nickname: a.nickname, profileImage: '' } } })}
-                                className="px-4 py-2 rounded-lg text-sm font-black bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all"
+                                className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all whitespace-nowrap"
                               >
                                 채팅하기
                               </button>
@@ -1648,25 +1648,25 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                                 <p className="text-amber-600 font-bold">작업 링크 미제출</p>
                               )}
                               {links.length > 0 && !paid && (
-                                <div className="flex gap-2 flex-wrap items-center">
-                                  <button type="button" onClick={() => setRevisionModal({ userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200">
+                                <div className="flex gap-1.5 flex-wrap items-center mt-1">
+                                  <button type="button" onClick={() => setRevisionModal({ userId: a.userId, nickname: a.nickname, text: a.revisionRequest || '' })} className="px-3 py-1.5 rounded-lg text-xs font-black bg-orange-100 text-orange-700 hover:bg-orange-200 whitespace-nowrap">
                                     수정요청
                                   </button>
                                   {a.deliveryAt && a.autoApproveAt ? (
                                     new Date(a.autoApproveAt) > new Date() ? (
                                       <span className="text-blue-600 font-bold text-xs">
-                                        4일 이내 자동 지급 예정 ({new Date(a.autoApproveAt).toLocaleDateString('ko-KR')} 까지)
+                                        자동지급 예정 ({new Date(a.autoApproveAt).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })})
                                       </span>
                                     ) : (
                                       <span className="text-amber-600 font-bold text-xs">자동 지급 처리 중...</span>
                                     )
                                   ) : (
-                                    <button type="button" onClick={() => handleApprovePass(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700">
+                                    <button type="button" onClick={() => handleApprovePass(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">
                                       통과
                                     </button>
                                   )}
-                                  <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700">
-                                    즉시 지급
+                                  <button type="button" onClick={() => handlePayPoints(a.userId)} className="px-3 py-1.5 rounded-lg text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 whitespace-nowrap">
+                                    즉시지급
                                   </button>
                                 </div>
                               )}
