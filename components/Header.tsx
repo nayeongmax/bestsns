@@ -192,28 +192,46 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
           </div>
         </div>
 
-        {/* 모바일(xl 미만): 햄버거 + 중앙 로고만 표시 */}
+        {/* 모바일(xl 미만): 햄버거 + 중앙 로고 + 우측 아이콘 */}
         <div className="xl:hidden">
-          <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-[1550px] min-w-0 overflow-x-hidden">
-            <div className="w-10 flex-shrink-0 flex items-center justify-center">
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(true)}
-                className="p-2 -ml-1 rounded-xl text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                aria-label="메뉴 열기"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 flex justify-center min-w-0">
-              <Link to="/" className="text-xl font-black tracking-tighter">
-                <span className="text-gray-900 uppercase">BEST</span>
-                <span className="text-blue-600 uppercase">SNS</span>
+          <div className="px-3 h-14 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+              aria-label="메뉴 열기"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+
+            <Link to="/" className="text-lg font-black tracking-tighter shrink-0">
+              <span className="text-gray-900 uppercase">BEST</span>
+              <span className="text-blue-600 uppercase">SNS</span>
+            </Link>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <Link to="/notifications" className="relative p-2 text-gray-500 hover:text-orange-500 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center bg-blue-600 text-white text-[9px] font-black rounded-full">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>
+                )}
               </Link>
+              {user?.id ? (
+                <Link to="/mypage" className="p-1">
+                  <img src={user.profileImage} alt="프로필" className="w-7 h-7 rounded-full object-cover border border-gray-200" />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => (onOpenLoginModal ? onOpenLoginModal() : navigate('/login'))}
+                  className="px-3 py-1.5 rounded-xl bg-gray-900 text-white text-xs font-black"
+                >
+                  로그인
+                </button>
+              )}
             </div>
-            <div className="w-10 flex-shrink-0" aria-hidden="true" />
           </div>
         </div>
       </header>
