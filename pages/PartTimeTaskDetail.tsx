@@ -4,6 +4,7 @@ import { UserProfile } from '@/types';
 import type { PartTimeTask } from '@/types';
 import { NotificationType } from '@/types';
 import {
+  fetchPartTimeTaskById,
   fetchPartTimeTasks,
   fetchPartTimeJobRequests,
   upsertPartTimeTasks,
@@ -62,6 +63,8 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
   const [uploadProgressText, setUploadProgressText] = useState('');
   const [showDailyLimitModal, setShowDailyLimitModal] = useState(false);
   const [showApplyWarning, setShowApplyWarning] = useState(false);
+  const [rejectVideoModal, setRejectVideoModal] = useState<{ videoId: string; fileName: string; userId: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [replaceVideoFile, setReplaceVideoFile] = useState<File | null>(null);
   const [isReplacingVideo, setIsReplacingVideo] = useState(false);
@@ -72,9 +75,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
     let cancelled = false;
     (async () => {
       try {
-        const [taskList, jrList] = await Promise.all([fetchPartTimeTasks(), fetchPartTimeJobRequests()]);
+        // 해당 작업 하나만 조회 (전체 목록 대신) → sections 포함하면서도 빠르게 로드
+        const [single, jrList] = await Promise.all([fetchPartTimeTaskById(taskId!), fetchPartTimeJobRequests()]);
         if (!cancelled) {
-          setTasks(taskList);
+          setTasks(single ? [single] : []);
           setJobRequests(jrList);
           setLoading(false);
         }
@@ -453,23 +457,36 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
     }
   };
 
-  /** 운영자: 영상제공 - 특정 영상 반려 처리 */
+  /** 운영자: 영상제공 - 반려 모달 열기 */
   const handleRejectVideo = (videoId: string) => {
     if (!task) return;
-    if (!confirm('이 영상을 반려 처리하시겠습니까? 해당 회원에게 알림이 전송됩니다.')) return;
     const targetVideo = task.videoUploads?.find((v) => v.id === videoId);
+    if (!targetVideo) return;
+    setRejectReason('');
+    setRejectVideoModal({ videoId, fileName: targetVideo.fileName, userId: targetVideo.userId });
+  };
+
+  /** 운영자: 영상제공 - 반려 확정 (사유 포함) */
+  const handleRejectVideoConfirm = () => {
+    if (!task || !rejectVideoModal) return;
+    const reason = rejectReason.trim();
     const next = tasks.map((t) =>
       t.id !== task.id ? t : {
         ...t,
         videoUploads: (t.videoUploads ?? []).map((v) =>
-          v.id === videoId ? { ...v, status: 'rejected' as const } : v
+          v.id === rejectVideoModal.videoId
+            ? { ...v, status: 'rejected' as const, rejectionReason: reason || undefined }
+            : v
         ),
       }
     );
     saveTasks(next);
-    if (targetVideo && addNotif) {
-      addNotif(targetVideo.userId, 'revision', '영상 반려 안내', `[${task.title}] 제출하신 영상(${targetVideo.fileName})이 반려되었습니다. 중복 제출 또는 검토 기준 미달 영상은 포인트가 지급되지 않습니다.`);
+    if (addNotif) {
+      const reasonText = reason ? ` 반려 사유: ${reason}` : '';
+      addNotif(rejectVideoModal.userId, 'revision', '영상 반려 안내', `[${task.title}] 제출하신 영상(${rejectVideoModal.fileName})이 반려되었습니다.${reasonText} 영상을 다시 확인하고 재제출해 주세요.`);
     }
+    setRejectVideoModal(null);
+    setRejectReason('');
   };
 
   /** 운영자: 영상제공 - 반려 취소 (실수 시 복구) */
@@ -670,7 +687,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                               {isPaid ? (
                                 <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">✅ 포인트 지급 완료</span>
                               ) : isRejected ? (
-                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-600">❌ 반려됨</span>
+                                <div className="mt-1 space-y-1">
+                                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-600">❌ 반려됨</span>
+                                  {v.rejectionReason && (
+                                    <p className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">반려 사유: {v.rejectionReason}</p>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">🔍 검토중</span>
                               )}
@@ -1512,7 +1534,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                                         <p className="text-xs text-gray-500">📍 {[v.location, v.storeName].filter(Boolean).join(' · ')}</p>
                                       )}
                                       <p className="text-[10px] text-gray-400">{v.uploadedAt.slice(11, 16)}</p>
-                                      {isRejected && <span className="text-[10px] font-black text-red-500">❌ 반려됨</span>}
+                                      {isRejected && (
+                                        <div>
+                                          <span className="text-[10px] font-black text-red-500">❌ 반려됨</span>
+                                          {v.rejectionReason && <p className="text-[10px] text-red-400 mt-0.5">사유: {v.rejectionReason}</p>}
+                                        </div>
+                                      )}
                                       {vPaid && <span className="text-[10px] font-black text-emerald-600">✅ 지급됨</span>}
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
@@ -1661,6 +1688,22 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
           </div>
         )}
 
+        {/* 운영자 전용 원고 디버그 패널 */}
+        {isOperator && (
+          <details className="border border-dashed border-gray-300 rounded-xl p-4">
+            <summary className="text-xs font-black text-gray-400 cursor-pointer select-none">🔧 관리자: 원고 데이터 확인 (클릭해서 펼치기)</summary>
+            <div className="mt-3">
+              {Object.keys(sections).length === 0 ? (
+                <p className="text-red-600 font-black text-sm">⚠️ DB에 원고 데이터가 없습니다. 수정 버튼을 눌러 원고를 다시 입력해주세요.</p>
+              ) : (
+                <pre className="text-[10px] text-gray-600 overflow-auto max-h-60 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap break-all">
+                  {JSON.stringify(sections, null, 2)}
+                </pre>
+              )}
+            </div>
+          </details>
+        )}
+
         {task.pointPaid && (
           <p className="text-center text-gray-500 font-bold py-4">이 작업은 마감되었습니다.</p>
         )}
@@ -1682,6 +1725,35 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
             <button onClick={() => setShowDailyLimitModal(false)} className="w-full py-3 rounded-xl bg-rose-500 text-white font-black hover:bg-rose-600 transition-all">
               확인
             </button>
+          </div>
+        </div>
+      )}
+
+      {rejectVideoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl space-y-5">
+            <h4 className="font-black text-gray-900 text-lg">영상 반려</h4>
+            <p className="text-sm text-gray-600 truncate">🎬 {rejectVideoModal.fileName}</p>
+            <div>
+              <label className="text-sm font-black text-gray-700 block mb-2">반려 사유 <span className="text-gray-400 font-normal">(선택사항)</span></label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="예: 영상이 너무 짧습니다 / 매장이 다릅니다 / 화질이 불량합니다"
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-200 outline-none text-sm resize-none"
+                autoFocus
+              />
+              <p className="text-xs text-gray-400 mt-1">입력하면 회원 알림과 마이페이지에 사유가 표시됩니다.</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setRejectVideoModal(null); setRejectReason(''); }} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200">
+                취소
+              </button>
+              <button onClick={handleRejectVideoConfirm} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-black hover:bg-red-600">
+                반려 처리
+              </button>
+            </div>
           </div>
         </div>
       )}
