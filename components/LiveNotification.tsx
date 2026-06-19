@@ -101,17 +101,14 @@ const LiveNotification: React.FC = () => {
 
   const isOrder = notification.type === 'order';
   return (
-    <div className="fixed top-20 left-2 right-2 sm:left-auto sm:right-8 sm:top-24 z-[100] notification-fade">
-      {/* 모바일: 좌우 여백만 두고 가로 폭 꽉 채워서 문장 전체 노출 / sm 이상은 기존 */}
-      <div className="bg-white/95 backdrop-blur-md border border-gray-100 shadow-lg rounded-xl flex items-center gap-2 min-w-0 w-full px-2.5 py-2 sm:w-auto sm:min-w-[340px] sm:max-w-none sm:rounded-2xl sm:p-5 sm:gap-4 sm:shadow-xl">
-        <div className="flex-shrink-0 flex items-center justify-center w-3.5 h-3.5 sm:w-6 sm:h-6">
-          <div className={`w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
+    <div className="fixed bottom-[76px] left-2 right-2 sm:bottom-auto sm:top-24 sm:left-auto sm:right-6 z-[99] notification-fade pointer-events-none">
+      <div className="bg-white/96 backdrop-blur-md border border-gray-100 shadow-md rounded-xl flex items-start gap-2 px-3 py-2 sm:min-w-[300px] sm:max-w-sm sm:rounded-2xl sm:p-4 sm:gap-3 sm:shadow-xl">
+        <div className="flex-shrink-0 mt-1">
+          <div className={`w-2 h-2 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
         </div>
-        <div className="flex-1 min-w-0 overflow-hidden">
-          <p className="text-[10px] font-bold text-gray-700 leading-tight sm:text-[14px] sm:leading-tight whitespace-nowrap overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] sm:whitespace-normal sm:overflow-visible">
-            {notification.content}
-          </p>
-        </div>
+        <p className="text-[11px] font-bold text-gray-700 leading-snug sm:text-[13px] sm:leading-tight flex-1">
+          {notification.content}
+        </p>
       </div>
     </div>
   );

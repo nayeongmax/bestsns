@@ -174,40 +174,41 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
   const latestNotice = notices.filter(n => !n.isHidden)[0];
 
   return (
-    <div className="max-w-6xl mx-auto py-12 px-4 md:px-6 animate-in fade-in duration-700 space-y-6">
+    <div className="max-w-6xl mx-auto py-2 md:py-12 px-2 md:px-6 animate-in fade-in duration-700 space-y-3 md:space-y-6">
       {/* 공지사항 배너 */}
       {latestNotice && (
-        <div className="bg-[#1e293b] rounded-[32px] p-6 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden group">
-          <div className="absolute right-0 top-0 opacity-10 translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-700">
+        <div className="bg-[#1e293b] rounded-xl md:rounded-[32px] p-3 md:p-6 text-white flex flex-row items-center justify-between gap-2 md:gap-6 shadow-xl relative overflow-hidden group">
+          <div className="hidden md:block absolute right-0 top-0 opacity-10 translate-x-1/4 -translate-y-1/4 group-hover:scale-110 transition-transform duration-700">
             <svg className="w-64 h-64" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
           </div>
-          <div className="flex items-center gap-6 relative z-10">
-            <div className="bg-orange-500 px-4 py-1.5 rounded-full font-black text-xs italic tracking-widest uppercase">Official Notice</div>
-            <p className="text-lg font-black tracking-tight truncate max-w-2xl">{latestNotice.title}</p>
+          <div className="flex items-center gap-2 md:gap-6 relative z-10 min-w-0">
+            <div className="hidden md:block bg-orange-500 px-4 py-1.5 rounded-full font-black text-xs italic tracking-widest uppercase whitespace-nowrap">Official Notice</div>
+            <span className="md:hidden text-orange-400 text-xs font-black shrink-0">공지</span>
+            <p className="text-xs md:text-lg font-black tracking-tight truncate">{latestNotice.title}</p>
           </div>
           <button
             onClick={() => navigate('/notices')}
-            className="bg-white/10 hover:bg-white text-white hover:text-gray-900 px-8 py-2.5 rounded-2xl font-black text-[13px] transition-all whitespace-nowrap relative z-10"
+            className="bg-white/10 hover:bg-white text-white hover:text-gray-900 px-3 py-1.5 md:px-8 md:py-2.5 rounded-xl md:rounded-2xl font-black text-[11px] md:text-[13px] transition-all whitespace-nowrap relative z-10 shrink-0"
           >
             전체보기
           </button>
         </div>
       )}
-      <div className="bg-white rounded-[48px] p-8 md:p-12 shadow-xl border border-gray-100 space-y-10 relative overflow-hidden">
+      <div className="bg-white rounded-2xl md:rounded-[48px] p-3 md:p-8 xl:p-12 shadow-xl border border-gray-100 space-y-5 md:space-y-10 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-blue-500 to-blue-500" />
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
           <div>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
+            <h2 className="text-2xl md:text-4xl font-black text-gray-900 italic tracking-tighter">
               누구나<span className="text-blue-600">알바</span>
             </h2>
-            <p className="text-gray-700 font-semibold text-xs md:text-sm mt-2 whitespace-nowrap">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
-            <p className="text-gray-700 font-semibold text-xs md:text-sm mt-1 whitespace-nowrap">프리랜서 작업이 필요하시면 아래에 작업의뢰를 눌러주세요.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <p className="text-gray-700 font-semibold text-xs mt-1">프리랜서 작업을 하고 수익통장에 포인트를 쌓아보세요.</p>
+            <p className="text-gray-700 font-semibold text-xs mt-0.5">작업이 필요하시면 아래 작업의뢰를 눌러주세요.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
               {(user?.role === 'admin' || user?.role === 'manager') && (
                 <button
                   onClick={() => navigate('/part-time/register')}
-                  className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-700 transition-all ring-2 ring-gray-400/50"
+                  className="flex-1 min-w-[100px] px-4 py-2.5 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-700 transition-all ring-2 ring-gray-400/50"
                   title="광고주 결제 후 여기서 작업을 등록하세요 (운영자 전용)"
                 >
                   작업 등록 (운영자)
@@ -215,7 +216,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
               )}
               <button
                 onClick={() => navigate('/part-time/request')}
-                className="px-5 py-3 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-all"
+                className="flex-1 min-w-[80px] px-4 py-2.5 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-all"
               >
                 작업의뢰
               </button>
@@ -288,50 +289,31 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                 touchStartX.current = null;
               }}
             >
-              {/* 모바일: 월~금 5칸 + 토·일 2칸 2행 레이아웃 */}
-              <div className="md:hidden space-y-1">
-                <div className="grid grid-cols-5 gap-1">
-                  {weekDates.slice(0, 5).map((d) => {
+              {/* 모바일: 7칸 1행 compact 레이아웃 */}
+              <div className="md:hidden">
+                <div className="grid grid-cols-7 gap-0.5">
+                  {weekDates.map((d) => {
                     const c = dateCounts[d] || { total: 0, done: 0 };
                     const isSelected = effectiveDate === d;
-                    const dayLabel = `${d.slice(5, 7)}/${d.slice(8)}`;
+                    const dayNames = ['월','화','수','목','금','토','일'];
+                    const jsDay = new Date(d).getDay();
+                    const dayName = dayNames[jsDay === 0 ? 6 : jsDay - 1];
+                    const dayNum = d.slice(8);
                     return (
                       <button
                         key={d}
                         type="button"
                         onClick={() => setSelectedDate(d)}
-                        className={`p-2 rounded-lg border text-left transition-all duration-200 min-w-0 ${
+                        className={`p-1 rounded-lg border text-center transition-all duration-200 min-w-0 ${
                           isSelected
-                            ? 'border-blue-400 bg-blue-50/80 shadow-md ring-2 ring-blue-200/60'
+                            ? 'border-blue-400 bg-blue-50 shadow ring-1 ring-blue-300/60'
                             : 'border-gray-200/80 bg-white'
                         }`}
                       >
-                        <p className="text-[11px] font-black text-gray-600">{dayLabel}</p>
-                        <p className="text-[10px] text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
-                        <p className="text-[10px] text-blue-600 font-semibold leading-tight">완료 {c.done}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="grid grid-cols-2 gap-1">
-                  {weekDates.slice(5, 7).map((d) => {
-                    const c = dateCounts[d] || { total: 0, done: 0 };
-                    const isSelected = effectiveDate === d;
-                    const dayLabel = `${d.slice(5, 7)}/${d.slice(8)}`;
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => setSelectedDate(d)}
-                        className={`p-2 rounded-lg border text-center transition-all duration-200 min-w-0 ${
-                          isSelected
-                            ? 'border-blue-400 bg-blue-50/80 shadow-md ring-2 ring-blue-200/60'
-                            : 'border-gray-200/80 bg-white'
-                        }`}
-                      >
-                        <p className="text-[11px] font-black text-gray-600">{dayLabel}</p>
-                        <p className="text-[10px] text-gray-500 mt-1 font-semibold leading-tight">작업 {c.total}</p>
-                        <p className="text-[10px] text-blue-600 font-semibold leading-tight">완료 {c.done}</p>
+                        <p className={`text-[9px] font-bold leading-tight ${jsDay === 0 ? 'text-red-400' : jsDay === 6 ? 'text-blue-400' : 'text-gray-400'}`}>{dayName}</p>
+                        <p className={`text-[12px] font-black leading-tight mt-0.5 ${isSelected ? 'text-blue-600' : 'text-gray-800'}`}>{dayNum}</p>
+                        <p className="text-[8px] text-gray-400 leading-tight">{c.total}건</p>
+                        {c.done > 0 && <p className="text-[8px] text-blue-500 leading-tight font-bold">{c.done}완</p>}
                       </button>
                     );
                   })}
@@ -404,29 +386,29 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
               return (
                 <div
                   key={task.id}
-                  className={`w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border transition-all ${
+                  className={`w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 p-3 sm:p-6 rounded-xl sm:rounded-2xl border transition-all ${
                     done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm'
                   }`}
                 >
-                  <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className="flex-1 text-left">
-                    <span className="text-xs font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
-                    <h4 className="font-black text-gray-900 text-base">{task.title}</h4>
-                    <p className="text-base text-gray-500 mt-1 line-clamp-2">{task.description}</p>
+                  <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className="flex-1 text-left min-w-0">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
+                    <h4 className="font-black text-gray-900 text-sm sm:text-base truncate">{task.title}</h4>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-1 sm:line-clamp-2">{task.description}</p>
                   </button>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-black text-blue-600 text-base">+{task.reward.toLocaleString()}원</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-black text-blue-600 text-sm sm:text-base whitespace-nowrap">+{task.reward.toLocaleString()}원</span>
                     <div className="flex flex-col items-end gap-1">
                       {isMeSelected && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-500 text-white">선정되었습니다!</span>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-red-500 text-white whitespace-nowrap">선정됨!</span>
                       )}
-                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className={`px-4 py-2 rounded-xl text-sm font-black ${buttonClass}`}>
+                      <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className={`px-3 py-1.5 rounded-lg text-xs font-black whitespace-nowrap ${buttonClass}`}>
                         {buttonLabel}
                       </button>
-                    </div>{/* badge+button wrapper */}
+                    </div>
                     {user?.role === 'admin' && (
                       <>
-                        <Link to={`/part-time/register`} state={{ editTask: task }} className="px-3 py-2 rounded-xl bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100">수정</Link>
-                        <button type="button" onClick={async (e) => { e.stopPropagation(); if (!confirm(`"${task.title}" 작업을 삭제할까요?`)) return; await deletePartTimeTask(task.id); setTasks(prev => prev.filter(x => x.id !== task.id)); }} className="px-3 py-2 rounded-xl bg-red-50 text-red-500 text-xs font-black hover:bg-red-100">삭제</button>
+                        <Link to={`/part-time/register`} state={{ editTask: task }} className="px-2 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 whitespace-nowrap">수정</Link>
+                        <button type="button" onClick={async (e) => { e.stopPropagation(); if (!confirm(`"${task.title}" 작업을 삭제할까요?`)) return; await deletePartTimeTask(task.id); setTasks(prev => prev.filter(x => x.id !== task.id)); }} className="px-2 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-black hover:bg-red-100 whitespace-nowrap">삭제</button>
                       </>
                     )}
                   </div>
