@@ -632,7 +632,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
 
   return (
     <div className="max-w-6xl mx-auto py-6 md:py-12 px-3 md:px-8 animate-in fade-in duration-300">
-      <div className="bg-white rounded-2xl md:rounded-[32px] p-5 md:p-10 shadow-xl border border-gray-100 space-y-6 md:space-y-8">
+      <div className="bg-white rounded-2xl md:rounded-[32px] p-3 md:p-10 shadow-xl border border-gray-100 space-y-4 md:space-y-8">
         <div className="flex items-start justify-between gap-3 pb-4 border-b border-gray-100">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -931,35 +931,35 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
             </div>
           ) : (
           <>{/* STEP 2 ─ 원본 글 작성 */}
-          <div className="border-2 border-blue-200 rounded-2xl p-4 md:p-6 bg-blue-50/20">
-            <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
-              <div className="flex items-center gap-2">
+          <div className="border-2 border-blue-200 rounded-2xl p-3 md:p-6 bg-blue-50/20">
+            <div className="mb-2">
+              <div className="flex items-center gap-2 mb-1.5">
                 <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-500 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm">2</div>
                 <div>
                   <h3 className="font-black text-gray-900 text-sm md:text-base">아래 원본 내용으로 게시글 작성하기</h3>
                   <p className="text-xs text-gray-500 mt-0.5">원본 글을 그대로 복사해서 작성해 주세요</p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1.5 shrink-0">
+              <div className="flex flex-wrap gap-1.5 ml-9">
                 <span className={`px-2.5 py-1 rounded-full text-xs font-black border shadow-sm ${(task.postVisibility ?? '전체공개') === '멤버공개' ? 'bg-amber-400 text-white border-amber-500' : 'bg-blue-500 text-white border-blue-600'}`}>
                   {task.postVisibility ?? '전체공개'}
                 </span>
                 <span className="px-2.5 py-1 rounded-full text-xs font-black bg-purple-500 text-white border border-purple-600 shadow-sm">1분간 체류</span>
                 {task.workTimeSlot && (
-                  <span className="px-2.5 py-1 rounded-full text-xs font-black bg-indigo-500 text-white border border-indigo-600 shadow-sm">
+                  <span className="px-2.5 py-1 rounded-full text-xs font-black bg-indigo-500 text-white border border-indigo-600 shadow-sm whitespace-nowrap">
                     🕐 {task.workTimeSlot}
                   </span>
                 )}
               </div>
             </div>
             {/* 필수 안내 배너 */}
-            <div className="flex items-start gap-2 bg-amber-50 border-2 border-amber-300 rounded-xl px-3 py-2.5 mb-2">
-              <span className="text-base shrink-0">⚠️</span>
-              <p className="text-xs font-black text-amber-800 leading-relaxed">
-                각 게시글마다 <span className="text-amber-600 underline decoration-amber-400">{task.postVisibility ?? '전체공개'}</span>로 설정 후 업로드 필수!<br />글 작성 후 <span className="text-purple-700 underline decoration-purple-400">1분 체류 후 닫기</span>
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 rounded-xl px-3 py-2 mb-2">
+              <span className="shrink-0 text-sm">⚠️</span>
+              <p className="text-[11px] font-black text-amber-800 leading-snug">
+                <span className="text-amber-600">{task.postVisibility ?? '전체공개'}</span> 설정 필수 · 글 작성 후 <span className="text-purple-700">1분 체류</span> 후 닫기
               </p>
             </div>
-            <div className="grid gap-4">
+            <div className="grid gap-2 md:gap-4">
           <h3 className="text-sm font-black text-gray-500 uppercase">작업 내용 (작업자가 할 일)</h3>
           {(() => {
             const order = sections.sectionOrder;
@@ -968,19 +968,19 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 if (type === '게시글' && sections.게시글목록?.[index]) {
                   const block = sections.게시글목록[index];
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {index + 1}</p>
-                      {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
-                      {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 space-y-1">
+                      <p className="text-[9px] font-black text-gray-400 uppercase">게시글 {index + 1}</p>
+                      {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug">{block.제목}</p>}
+                      {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">{block.내용}</p>}
                     </div>
                   );
                 }
                 if (type === '댓글' && sections.댓글목록?.[index]) {
                   const text = sections.댓글목록[index];
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {index + 1}</p>
-                      <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
+                      <p className="text-[9px] font-black text-gray-400 uppercase mb-1">댓글 {index + 1}</p>
+                      <p className="text-gray-800 whitespace-pre-wrap text-xs">{text}</p>
                     </div>
                   );
                 }
@@ -988,29 +988,33 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                   const text = sections.작업링크목록[index];
                   const isUrl = text.startsWith('http://') || text.startsWith('https://');
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {index + 1}</p>
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
+                      <p className="text-[9px] font-black text-gray-400 uppercase mb-1.5">작업링크 {index + 1}</p>
                       {isUrl ? (
-                        <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
+                        <a href={text} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
+                          <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                          <span className="text-emerald-700 font-bold text-xs truncate flex-1">{text}</span>
+                        </a>
                       ) : (
-                        <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                        <p className="text-gray-800 text-xs">{text}</p>
                       )}
                     </div>
                   );
                 }
                 if (type === '제목' && sections.제목목록?.[index]) {
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">제목 {index + 1}</p>
-                      <p className="font-black text-gray-800">{sections.제목목록[index]}</p>
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
+                      <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">제목 {index + 1}</p>
+                      <p className="font-black text-gray-900 text-sm">{sections.제목목록[index]}</p>
                     </div>
                   );
                 }
                 if (type === '내용' && sections.내용목록?.[index]) {
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {index + 1}</p>
-                      <p className="text-gray-800 whitespace-pre-wrap text-sm">{sections.내용목록[index]}</p>
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
+                      <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">내용 {index + 1}</p>
+                      <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">{sections.내용목록[index]}</p>
                     </div>
                   );
                 }
@@ -1084,57 +1088,61 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                   </div>
                 )}
                 {sections.게시글목록 && sections.게시글목록.length > 0 && !sections.작업세트목록?.length && (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {sections.게시글목록.map((block, i) => (
-                      <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2">게시글 {i + 1}</p>
-                        {block.제목 && <p className="font-black text-gray-800 mb-1">{block.제목}</p>}
-                        {block.내용 && <p className="text-gray-800 whitespace-pre-wrap text-sm">{block.내용}</p>}
+                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 space-y-1">
+                        <p className="text-[9px] font-black text-gray-400 uppercase">게시글 {i + 1}</p>
+                        {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug">{block.제목}</p>}
+                        {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">{block.내용}</p>}
                       </div>
                     ))}
                   </div>
                 )}
                 {sections.댓글목록 && sections.댓글목록.length > 0 && (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {sections.댓글목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
-                        <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                        <p className="text-[9px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
+                        <p className="text-gray-800 whitespace-pre-wrap text-xs">{text}</p>
                       </div>
                     ))}
                   </div>
                 )}
                 {sections.제목목록 && sections.제목목록.length > 0 && (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {sections.제목목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">제목 {i + 1}</p>
-                        <p className="font-black text-gray-800">{text}</p>
+                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                        <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">제목 {i + 1}</p>
+                        <p className="font-black text-gray-900 text-sm">{text}</p>
                       </div>
                     ))}
                   </div>
                 )}
                 {sections.내용목록 && sections.내용목록.length > 0 && (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {sections.내용목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-1">내용 {i + 1}</p>
-                        <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
+                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                        <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">내용 {i + 1}</p>
+                        <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">{text}</p>
                       </div>
                     ))}
                   </div>
                 )}
                 {sections.작업링크목록 && sections.작업링크목록.length > 0 && (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {sections.작업링크목록.map((text, i) => {
                       const isUrl = text.startsWith('http://') || text.startsWith('https://');
                       return (
-                        <div key={i} className="bg-white rounded-xl p-4 border border-gray-200">
-                          <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업링크 {i + 1}</p>
+                        <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                          <p className="text-[9px] font-black text-gray-400 uppercase mb-1.5">작업링크 {i + 1}</p>
                           {isUrl ? (
-                            <p className="text-gray-800 whitespace-pre-wrap"><a href={text} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{text}</a></p>
+                            <a href={text} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
+                              <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                              <span className="text-emerald-700 font-bold text-xs truncate flex-1">{text}</span>
+                            </a>
                           ) : (
-                            <p className="text-gray-800 whitespace-pre-wrap">{text}</p>
+                            <p className="text-gray-800 text-xs">{text}</p>
                           )}
                         </div>
                       );
@@ -1157,12 +1165,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
               if (key !== '이미지' && key !== '댓글' && key !== '작업링크' && key !== 'gif' && !sections[key]) return null;
               if (key === 'gif' && !sections.gif) return null;
               return (
-                <div key={key} className="bg-white rounded-xl p-4 border border-gray-200">
-                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">{key}</p>
+                <div key={key} className="bg-white rounded-xl p-3 border border-gray-100">
+                  <p className="text-[9px] font-black text-gray-400 uppercase mb-1">{key}</p>
                   {key === '이미지' ? (
                     <>
                       {sections.이미지목록 && sections.이미지목록.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-2 mb-2">
                           {sections.이미지목록.map((src, i) => (
                             <div key={i} className="relative">
                               <img
@@ -1186,7 +1194,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                           )}
                         </div>
                       ) : sections.이미지 ? (
-                        <p className="text-gray-800 whitespace-pre-wrap">{sections.이미지}</p>
+                        <p className="text-gray-700 text-xs">{sections.이미지}</p>
                       ) : null}
                     </>
                   ) : key === 'gif' && sections.gif?.startsWith('data:') ? (
@@ -1202,15 +1210,19 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                       )}
                     </div>
                   ) : key === '작업링크' && sections.작업링크 && (sections.작업링크.startsWith('http://') || sections.작업링크.startsWith('https://')) ? (
-                    <p className="text-gray-800 whitespace-pre-wrap"><a href={sections.작업링크} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all">{sections.작업링크}</a></p>
+                    <a href={sections.작업링크} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
+                      <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      <span className="text-emerald-700 font-bold text-xs truncate flex-1">{sections.작업링크}</span>
+                    </a>
                   ) : (
-                    <p className="text-gray-800 whitespace-pre-wrap">{sections[key]}</p>
+                    <p className="text-gray-700 text-xs whitespace-pre-wrap">{sections[key]}</p>
                   )}
                 </div>
               );
             }
           )}
-            </div>{/* close grid gap-4 (sections) */}
+            </div>{/* close grid gap-2 md:gap-4 (sections) */}
           </div>{/* close Step 2 box */}
           </>)}
 

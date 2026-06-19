@@ -194,7 +194,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
           </button>
         </div>
       )}
-      <div className="bg-white rounded-2xl md:rounded-[48px] p-3 md:p-8 xl:p-12 shadow-xl border border-gray-100 space-y-5 md:space-y-10 relative overflow-hidden">
+      <div className="bg-white rounded-xl md:rounded-[48px] p-3 md:p-8 xl:p-12 shadow-xl border border-gray-100 space-y-4 md:space-y-10 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-blue-500 to-blue-500" />
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
@@ -390,7 +390,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                     done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm'
                   }`}
                 >
-                  <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className="flex-1 text-left min-w-0">
+                  <button type="button" onClick={() => navigate(`/part-time/${task.id}`, { state: { selectedDate: effectiveDate, initialTask: task } })} className="flex-1 text-left min-w-0 overflow-hidden">
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{task.category}</span>
                     <h4 className="font-black text-gray-900 text-sm sm:text-base truncate">{task.title}</h4>
                     <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-1 sm:line-clamp-2">{task.description}</p>
