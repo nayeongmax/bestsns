@@ -53,6 +53,7 @@ function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
 // Page and Component Imports (루트 기준 @/ 사용 - Netlify 빌드 시 해석 기준 오류 방지)
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import LiveNotification from '@/components/LiveNotification';
 import SNSActivation from '@/pages/SNSActivation';
 import ChannelSales from '@/pages/ChannelSales';
@@ -953,7 +954,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
       <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={unreadChatCount} onLogout={handleLogout} onOpenLoginModal={() => setShowAuthModal(true)} />
       <LiveNotification />
-      <div className="container mx-auto py-10 px-4 flex-1">
+      <div className="container mx-auto pt-4 pb-24 px-3 xl:py-10 xl:px-4 flex-1">
         <ContainerRoutes
             ebooks={ebooks}
             setEbooks={setEbooks}
@@ -997,7 +998,8 @@ const App: React.FC = () => {
             onlineUserIds={onlineUserIds}
           />
       </div>
-      <Footer />
+      <div className="hidden xl:block"><Footer /></div>
+      <MobileBottomNav />
     </div>
     <WelcomeGuideModal />
     {showAuthModal && (
