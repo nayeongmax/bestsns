@@ -525,7 +525,14 @@ const FreelancerDashboard: React.FC<Props> = ({ user, onUpdate, onApplyFreelance
                           <p className="text-xs text-gray-400">📍 {[firstVideo.location, firstVideo.storeName].filter(Boolean).join(' · ')}</p>
                         )}
                         {isAllRejected ? (
-                          <p className="text-xs text-red-500 font-bold mt-1">❌ 반려됨 · 재제출해 주세요.</p>
+                          <div className="mt-1 space-y-1">
+                            <p className="text-xs text-red-500 font-bold">❌ 반려됨 · 재제출해 주세요.</p>
+                            {dateVideos.filter((v) => v.rejectionReason).map((v, i) => (
+                              <p key={i} className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5 font-bold">
+                                반려 사유: {v.rejectionReason}
+                              </p>
+                            ))}
+                          </div>
                         ) : (
                           <p className="text-xs text-blue-600 font-bold mt-1">🔍 검토 후 포인트가 지급됩니다.</p>
                         )}
