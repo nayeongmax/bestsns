@@ -174,7 +174,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
   const latestNotice = notices.filter(n => !n.isHidden)[0];
 
   return (
-    <div className="max-w-6xl mx-auto py-2 md:py-12 px-2 md:px-6 animate-in fade-in duration-700 space-y-3 md:space-y-6">
+    <div className="max-w-6xl mx-auto py-2 md:py-12 px-3 md:px-6 animate-in fade-in duration-700 space-y-3 md:space-y-6">
       {/* 공지사항 배너 */}
       {latestNotice && (
         <div className="bg-[#1e293b] rounded-xl md:rounded-[32px] p-3 md:p-6 text-white flex flex-row items-center justify-between gap-2 md:gap-6 shadow-xl relative overflow-hidden group">
@@ -395,7 +395,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                     <h4 className="font-black text-gray-900 text-sm sm:text-base truncate">{task.title}</h4>
                     <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-1 sm:line-clamp-2">{task.description}</p>
                   </button>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-black text-blue-600 text-sm sm:text-base whitespace-nowrap">+{task.reward.toLocaleString()}원</span>
                     <div className="flex flex-col items-end gap-1">
                       {isMeSelected && (

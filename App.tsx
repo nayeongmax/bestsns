@@ -954,7 +954,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
       <Header user={user} wishlistCount={wishlist.length} notifications={notifications} unreadChatCount={unreadChatCount} onLogout={handleLogout} onOpenLoginModal={() => setShowAuthModal(true)} />
       <LiveNotification />
-      <div className="container mx-auto pt-4 pb-24 px-3 xl:py-10 xl:px-4 flex-1">
+      <div className="container mx-auto pt-4 pb-24 md:pb-4 px-3 xl:py-10 xl:px-4 flex-1">
         <ContainerRoutes
             ebooks={ebooks}
             setEbooks={setEbooks}

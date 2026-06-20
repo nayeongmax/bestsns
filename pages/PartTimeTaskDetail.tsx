@@ -632,7 +632,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
 
   return (
     <div className="max-w-6xl mx-auto py-6 md:py-12 px-3 md:px-8 animate-in fade-in duration-300">
-      <div className="bg-white rounded-2xl md:rounded-[32px] p-3 md:p-10 shadow-xl border border-gray-100 space-y-4 md:space-y-8">
+      <div className="bg-white rounded-2xl md:rounded-[32px] p-3 md:p-10 shadow-xl border border-gray-100 space-y-4 md:space-y-8 overflow-hidden">
         <div className="flex items-start justify-between gap-3 pb-4 border-b border-gray-100">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -953,10 +953,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
               </div>
             </div>
             {/* 필수 안내 배너 */}
-            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 rounded-xl px-3 py-2 mb-2">
-              <span className="shrink-0 text-sm">⚠️</span>
-              <p className="text-[11px] font-black text-amber-800 leading-snug">
-                <span className="text-amber-600">{task.postVisibility ?? '전체공개'}</span> 설정 필수 · 글 작성 후 <span className="text-purple-700">1분 체류</span> 후 닫기
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 rounded-xl px-2.5 py-1.5 mb-2">
+              <span className="shrink-0 text-xs">⚠️</span>
+              <p className="text-[11px] font-black text-amber-800 whitespace-nowrap overflow-hidden text-ellipsis">
+                <span className="text-amber-600">{task.postVisibility ?? '전체공개'}</span> 설정 · <span className="text-purple-700">1분 체류</span> 필수
               </p>
             </div>
             <div className="grid gap-2 md:gap-4">
@@ -968,19 +968,19 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 if (type === '게시글' && sections.게시글목록?.[index]) {
                   const block = sections.게시글목록[index];
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 space-y-1">
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 space-y-1 overflow-hidden">
                       <p className="text-[9px] font-black text-gray-400 uppercase">게시글 {index + 1}</p>
-                      {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug">{block.제목}</p>}
-                      {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">{block.내용}</p>}
+                      {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug break-words">{block.제목}</p>}
+                      {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed break-words">{block.내용}</p>}
                     </div>
                   );
                 }
                 if (type === '댓글' && sections.댓글목록?.[index]) {
                   const text = sections.댓글목록[index];
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
                       <p className="text-[9px] font-black text-gray-400 uppercase mb-1">댓글 {index + 1}</p>
-                      <p className="text-gray-800 whitespace-pre-wrap text-xs">{text}</p>
+                      <p className="text-gray-800 whitespace-pre-wrap text-xs break-words">{text}</p>
                     </div>
                   );
                 }
@@ -988,16 +988,16 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                   const text = sections.작업링크목록[index];
                   const isUrl = text.startsWith('http://') || text.startsWith('https://');
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
                       <p className="text-[9px] font-black text-gray-400 uppercase mb-1.5">작업링크 {index + 1}</p>
                       {isUrl ? (
                         <a href={text} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
+                          className="flex items-center gap-2 w-full min-w-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
                           <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                          <span className="text-emerald-700 font-bold text-xs truncate flex-1">{text}</span>
+                          <span className="text-emerald-700 font-bold text-xs truncate min-w-0 flex-1">{text}</span>
                         </a>
                       ) : (
-                        <p className="text-gray-800 text-xs">{text}</p>
+                        <p className="text-gray-800 text-xs break-words">{text}</p>
                       )}
                     </div>
                   );
@@ -1090,10 +1090,10 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 {sections.게시글목록 && sections.게시글목록.length > 0 && !sections.작업세트목록?.length && (
                   <div className="space-y-2">
                     {sections.게시글목록.map((block, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 space-y-1">
+                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 space-y-1 overflow-hidden">
                         <p className="text-[9px] font-black text-gray-400 uppercase">게시글 {i + 1}</p>
-                        {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug">{block.제목}</p>}
-                        {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">{block.내용}</p>}
+                        {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug break-words">{block.제목}</p>}
+                        {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed break-words">{block.내용}</p>}
                       </div>
                     ))}
                   </div>
@@ -1101,9 +1101,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 {sections.댓글목록 && sections.댓글목록.length > 0 && (
                   <div className="space-y-2">
                     {sections.댓글목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
                         <p className="text-[9px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
-                        <p className="text-gray-800 whitespace-pre-wrap text-xs">{text}</p>
+                        <p className="text-gray-800 whitespace-pre-wrap text-xs break-words">{text}</p>
                       </div>
                     ))}
                   </div>
@@ -1111,9 +1111,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 {sections.제목목록 && sections.제목목록.length > 0 && (
                   <div className="space-y-2">
                     {sections.제목목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
                         <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">제목 {i + 1}</p>
-                        <p className="font-black text-gray-900 text-sm">{text}</p>
+                        <p className="font-black text-gray-900 text-sm break-words">{text}</p>
                       </div>
                     ))}
                   </div>
@@ -1121,9 +1121,9 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 {sections.내용목록 && sections.내용목록.length > 0 && (
                   <div className="space-y-2">
                     {sections.내용목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
                         <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">내용 {i + 1}</p>
-                        <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">{text}</p>
+                        <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed break-words">{text}</p>
                       </div>
                     ))}
                   </div>
@@ -1133,16 +1133,16 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                     {sections.작업링크목록.map((text, i) => {
                       const isUrl = text.startsWith('http://') || text.startsWith('https://');
                       return (
-                        <div key={i} className="bg-white rounded-xl p-3 border border-gray-100">
+                        <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
                           <p className="text-[9px] font-black text-gray-400 uppercase mb-1.5">작업링크 {i + 1}</p>
                           {isUrl ? (
                             <a href={text} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
+                              className="flex items-center gap-2 w-full min-w-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
                               <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                              <span className="text-emerald-700 font-bold text-xs truncate flex-1">{text}</span>
+                              <span className="text-emerald-700 font-bold text-xs truncate min-w-0 flex-1">{text}</span>
                             </a>
                           ) : (
-                            <p className="text-gray-800 text-xs">{text}</p>
+                            <p className="text-gray-800 text-xs break-words">{text}</p>
                           )}
                         </div>
                       );
@@ -1165,7 +1165,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
               if (key !== '이미지' && key !== '댓글' && key !== '작업링크' && key !== 'gif' && !sections[key]) return null;
               if (key === 'gif' && !sections.gif) return null;
               return (
-                <div key={key} className="bg-white rounded-xl p-3 border border-gray-100">
+                <div key={key} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
                   <p className="text-[9px] font-black text-gray-400 uppercase mb-1">{key}</p>
                   {key === '이미지' ? (
                     <>
@@ -1211,12 +1211,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                     </div>
                   ) : key === '작업링크' && sections.작업링크 && (sections.작업링크.startsWith('http://') || sections.작업링크.startsWith('https://')) ? (
                     <a href={sections.작업링크} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
+                      className="flex items-center gap-2 w-full min-w-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
                       <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                      <span className="text-emerald-700 font-bold text-xs truncate flex-1">{sections.작업링크}</span>
+                      <span className="text-emerald-700 font-bold text-xs truncate min-w-0 flex-1">{sections.작업링크}</span>
                     </a>
                   ) : (
-                    <p className="text-gray-700 text-xs whitespace-pre-wrap">{sections[key]}</p>
+                    <p className="text-gray-700 text-xs whitespace-pre-wrap break-words">{sections[key]}</p>
                   )}
                 </div>
               );
