@@ -20,7 +20,7 @@ const MobileBottomNav: React.FC = () => {
       : pathname === path || (path !== '/' && pathname.startsWith(path + '/'));
 
   return (
-    <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex overflow-x-auto no-scrollbar">
         {navItems.map((item) => {
           const active = isActive(item.path);
