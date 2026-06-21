@@ -101,12 +101,13 @@ const LiveNotification: React.FC = () => {
 
   const isOrder = notification.type === 'order';
   return (
-    <div className="fixed bottom-[76px] left-2 right-2 sm:bottom-auto sm:top-24 sm:left-auto sm:right-6 z-[99] notification-fade pointer-events-none">
-      <div className="bg-white/96 backdrop-blur-md border border-gray-100 shadow-md rounded-xl flex items-start gap-2 px-3 py-2 sm:min-w-[300px] sm:max-w-sm sm:rounded-2xl sm:p-4 sm:gap-3 sm:shadow-xl">
-        <div className="flex-shrink-0 mt-1">
-          <div className={`w-2 h-2 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
+    <div className="fixed bottom-[76px] left-2 right-2 sm:bottom-auto sm:top-24 sm:left-auto sm:right-8 z-[99] notification-fade pointer-events-none">
+      {/* 모바일: 하단 컴팩트 토스트 (반투명) / sm+: 원래 스타일 (흰 배경, 선명) */}
+      <div className="bg-white/80 backdrop-blur-sm border border-white/40 shadow-sm rounded-xl flex items-start gap-2 px-3 py-2 sm:bg-white sm:backdrop-blur-none sm:border-gray-100 sm:shadow-xl sm:rounded-2xl sm:p-5 sm:gap-4 sm:items-center sm:min-w-[340px] sm:max-w-none">
+        <div className="flex-shrink-0 mt-1 sm:mt-0 sm:flex sm:items-center sm:justify-center sm:w-6 sm:h-6">
+          <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shadow-sm animate-pulse ${isOrder ? 'bg-blue-500 shadow-blue-200' : 'bg-red-500 shadow-red-200'}`}></div>
         </div>
-        <p className="text-[11px] font-bold text-gray-700 leading-snug sm:text-[13px] sm:leading-tight flex-1">
+        <p className="text-[11px] font-bold text-gray-700 leading-snug sm:text-[14px] sm:font-bold sm:leading-tight flex-1">
           {notification.content}
         </p>
       </div>
