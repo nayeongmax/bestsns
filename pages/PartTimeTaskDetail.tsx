@@ -50,6 +50,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
   const [applyComment, setApplyComment] = useState('');
   const [applyContact, setApplyContact] = useState('');
   const [applyCafeId, setApplyCafeId] = useState('');
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [workLinks, setWorkLinks] = useState<string[]>(['']);
   const [revisionModal, setRevisionModal] = useState<{ userId: string; nickname: string; text: string } | null>(null);
   const [agree1, setAgree1] = useState(false);
@@ -991,11 +992,20 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                     <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
                       <p className="text-[9px] font-black text-gray-400 uppercase mb-1.5">작업링크 {index + 1}</p>
                       {isUrl ? (
-                        <a href={text} target="_blank" rel="noopener noreferrer"
-                          className="flex items-center gap-2 w-full min-w-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
-                          <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                          <span className="text-emerald-700 font-bold text-xs truncate min-w-0 flex-1">{text}</span>
-                        </a>
+                        <div className="flex items-center gap-1.5 w-full min-w-0">
+                          <a href={text} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2 flex-1 min-w-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
+                            <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            <span className="text-emerald-700 font-bold text-xs truncate min-w-0 flex-1">{text}</span>
+                          </a>
+                          <button type="button" onClick={() => { navigator.clipboard.writeText(text); setCopiedUrl(text); setTimeout(() => setCopiedUrl(null), 2000); }}
+                            className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border transition-colors bg-gray-50 hover:bg-gray-100 border-gray-200">
+                            {copiedUrl === text
+                              ? <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                              : <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            }
+                          </button>
+                        </div>
                       ) : (
                         <p className="text-gray-800 text-xs break-words">{text}</p>
                       )}
@@ -1210,11 +1220,20 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                       )}
                     </div>
                   ) : key === '작업링크' && sections.작업링크 && (sections.작업링크.startsWith('http://') || sections.작업링크.startsWith('https://')) ? (
-                    <a href={sections.작업링크} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 w-full min-w-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
-                      <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                      <span className="text-emerald-700 font-bold text-xs truncate min-w-0 flex-1">{sections.작업링크}</span>
-                    </a>
+                    <div className="flex items-center gap-1.5 w-full min-w-0">
+                      <a href={sections.작업링크} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 flex-1 min-w-0 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-2 transition-colors">
+                        <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        <span className="text-emerald-700 font-bold text-xs truncate min-w-0 flex-1">{sections.작업링크}</span>
+                      </a>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(sections.작업링크!); setCopiedUrl(sections.작업링크!); setTimeout(() => setCopiedUrl(null), 2000); }}
+                        className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border transition-colors bg-gray-50 hover:bg-gray-100 border-gray-200">
+                        {copiedUrl === sections.작업링크
+                          ? <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                          : <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        }
+                      </button>
+                    </div>
                   ) : (
                     <p className="text-gray-700 text-xs whitespace-pre-wrap break-words">{sections[key]}</p>
                   )}
