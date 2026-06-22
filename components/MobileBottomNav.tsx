@@ -8,7 +8,6 @@ const navItems = [
   { label: '누구나알바', path: '/part-time', icon: '👷', badge: '지원OK' },
   { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
   { label: '자유게시판', path: '/board', icon: '🗨️' },
-  { label: '매출관리', path: '/revenue', icon: '📊' },
 ];
 
 const MobileBottomNav: React.FC = () => {

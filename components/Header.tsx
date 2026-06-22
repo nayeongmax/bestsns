@@ -33,6 +33,8 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
 
   const isAdmin = user?.role === 'admin' || user?.id?.toLowerCase() === 'admin';
 
+  const isFranchiseUser = user?.isFranchise || isAdmin;
+
   const navItems = [
     { label: '마케팅주문', path: '/sns', icon: '📈' },
     { label: '채널판매', path: '/channels', icon: '📺' },
@@ -40,7 +42,6 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
     { label: '누구나알바', path: '/part-time', icon: '👷', badge: '누구나 지원OK' },
     { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
     { label: '자유게시판', path: '/board', icon: '🗨️' },
-    { label: '매출관리', path: '/revenue', icon: '📊' },
   ];
 
   const handleLogoutClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -159,6 +160,11 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                   )}
                 </Link>
               </div>
+              {isFranchiseUser && (
+                <Link to="/franchise" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e3a5f] text-white text-sm font-black hover:bg-[#152d4a] transition-all italic tracking-tight shrink-0">
+                  🏢 가맹점패널
+                </Link>
+              )}
               {isAdmin && (
                 <Link to="/admin" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d1117] text-white text-sm font-black hover:bg-black transition-all italic tracking-tight shrink-0">
                   ⚙️ 어드민패널
@@ -317,6 +323,11 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
             </div>
           </nav>
           <div className="border-t border-gray-100 p-4 sm:p-5 space-y-2 sm:space-y-3 shrink-0">
+            {isFranchiseUser && (
+              <Link to="/franchise" onClick={closeMobileMenu} className="flex items-center gap-3 px-5 py-3.5 sm:py-4 rounded-xl bg-[#1e3a5f] text-white text-sm sm:text-base font-black">
+                🏢 가맹점패널
+              </Link>
+            )}
             {isAdmin && (
               <Link to="/admin" onClick={closeMobileMenu} className="flex items-center gap-3 px-5 py-3.5 sm:py-4 rounded-xl bg-[#0d1117] text-white text-sm sm:text-base font-black">
                 ⚙️ 어드민패널
@@ -346,6 +357,11 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
         </div>
       </div>
 
+      {isFranchiseUser && (
+        <Link to="/franchise" className="fixed bottom-28 right-8 z-[59] bg-[#1e3a5f] text-white w-14 h-14 rounded-2xl shadow-2xl flex items-center justify-center hover:bg-[#152d4a] transition-all hover:scale-110 active:scale-95">
+          <span className="text-[11px] font-black italic tracking-widest text-center leading-none">가맹<br/>점</span>
+        </Link>
+      )}
       {isAdmin && (
         <Link to="/admin" className="fixed bottom-8 right-8 z-[60] bg-[#0d1117] text-white w-14 h-14 rounded-2xl shadow-2xl flex items-center justify-center hover:bg-black transition-all hover:scale-110 active:scale-95 group">
           <span className="text-[11px] font-black italic tracking-widest text-center leading-none">ADMIN<br/>PANEL</span>
