@@ -36,6 +36,8 @@ export interface UserProfile {
   freelancerStatus?: 'none' | 'pending' | 'approved';
   /** 프리랜서 등록 신청 정보 (최초 1회, 승인 후에는 통장 등 수정 가능) */
   freelancerApplication?: FreelancerApplication;
+  /** 가맹점 파트너 여부 — 관리자가 부여 */
+  isFranchise?: boolean;
 }
 
 /** 프리랜서 등록 신청 (최초 1회) */

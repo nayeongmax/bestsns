@@ -39,6 +39,7 @@ function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
     totalPurchaseAmount: Number(row.total_purchase_amount ?? 0),
     totalSalesAmount: Number(row.total_sales_amount ?? 0),
     freelancerEarnings: Number(row.total_freelancer_earnings ?? 0),
+    isFranchise: Boolean(row.is_franchise ?? false),
     joinDate: row.join_date != null ? String(row.join_date) : undefined,
     sellerStatus: (row.seller_status as UserProfile['sellerStatus']) ?? 'none',
     freelancerStatus: (row.freelancer_status as UserProfile['freelancerStatus']) ?? 'none',
@@ -87,6 +88,7 @@ import WishlistPage from '@/pages/WishlistPage';
 import PartTimePage, { PartTimeTaskRegister } from '@/pages/PartTimePage';
 import PartTimeTaskDetail from '@/pages/PartTimeTaskDetail';
 import PartTimeJobRequestPage from '@/pages/PartTimeJobRequestPage';
+import FranchisePanel from '@/pages/FranchisePanel';
 
 /** pathname이 /ebooks일 때 항상 EbookSales만 렌더 (다른 라우트 간섭 방지) */
 function ContainerRoutes(props: {
@@ -149,6 +151,7 @@ function ContainerRoutes(props: {
       <Route path="/store/marketing-voucher" element={props.user ? <MarketingVoucherPage user={props.user} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/payment/alba" element={props.user ? <AlbaPaymentPage user={props.user} members={props.members} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
+      <Route path="/franchise" element={props.user ? <FranchisePanel user={props.user} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} /> : <Navigate to="/login" />} />
       <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} onDeleteSmmProducts={props.onDeleteSmmProducts} smmOrders={props.smmOrders} setSmmOrders={props.setSmmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} setChannelOrders={props.setChannelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} onRefreshMembers={props.onRefreshMembers} /> : <Navigate to="/login" />} />
       <Route path="/notices" element={<NoticePage notices={props.notices} setNotices={props.setNotices} user={props.user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
       <Route path="/terms" element={<TermsPage />} />
