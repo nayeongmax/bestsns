@@ -51,6 +51,7 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
   const [applyContact, setApplyContact] = useState('');
   const [applyCafeId, setApplyCafeId] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [workLinks, setWorkLinks] = useState<string[]>(['']);
   const [revisionModal, setRevisionModal] = useState<{ userId: string; nickname: string; text: string } | null>(null);
   const [agree1, setAgree1] = useState(false);
@@ -135,6 +136,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
       );
     }
   }, [task, addNotif]);
+
+  const copyText = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSection(key);
+    setTimeout(() => setCopiedSection(null), 2000);
+  };
 
   const saveTasks = (next: PartTimeTask[]) => {
     setTasks(next);
@@ -968,9 +975,16 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
               return order.map(({ type, index }, i) => {
                 if (type === '게시글' && sections.게시글목록?.[index]) {
                   const block = sections.게시글목록[index];
+                  const blockText = [block.제목, block.내용].filter(Boolean).join('\n\n');
+                  const blockKey = `게시글-${index}`;
                   return (
-                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 space-y-1 overflow-hidden">
-                      <p className="text-[9px] font-black text-gray-400 uppercase">게시글 {index + 1}</p>
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[9px] font-black text-gray-400 uppercase">게시글 {index + 1}</p>
+                        <button type="button" onClick={() => copyText(blockText, blockKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                          {copiedSection === blockKey ? '✓ 복사됨' : '📋 복사'}
+                        </button>
+                      </div>
                       {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug break-words">{block.제목}</p>}
                       {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed break-words">{block.내용}</p>}
                     </div>
@@ -978,9 +992,15 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 }
                 if (type === '댓글' && sections.댓글목록?.[index]) {
                   const text = sections.댓글목록[index];
+                  const commentKey = `댓글-${index}`;
                   return (
                     <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
-                      <p className="text-[9px] font-black text-gray-400 uppercase mb-1">댓글 {index + 1}</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[9px] font-black text-gray-400 uppercase">댓글 {index + 1}</p>
+                        <button type="button" onClick={() => copyText(text, commentKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                          {copiedSection === commentKey ? '✓ 복사됨' : '📋 복사'}
+                        </button>
+                      </div>
                       <p className="text-gray-800 whitespace-pre-wrap text-xs break-words">{text}</p>
                     </div>
                   );
@@ -1013,17 +1033,29 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                   );
                 }
                 if (type === '제목' && sections.제목목록?.[index]) {
+                  const titleKey = `제목-${index}`;
                   return (
                     <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
-                      <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">제목 {index + 1}</p>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <p className="text-[9px] font-black text-gray-400 uppercase">제목 {index + 1}</p>
+                        <button type="button" onClick={() => copyText(sections.제목목록![index], titleKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                          {copiedSection === titleKey ? '✓ 복사됨' : '📋 복사'}
+                        </button>
+                      </div>
                       <p className="font-black text-gray-900 text-sm">{sections.제목목록[index]}</p>
                     </div>
                   );
                 }
                 if (type === '내용' && sections.내용목록?.[index]) {
+                  const contentKey = `내용-${index}`;
                   return (
                     <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
-                      <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">내용 {index + 1}</p>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <p className="text-[9px] font-black text-gray-400 uppercase">내용 {index + 1}</p>
+                        <button type="button" onClick={() => copyText(sections.내용목록![index], contentKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                          {copiedSection === contentKey ? '✓ 복사됨' : '📋 복사'}
+                        </button>
+                      </div>
                       <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">{sections.내용목록[index]}</p>
                     </div>
                   );
@@ -1051,9 +1083,15 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 if (type === '작업안내') {
                   const text = sections.작업안내목록?.[index];
                   if (!text) return null;
+                  const guideKey = `작업안내-${index}`;
                   return (
                     <div key={`${type}-${index}`} className="bg-white rounded-xl p-4 border border-gray-200">
-                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">작업안내</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-black text-gray-400 uppercase">작업안내</p>
+                        <button type="button" onClick={() => copyText(text, guideKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                          {copiedSection === guideKey ? '✓ 복사됨' : '📋 복사'}
+                        </button>
+                      </div>
                       <p className="text-gray-800 whitespace-pre-wrap text-sm">{text}</p>
                     </div>
                   );
@@ -1099,43 +1137,76 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                 )}
                 {sections.게시글목록 && sections.게시글목록.length > 0 && !sections.작업세트목록?.length && (
                   <div className="space-y-2">
-                    {sections.게시글목록.map((block, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 space-y-1 overflow-hidden">
-                        <p className="text-[9px] font-black text-gray-400 uppercase">게시글 {i + 1}</p>
-                        {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug break-words">{block.제목}</p>}
-                        {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed break-words">{block.내용}</p>}
-                      </div>
-                    ))}
+                    {sections.게시글목록.map((block, i) => {
+                      const bText = [block.제목, block.내용].filter(Boolean).join('\n\n');
+                      const bKey = `fb-게시글-${i}`;
+                      return (
+                        <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-[9px] font-black text-gray-400 uppercase">게시글 {i + 1}</p>
+                            <button type="button" onClick={() => copyText(bText, bKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                              {copiedSection === bKey ? '✓ 복사됨' : '📋 복사'}
+                            </button>
+                          </div>
+                          {block.제목 && <p className="font-black text-gray-900 text-sm leading-snug break-words">{block.제목}</p>}
+                          {block.내용 && <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed break-words">{block.내용}</p>}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {sections.댓글목록 && sections.댓글목록.length > 0 && (
                   <div className="space-y-2">
-                    {sections.댓글목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
-                        <p className="text-[9px] font-black text-gray-400 uppercase mb-1">댓글 {i + 1}</p>
-                        <p className="text-gray-800 whitespace-pre-wrap text-xs break-words">{text}</p>
-                      </div>
-                    ))}
+                    {sections.댓글목록.map((text, i) => {
+                      const cKey = `fb-댓글-${i}`;
+                      return (
+                        <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-[9px] font-black text-gray-400 uppercase">댓글 {i + 1}</p>
+                            <button type="button" onClick={() => copyText(text, cKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                              {copiedSection === cKey ? '✓ 복사됨' : '📋 복사'}
+                            </button>
+                          </div>
+                          <p className="text-gray-800 whitespace-pre-wrap text-xs break-words">{text}</p>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {sections.제목목록 && sections.제목목록.length > 0 && (
                   <div className="space-y-2">
-                    {sections.제목목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
-                        <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">제목 {i + 1}</p>
-                        <p className="font-black text-gray-900 text-sm break-words">{text}</p>
-                      </div>
-                    ))}
+                    {sections.제목목록.map((text, i) => {
+                      const tKey = `fb-제목-${i}`;
+                      return (
+                        <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <p className="text-[9px] font-black text-gray-400 uppercase">제목 {i + 1}</p>
+                            <button type="button" onClick={() => copyText(text, tKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                              {copiedSection === tKey ? '✓ 복사됨' : '📋 복사'}
+                            </button>
+                          </div>
+                          <p className="font-black text-gray-900 text-sm break-words">{text}</p>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {sections.내용목록 && sections.내용목록.length > 0 && (
                   <div className="space-y-2">
-                    {sections.내용목록.map((text, i) => (
-                      <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
-                        <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">내용 {i + 1}</p>
-                        <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed break-words">{text}</p>
-                      </div>
-                    ))}
+                    {sections.내용목록.map((text, i) => {
+                      const nKey = `fb-내용-${i}`;
+                      return (
+                        <div key={i} className="bg-white rounded-xl p-3 border border-gray-100 overflow-hidden">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <p className="text-[9px] font-black text-gray-400 uppercase">내용 {i + 1}</p>
+                            <button type="button" onClick={() => copyText(text, nKey)} className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                              {copiedSection === nKey ? '✓ 복사됨' : '📋 복사'}
+                            </button>
+                          </div>
+                          <p className="text-gray-700 whitespace-pre-wrap text-xs leading-relaxed break-words">{text}</p>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {sections.작업링크목록 && sections.작업링크목록.length > 0 && (
@@ -1235,7 +1306,12 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                       </button>
                     </div>
                   ) : (
-                    <p className="text-gray-700 text-xs whitespace-pre-wrap break-words">{sections[key]}</p>
+                    <div className="flex items-start gap-2">
+                      <p className="text-gray-700 text-xs whitespace-pre-wrap break-words flex-1">{sections[key]}</p>
+                      <button type="button" onClick={() => copyText(sections[key] as string, `sec-${key}`)} className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                        {copiedSection === `sec-${key}` ? '✓ 복사됨' : '📋 복사'}
+                      </button>
+                    </div>
                   )}
                 </div>
               );
