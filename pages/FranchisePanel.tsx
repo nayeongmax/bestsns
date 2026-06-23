@@ -611,7 +611,11 @@ const CollectorTab: React.FC = () => {
         }),
       });
       const data = await res.json();
-      if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
+      if (data.status !== 'ok') {
+        const msg = data.message || '수집 실패';
+        const hint = data.hint ? `\n💡 ${data.hint}` : '';
+        throw new Error(msg + hint);
+      }
       const newList: CafeArticle[] = data.articles || [];
       const merged = resume
         ? [...articles, ...newList.map((a, i) => ({ ...a, no: articles.length + i + 1 }))]
@@ -778,23 +782,20 @@ const CollectorTab: React.FC = () => {
               <p className="text-[10px] text-gray-400">※ API 키·프롬프트는 치환키워드 탭에서</p>
             </div>
 
-            {/* 네이버 로그인 (비공개 카페) */}
+            {/* 네이버 쿠키 인증 — 필수 */}
             <div className="mt-2 pt-2 border-t border-gray-200">
-              <p className="text-xs font-black text-gray-500 mb-1.5">■ 네이버 로그인 (비공개 카페)</p>
-              <button type="button" onClick={openNaverLogin}
-                className="w-full py-1.5 rounded text-xs font-black text-white bg-green-600 hover:bg-green-700 mb-1.5">
-                🔐 네이버 로그인 팝업
-              </button>
-              <button type="button" onClick={() => setShowCookie(v => !v)}
-                className="text-[10px] text-blue-500 hover:underline font-bold">
-                {showCookie ? '▲ 세션쿠키 숨기기' : '▼ 세션쿠키 직접 입력'}
-              </button>
-              {showCookie && (
-                <div className="mt-1">
-                  <p className="text-[10px] text-gray-400 mb-0.5">NID_AUT 쿠키값 (브라우저 개발자도구 → Application → Cookies)</p>
-                  <input className={inputCls} value={naverCookie} onChange={e => setNaverCookie(e.target.value)} placeholder="NID_AUT=..." autoComplete="off" />
-                </div>
-              )}
+              <p className="text-xs font-black text-red-500 mb-1">⚠ 쿠키 인증 필요</p>
+              <p className="text-[10px] text-gray-500 mb-1.5 leading-relaxed">
+                네이버 카페는 API가 막혀 쿠키 인증이 필요합니다.<br/>
+                ① <button type="button" onClick={openNaverLogin} className="text-blue-500 underline font-bold">네이버 로그인 팝업</button> 열어 로그인<br/>
+                ② F12 → Application → Cookies → cafe.naver.com<br/>
+                ③ NID_AUT, NID_SES 값 복사 후 아래 붙여넣기
+              </p>
+              <label className="block text-[10px] font-bold text-gray-500 mb-0.5">NID_AUT 쿠키:</label>
+              <input className={inputCls} value={naverCookie} onChange={e => setNaverCookie(e.target.value)}
+                placeholder="NID_AUT=xxxxx" autoComplete="off"
+                style={{ borderColor: naverCookie ? '#22c55e' : '#fca5a5' }} />
+              {naverCookie && <p className="text-[10px] text-green-600 font-bold mt-0.5">✓ 쿠키 입력됨</p>}
             </div>
 
             {/* 마지막 수집 정보 */}
