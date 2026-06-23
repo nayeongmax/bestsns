@@ -15,8 +15,10 @@ interface Props {
    원고시트 — 구글 시트 기본형 (자유 셀 입력)
 ══════════════════════════════════════════════ */
 
-const NUM_COLS = 10;   // A ~ J
-const NUM_ROWS = 100;  // 기본 100행
+const MIN_COLS = 26;   // 초기 A~Z
+const MIN_ROWS = 50;   // 초기 50행
+const COL_BUF  = 5;    // 마지막 데이터 열 이후 여유 열
+const ROW_BUF  = 20;   // 마지막 데이터 행 이후 여유 행
 
 const colLabel = (c: number) => {
   let label = '';
@@ -25,22 +27,46 @@ const colLabel = (c: number) => {
   return label;
 };
 
-const COL_LABELS = Array.from({ length: NUM_COLS }, (_, i) => colLabel(i));
+function computeSize(data: Record<string, string>) {
+  let maxR = MIN_ROWS - 1, maxC = MIN_COLS - 1;
+  for (const k of Object.keys(data)) {
+    const [rs, cs] = k.split(':');
+    const r = Number(rs), c = Number(cs);
+    if (!isNaN(r)) maxR = Math.max(maxR, r);
+    if (!isNaN(c)) maxC = Math.max(maxC, c);
+  }
+  return { rows: maxR + ROW_BUF + 1, cols: maxC + COL_BUF + 1 };
+}
 
 const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
   const STORAGE_KEY = `franchise_sheet_${userId}`;
 
   const [data, setData] = useState<Record<string, string>>({});
+  const [size, setSize] = useState({ rows: MIN_ROWS, cols: MIN_COLS });
   const [editCell, setEditCell] = useState<{ r: number; c: number } | null>(null);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    try { const s = localStorage.getItem(STORAGE_KEY); if (s) setData(JSON.parse(s)); } catch {}
+    try {
+      const s = localStorage.getItem(STORAGE_KEY);
+      if (s) {
+        const d = JSON.parse(s) as Record<string, string>;
+        setData(d);
+        setSize(prev => {
+          const { rows, cols } = computeSize(d);
+          return { rows: Math.max(prev.rows, rows), cols: Math.max(prev.cols, cols) };
+        });
+      }
+    } catch {}
   }, [STORAGE_KEY]);
 
   const persist = (d: Record<string, string>) => {
     setData(d);
+    setSize(prev => {
+      const { rows, cols } = computeSize(d);
+      return { rows: Math.max(prev.rows, rows), cols: Math.max(prev.cols, cols) };
+    });
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch {}
   };
 
@@ -48,6 +74,11 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
   const getVal = (r: number, c: number) => data[key(r, c)] ?? '';
 
   const startEdit = useCallback((r: number, c: number) => {
+    // 가장자리에서 탐색 시 자동 확장
+    setSize(prev => ({
+      rows: Math.max(prev.rows, r + ROW_BUF + 1),
+      cols: Math.max(prev.cols, c + COL_BUF + 1),
+    }));
     setEditCell({ r, c });
     setEditValue(data[key(r, c)] ?? '');
   }, [data]);
@@ -63,14 +94,16 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       commitEdit(r, c, editValue);
-      const nc = e.shiftKey ? c - 1 : c + 1;
-      if (nc >= 0 && nc < NUM_COLS) startEdit(r, nc);
-      else if (!e.shiftKey && r + 1 < NUM_ROWS) startEdit(r + 1, 0);
-      else if (e.shiftKey && r > 0) startEdit(r - 1, NUM_COLS - 1);
+      if (e.shiftKey) {
+        if (c > 0) startEdit(r, c - 1);
+        else if (r > 0) startEdit(r - 1, size.cols - 1);
+      } else {
+        startEdit(r, c + 1); // startEdit handles expansion
+      }
     } else if (e.key === 'Enter') {
       e.preventDefault();
       commitEdit(r, c, editValue);
-      if (r + 1 < NUM_ROWS) startEdit(r + 1, c);
+      startEdit(r + 1, c);
     } else if (e.key === 'Escape') {
       setEditCell(null);
     }
@@ -80,24 +113,17 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     if (editCell && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
   }, [editCell]);
 
-  const cellRef = (r: number, c: number) => `${COL_LABELS[c]}${r + 1}`;
-  const activeCellLabel = editCell ? cellRef(editCell.r, editCell.c) : '';
+  const activeCellLabel = editCell ? `${colLabel(editCell.c)}${editCell.r + 1}` : '';
+  const colLabels = Array.from({ length: size.cols }, (_, i) => colLabel(i));
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 260px)', minHeight: 320 }}>
-      {/* 구글 시트 수식 바 */}
-      <div
-        className="flex items-center shrink-0 border-b"
-        style={{ background: '#f8f9fa', borderColor: '#dadce0', height: 28 }}
-      >
-        {/* 셀 주소 */}
-        <div
-          className="flex items-center justify-center shrink-0 text-xs font-medium text-gray-600 border-r select-none"
-          style={{ width: 80, borderColor: '#dadce0', height: '100%', fontSize: 12 }}
-        >
-          {activeCellLabel || ''}
+      {/* 수식 바 */}
+      <div className="flex items-center shrink-0 border-b" style={{ background: '#f8f9fa', borderColor: '#dadce0', height: 28 }}>
+        <div className="flex items-center justify-center shrink-0 text-xs font-medium text-gray-600 border-r select-none"
+          style={{ width: 80, borderColor: '#dadce0', height: '100%', fontSize: 12 }}>
+          {activeCellLabel}
         </div>
-        {/* 수식 입력칸 (표시 전용) */}
         <div className="flex-1 px-3 text-xs text-gray-700 font-medium truncate" style={{ fontSize: 13 }}>
           {editCell ? editValue : ''}
         </div>
@@ -105,47 +131,19 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
 
       {/* 스프레드시트 본체 */}
       <div className="flex-1 overflow-auto" style={{ border: '1px solid #dadce0', borderTop: 'none' }}>
-        <table
-          style={{
-            borderCollapse: 'collapse',
-            minWidth: 'max-content',
-            tableLayout: 'fixed',
-          }}
-        >
+        <table style={{ borderCollapse: 'collapse', minWidth: 'max-content', tableLayout: 'fixed' }}>
           {/* 컬럼 너비 */}
           <colgroup>
             <col style={{ width: 46 }} />
-            {COL_LABELS.map(l => <col key={l} style={{ width: 120 }} />)}
+            {colLabels.map(l => <col key={l} style={{ width: 120 }} />)}
           </colgroup>
 
           {/* 헤더 행 */}
           <thead>
             <tr>
-              {/* 좌상단 코너 */}
-              <th
-                style={{
-                  position: 'sticky', top: 0, left: 0, zIndex: 30,
-                  background: '#f8f9fa',
-                  border: '1px solid #dadce0',
-                  height: 20,
-                }}
-              />
-              {COL_LABELS.map(label => (
-                <th
-                  key={label}
-                  style={{
-                    position: 'sticky', top: 0, zIndex: 20,
-                    background: '#f8f9fa',
-                    border: '1px solid #dadce0',
-                    height: 20,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: '#444746',
-                    textAlign: 'center',
-                    userSelect: 'none',
-                    letterSpacing: '0.02em',
-                  }}
-                >
+              <th style={{ position: 'sticky', top: 0, left: 0, zIndex: 30, background: '#f8f9fa', border: '1px solid #dadce0', height: 20 }} />
+              {colLabels.map(label => (
+                <th key={label} style={{ position: 'sticky', top: 0, zIndex: 20, background: '#f8f9fa', border: '1px solid #dadce0', height: 20, fontSize: 11, fontWeight: 600, color: '#444746', textAlign: 'center', userSelect: 'none', letterSpacing: '0.02em' }}>
                   {label}
                 </th>
               ))}
@@ -154,29 +152,15 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
 
           {/* 데이터 행 */}
           <tbody>
-            {Array.from({ length: NUM_ROWS }, (_, r) => (
+            {Array.from({ length: size.rows }, (_, r) => (
               <tr key={r}>
                 {/* 행 번호 */}
-                <td
-                  style={{
-                    position: 'sticky', left: 0, zIndex: 10,
-                    background: '#f8f9fa',
-                    borderRight: '1px solid #dadce0',
-                    borderBottom: '1px solid #e2e3e3',
-                    height: 21,
-                    fontSize: 11,
-                    fontWeight: 500,
-                    color: '#444746',
-                    textAlign: 'center',
-                    userSelect: 'none',
-                    minWidth: 46,
-                  }}
-                >
+                <td style={{ position: 'sticky', left: 0, zIndex: 10, background: '#f8f9fa', borderRight: '1px solid #dadce0', borderBottom: '1px solid #e2e3e3', height: 21, fontSize: 11, fontWeight: 500, color: '#444746', textAlign: 'center', userSelect: 'none', minWidth: 46 }}>
                   {r + 1}
                 </td>
 
                 {/* 데이터 셀 */}
-                {COL_LABELS.map((_, c) => {
+                {colLabels.map((_, c) => {
                   const isEditing = editCell?.r === r && editCell?.c === c;
                   const val = getVal(r, c);
 
