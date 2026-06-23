@@ -3,7 +3,7 @@ import { UserProfile } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
 
-type FranchiseTab = 'members' | 'revenue' | 'manuscripts' | 'convert';
+type FranchiseTab = 'members' | 'revenue' | 'manuscripts' | 'convert' | 'collector';
 
 interface Props {
   user: UserProfile;
@@ -468,6 +468,240 @@ const ConvertTab: React.FC = () => {
 };
 
 /* ══════════════════════════════════════════════
+   원고수집기
+══════════════════════════════════════════════ */
+interface CollectedArticle {
+  id: string;
+  url: string;
+  title: string | null;
+  description: string | null;
+  body: string | null;
+  thumbnail: string | null;
+  images: string[];
+  author: string | null;
+  publishedAt: string | null;
+  collectedAt: string;
+}
+
+const CollectorTab: React.FC = () => {
+  const [url, setUrl]             = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const [articles, setArticles]   = useState<CollectedArticle[]>(() => {
+    try {
+      const s = localStorage.getItem('franchise_collected_articles');
+      return s ? JSON.parse(s) : [];
+    } catch { return []; }
+  });
+  const [preview, setPreview]     = useState<CollectedArticle | null>(null);
+  const [copiedId, setCopiedId]   = useState<string | null>(null);
+
+  const saveArticles = (list: CollectedArticle[]) => {
+    setArticles(list);
+    try { localStorage.setItem('franchise_collected_articles', JSON.stringify(list)); } catch {}
+  };
+
+  const collect = async () => {
+    if (!url.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/.netlify/functions/scrape-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const data = await res.json();
+      if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
+      const article: CollectedArticle = {
+        id: Date.now().toString(),
+        url: data.url,
+        title: data.title,
+        description: data.description,
+        body: data.body,
+        thumbnail: data.thumbnail,
+        images: data.images || [],
+        author: data.author,
+        publishedAt: data.publishedAt,
+        collectedAt: new Date().toISOString(),
+      };
+      const next = [article, ...articles];
+      saveArticles(next);
+      setPreview(article);
+      setUrl('');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const remove = (id: string) => {
+    saveArticles(articles.filter(a => a.id !== id));
+    if (preview?.id === id) setPreview(null);
+  };
+
+  const copyText = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
+  const formatDate = (iso: string) => {
+    try { return new Date(iso).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch { return iso; }
+  };
+
+  return (
+    <div className="space-y-4 max-w-6xl">
+      {/* 입력 */}
+      <div>
+        <h2 className="text-lg font-black text-gray-900 mb-1">원고수집기</h2>
+        <p className="text-xs text-gray-400 font-bold mb-3">URL을 입력하면 해당 페이지의 글·이미지를 자동으로 수집합니다</p>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !loading && collect()}
+            placeholder="https://blog.naver.com/... 또는 수집할 글 URL"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-400"
+          />
+          <button
+            type="button"
+            onClick={collect}
+            disabled={loading || !url.trim()}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {loading ? '수집 중...' : '🔍 수집'}
+          </button>
+        </div>
+        {error && <p className="mt-2 text-xs text-red-500 font-bold">{error}</p>}
+      </div>
+
+      {articles.length === 0 ? (
+        <div className="py-16 text-center">
+          <div className="text-4xl mb-3">📰</div>
+          <p className="text-sm text-gray-300 font-bold">수집된 글이 없습니다</p>
+          <p className="text-xs text-gray-300 font-bold mt-1">위에 URL을 입력해 글을 수집해보세요</p>
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-2 gap-4 items-start">
+          {/* 목록 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-black text-gray-400 uppercase">수집 목록 ({articles.length})</p>
+              <button type="button" onClick={() => saveArticles([])} className="text-xs text-red-400 hover:text-red-600 font-bold">전체 삭제</button>
+            </div>
+            {articles.map(a => (
+              <div
+                key={a.id}
+                onClick={() => setPreview(a)}
+                className={`flex gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${preview?.id === a.id ? 'border-blue-400 bg-blue-50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+              >
+                {a.thumbnail && (
+                  <img src={a.thumbnail} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 bg-gray-100" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-gray-900 truncate">{a.title || '(제목 없음)'}</p>
+                  <p className="text-xs text-gray-400 font-bold truncate mt-0.5">{a.url}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {a.author && <span className="text-[11px] text-gray-400">{a.author}</span>}
+                    <span className="text-[11px] text-gray-300">{formatDate(a.collectedAt)}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); remove(a.id); }}
+                  className="text-gray-300 hover:text-red-400 font-bold text-lg leading-none shrink-0 self-start"
+                  title="삭제"
+                >×</button>
+              </div>
+            ))}
+          </div>
+
+          {/* 미리보기 */}
+          {preview && (
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-3 sticky top-32">
+              {preview.thumbnail && (
+                <img src={preview.thumbnail} alt="" className="w-full h-40 object-cover rounded-xl bg-gray-100" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+              )}
+              <div>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-black text-gray-900 text-sm leading-snug">{preview.title || '(제목 없음)'}</h3>
+                  <button
+                    type="button"
+                    onClick={() => copyText(preview.title || '', `title-${preview.id}`)}
+                    className={`text-xs font-black shrink-0 ${copiedId === `title-${preview.id}` ? 'text-emerald-500' : 'text-blue-500 hover:text-blue-700'}`}
+                  >{copiedId === `title-${preview.id}` ? '✓' : '복사'}</button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {preview.author && <span className="text-[11px] text-gray-400 font-bold">{preview.author}</span>}
+                  {preview.publishedAt && <span className="text-[11px] text-gray-300">{formatDate(preview.publishedAt)}</span>}
+                  <a href={preview.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-400 hover:underline font-bold">원문 보기</a>
+                </div>
+              </div>
+
+              {preview.description && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[11px] font-black text-gray-400 uppercase">요약</p>
+                    <button
+                      type="button"
+                      onClick={() => copyText(preview.description || '', `desc-${preview.id}`)}
+                      className={`text-xs font-black ${copiedId === `desc-${preview.id}` ? 'text-emerald-500' : 'text-blue-500 hover:text-blue-700'}`}
+                    >{copiedId === `desc-${preview.id}` ? '✓ 복사됨' : '복사'}</button>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed">{preview.description}</p>
+                </div>
+              )}
+
+              {preview.body && preview.body !== preview.description && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[11px] font-black text-gray-400 uppercase">본문</p>
+                    <button
+                      type="button"
+                      onClick={() => copyText(preview.body || '', `body-${preview.id}`)}
+                      className={`text-xs font-black ${copiedId === `body-${preview.id}` ? 'text-emerald-500' : 'text-blue-500 hover:text-blue-700'}`}
+                    >{copiedId === `body-${preview.id}` ? '✓ 복사됨' : '복사'}</button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto rounded-xl bg-gray-50 p-3">
+                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">{preview.body}</p>
+                  </div>
+                </div>
+              )}
+
+              {preview.images.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-black text-gray-400 uppercase mb-2">이미지 ({preview.images.length})</p>
+                  <div className="flex flex-wrap gap-2">
+                    {preview.images.slice(0, 8).map((img, i) => (
+                      <a key={i} href={img} target="_blank" rel="noopener noreferrer">
+                        <img src={img} alt="" className="w-16 h-16 rounded-lg object-cover bg-gray-100" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => copyText(`제목: ${preview.title || ''}\n\n${preview.body || preview.description || ''}`, `all-${preview.id}`)}
+                className={`w-full py-2.5 rounded-xl font-black text-sm transition-colors ${copiedId === `all-${preview.id}` ? 'bg-emerald-500 text-white' : 'bg-gray-900 text-white hover:bg-gray-700'}`}
+              >
+                {copiedId === `all-${preview.id}` ? '✓ 전체 복사됨' : '📋 전체 복사'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
    가맹점 현황 (어드민)
 ══════════════════════════════════════════════ */
 const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProfile) => void }> = ({ members, onUpdateUser }) => {
@@ -566,6 +800,7 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
     { id: 'revenue',     label: '매출관리',    icon: '📊' },
     { id: 'manuscripts', label: '원고시트',     icon: '📝' },
     { id: 'convert',     label: '원고시트변환', icon: '🔄' },
+    { id: 'collector',   label: '원고수집기',   icon: '🔍' },
   ];
 
   return (
@@ -585,6 +820,7 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         {activeTab === 'revenue'     && <RevenueManagement user={user} />}
         {activeTab === 'manuscripts' && <ManuscriptSheet userId={user.id} />}
         {activeTab === 'convert'     && <ConvertTab />}
+        {activeTab === 'collector'   && <CollectorTab />}
       </div>
     </div>
   );
