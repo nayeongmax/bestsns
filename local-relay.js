@@ -33,6 +33,22 @@ function buildNaverHeaders(cookie, referer) {
   };
 }
 
+function buildApiHeaders(cookie, referer) {
+  return {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'ko-KR,ko;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': referer || 'https://cafe.naver.com/',
+    'Origin': 'https://cafe.naver.com',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'x-cafe-product': 'pc',
+    ...(cookie ? { 'Cookie': cookie } : {}),
+  };
+}
+
 function decodeHtml(s) {
   if (!s) return '';
   return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
@@ -204,7 +220,77 @@ async function tryArticleListHtml(cafeId, menuId, page, cookie) {
   throw new Error('ArticleList 파싱 실패 — 로그인 필요하거나 비공개 카페');
 }
 
-// ── 방법 2: 모바일 API ────────────────────────────────────────────────────────
+// ── 방법 2: /ca-fe/ REST API (XHR 헤더 포함) ─────────────────────────────────
+async function tryCaFeApi(cafeId, menuId, page, cookie) {
+  const url = menuId
+    ? `https://cafe.naver.com/ca-fe/cafes/${cafeId}/menus/${menuId}/articles?page=${page}&perPage=50&orderBy=date`
+    : `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles?page=${page}&perPage=50&orderBy=date&includeAllMenu=true`;
+
+  console.log(`[ca-fe API] ${url}`);
+  const { status, body } = await httpsGet(url, buildApiHeaders(cookie, 'https://cafe.naver.com/'));
+  console.log(`  → HTTP ${status}, 앞150자: ${body.slice(0,150).replace(/\n/g,' ')}`);
+
+  if (status !== 200) throw new Error(`ca-fe API HTTP ${status}`);
+  let json;
+  try { json = JSON.parse(body); } catch { throw new Error('ca-fe API: JSON 파싱 실패 (HTML 반환)'); }
+
+  const result = json?.message?.result ?? json?.result ?? json;
+  const list = result?.articleList ?? result?.items ?? result?.articles ?? [];
+  if (!Array.isArray(list) || list.length === 0) throw new Error('ca-fe API: 목록 없음');
+
+  return list.map(item => ({
+    articleId: item.articleId ?? item.id,
+    title: decodeHtml(item.subject ?? item.title ?? ''),
+    writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
+    dateStr: item.writeDateTimestamp
+      ? fmtDate(new Date(item.writeDateTimestamp))
+      : (item.writeDate ?? item.writeDateText ?? ''),
+    commentCount: parseInt(item.commentCount ?? item.replyCount ?? 0),
+    readCount: parseInt(item.readCount ?? item.viewCount ?? 0),
+    totalPage: result?.totalPage ?? result?.pageInfo?.totalPage ?? 0,
+  }));
+}
+
+// ── 방법 3: apis.naver.com ────────────────────────────────────────────────────
+async function tryApisNaver(cafeId, menuId, page, cookie) {
+  const qs = new URLSearchParams({
+    'search.clubid': cafeId,
+    'search.page': String(page),
+    'search.perPage': '50',
+    'search.boardType': 'L',
+  });
+  if (menuId) qs.set('search.menuid', menuId);
+  const url = `https://apis.naver.com/cafe-web/cafe2/ArticleListV2.json?${qs}`;
+
+  console.log(`[apis.naver] ${url}`);
+  const headers = {
+    ...buildApiHeaders(cookie, 'https://cafe.naver.com/'),
+    'sec-fetch-site': 'cross-site',
+    'Origin': 'https://cafe.naver.com',
+  };
+  const { status, body } = await httpsGet(url, headers);
+  console.log(`  → HTTP ${status}, 앞150자: ${body.slice(0,150).replace(/\n/g,' ')}`);
+
+  if (status !== 200) throw new Error(`apis.naver HTTP ${status}`);
+  let json;
+  try { json = JSON.parse(body); } catch { throw new Error('apis.naver: JSON 파싱 실패'); }
+
+  const result = json?.message?.result ?? json?.result ?? json;
+  const list = result?.articleList ?? result?.items ?? [];
+  if (!Array.isArray(list) || list.length === 0) throw new Error('apis.naver: 목록 없음');
+
+  return list.map(item => ({
+    articleId: item.articleId ?? item.id,
+    title: decodeHtml(item.subject ?? item.title ?? ''),
+    writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
+    dateStr: item.writeDate ?? item.writeDateText ?? '',
+    commentCount: parseInt(item.commentCount ?? 0),
+    readCount: parseInt(item.readCount ?? 0),
+    totalPage: result?.totalPage ?? 0,
+  }));
+}
+
+// ── 방법 4: 모바일 API ────────────────────────────────────────────────────────
 async function tryMobileApi(cafeId, menuId, page, cookie) {
   const qs = new URLSearchParams({
     cafeId,
@@ -256,16 +342,38 @@ async function handleScrape(body) {
   while (articles.length < maxArticles && pagesScanned < MAX_PAGES) {
     let rawItems = [];
 
-    // 방법 1: ArticleList.nhn HTML
+    // 방법 1: /ca-fe/ REST API (XHR 헤더)
     try {
-      rawItems = await tryArticleListHtml(cafeId, menuId, page, naverCookie);
-      method = 'ArticleList HTML';
+      rawItems = await tryCaFeApi(cafeId, menuId, page, naverCookie);
+      method = 'ca-fe REST API';
     } catch (e) {
       lastError = e.message;
       console.log(`[방법1 실패] ${e.message}`);
     }
 
-    // 방법 2: 모바일 API
+    // 방법 2: apis.naver.com
+    if (rawItems.length === 0) {
+      try {
+        rawItems = await tryApisNaver(cafeId, menuId, page, naverCookie);
+        method = 'apis.naver.com';
+      } catch (e) {
+        lastError = e.message;
+        console.log(`[방법2 실패] ${e.message}`);
+      }
+    }
+
+    // 방법 3: ArticleList.nhn HTML
+    if (rawItems.length === 0) {
+      try {
+        rawItems = await tryArticleListHtml(cafeId, menuId, page, naverCookie);
+        method = 'ArticleList HTML';
+      } catch (e) {
+        lastError = e.message;
+        console.log(`[방법3 실패] ${e.message}`);
+      }
+    }
+
+    // 방법 4: 모바일 API
     if (rawItems.length === 0) {
       try {
         rawItems = await tryMobileApi(cafeId, menuId, page, naverCookie);
