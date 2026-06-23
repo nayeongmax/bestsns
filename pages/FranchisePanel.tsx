@@ -3,7 +3,7 @@ import { UserProfile } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
 
-type FranchiseTab = 'members' | 'revenue' | 'manuscripts' | 'convert';
+type FranchiseTab = 'members' | 'revenue' | 'manuscripts' | 'convert' | 'collector';
 
 interface Props {
   user: UserProfile;
@@ -468,6 +468,351 @@ const ConvertTab: React.FC = () => {
 };
 
 /* ══════════════════════════════════════════════
+   원고수집기 — 네이버 카페 크롤러
+══════════════════════════════════════════════ */
+interface CafeArticle {
+  no: number;
+  articleId: string | number;
+  title: string;
+  writer: string;
+  date: string;
+  commentCount: number;
+  readCount: number;
+  url: string;
+  comments: { content: string; writer: string; date: string }[];
+}
+
+function parseCafeId(input: string): string {
+  // "https://cafe.naver.com/f-e" → URL에서 ID 추출 시도 or 숫자 그대로
+  try {
+    const u = new URL(input.includes('://') ? input : `https://${input}`);
+    // clubid 파라미터
+    const club = u.searchParams.get('clubid');
+    if (club) return club;
+    // 숫자만 있으면 그대로
+    if (/^\d+$/.test(input.trim())) return input.trim();
+    // 카페 URL slug는 ID가 아님 — 빈 문자열 반환
+    return '';
+  } catch {
+    return /^\d+$/.test(input.trim()) ? input.trim() : '';
+  }
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+}
+
+const CollectorTab: React.FC = () => {
+  // ── 설정 ──
+  const [cafeUrl,      setCafeUrl]      = useState('https://cafe.naver.com/');
+  const [cafeId,       setCafeId]       = useState('');
+  const [menuId,       setMenuId]       = useState('');
+  const [startPage,    setStartPage]    = useState('1');
+  const [startDate,    setStartDate]    = useState('');
+  const [endDate,      setEndDate]      = useState('');
+  const [maxArticles,  setMaxArticles]  = useState('10');
+  const [maxComments,  setMaxComments]  = useState(3);
+  const [aiRewrite,    setAiRewrite]    = useState(false);
+  const [aiFillComment,setAiFillComment]= useState(false);
+
+  // ── 수집 상태 ──
+  const [loading,   setLoading]   = useState(false);
+  const [stopped,   setStopped]   = useState(false);
+  const stopRef = useRef(false);
+  const [status,    setStatus]    = useState('대기 중...');
+  const [nextPage,  setNextPage]  = useState<number | null>(null);
+
+  // ── 결과 ──
+  const [articles,  setArticles]  = useState<CafeArticle[]>(() => {
+    try { const s = localStorage.getItem('cafe_crawl_articles'); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+  const [selected,  setSelected]  = useState<Set<number>>(new Set());
+  const [lastInfo,  setLastInfo]  = useState<{ writer: string; date: string; page: number; savedAt: string } | null>(() => {
+    try { const s = localStorage.getItem('cafe_crawl_lastinfo'); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
+
+  const saveArticles = (list: CafeArticle[]) => {
+    setArticles(list);
+    try { localStorage.setItem('cafe_crawl_articles', JSON.stringify(list)); } catch {}
+  };
+
+  const saveLastInfo = (info: typeof lastInfo) => {
+    setLastInfo(info);
+    try { localStorage.setItem('cafe_crawl_lastinfo', JSON.stringify(info)); } catch {}
+  };
+
+  const resolvedCafeId = cafeId || parseCafeId(cafeUrl);
+
+  const doCollect = async (resume: boolean) => {
+    if (!resolvedCafeId) {
+      setStatus('카페 ID를 입력해주세요.');
+      return;
+    }
+    stopRef.current = false;
+    setStopped(false);
+    setLoading(true);
+    const page = resume && nextPage ? nextPage : parseInt(startPage) || 1;
+    setStatus(`수집 중... (페이지 ${page})`);
+
+    try {
+      const res = await fetch('/.netlify/functions/scrape-naver-cafe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cafeId: resolvedCafeId,
+          menuId: menuId.trim(),
+          startPage: page,
+          startDate: startDate.trim() || undefined,
+          endDate: endDate.trim() || todayStr(),
+          maxArticles: parseInt(maxArticles) || 10,
+          maxComments,
+          fetchComments: maxComments > 0,
+        }),
+      });
+      const data = await res.json();
+      if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
+
+      const newList: CafeArticle[] = data.articles || [];
+      const merged = resume
+        ? [...articles, ...newList.map((a, i) => ({ ...a, no: articles.length + i + 1 }))]
+        : newList;
+      saveArticles(merged);
+      setNextPage(data.nextPage || null);
+
+      if (newList.length > 0) {
+        const last = newList[newList.length - 1];
+        const info = {
+          writer: last.writer,
+          date: last.date,
+          page: data.nextPage || page,
+          savedAt: new Date().toLocaleString('ko-KR'),
+        };
+        saveLastInfo(info);
+      }
+      setStatus(`수집 완료 — ${merged.length}개 글`);
+    } catch (e: unknown) {
+      setStatus(`오류: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stop = () => { stopRef.current = true; setStopped(true); setLoading(false); setStatus('중지됨'); };
+
+  const toggleSelect = (no: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(no) ? next.delete(no) : next.add(no);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === articles.length) setSelected(new Set());
+    else setSelected(new Set(articles.map(a => a.no)));
+  };
+
+  const deleteSelected = () => {
+    const next = articles.filter(a => !selected.has(a.no)).map((a, i) => ({ ...a, no: i + 1 }));
+    saveArticles(next);
+    setSelected(new Set());
+  };
+
+  const exportCsv = (rewritten = false) => {
+    const rows = [['번호', '날짜', '제목', '작성자', '댓글수', '조회수', 'URL']];
+    articles.forEach(a => rows.push([
+      String(a.no), a.date,
+      rewritten ? `[리라이팅]${a.title}` : a.title,
+      a.writer, String(a.commentCount), String(a.readCount), a.url,
+    ]));
+    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `naver_cafe_${resolvedCafeId}_${todayStr()}.csv`;
+    link.click();
+  };
+
+  const openSheet = () => {
+    window.open('https://sheets.new', '_blank');
+  };
+
+  const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+    <div className="mb-3">
+      <label className="block text-xs font-bold text-gray-600 mb-1">{label}</label>
+      {children}
+    </div>
+  );
+
+  const inputCls = 'w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-400 bg-white';
+
+  return (
+    <div className="flex gap-0 h-[calc(100vh-220px)] min-h-[500px] border border-gray-200 rounded-xl overflow-hidden bg-white">
+      {/* ── 왼쪽 설정 패널 ── */}
+      <div className="w-60 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col overflow-y-auto">
+        <div className="p-3 flex-1">
+          <p className="text-xs font-black text-gray-500 mb-3 uppercase tracking-wide">설정</p>
+
+          <Field label="카페 URL:">
+            <input className={inputCls} value={cafeUrl} onChange={e => setCafeUrl(e.target.value)} placeholder="https://cafe.naver.com/..." />
+          </Field>
+
+          <Field label="카페 ID:">
+            <input className={inputCls} value={cafeId} onChange={e => setCafeId(e.target.value)} placeholder="22514346" />
+            {!cafeId && resolvedCafeId && <p className="text-[10px] text-blue-500 mt-0.5">자동: {resolvedCafeId}</p>}
+          </Field>
+
+          <Field label="카테고리 ID (전체글이면 비워두세요):">
+            <input className={inputCls} value={menuId} onChange={e => setMenuId(e.target.value)} placeholder="121" />
+          </Field>
+
+          <Field label="시작 페이지 번호:">
+            <input className={inputCls} type="number" min="1" value={startPage} onChange={e => setStartPage(e.target.value)} />
+          </Field>
+
+          <Field label="시작일 (YYYY.MM.DD):">
+            <input className={inputCls} value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="2025.06.01" />
+          </Field>
+
+          <Field label="종료일 (YYYY.MM.DD, 비우면 오늘):">
+            <input className={inputCls} value={endDate} onChange={e => setEndDate(e.target.value)} placeholder={todayStr()} />
+          </Field>
+
+          <Field label="최대 수집 글 수:">
+            <input className={inputCls} type="number" min="1" max="500" value={maxArticles} onChange={e => setMaxArticles(e.target.value)} />
+          </Field>
+
+          <Field label="댓글 수집 개수 (0~5):">
+            <input className={inputCls} type="number" min="0" max="5" value={maxComments} onChange={e => setMaxComments(Number(e.target.value))} />
+          </Field>
+
+          {/* AI 설정 */}
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <p className="text-xs font-black text-gray-500 mb-2">■ AI 설정</p>
+            <label className="flex items-center gap-2 text-xs text-gray-600 mb-1.5 cursor-pointer">
+              <input type="checkbox" checked={aiRewrite} onChange={e => setAiRewrite(e.target.checked)} className="rounded" />
+              AI 리라이팅 적용 (제목+내용)
+            </label>
+            <label className="flex items-center gap-2 text-xs text-gray-600 mb-1.5 cursor-pointer">
+              <input type="checkbox" checked={aiFillComment} onChange={e => setAiFillComment(e.target.checked)} className="rounded" />
+              댓글 부족 시 AI 댓글로 채우기
+            </label>
+            <p className="text-[10px] text-gray-400">※ API 키·프롬프트는 치환키워드 탭에서</p>
+          </div>
+
+          {/* 마지막 수집 정보 */}
+          {lastInfo && (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <p className="text-[11px] text-blue-600 font-bold leading-relaxed">
+                마지막 수집:<br />
+                {lastInfo.writer}...<br />
+                날짜: {lastInfo.date}<br />
+                페이지: {lastInfo.page}<br />
+                저장: {lastInfo.savedAt}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* 버튼들 */}
+        <div className="p-3 space-y-1.5 border-t border-gray-200">
+          <button type="button" onClick={() => doCollect(false)} disabled={loading}
+            className="w-full py-2 rounded font-black text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            {loading ? '수집 중...' : '▶ 수집 시작'}
+          </button>
+          <button type="button" onClick={() => doCollect(true)} disabled={loading || !nextPage}
+            className="w-full py-2 rounded font-black text-sm text-white bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            ▶ 이어서 수집
+          </button>
+          <button type="button" onClick={stop} disabled={!loading}
+            className="w-full py-2 rounded font-black text-sm text-white bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            ■ 중지
+          </button>
+          <button type="button" onClick={deleteSelected} disabled={selected.size === 0}
+            className="w-full py-2 rounded font-black text-sm text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            × 선택글 삭제
+          </button>
+          <button type="button" onClick={openSheet}
+            className="w-full py-2 rounded font-black text-sm text-white bg-blue-500 hover:bg-blue-600 transition-colors">
+            구글 시트로 열기
+          </button>
+          <button type="button" onClick={() => exportCsv(false)} disabled={articles.length === 0}
+            className="w-full py-2 rounded font-black text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            💾 CSV 저장 (원문만)
+          </button>
+          <button type="button" onClick={() => exportCsv(true)} disabled={articles.length === 0}
+            className="w-full py-2 rounded font-black text-sm text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            🤖 리라이팅 후 저장
+          </button>
+        </div>
+      </div>
+
+      {/* ── 오른쪽 결과 영역 ── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-4 py-2 border-b border-gray-200 bg-white shrink-0">
+          <p className="text-xs text-gray-500 font-bold">수집 결과 (✓ 열 클릭 → 선택 후 삭제)</p>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <table className="min-w-full text-xs border-collapse">
+            <thead className="sticky top-0 bg-gray-50 z-10">
+              <tr>
+                <th className="w-8 border border-gray-200 px-2 py-2 text-center cursor-pointer select-none" onClick={toggleAll}>
+                  {selected.size > 0 && selected.size === articles.length ? '✓' : '✓'}
+                </th>
+                <th className="w-12 border border-gray-200 px-2 py-2 text-center font-black text-gray-500">번호</th>
+                <th className="w-24 border border-gray-200 px-2 py-2 text-center font-black text-gray-500">날짜</th>
+                <th className="border border-gray-200 px-2 py-2 text-left font-black text-gray-500">제목</th>
+                <th className="w-16 border border-gray-200 px-2 py-2 text-center font-black text-gray-500">댓글수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {articles.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center text-gray-300 font-bold">
+                    수집된 글이 없습니다
+                  </td>
+                </tr>
+              ) : articles.map(a => (
+                <tr key={a.no} className={`hover:bg-blue-50 transition-colors ${selected.has(a.no) ? 'bg-blue-50' : ''}`}>
+                  <td className="border border-gray-100 px-2 py-1.5 text-center cursor-pointer" onClick={() => toggleSelect(a.no)}>
+                    {selected.has(a.no) ? <span className="text-blue-600 font-black">✓</span> : ''}
+                  </td>
+                  <td className="border border-gray-100 px-2 py-1.5 text-center text-gray-400">{a.no}</td>
+                  <td className="border border-gray-100 px-2 py-1.5 text-center text-gray-500 whitespace-nowrap">{a.date}</td>
+                  <td className="border border-gray-100 px-2 py-1.5">
+                    <a href={a.url} target="_blank" rel="noopener noreferrer"
+                      className="text-gray-800 hover:text-blue-600 hover:underline font-medium">
+                      {a.title}
+                    </a>
+                    {a.comments.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {a.comments.map((c, i) => (
+                          <p key={i} className="text-[10px] text-gray-400 pl-2 border-l-2 border-gray-200">
+                            {c.writer}: {c.content}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="border border-gray-100 px-2 py-1.5 text-center text-gray-500">{a.commentCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 상태바 */}
+        <div className="px-4 py-1.5 border-t border-gray-200 bg-gray-50 shrink-0">
+          <p className="text-xs text-gray-400 font-bold">{status}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
    가맹점 현황 (어드민)
 ══════════════════════════════════════════════ */
 const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProfile) => void }> = ({ members, onUpdateUser }) => {
@@ -566,6 +911,7 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
     { id: 'revenue',     label: '매출관리',    icon: '📊' },
     { id: 'manuscripts', label: '원고시트',     icon: '📝' },
     { id: 'convert',     label: '원고시트변환', icon: '🔄' },
+    { id: 'collector',   label: '원고수집기',   icon: '🔍' },
   ];
 
   return (
@@ -585,6 +931,7 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         {activeTab === 'revenue'     && <RevenueManagement user={user} />}
         {activeTab === 'manuscripts' && <ManuscriptSheet userId={user.id} />}
         {activeTab === 'convert'     && <ConvertTab />}
+        {activeTab === 'collector'   && <CollectorTab />}
       </div>
     </div>
   );
