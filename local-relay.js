@@ -387,11 +387,13 @@ async function handleScrape(body) {
     if (rawItems.length === 0) break;
 
     let reachedStart = false;
+    console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
     for (const item of rawItems) {
       if (articles.length >= maxArticles) break;
       const dateObj = parseDateStr(item.dateStr);
-      if (endDateObj && dateObj && dateObj > endDateObj) continue;
-      if (startDateObj && dateObj && dateObj < startDateObj) { reachedStart = true; break; }
+      console.log(`  article ${item.articleId}: dateStr="${item.dateStr}" → parsed=${dateObj ? fmtDate(dateObj) : 'null'}`);
+      if (endDateObj && dateObj && dateObj > endDateObj) { console.log(`    skip (too new)`); continue; }
+      if (startDateObj && dateObj && dateObj < startDateObj) { console.log(`    stop (too old)`); reachedStart = true; break; }
       articles.push({
         no: articles.length + 1,
         articleId: item.articleId,
