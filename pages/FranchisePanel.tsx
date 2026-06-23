@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { UserProfile } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
@@ -31,7 +31,31 @@ const STATUS_STYLES: Record<ManuscriptRow['status'], string> = {
   '보류': 'bg-amber-100 text-amber-700',
 };
 
-const EMPTY_FORM: Omit<ManuscriptRow, 'id'> = {
+/* ══════════════════════════════════════════════
+   원고시트 — 구글 시트 스타일 스프레드시트
+══════════════════════════════════════════════ */
+
+type ColKey = keyof Omit<ManuscriptRow, 'id'>;
+
+interface ColDef {
+  key: ColKey;
+  label: string;
+  minW: number;
+  type: 'text' | 'date' | 'select';
+  options?: string[];
+}
+
+const COLS: ColDef[] = [
+  { key: 'date',     label: '날짜',       minW: 112, type: 'date' },
+  { key: 'client',   label: '클라이언트', minW: 128, type: 'text' },
+  { key: 'channel',  label: '채널',       minW: 124, type: 'select', options: CHANNELS },
+  { key: 'title',    label: '제목',       minW: 220, type: 'text' },
+  { key: 'status',   label: '상태',       minW: 90,  type: 'select', options: ['작업전', '진행중', '완료', '보류'] },
+  { key: 'deadline', label: '마감일',     minW: 112, type: 'date' },
+  { key: 'notes',    label: '비고',       minW: 180, type: 'text' },
+];
+
+const EMPTY_ROW: Omit<ManuscriptRow, 'id'> = {
   date: new Date().toISOString().slice(0, 10),
   client: '',
   channel: '인스타그램',
@@ -41,232 +65,405 @@ const EMPTY_FORM: Omit<ManuscriptRow, 'id'> = {
   notes: '',
 };
 
-/* ─────────────────────── 원고시트 모달 ─────────────────────── */
-const ManuscriptModal: React.FC<{
-  initial: Omit<ManuscriptRow, 'id'>;
-  isEdit: boolean;
-  onSave: (form: Omit<ManuscriptRow, 'id'>) => void;
-  onClose: () => void;
-}> = ({ initial, isEdit, onSave, onClose }) => {
-  const [form, setForm] = useState(initial);
-  const set = (key: keyof typeof form, val: string) => setForm(f => ({ ...f, [key]: val }));
+/* ── 개별 셀 ── */
+interface CellProps {
+  value: string;
+  col: ColDef;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+  onTab: (shift: boolean) => void;
+  onEnter: () => void;
+}
+
+const SpreadsheetCell: React.FC<CellProps> = ({
+  value, col, isEditing, onStartEdit, onChange, onBlur, onTab, onEnter,
+}) => {
+  const inputRef = useRef<HTMLInputElement & HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      if (col.type === 'text') {
+        try { (inputRef.current as HTMLInputElement).select(); } catch {}
+      }
+    }
+  }, [isEditing, col.type]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Tab')    { e.preventDefault(); onTab(e.shiftKey); }
+    else if (e.key === 'Enter') { e.preventDefault(); onEnter(); }
+    else if (e.key === 'Escape') onBlur();
+  };
+
+  const baseInput = 'w-full h-full px-2 border-0 bg-transparent outline-none text-[13px] font-medium text-gray-800';
+
+  if (isEditing) {
+    if (col.type === 'select') {
+      return (
+        <select
+          ref={inputRef as React.RefObject<HTMLSelectElement>}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onBlur={onBlur}
+          onKeyDown={handleKeyDown}
+          className={baseInput + ' cursor-pointer'}
+          style={{ minHeight: 28 }}
+        >
+          {col.options!.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      );
+    }
+    return (
+      <input
+        ref={inputRef as React.RefObject<HTMLInputElement>}
+        type={col.type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
+        onKeyDown={handleKeyDown}
+        className={baseInput}
+        style={{ minHeight: 28 }}
+      />
+    );
+  }
+
+  /* 표시 모드 */
+  if (col.key === 'status') {
+    return (
+      <div className="flex items-center h-full px-1.5 cursor-cell select-none" onClick={onStartEdit}
+        onDoubleClick={onStartEdit}>
+        <span className={`px-1.5 py-[1px] rounded text-[11px] font-black whitespace-nowrap ${STATUS_STYLES[value as ManuscriptRow['status']] || 'bg-gray-100 text-gray-500'}`}>
+          {value || '작업전'}
+        </span>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 space-y-3 shadow-2xl z-10 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="font-black text-gray-900">{isEdit ? '행 수정' : '행 추가'}</h3>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-[11px] font-black text-gray-400 uppercase mb-1 block">날짜</label>
-            <input type="date" value={form.date} onChange={e => set('date', e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400" />
-          </div>
-          <div>
-            <label className="text-[11px] font-black text-gray-400 uppercase mb-1 block">마감일</label>
-            <input type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400" />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-[11px] font-black text-gray-400 uppercase mb-1 block">클라이언트</label>
-          <input type="text" value={form.client} onChange={e => set('client', e.target.value)} placeholder="클라이언트명"
-            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-[11px] font-black text-gray-400 uppercase mb-1 block">채널</label>
-            <select value={form.channel} onChange={e => set('channel', e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 bg-white">
-              {CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-[11px] font-black text-gray-400 uppercase mb-1 block">상태</label>
-            <select value={form.status} onChange={e => set('status', e.target.value as ManuscriptRow['status'])}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 bg-white">
-              {(['작업전', '진행중', '완료', '보류'] as const).map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-[11px] font-black text-gray-400 uppercase mb-1 block">제목</label>
-          <input type="text" value={form.title} onChange={e => set('title', e.target.value)} placeholder="원고 제목"
-            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400" />
-        </div>
-
-        <div>
-          <label className="text-[11px] font-black text-gray-400 uppercase mb-1 block">비고</label>
-          <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="메모..." rows={2}
-            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 resize-none" />
-        </div>
-
-        <div className="flex gap-2 pt-1">
-          <button type="button" onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-black text-gray-500 hover:bg-gray-50">
-            취소
-          </button>
-          <button type="button" onClick={() => onSave(form)}
-            className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700">
-            {isEdit ? '수정' : '추가'}
-          </button>
-        </div>
-      </div>
+    <div className="flex items-center h-full px-2 cursor-cell overflow-hidden select-none"
+      onClick={onStartEdit} onDoubleClick={onStartEdit}>
+      <span className="text-[13px] font-medium text-gray-800 truncate leading-none">
+        {value || ''}
+      </span>
     </div>
   );
 };
 
-/* ─────────────────────── 원고시트 테이블 ─────────────────────── */
-const ManuscriptSheet: React.FC<{
+/* ── 스프레드시트 메인 ── */
+interface SpreadsheetProps {
   manuscripts: ManuscriptRow[];
   onAdd: (row: Omit<ManuscriptRow, 'id'>) => void;
   onUpdate: (row: ManuscriptRow) => void;
   onDelete: (id: string) => void;
-}> = ({ manuscripts, onAdd, onUpdate, onDelete }) => {
-  const [showModal, setShowModal] = useState(false);
-  const [editTarget, setEditTarget] = useState<ManuscriptRow | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('전체');
-  const [filterChannel, setFilterChannel] = useState<string>('전체');
+}
+
+const ManuscriptSheet: React.FC<SpreadsheetProps> = ({ manuscripts, onAdd, onUpdate, onDelete }) => {
+  const [editingCell, setEditingCell] = useState<{ ri: number; ci: number } | null>(null);
+  const [filterStatus, setFilterStatus] = useState('전체');
+  const [filterChannel, setFilterChannel] = useState('전체');
   const [search, setSearch] = useState('');
-
-  const openAdd = () => { setEditTarget(null); setShowModal(true); };
-  const openEdit = (row: ManuscriptRow) => { setEditTarget(row); setShowModal(true); };
-
-  const handleSave = (form: Omit<ManuscriptRow, 'id'>) => {
-    if (editTarget) onUpdate({ ...editTarget, ...form });
-    else onAdd(form);
-    setShowModal(false);
-  };
-
-  const exportCsv = () => {
-    const header = ['No.', '날짜', '클라이언트', '채널', '제목', '상태', '마감일', '비고'];
-    const rows = manuscripts.map((m, i) => [i + 1, m.date, m.client, m.channel, m.title, m.status, m.deadline, m.notes]);
-    const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `원고시트_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
-    URL.revokeObjectURL(url);
-  };
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const filtered = manuscripts.filter(m => {
     if (filterStatus !== '전체' && m.status !== filterStatus) return false;
     if (filterChannel !== '전체' && m.channel !== filterChannel) return false;
-    if (search && !m.client.includes(search) && !m.title.includes(search)) return false;
+    if (search && !m.client.includes(search) && !m.title.includes(search) && !m.notes.includes(search)) return false;
     return true;
   });
 
   const stats = {
     total: manuscripts.length,
-    done: manuscripts.filter(m => m.status === '완료').length,
     inProgress: manuscripts.filter(m => m.status === '진행중').length,
-    pending: manuscripts.filter(m => m.status === '보류').length,
+    done: manuscripts.filter(m => m.status === '완료').length,
+    hold: manuscripts.filter(m => m.status === '보류').length,
+  };
+
+  const startEdit = (ri: number, ci: number) => setEditingCell({ ri, ci });
+  const stopEdit  = () => setEditingCell(null);
+
+  const moveCell = useCallback((ri: number, ci: number, dRow: number, dCol: number) => {
+    const nextCi = ci + dCol;
+    const nextRi = ri + dRow;
+    if (nextCi >= 0 && nextCi < COLS.length && nextRi >= 0 && nextRi < filtered.length) {
+      setEditingCell({ ri: nextRi, ci: nextCi });
+    } else {
+      stopEdit();
+    }
+  }, [filtered.length]);
+
+  const handleChange = (rowId: string, key: ColKey, val: string) => {
+    const row = manuscripts.find(m => m.id === rowId);
+    if (row) onUpdate({ ...row, [key]: val });
+  };
+
+  const addRow = () => {
+    onAdd({ ...EMPTY_ROW });
+    setTimeout(() => setEditingCell({ ri: filtered.length, ci: 0 }), 30);
+  };
+
+  const exportCsv = () => {
+    const header = ['No.', ...COLS.map(c => c.label)];
+    const rows = manuscripts.map((m, i) => [i + 1, ...COLS.map(c => m[c.key])]);
+    const csv = [header, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
+    a.download = `원고시트_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
   };
 
   return (
-    <div className="space-y-4">
-      {/* 상단 통계 */}
+    <div className="space-y-3">
+      {/* 통계 */}
       <div className="grid grid-cols-4 gap-2">
         {[
-          { label: '전체', val: stats.total, color: 'bg-gray-100 text-gray-700' },
-          { label: '진행중', val: stats.inProgress, color: 'bg-blue-100 text-blue-700' },
-          { label: '완료', val: stats.done, color: 'bg-emerald-100 text-emerald-700' },
-          { label: '보류', val: stats.pending, color: 'bg-amber-100 text-amber-700' },
+          { label: '전체', val: stats.total,      cls: 'bg-gray-100 text-gray-700' },
+          { label: '진행중', val: stats.inProgress, cls: 'bg-blue-50 text-blue-700' },
+          { label: '완료',   val: stats.done,       cls: 'bg-emerald-50 text-emerald-700' },
+          { label: '보류',   val: stats.hold,       cls: 'bg-amber-50 text-amber-700' },
         ].map(s => (
-          <div key={s.label} className={`${s.color} rounded-xl p-3 text-center`}>
-            <p className="text-xl font-black">{s.val}</p>
-            <p className="text-[11px] font-bold">{s.label}</p>
+          <div key={s.label} className={`${s.cls} rounded-xl p-2.5 text-center`}>
+            <p className="text-xl font-black leading-none">{s.val}</p>
+            <p className="text-[11px] font-bold mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* 필터 & 검색 */}
+      {/* 툴바 */}
       <div className="flex flex-wrap gap-2 items-center">
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="클라이언트·제목 검색..."
-          className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold focus:outline-none focus:border-blue-400 w-40" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="검색 (클라이언트·제목·비고)..."
+          className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium focus:outline-none focus:border-blue-400 w-44" />
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold focus:outline-none focus:border-blue-400 bg-white">
+          className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-bold focus:outline-none bg-white">
           {['전체', '작업전', '진행중', '완료', '보류'].map(s => <option key={s}>{s}</option>)}
         </select>
         <select value={filterChannel} onChange={e => setFilterChannel(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold focus:outline-none focus:border-blue-400 bg-white">
+          className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-bold focus:outline-none bg-white">
           {['전체', ...CHANNELS].map(c => <option key={c}>{c}</option>)}
         </select>
         <div className="ml-auto flex gap-2">
           <button type="button" onClick={exportCsv}
-            className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-black text-gray-500 hover:bg-gray-50 transition-colors">
+            className="px-3 py-1.5 rounded-lg border border-gray-200 text-[11px] font-black text-gray-400 hover:bg-gray-50 transition-colors whitespace-nowrap">
             CSV 내보내기
           </button>
-          <button type="button" onClick={openAdd}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-black hover:bg-blue-700 transition-colors">
+          <button type="button" onClick={addRow}
+            className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-black hover:bg-blue-700 transition-colors whitespace-nowrap">
             + 행 추가
           </button>
         </div>
       </div>
 
-      {/* 테이블 */}
-      <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm bg-white">
-        <table className="min-w-full text-xs">
-          <thead className="bg-gray-50 border-b border-gray-100">
+      {/* 스프레드시트 */}
+      <div
+        ref={tableRef}
+        className="overflow-auto rounded-lg shadow-sm"
+        style={{
+          maxHeight: 'calc(100vh - 380px)',
+          minHeight: 240,
+          border: '1px solid #dadce0',
+        }}
+        onClick={e => { if (e.target === tableRef.current) stopEdit(); }}
+      >
+        <table
+          className="border-collapse"
+          style={{ minWidth: 'max-content', tableLayout: 'fixed' }}
+        >
+          {/* 컬럼 너비 정의 */}
+          <colgroup>
+            <col style={{ width: 40 }} />
+            {COLS.map(c => <col key={c.key} style={{ width: c.minW }} />)}
+            <col style={{ width: 32 }} />
+          </colgroup>
+
+          {/* 헤더 */}
+          <thead>
             <tr>
-              {['No.', '날짜', '클라이언트', '채널', '제목', '상태', '마감일', '비고', ''].map(h => (
-                <th key={h} className="px-3 py-3 text-left font-black text-gray-400 uppercase whitespace-nowrap">{h}</th>
+              {/* 코너 셀 */}
+              <th
+                className="sticky left-0 top-0 z-30 select-none"
+                style={{
+                  background: '#f8f9fa',
+                  borderRight: '1px solid #dadce0',
+                  borderBottom: '1px solid #dadce0',
+                  height: 28,
+                }}
+              />
+              {COLS.map(col => (
+                <th
+                  key={col.key}
+                  className="sticky top-0 z-20 select-none text-center"
+                  style={{
+                    background: '#f8f9fa',
+                    borderRight: '1px solid #dadce0',
+                    borderBottom: '2px solid #dadce0',
+                    height: 28,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#5f6368',
+                    letterSpacing: '0.03em',
+                    padding: '0 8px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {col.label}
+                </th>
               ))}
+              {/* 삭제 컬럼 헤더 */}
+              <th
+                className="sticky top-0 z-20"
+                style={{
+                  background: '#f8f9fa',
+                  borderBottom: '2px solid #dadce0',
+                  height: 28,
+                }}
+              />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="py-16 text-center text-gray-300 font-bold">
-                  {manuscripts.length === 0 ? '+ 행 추가 버튼으로 원고를 등록하세요' : '검색 결과가 없습니다'}
+
+          <tbody>
+            {filtered.map((row, ri) => (
+              <tr key={row.id} className="group">
+                {/* 행 번호 */}
+                <td
+                  className="sticky left-0 z-10 text-center select-none"
+                  style={{
+                    background: '#f8f9fa',
+                    borderRight: '1px solid #dadce0',
+                    borderBottom: '1px solid #e8eaed',
+                    height: 28,
+                    fontSize: 11,
+                    color: '#80868b',
+                    fontWeight: 600,
+                    minWidth: 40,
+                  }}
+                >
+                  {ri + 1}
                 </td>
-              </tr>
-            ) : filtered.map((row, i) => (
-              <tr key={row.id} onClick={() => openEdit(row)}
-                className="hover:bg-blue-50/30 cursor-pointer transition-colors">
-                <td className="px-3 py-3 text-gray-400 font-bold">{i + 1}</td>
-                <td className="px-3 py-3 text-gray-600 font-bold whitespace-nowrap">{row.date}</td>
-                <td className="px-3 py-3 font-black text-gray-800 max-w-[100px] truncate">{row.client || '-'}</td>
-                <td className="px-3 py-3 text-gray-500 font-bold whitespace-nowrap">{row.channel}</td>
-                <td className="px-3 py-3 font-bold text-gray-700 max-w-[180px] truncate">{row.title || '-'}</td>
-                <td className="px-3 py-3">
-                  <span className={`px-2 py-0.5 rounded-full font-black text-[11px] whitespace-nowrap ${STATUS_STYLES[row.status]}`}>
-                    {row.status}
-                  </span>
-                </td>
-                <td className="px-3 py-3 text-gray-500 font-bold whitespace-nowrap">{row.deadline || '-'}</td>
-                <td className="px-3 py-3 text-gray-400 max-w-[120px] truncate">{row.notes || '-'}</td>
-                <td className="px-3 py-3">
-                  <button type="button" onClick={e => { e.stopPropagation(); onDelete(row.id); }}
-                    className="text-gray-300 hover:text-red-400 transition-colors font-black text-sm px-1">
+
+                {/* 데이터 셀 */}
+                {COLS.map((col, ci) => {
+                  const isEditing = editingCell?.ri === ri && editingCell?.ci === ci;
+                  return (
+                    <td
+                      key={col.key}
+                      style={{
+                        height: 28,
+                        padding: 0,
+                        borderRight: '1px solid #e8eaed',
+                        borderBottom: '1px solid #e8eaed',
+                        position: 'relative',
+                        boxSizing: 'border-box',
+                        ...(isEditing
+                          ? { outline: '2px solid #1a73e8', outlineOffset: -1, zIndex: 15, background: '#fff' }
+                          : { background: '#fff' }),
+                      }}
+                    >
+                      <SpreadsheetCell
+                        value={row[col.key] as string}
+                        col={col}
+                        isEditing={isEditing}
+                        onStartEdit={() => startEdit(ri, ci)}
+                        onChange={v => handleChange(row.id, col.key, v)}
+                        onBlur={stopEdit}
+                        onTab={shift => moveCell(ri, ci, 0, shift ? -1 : 1)}
+                        onEnter={() => moveCell(ri, ci, 1, 0)}
+                      />
+                    </td>
+                  );
+                })}
+
+                {/* 삭제 버튼 */}
+                <td
+                  style={{
+                    height: 28,
+                    borderBottom: '1px solid #e8eaed',
+                    background: '#fff',
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onDelete(row.id)}
+                    className="text-gray-300 hover:text-red-400 text-sm font-black leading-none opacity-0 group-hover:opacity-100 transition-opacity px-1"
+                    tabIndex={-1}
+                  >
                     ×
                   </button>
                 </td>
+              </tr>
+            ))}
+
+            {/* 빈 행 (행 추가 클릭) */}
+            <tr
+              className="cursor-pointer hover:bg-[#f8f9fa] transition-colors"
+              onClick={addRow}
+            >
+              <td
+                className="sticky left-0"
+                style={{
+                  background: '#f8f9fa',
+                  borderRight: '1px solid #dadce0',
+                  borderBottom: '1px solid #e8eaed',
+                  height: 28,
+                  textAlign: 'center',
+                  fontSize: 11,
+                  color: '#bdc1c6',
+                }}
+              >
+                {filtered.length + 1}
+              </td>
+              <td
+                colSpan={COLS.length + 1}
+                style={{
+                  borderBottom: '1px solid #e8eaed',
+                  height: 28,
+                  paddingLeft: 12,
+                  fontSize: 12,
+                  color: '#bdc1c6',
+                  fontWeight: 600,
+                }}
+              >
+                + 클릭하여 행 추가
+              </td>
+            </tr>
+
+            {/* 아래 여백 행들 */}
+            {Array.from({ length: 5 }).map((_, i) => (
+              <tr key={`pad-${i}`} onClick={addRow} className="cursor-pointer hover:bg-[#f8f9fa] transition-colors">
+                <td
+                  className="sticky left-0"
+                  style={{
+                    background: '#f8f9fa',
+                    borderRight: '1px solid #dadce0',
+                    borderBottom: '1px solid #e8eaed',
+                    height: 28,
+                  }}
+                />
+                <td
+                  colSpan={COLS.length + 1}
+                  style={{ borderBottom: '1px solid #e8eaed', height: 28, background: '#fff' }}
+                />
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {showModal && (
-        <ManuscriptModal
-          initial={editTarget ? { date: editTarget.date, client: editTarget.client, channel: editTarget.channel, title: editTarget.title, status: editTarget.status, deadline: editTarget.deadline, notes: editTarget.notes } : EMPTY_FORM}
-          isEdit={!!editTarget}
-          onSave={handleSave}
-          onClose={() => setShowModal(false)}
-        />
+      {manuscripts.length === 0 && (
+        <p className="text-center text-xs text-gray-300 font-medium pt-1">
+          위 시트를 클릭하여 데이터를 입력하세요
+        </p>
       )}
     </div>
   );
 };
 
-/* ─────────────────────── 원고시트변환 ─────────────────────── */
+/* ══════════════════════════════════════════════
+   원고시트변환
+══════════════════════════════════════════════ */
 function convertManuscript(input: string, platform: string): string {
   const lines = input.trim().split('\n');
   const hashLines = lines.filter(l => l.trim().startsWith('#'));
@@ -293,10 +490,10 @@ function convertManuscript(input: string, platform: string): string {
 }
 
 const PLATFORM_TIPS: Record<string, string> = {
-  '인스타그램': '단락 사이에 마침표(.) 줄을 추가하고, 해시태그를 하단에 분리합니다.',
-  '카카오채널': '3줄 이상의 공백을 2줄로 정리합니다.',
-  '네이버블로그': '단락 간 2줄 공백으로 정리합니다.',
-  '유튜브': '영상 설명 헤더와 해시태그 섹션을 자동 추가합니다.',
+  '인스타그램': '단락 사이에 마침표(.) 줄 추가 · 해시태그 하단 분리',
+  '카카오채널': '3줄 이상 공백 → 2줄로 정리',
+  '네이버블로그': '단락 간 2줄 공백으로 정리',
+  '유튜브': '영상 설명 헤더 · 해시태그 섹션 자동 추가',
 };
 
 const ConvertTab: React.FC = () => {
@@ -305,7 +502,6 @@ const ConvertTab: React.FC = () => {
   const [output, setOutput] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const handleConvert = () => setOutput(convertManuscript(input, platform));
   const handleCopy = () => {
     navigator.clipboard.writeText(output);
     setCopied(true);
@@ -318,16 +514,16 @@ const ConvertTab: React.FC = () => {
         <h2 className="text-lg font-black text-gray-900">원고시트변환</h2>
         <select value={platform} onChange={e => { setPlatform(e.target.value); setOutput(''); }}
           className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 bg-white">
-          {['인스타그램', '카카오채널', '네이버블로그', '유튜브'].map(p => <option key={p} value={p}>{p}</option>)}
+          {['인스타그램', '카카오채널', '네이버블로그', '유튜브'].map(p => <option key={p}>{p}</option>)}
         </select>
+        <span className="text-xs text-gray-400 font-bold">{PLATFORM_TIPS[platform]}</span>
       </div>
-      <p className="text-xs text-gray-400 font-bold">{PLATFORM_TIPS[platform]}</p>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-black text-gray-400 uppercase mb-2">원본 내용</label>
           <textarea value={input} onChange={e => setInput(e.target.value)}
-            placeholder={'원고 내용을 붙여넣으세요...\n해시태그는 # 로 시작하는 줄에 입력하세요.'}
+            placeholder={'원고 내용을 붙여넣으세요...\n#해시태그는 # 로 시작하는 줄에 입력'}
             className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-400 resize-none"
           />
         </div>
@@ -336,7 +532,7 @@ const ConvertTab: React.FC = () => {
             <label className="block text-xs font-black text-gray-400 uppercase">{platform} 변환 결과</label>
             {output && (
               <button type="button" onClick={handleCopy}
-                className={`text-xs font-black transition-colors ${copied ? 'text-emerald-500' : 'text-blue-600 hover:text-blue-700'}`}>
+                className={`text-xs font-black ${copied ? 'text-emerald-500' : 'text-blue-600 hover:text-blue-700'}`}>
                 {copied ? '✓ 복사됨' : '복사'}
               </button>
             )}
@@ -348,7 +544,7 @@ const ConvertTab: React.FC = () => {
         </div>
       </div>
 
-      <button type="button" onClick={handleConvert}
+      <button type="button" onClick={() => setOutput(convertManuscript(input, platform))}
         disabled={!input.trim()}
         className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
         🔄 변환하기
@@ -357,7 +553,9 @@ const ConvertTab: React.FC = () => {
   );
 };
 
-/* ─────────────────────── 가맹점 현황 (어드민) ─────────────────────── */
+/* ══════════════════════════════════════════════
+   가맹점 현황 (어드민)
+══════════════════════════════════════════════ */
 const MembersTab: React.FC<{
   members: UserProfile[];
   onUpdateUser?: (u: UserProfile) => void;
@@ -372,7 +570,10 @@ const MembersTab: React.FC<{
     setTogglingId(member.id);
     try {
       const newVal = !member.isFranchise;
-      const { error } = await supabase.from('profiles').update({ is_franchise: newVal, updated_at: new Date().toISOString() }).eq('id', member.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_franchise: newVal, updated_at: new Date().toISOString() })
+        .eq('id', member.id);
       if (!error) {
         const updated = { ...member, isFranchise: newVal };
         setLocalMembers(prev => prev.map(m => m.id === member.id ? updated : m));
@@ -383,9 +584,11 @@ const MembersTab: React.FC<{
     }
   };
 
-  const franchiseCount = localMembers.filter(m => m.isFranchise).length;
+  const franchiseMembers = localMembers.filter(m => m.isFranchise);
   const visible = localMembers.filter(m =>
-    !search || m.nickname.toLowerCase().includes(search.toLowerCase()) || m.id.toLowerCase().includes(search.toLowerCase())
+    !search ||
+    m.nickname.toLowerCase().includes(search.toLowerCase()) ||
+    m.id.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -393,17 +596,20 @@ const MembersTab: React.FC<{
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-black text-gray-900">가맹점 파트너 관리</h2>
-          <p className="text-xs text-gray-400 font-bold mt-0.5">현재 {franchiseCount}개 가맹점 활성화</p>
+          <p className="text-xs text-gray-400 font-bold mt-0.5">
+            현재 {franchiseMembers.length}개 가맹점 활성 · 가맹점으로 선택된 회원은 가맹점패널에 접근할 수 있습니다
+          </p>
         </div>
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="닉네임·ID 검색..."
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="닉네임·ID 검색..."
           className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 w-48" />
       </div>
 
-      {franchiseCount > 0 && (
+      {franchiseMembers.length > 0 && (
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-          <p className="text-xs font-black text-blue-700 mb-2">활성 가맹점</p>
+          <p className="text-xs font-black text-blue-700 mb-2">✓ 활성 가맹점</p>
           <div className="flex flex-wrap gap-2">
-            {localMembers.filter(m => m.isFranchise).map(m => (
+            {franchiseMembers.map(m => (
               <div key={m.id} className="flex items-center gap-1.5 bg-white border border-blue-200 rounded-full px-3 py-1">
                 <img src={m.profileImage} alt="" className="w-4 h-4 rounded-full object-cover" />
                 <span className="text-xs font-black text-blue-800">{m.nickname}</span>
@@ -419,7 +625,7 @@ const MembersTab: React.FC<{
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 {['회원', 'ID', '이메일', '등급', '가맹점 여부'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left font-black text-gray-400 uppercase whitespace-nowrap">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left font-black text-gray-400 uppercase whitespace-nowrap text-[11px]">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -432,24 +638,26 @@ const MembersTab: React.FC<{
                       <span className="font-black text-gray-900 whitespace-nowrap">{member.nickname}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 font-mono">{member.id}</td>
+                  <td className="px-4 py-3 text-gray-400 font-mono text-[11px]">{member.id}</td>
                   <td className="px-4 py-3 text-gray-500">{member.email || '-'}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                      member.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                      member.role === 'admin'   ? 'bg-purple-100 text-purple-700' :
                       member.role === 'manager' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-500'
+                                                  'bg-gray-100 text-gray-500'
                     }`}>{member.role}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <button type="button"
+                    <button
+                      type="button"
                       disabled={togglingId === member.id || member.role === 'admin'}
                       onClick={() => toggleFranchise(member)}
-                      className={`px-3 py-1.5 rounded-lg font-black transition-all disabled:opacity-40 ${
+                      className={`px-3 py-1.5 rounded-lg font-black text-xs transition-all disabled:opacity-40 ${
                         member.isFranchise
                           ? 'bg-blue-600 text-white hover:bg-blue-700'
                           : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                      }`}>
+                      }`}
+                    >
                       {togglingId === member.id ? '...' : member.isFranchise ? '✓ 가맹점' : '가맹점 선택'}
                     </button>
                   </td>
@@ -466,7 +674,9 @@ const MembersTab: React.FC<{
   );
 };
 
-/* ─────────────────────── 메인 컴포넌트 ─────────────────────── */
+/* ══════════════════════════════════════════════
+   메인 컴포넌트
+══════════════════════════════════════════════ */
 const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
   const isAdmin = user.role === 'admin' || user.id.toLowerCase() === 'admin';
   const canAccess = isAdmin || !!user.isFranchise;
@@ -499,9 +709,9 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
 
   const tabs: { id: FranchiseTab; label: string; icon: string; adminOnly?: boolean }[] = [
     ...(isAdmin ? [{ id: 'members' as FranchiseTab, label: '가맹점 현황', icon: '🏢', adminOnly: true }] : []),
-    { id: 'revenue', label: '매출관리', icon: '📊' },
-    { id: 'manuscripts', label: '원고시트', icon: '📝' },
-    { id: 'convert', label: '원고시트변환', icon: '🔄' },
+    { id: 'revenue',     label: '매출관리',     icon: '📊' },
+    { id: 'manuscripts', label: '원고시트',      icon: '📝' },
+    { id: 'convert',     label: '원고시트변환',  icon: '🔄' },
   ];
 
   return (
@@ -529,11 +739,9 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         {activeTab === 'members' && isAdmin && (
           <MembersTab members={members} onUpdateUser={onUpdateUser} />
         )}
-
         {activeTab === 'revenue' && (
           <RevenueManagement user={user} />
         )}
-
         {activeTab === 'manuscripts' && (
           <ManuscriptSheet
             manuscripts={manuscripts}
@@ -542,7 +750,6 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
             onDelete={id => saveManuscripts(manuscripts.filter(m => m.id !== id))}
           />
         )}
-
         {activeTab === 'convert' && <ConvertTab />}
       </div>
     </div>
