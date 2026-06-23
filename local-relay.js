@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 /**
  * 네이버 카페 로컬 릴레이 서버
- *
- * 사용법:
- *   node local-relay.js
- *
- * 포트: 3333 (변경: PORT=4000 node local-relay.js)
- *
- * 이 스크립트는 웹앱의 요청을 네이버 카페 API로 중계합니다.
- * Netlify 서버는 미국에 있어 네이버가 차단하지만,
- * 이 스크립트는 내 PC(한국 IP)에서 실행되므로 차단되지 않습니다.
+ * 사용법: node local-relay.js
+ * 포트: 3333
  */
 
 const http = require('http');
@@ -24,13 +17,17 @@ const RESP_HEADERS = {
   'Content-Type': 'application/json; charset=UTF-8',
 };
 
-function buildNaverHeaders(cookie) {
+function buildNaverHeaders(cookie, referer) {
   return {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'ko-KR,ko;q=0.9',
-    'Referer': 'https://cafe.naver.com/',
-    'Origin': 'https://cafe.naver.com',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': referer || 'https://cafe.naver.com/',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'same-origin',
+    'upgrade-insecure-requests': '1',
     ...(cookie ? { 'Cookie': cookie } : {}),
   };
 }
@@ -69,6 +66,13 @@ function httpsGet(url, headers) {
       timeout: 15000,
     };
     const req = https.request(options, res => {
+      // 리다이렉트 처리
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        const loc = res.headers.location;
+        const next = loc.startsWith('http') ? loc : `https://${parsed.hostname}${loc}`;
+        console.log(`  → 리다이렉트: ${next}`);
+        return httpsGet(next, headers).then(resolve).catch(reject);
+      }
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
@@ -79,34 +83,6 @@ function httpsGet(url, headers) {
   });
 }
 
-async function tryRestApi(cafeId, menuId, page, perPage, cookie) {
-  const url = menuId
-    ? `https://cafe.naver.com/ca-fe/cafes/${cafeId}/menus/${menuId}/articles?page=${page}&perPage=${perPage}&orderBy=date&includeAllMenu=false`
-    : `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles?page=${page}&perPage=${perPage}&orderBy=date&includeAllMenu=true`;
-
-  console.log(`[REST] ${url}`);
-  const { status, body } = await httpsGet(url, buildNaverHeaders(cookie));
-  console.log(`[REST] 응답 HTTP ${status}, 본문 앞 200자: ${body.slice(0,200)}`);
-  if (status !== 200) throw new Error(`REST API HTTP ${status}`);
-  const json = JSON.parse(body);
-
-  const result = json?.message?.result ?? json?.result ?? json;
-  const list = result?.articleList ?? result?.items ?? result?.articles ?? [];
-  if (!Array.isArray(list)) throw new Error('articleList 없음');
-
-  return list.map(item => ({
-    articleId: item.articleId ?? item.id,
-    title: decodeHtml(item.subject ?? item.title ?? ''),
-    writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? item.author ?? '',
-    dateStr: item.writeDateTimestamp
-      ? fmtDate(new Date(item.writeDateTimestamp))
-      : (item.writeDate ?? item.writeDateText ?? ''),
-    commentCount: parseInt(item.commentCount ?? item.replyCount ?? 0),
-    readCount: parseInt(item.readCount ?? item.viewCount ?? 0),
-    totalPage: result?.totalPage ?? result?.pageInfo?.totalPage ?? 0,
-  }));
-}
-
 function deepFind(obj, keys, depth=0) {
   if (depth>8||!obj||typeof obj!=='object') return null;
   if (Array.isArray(obj)) { for(const i of obj){const v=deepFind(i,keys,depth+1);if(v!=null)return v;} return null; }
@@ -115,28 +91,35 @@ function deepFind(obj, keys, depth=0) {
   return null;
 }
 
-async function tryIframeApi(cafeId, menuId, page, cookie) {
-  const iframeUrl = encodeURIComponent(
-    menuId
-      ? `/ArticleList.nhn?search.menuid=${menuId}&search.boardType=L&userDisplay=50&search.page=${page}`
-      : `/ArticleList.nhn?search.boardType=L&userDisplay=50&search.page=${page}`
-  );
-  const url = `https://cafe.naver.com/CafeExplore.nhn?clubid=${cafeId}&iframe_url=${iframeUrl}`;
-
-  console.log(`[iframe] ${url}`);
-  const { status, body: html } = await httpsGet(url, {
-    ...buildNaverHeaders(cookie),
-    Accept: 'text/html,application/xhtml+xml,*/*',
+// ── 방법 1: ArticleList.nhn 직접 HTML 파싱 ──────────────────────────────────
+async function tryArticleListHtml(cafeId, menuId, page, cookie) {
+  const qs = new URLSearchParams({
+    'search.clubid': cafeId,
+    'search.boardType': 'L',
+    'userDisplay': '50',
+    'search.page': String(page),
   });
-  console.log(`[iframe] 응답 HTTP ${status}, 본문 앞 200자: ${html.slice(0,200)}`);
-  if (status !== 200) throw new Error(`iframe HTTP ${status}`);
+  if (menuId) qs.set('search.menuid', menuId);
+  const url = `https://cafe.naver.com/ArticleList.nhn?${qs}`;
 
-  const m = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-  if (m) {
+  console.log(`[ArticleList] ${url}`);
+  const { status, body: html } = await httpsGet(url, buildNaverHeaders(cookie, `https://cafe.naver.com/`));
+  console.log(`  → HTTP ${status}, 본문길이 ${html.length}, 앞50자: ${html.slice(0,50).replace(/\n/g,' ')}`);
+
+  if (status !== 200) throw new Error(`ArticleList HTTP ${status}`);
+  if (html.includes('서비스에 접속할 수 없습니다') || html.includes('로그인이 필요')) {
+    throw new Error('로그인 필요 또는 서비스 접근 불가');
+  }
+
+  // __NEXT_DATA__ 시도
+  const ndm = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+  if (ndm) {
     try {
-      const nd = JSON.parse(m[1]);
+      const nd = JSON.parse(ndm[1]);
       const list = deepFind(nd, ['articleList','articles','items']);
       if (Array.isArray(list) && list.length > 0) {
+        console.log(`  → __NEXT_DATA__ 파싱 성공, ${list.length}개`);
+        const totalPage = deepFind(nd, ['totalPage', 'pageCount']) || 0;
         return list.map(item => ({
           articleId: item.articleId ?? item.id,
           title: decodeHtml(item.subject ?? item.title ?? ''),
@@ -144,28 +127,100 @@ async function tryIframeApi(cafeId, menuId, page, cookie) {
           dateStr: item.writeDate ?? item.writeDateText ?? '',
           commentCount: parseInt(item.commentCount ?? 0),
           readCount: parseInt(item.readCount ?? 0),
-          totalPage: 0,
+          totalPage,
         }));
       }
-    } catch {}
+    } catch(e) { console.log(`  → __NEXT_DATA__ 파싱 실패: ${e.message}`); }
   }
 
+  // HTML 테이블 파싱
   const rows = [];
-  const rowPat = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  let rm;
-  while ((rm = rowPat.exec(html)) !== null) {
-    const row = rm[1];
-    const linkM = row.match(/articleid=(\d+)[^"]*"[^>]*>([\s\S]*?)<\/a>/i)
-                ?? row.match(/\/(\d{5,})[^"]*"[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/a>/i);
-    if (!linkM) continue;
-    const articleId = linkM[1];
-    const title = decodeHtml(linkM[2].replace(/<[^>]+>/g, '').trim());
-    if (!title || title.length < 2) continue;
-    const dateM = row.match(/(\d{4}\.\d{2}\.\d{2}|\d{2}\.\d{2})/);
-    rows.push({ articleId, title, writer: '', dateStr: dateM?.[1] ?? '', commentCount: 0, readCount: 0, totalPage: 0 });
+  // 방법 A: articleid 파라미터
+  const patA = /articleid=(\d+)[^"]*"[^>]*>\s*<\/a>\s*<a[^>]*>([\s\S]*?)<\/a>/gi;
+  // 방법 B: 제목 링크에서 articleid 추출
+  const patB = /href="[^"]*articleid=(\d+)[^"]*"[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+  // 방법 C: 간단한 링크 패턴
+  const patC = /<a[^>]+href="[^"]*articleid=(\d+)[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+
+  const seen = new Set();
+  for (const pat of [patA, patB, patC]) {
+    pat.lastIndex = 0;
+    let m;
+    while ((m = pat.exec(html)) !== null) {
+      const articleId = m[1];
+      if (seen.has(articleId)) continue;
+      const rawTitle = m[2].replace(/<[^>]+>/g, '').trim();
+      const title = decodeHtml(rawTitle);
+      if (!title || title.length < 2) continue;
+      seen.add(articleId);
+
+      // 주변에서 날짜 찾기
+      const context = html.slice(Math.max(0, m.index - 500), m.index + 500);
+      const dateM = context.match(/(\d{4}\.\d{2}\.\d{2})/);
+      const dateM2 = context.match(/(\d{2}\.\d{2})/);
+      const dateStr = dateM?.[1] ?? dateM2?.[1] ?? '';
+
+      // 댓글 수 패턴
+      const cmtM = context.match(/commentCount['":\s]+(\d+)/i) ?? context.match(/\[(\d+)\]/);
+      rows.push({
+        articleId,
+        title,
+        writer: '',
+        dateStr,
+        commentCount: cmtM ? parseInt(cmtM[1]) : 0,
+        readCount: 0,
+        totalPage: 0,
+      });
+    }
+    if (rows.length > 0) break;
   }
-  if (rows.length) return rows;
-  throw new Error('iframe 파싱 실패 — 로그인 필요 또는 비공개 카페');
+
+  if (rows.length > 0) {
+    console.log(`  → HTML 파싱 성공, ${rows.length}개`);
+    return rows;
+  }
+
+  // 마지막: 페이지 소스에서 totalPage 확인
+  const tpM = html.match(/totalPage['":\s]+(\d+)/i) ?? html.match(/lastPage['":\s]+(\d+)/i);
+  if (tpM) console.log(`  → totalPage: ${tpM[1]}`);
+
+  console.log(`  → 파싱 실패. HTML 500자: ${html.slice(0,500).replace(/\n/g,' ')}`);
+  throw new Error('ArticleList 파싱 실패 — 로그인 필요하거나 비공개 카페');
+}
+
+// ── 방법 2: 모바일 API ────────────────────────────────────────────────────────
+async function tryMobileApi(cafeId, menuId, page, cookie) {
+  const qs = new URLSearchParams({
+    cafeId,
+    menuId: menuId || '',
+    page: String(page),
+    perPage: '50',
+    orderBy: 'date',
+  });
+  const url = `https://m.cafe.naver.com/api/v1/cafes/${cafeId}/${menuId ? `menus/${menuId}/` : ''}articles?${qs}`;
+  console.log(`[Mobile] ${url}`);
+
+  const headers = {
+    ...buildNaverHeaders(cookie, `https://m.cafe.naver.com/`),
+    'Accept': 'application/json',
+  };
+  const { status, body } = await httpsGet(url, headers);
+  console.log(`  → HTTP ${status}, 앞100자: ${body.slice(0,100).replace(/\n/g,' ')}`);
+
+  if (status !== 200) throw new Error(`Mobile API HTTP ${status}`);
+  const json = JSON.parse(body);
+  const list = json?.result?.articleList ?? json?.articleList ?? json?.articles ?? json?.items ?? [];
+  if (!Array.isArray(list) || list.length === 0) throw new Error('모바일 API: 목록 없음');
+
+  return list.map(item => ({
+    articleId: item.articleId ?? item.id,
+    title: decodeHtml(item.subject ?? item.title ?? ''),
+    writer: item.writerInfo?.nick ?? item.nick ?? '',
+    dateStr: item.writeDate ?? item.writeDateText ?? '',
+    commentCount: parseInt(item.commentCount ?? 0),
+    readCount: parseInt(item.readCount ?? 0),
+    totalPage: json?.result?.totalPage ?? 0,
+  }));
 }
 
 async function handleScrape(body) {
@@ -185,16 +240,24 @@ async function handleScrape(body) {
   while (articles.length < maxArticles && pagesScanned < MAX_PAGES) {
     let rawItems = [];
 
+    // 방법 1: ArticleList.nhn HTML
     try {
-      rawItems = await tryRestApi(cafeId, menuId, page, 50, naverCookie);
-      method = 'REST API';
-    } catch (e) { lastError = e.message; }
+      rawItems = await tryArticleListHtml(cafeId, menuId, page, naverCookie);
+      method = 'ArticleList HTML';
+    } catch (e) {
+      lastError = e.message;
+      console.log(`[방법1 실패] ${e.message}`);
+    }
 
+    // 방법 2: 모바일 API
     if (rawItems.length === 0) {
       try {
-        rawItems = await tryIframeApi(cafeId, menuId, page, naverCookie);
-        method = 'iframe HTML';
-      } catch (e) { lastError = e.message; }
+        rawItems = await tryMobileApi(cafeId, menuId, page, naverCookie);
+        method = '모바일 API';
+      } catch (e) {
+        lastError = e.message;
+        console.log(`[방법2 실패] ${e.message}`);
+      }
     }
 
     if (rawItems.length === 0) break;
@@ -247,13 +310,11 @@ async function handleScrape(body) {
 
 const server = http.createServer((req, res) => {
   const sendJson = (code, obj) => {
-    const json = JSON.stringify(obj);
     res.writeHead(code, RESP_HEADERS);
-    res.end(json);
+    res.end(JSON.stringify(obj));
   };
 
   if (req.method === 'OPTIONS') { res.writeHead(200, RESP_HEADERS); res.end(); return; }
-
   if (req.url === '/ping') { sendJson(200, { ok: true }); return; }
 
   if (req.url !== '/scrape-naver-cafe' || req.method !== 'POST') {
@@ -267,10 +328,13 @@ const server = http.createServer((req, res) => {
     try { body = JSON.parse(raw || '{}'); }
     catch { sendJson(400, { status: 'error', message: '요청 형식 오류' }); return; }
 
+    console.log(`\n수집 요청: cafeId=${body.cafeId} menuId=${body.menuId||''} page=${body.startPage||1}`);
     try {
       const result = await handleScrape(body);
+      console.log(`결과: ${result.body.status} — ${result.body.totalCollected||0}개`);
       sendJson(result.statusCode, result.body);
     } catch (e) {
+      console.log(`오류: ${e.message}`);
       sendJson(500, { status: 'error', message: e.message });
     }
   });
