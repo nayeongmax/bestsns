@@ -508,6 +508,15 @@ function parseCafeId(input: string): string {
   }
 }
 
+function buildNaverCookie(aut: string, ses: string): string {
+  const parts: string[] = [];
+  const a = aut.trim();
+  const s = ses.trim();
+  if (a) parts.push(a.startsWith('NID_AUT=') ? a : `NID_AUT=${a}`);
+  if (s) parts.push(s.startsWith('NID_SES=') ? s : `NID_SES=${s}`);
+  return parts.join('; ');
+}
+
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
@@ -532,6 +541,7 @@ const CollectorTab: React.FC = () => {
   const [aiRewrite,     setAiRewrite]     = useState(false);
   const [aiFillComment, setAiFillComment] = useState(false);
   const [naverCookie,   setNaverCookie]   = useState('');
+  const [naverSes,      setNaverSes]      = useState('');
   const [showCookie,    setShowCookie]    = useState(false);
 
   /* ── 수집 상태 ── */
@@ -607,7 +617,7 @@ const CollectorTab: React.FC = () => {
           maxArticles: parseInt(maxArticles) || 10,
           maxComments: parseInt(maxComments) || 0,
           fetchComments: parseInt(maxComments) > 0,
-          naverCookie: naverCookie.trim() || undefined,
+          naverCookie: buildNaverCookie(naverCookie, naverSes) || undefined,
         }),
       });
       const data = await res.json();
@@ -784,18 +794,24 @@ const CollectorTab: React.FC = () => {
 
             {/* 네이버 쿠키 인증 — 필수 */}
             <div className="mt-2 pt-2 border-t border-gray-200">
-              <p className="text-xs font-black text-red-500 mb-1">⚠ 쿠키 인증 필요</p>
+              <p className="text-xs font-black text-red-500 mb-1">⚠ 쿠키 인증 필요 (2개 모두)</p>
               <p className="text-[10px] text-gray-500 mb-1.5 leading-relaxed">
-                네이버 카페는 API가 막혀 쿠키 인증이 필요합니다.<br/>
-                ① <button type="button" onClick={openNaverLogin} className="text-blue-500 underline font-bold">네이버 로그인 팝업</button> 열어 로그인<br/>
+                ① <button type="button" onClick={openNaverLogin} className="text-blue-500 underline font-bold">네이버 로그인 팝업</button> 으로 로그인<br/>
                 ② F12 → Application → Cookies → cafe.naver.com<br/>
-                ③ NID_AUT, NID_SES 값 복사 후 아래 붙여넣기
+                ③ NID_AUT <b>와</b> NID_SES 값 <b>둘 다</b> 복사
               </p>
-              <label className="block text-[10px] font-bold text-gray-500 mb-0.5">NID_AUT 쿠키:</label>
+              <label className="block text-[10px] font-bold text-gray-500 mb-0.5">NID_AUT:</label>
               <input className={inputCls} value={naverCookie} onChange={e => setNaverCookie(e.target.value)}
-                placeholder="NID_AUT=xxxxx" autoComplete="off"
-                style={{ borderColor: naverCookie ? '#22c55e' : '#fca5a5' }} />
-              {naverCookie && <p className="text-[10px] text-green-600 font-bold mt-0.5">✓ 쿠키 입력됨</p>}
+                placeholder="값만 붙여넣기 (NID_AUT= 제외 가능)" autoComplete="off"
+                style={{ borderColor: naverCookie.trim() ? '#22c55e' : '#fca5a5' }} />
+              <label className="block text-[10px] font-bold text-gray-500 mt-1.5 mb-0.5">NID_SES:</label>
+              <input className={inputCls} value={naverSes} onChange={e => setNaverSes(e.target.value)}
+                placeholder="값만 붙여넣기 (NID_SES= 제외 가능)" autoComplete="off"
+                style={{ borderColor: naverSes.trim() ? '#22c55e' : '#fca5a5' }} />
+              {naverCookie.trim() && naverSes.trim()
+                ? <p className="text-[10px] text-green-600 font-bold mt-0.5">✓ 쿠키 2개 입력됨 — 수집 가능</p>
+                : <p className="text-[10px] text-orange-500 font-bold mt-0.5">NID_AUT, NID_SES 모두 입력해야 수집됩니다</p>
+              }
             </div>
 
             {/* 마지막 수집 정보 */}
