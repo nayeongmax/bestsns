@@ -7,6 +7,7 @@
 
 const http = require('http');
 const https = require('https');
+const zlib = require('zlib');
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3333;
 
@@ -55,27 +56,42 @@ function fmtDate(d) {
   return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function httpsGet(url, headers) {
+function httpsGet(url, headers, depth=0) {
   return new Promise((resolve, reject) => {
+    if (depth > 5) { reject(new Error('리다이렉트 너무 많음')); return; }
     const parsed = new URL(url);
     const options = {
       hostname: parsed.hostname,
       path: parsed.pathname + parsed.search,
       method: 'GET',
-      headers,
+      headers: { ...headers, 'Accept-Encoding': 'gzip, deflate, br' },
       timeout: 15000,
     };
     const req = https.request(options, res => {
-      // 리다이렉트 처리
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         const loc = res.headers.location;
         const next = loc.startsWith('http') ? loc : `https://${parsed.hostname}${loc}`;
         console.log(`  → 리다이렉트: ${next}`);
-        return httpsGet(next, headers).then(resolve).catch(reject);
+        res.resume();
+        return httpsGet(next, headers, depth+1).then(resolve).catch(reject);
       }
+      const enc = res.headers['content-encoding'] || '';
       const chunks = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+      res.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        const decompress = enc.includes('gzip') ? zlib.gunzipSync
+          : enc.includes('deflate') ? zlib.inflateSync
+          : enc.includes('br') ? zlib.brotliDecompressSync
+          : null;
+        try {
+          const body = decompress ? decompress(buf).toString('utf8') : buf.toString('utf8');
+          resolve({ status: res.statusCode, body });
+        } catch(e) {
+          // 압축 해제 실패 시 raw
+          resolve({ status: res.statusCode, body: buf.toString('utf8') });
+        }
+      });
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
