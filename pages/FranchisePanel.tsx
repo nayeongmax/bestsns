@@ -74,7 +74,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
   const getVal = (r: number, c: number) => data[key(r, c)] ?? '';
 
   const startEdit = useCallback((r: number, c: number) => {
-    // 가장자리에서 탐색 시 자동 확장
     setSize(prev => ({
       rows: Math.max(prev.rows, r + ROW_BUF + 1),
       cols: Math.max(prev.cols, c + COL_BUF + 1),
@@ -90,6 +89,20 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     setEditCell(null);
   }, [data]);
 
+  // 구글 시트 붙여넣기 — TSV 파싱 후 셀에 배치
+  const applyPaste = useCallback((startR: number, startC: number, text: string) => {
+    const rows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd().split('\n');
+    const newData = { ...data };
+    rows.forEach((rowStr, dr) => {
+      rowStr.split('\t').forEach((cellVal, dc) => {
+        const k = key(startR + dr, startC + dc);
+        if (cellVal) newData[k] = cellVal; else delete newData[k];
+      });
+    });
+    persist(newData);
+    setEditCell(null);
+  }, [data]);
+
   const handleKeyDown = (e: React.KeyboardEvent, r: number, c: number) => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -98,7 +111,7 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
         if (c > 0) startEdit(r, c - 1);
         else if (r > 0) startEdit(r - 1, size.cols - 1);
       } else {
-        startEdit(r, c + 1); // startEdit handles expansion
+        startEdit(r, c + 1);
       }
     } else if (e.key === 'Enter') {
       e.preventDefault();
@@ -109,6 +122,14 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     }
   };
 
+  // input 붙여넣기 — 멀티셀이면 TSV로 처리, 단일셀이면 기본 동작
+  const handleInputPaste = (e: React.ClipboardEvent<HTMLInputElement>, r: number, c: number) => {
+    const text = e.clipboardData.getData('text/plain');
+    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd().split('\n');
+    const isMulti = lines.length > 1 || lines[0]?.includes('\t');
+    if (isMulti) { e.preventDefault(); applyPaste(r, c, text); }
+  };
+
   useEffect(() => {
     if (editCell && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
   }, [editCell]);
@@ -116,8 +137,25 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
   const activeCellLabel = editCell ? `${colLabel(editCell.c)}${editCell.r + 1}` : '';
   const colLabels = Array.from({ length: size.cols }, (_, i) => colLabel(i));
 
+  // 컨테이너 레벨 붙여넣기 (셀 편집 중이 아닐 때)
+  const handleContainerPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (editCell) return; // input이 이미 처리
+    const text = e.clipboardData.getData('text/plain');
+    if (!text) return;
+    e.preventDefault();
+    // 마지막으로 선택했던 셀 기준 (없으면 A1)
+    const startR = editCell ? (editCell as { r: number; c: number }).r : 0;
+    const startC = editCell ? (editCell as { r: number; c: number }).c : 0;
+    applyPaste(startR, startC, text);
+  };
+
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 260px)', minHeight: 320 }}>
+    <div
+      className="flex flex-col"
+      tabIndex={0}
+      onPaste={handleContainerPaste}
+      style={{ height: 'calc(100vh - 260px)', minHeight: 320, outline: 'none' }}
+    >
       {/* 수식 바 */}
       <div className="flex items-center shrink-0 border-b" style={{ background: '#f8f9fa', borderColor: '#dadce0', height: 28 }}>
         <div className="flex items-center justify-center shrink-0 text-xs font-medium text-gray-600 border-r select-none"
@@ -190,6 +228,7 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
                           onChange={e => setEditValue(e.target.value)}
                           onBlur={() => commitEdit(r, c, editValue)}
                           onKeyDown={e => handleKeyDown(e, r, c)}
+                          onPaste={e => handleInputPaste(e, r, c)}
                           style={{
                             width: '100%',
                             height: '100%',
@@ -203,15 +242,19 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
                           }}
                         />
                       ) : (
+                        /* overflow 없음 — 내용이 옆 빈 셀로 자연스럽게 넘침 */
                         <div
                           style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
                             height: '100%',
                             padding: '0 4px',
                             fontSize: 13,
                             color: '#1f1f1f',
-                            overflow: 'hidden',
                             whiteSpace: 'nowrap',
                             lineHeight: '21px',
+                            pointerEvents: 'none',
                           }}
                         >
                           {val}
