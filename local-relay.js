@@ -84,7 +84,9 @@ async function tryRestApi(cafeId, menuId, page, perPage, cookie) {
     ? `https://cafe.naver.com/ca-fe/cafes/${cafeId}/menus/${menuId}/articles?page=${page}&perPage=${perPage}&orderBy=date&includeAllMenu=false`
     : `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles?page=${page}&perPage=${perPage}&orderBy=date&includeAllMenu=true`;
 
+  console.log(`[REST] ${url}`);
   const { status, body } = await httpsGet(url, buildNaverHeaders(cookie));
+  console.log(`[REST] 응답 HTTP ${status}, 본문 앞 200자: ${body.slice(0,200)}`);
   if (status !== 200) throw new Error(`REST API HTTP ${status}`);
   const json = JSON.parse(body);
 
@@ -121,10 +123,12 @@ async function tryIframeApi(cafeId, menuId, page, cookie) {
   );
   const url = `https://cafe.naver.com/CafeExplore.nhn?clubid=${cafeId}&iframe_url=${iframeUrl}`;
 
+  console.log(`[iframe] ${url}`);
   const { status, body: html } = await httpsGet(url, {
     ...buildNaverHeaders(cookie),
     Accept: 'text/html,application/xhtml+xml,*/*',
   });
+  console.log(`[iframe] 응답 HTTP ${status}, 본문 앞 200자: ${html.slice(0,200)}`);
   if (status !== 200) throw new Error(`iframe HTTP ${status}`);
 
   const m = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
