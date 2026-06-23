@@ -468,235 +468,346 @@ const ConvertTab: React.FC = () => {
 };
 
 /* ══════════════════════════════════════════════
-   원고수집기
+   원고수집기 — 네이버 카페 크롤러
 ══════════════════════════════════════════════ */
-interface CollectedArticle {
-  id: string;
+interface CafeArticle {
+  no: number;
+  articleId: string | number;
+  title: string;
+  writer: string;
+  date: string;
+  commentCount: number;
+  readCount: number;
   url: string;
-  title: string | null;
-  description: string | null;
-  body: string | null;
-  thumbnail: string | null;
-  images: string[];
-  author: string | null;
-  publishedAt: string | null;
-  collectedAt: string;
+  comments: { content: string; writer: string; date: string }[];
+}
+
+function parseCafeId(input: string): string {
+  // "https://cafe.naver.com/f-e" → URL에서 ID 추출 시도 or 숫자 그대로
+  try {
+    const u = new URL(input.includes('://') ? input : `https://${input}`);
+    // clubid 파라미터
+    const club = u.searchParams.get('clubid');
+    if (club) return club;
+    // 숫자만 있으면 그대로
+    if (/^\d+$/.test(input.trim())) return input.trim();
+    // 카페 URL slug는 ID가 아님 — 빈 문자열 반환
+    return '';
+  } catch {
+    return /^\d+$/.test(input.trim()) ? input.trim() : '';
+  }
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
 }
 
 const CollectorTab: React.FC = () => {
-  const [url, setUrl]             = useState('');
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
-  const [articles, setArticles]   = useState<CollectedArticle[]>(() => {
-    try {
-      const s = localStorage.getItem('franchise_collected_articles');
-      return s ? JSON.parse(s) : [];
-    } catch { return []; }
-  });
-  const [preview, setPreview]     = useState<CollectedArticle | null>(null);
-  const [copiedId, setCopiedId]   = useState<string | null>(null);
+  // ── 설정 ──
+  const [cafeUrl,      setCafeUrl]      = useState('https://cafe.naver.com/');
+  const [cafeId,       setCafeId]       = useState('');
+  const [menuId,       setMenuId]       = useState('');
+  const [startPage,    setStartPage]    = useState('1');
+  const [startDate,    setStartDate]    = useState('');
+  const [endDate,      setEndDate]      = useState('');
+  const [maxArticles,  setMaxArticles]  = useState('10');
+  const [maxComments,  setMaxComments]  = useState(3);
+  const [aiRewrite,    setAiRewrite]    = useState(false);
+  const [aiFillComment,setAiFillComment]= useState(false);
 
-  const saveArticles = (list: CollectedArticle[]) => {
+  // ── 수집 상태 ──
+  const [loading,   setLoading]   = useState(false);
+  const [stopped,   setStopped]   = useState(false);
+  const stopRef = useRef(false);
+  const [status,    setStatus]    = useState('대기 중...');
+  const [nextPage,  setNextPage]  = useState<number | null>(null);
+
+  // ── 결과 ──
+  const [articles,  setArticles]  = useState<CafeArticle[]>(() => {
+    try { const s = localStorage.getItem('cafe_crawl_articles'); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+  const [selected,  setSelected]  = useState<Set<number>>(new Set());
+  const [lastInfo,  setLastInfo]  = useState<{ writer: string; date: string; page: number; savedAt: string } | null>(() => {
+    try { const s = localStorage.getItem('cafe_crawl_lastinfo'); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
+
+  const saveArticles = (list: CafeArticle[]) => {
     setArticles(list);
-    try { localStorage.setItem('franchise_collected_articles', JSON.stringify(list)); } catch {}
+    try { localStorage.setItem('cafe_crawl_articles', JSON.stringify(list)); } catch {}
   };
 
-  const collect = async () => {
-    if (!url.trim()) return;
+  const saveLastInfo = (info: typeof lastInfo) => {
+    setLastInfo(info);
+    try { localStorage.setItem('cafe_crawl_lastinfo', JSON.stringify(info)); } catch {}
+  };
+
+  const resolvedCafeId = cafeId || parseCafeId(cafeUrl);
+
+  const doCollect = async (resume: boolean) => {
+    if (!resolvedCafeId) {
+      setStatus('카페 ID를 입력해주세요.');
+      return;
+    }
+    stopRef.current = false;
+    setStopped(false);
     setLoading(true);
-    setError(null);
+    const page = resume && nextPage ? nextPage : parseInt(startPage) || 1;
+    setStatus(`수집 중... (페이지 ${page})`);
+
     try {
-      const res = await fetch('/.netlify/functions/scrape-article', {
+      const res = await fetch('/.netlify/functions/scrape-naver-cafe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({
+          cafeId: resolvedCafeId,
+          menuId: menuId.trim(),
+          startPage: page,
+          startDate: startDate.trim() || undefined,
+          endDate: endDate.trim() || todayStr(),
+          maxArticles: parseInt(maxArticles) || 10,
+          maxComments,
+          fetchComments: maxComments > 0,
+        }),
       });
       const data = await res.json();
       if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
-      const article: CollectedArticle = {
-        id: Date.now().toString(),
-        url: data.url,
-        title: data.title,
-        description: data.description,
-        body: data.body,
-        thumbnail: data.thumbnail,
-        images: data.images || [],
-        author: data.author,
-        publishedAt: data.publishedAt,
-        collectedAt: new Date().toISOString(),
-      };
-      const next = [article, ...articles];
-      saveArticles(next);
-      setPreview(article);
-      setUrl('');
+
+      const newList: CafeArticle[] = data.articles || [];
+      const merged = resume
+        ? [...articles, ...newList.map((a, i) => ({ ...a, no: articles.length + i + 1 }))]
+        : newList;
+      saveArticles(merged);
+      setNextPage(data.nextPage || null);
+
+      if (newList.length > 0) {
+        const last = newList[newList.length - 1];
+        const info = {
+          writer: last.writer,
+          date: last.date,
+          page: data.nextPage || page,
+          savedAt: new Date().toLocaleString('ko-KR'),
+        };
+        saveLastInfo(info);
+      }
+      setStatus(`수집 완료 — ${merged.length}개 글`);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다.');
+      setStatus(`오류: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const remove = (id: string) => {
-    saveArticles(articles.filter(a => a.id !== id));
-    if (preview?.id === id) setPreview(null);
-  };
+  const stop = () => { stopRef.current = true; setStopped(true); setLoading(false); setStatus('중지됨'); };
 
-  const copyText = (text: string, id: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
+  const toggleSelect = (no: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(no) ? next.delete(no) : next.add(no);
+      return next;
     });
   };
 
-  const formatDate = (iso: string) => {
-    try { return new Date(iso).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
-    catch { return iso; }
+  const toggleAll = () => {
+    if (selected.size === articles.length) setSelected(new Set());
+    else setSelected(new Set(articles.map(a => a.no)));
   };
 
-  return (
-    <div className="space-y-4 max-w-6xl">
-      {/* 입력 */}
-      <div>
-        <h2 className="text-lg font-black text-gray-900 mb-1">원고수집기</h2>
-        <p className="text-xs text-gray-400 font-bold mb-3">URL을 입력하면 해당 페이지의 글·이미지를 자동으로 수집합니다</p>
-        <div className="flex gap-2">
-          <input
-            type="url"
-            value={url}
-            onChange={e => setUrl(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !loading && collect()}
-            placeholder="https://blog.naver.com/... 또는 수집할 글 URL"
-            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-400"
-          />
-          <button
-            type="button"
-            onClick={collect}
-            disabled={loading || !url.trim()}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
-          >
-            {loading ? '수집 중...' : '🔍 수집'}
-          </button>
-        </div>
-        {error && <p className="mt-2 text-xs text-red-500 font-bold">{error}</p>}
-      </div>
+  const deleteSelected = () => {
+    const next = articles.filter(a => !selected.has(a.no)).map((a, i) => ({ ...a, no: i + 1 }));
+    saveArticles(next);
+    setSelected(new Set());
+  };
 
-      {articles.length === 0 ? (
-        <div className="py-16 text-center">
-          <div className="text-4xl mb-3">📰</div>
-          <p className="text-sm text-gray-300 font-bold">수집된 글이 없습니다</p>
-          <p className="text-xs text-gray-300 font-bold mt-1">위에 URL을 입력해 글을 수집해보세요</p>
-        </div>
-      ) : (
-        <div className="grid lg:grid-cols-2 gap-4 items-start">
-          {/* 목록 */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-xs font-black text-gray-400 uppercase">수집 목록 ({articles.length})</p>
-              <button type="button" onClick={() => saveArticles([])} className="text-xs text-red-400 hover:text-red-600 font-bold">전체 삭제</button>
-            </div>
-            {articles.map(a => (
-              <div
-                key={a.id}
-                onClick={() => setPreview(a)}
-                className={`flex gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${preview?.id === a.id ? 'border-blue-400 bg-blue-50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
-              >
-                {a.thumbnail && (
-                  <img src={a.thumbnail} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 bg-gray-100" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-gray-900 truncate">{a.title || '(제목 없음)'}</p>
-                  <p className="text-xs text-gray-400 font-bold truncate mt-0.5">{a.url}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {a.author && <span className="text-[11px] text-gray-400">{a.author}</span>}
-                    <span className="text-[11px] text-gray-300">{formatDate(a.collectedAt)}</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={e => { e.stopPropagation(); remove(a.id); }}
-                  className="text-gray-300 hover:text-red-400 font-bold text-lg leading-none shrink-0 self-start"
-                  title="삭제"
-                >×</button>
-              </div>
-            ))}
+  const exportCsv = (rewritten = false) => {
+    const rows = [['번호', '날짜', '제목', '작성자', '댓글수', '조회수', 'URL']];
+    articles.forEach(a => rows.push([
+      String(a.no), a.date,
+      rewritten ? `[리라이팅]${a.title}` : a.title,
+      a.writer, String(a.commentCount), String(a.readCount), a.url,
+    ]));
+    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `naver_cafe_${resolvedCafeId}_${todayStr()}.csv`;
+    link.click();
+  };
+
+  const openSheet = () => {
+    window.open('https://sheets.new', '_blank');
+  };
+
+  const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+    <div className="mb-3">
+      <label className="block text-xs font-bold text-gray-600 mb-1">{label}</label>
+      {children}
+    </div>
+  );
+
+  const inputCls = 'w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-blue-400 bg-white';
+
+  return (
+    <div className="flex gap-0 h-[calc(100vh-220px)] min-h-[500px] border border-gray-200 rounded-xl overflow-hidden bg-white">
+      {/* ── 왼쪽 설정 패널 ── */}
+      <div className="w-60 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col overflow-y-auto">
+        <div className="p-3 flex-1">
+          <p className="text-xs font-black text-gray-500 mb-3 uppercase tracking-wide">설정</p>
+
+          <Field label="카페 URL:">
+            <input className={inputCls} value={cafeUrl} onChange={e => setCafeUrl(e.target.value)} placeholder="https://cafe.naver.com/..." />
+          </Field>
+
+          <Field label="카페 ID:">
+            <input className={inputCls} value={cafeId} onChange={e => setCafeId(e.target.value)} placeholder="22514346" />
+            {!cafeId && resolvedCafeId && <p className="text-[10px] text-blue-500 mt-0.5">자동: {resolvedCafeId}</p>}
+          </Field>
+
+          <Field label="카테고리 ID (전체글이면 비워두세요):">
+            <input className={inputCls} value={menuId} onChange={e => setMenuId(e.target.value)} placeholder="121" />
+          </Field>
+
+          <Field label="시작 페이지 번호:">
+            <input className={inputCls} type="number" min="1" value={startPage} onChange={e => setStartPage(e.target.value)} />
+          </Field>
+
+          <Field label="시작일 (YYYY.MM.DD):">
+            <input className={inputCls} value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="2025.06.01" />
+          </Field>
+
+          <Field label="종료일 (YYYY.MM.DD, 비우면 오늘):">
+            <input className={inputCls} value={endDate} onChange={e => setEndDate(e.target.value)} placeholder={todayStr()} />
+          </Field>
+
+          <Field label="최대 수집 글 수:">
+            <input className={inputCls} type="number" min="1" max="500" value={maxArticles} onChange={e => setMaxArticles(e.target.value)} />
+          </Field>
+
+          <Field label="댓글 수집 개수 (0~5):">
+            <input className={inputCls} type="number" min="0" max="5" value={maxComments} onChange={e => setMaxComments(Number(e.target.value))} />
+          </Field>
+
+          {/* AI 설정 */}
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <p className="text-xs font-black text-gray-500 mb-2">■ AI 설정</p>
+            <label className="flex items-center gap-2 text-xs text-gray-600 mb-1.5 cursor-pointer">
+              <input type="checkbox" checked={aiRewrite} onChange={e => setAiRewrite(e.target.checked)} className="rounded" />
+              AI 리라이팅 적용 (제목+내용)
+            </label>
+            <label className="flex items-center gap-2 text-xs text-gray-600 mb-1.5 cursor-pointer">
+              <input type="checkbox" checked={aiFillComment} onChange={e => setAiFillComment(e.target.checked)} className="rounded" />
+              댓글 부족 시 AI 댓글로 채우기
+            </label>
+            <p className="text-[10px] text-gray-400">※ API 키·프롬프트는 치환키워드 탭에서</p>
           </div>
 
-          {/* 미리보기 */}
-          {preview && (
-            <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-3 sticky top-32">
-              {preview.thumbnail && (
-                <img src={preview.thumbnail} alt="" className="w-full h-40 object-cover rounded-xl bg-gray-100" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-              )}
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-black text-gray-900 text-sm leading-snug">{preview.title || '(제목 없음)'}</h3>
-                  <button
-                    type="button"
-                    onClick={() => copyText(preview.title || '', `title-${preview.id}`)}
-                    className={`text-xs font-black shrink-0 ${copiedId === `title-${preview.id}` ? 'text-emerald-500' : 'text-blue-500 hover:text-blue-700'}`}
-                  >{copiedId === `title-${preview.id}` ? '✓' : '복사'}</button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {preview.author && <span className="text-[11px] text-gray-400 font-bold">{preview.author}</span>}
-                  {preview.publishedAt && <span className="text-[11px] text-gray-300">{formatDate(preview.publishedAt)}</span>}
-                  <a href={preview.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-400 hover:underline font-bold">원문 보기</a>
-                </div>
-              </div>
-
-              {preview.description && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-[11px] font-black text-gray-400 uppercase">요약</p>
-                    <button
-                      type="button"
-                      onClick={() => copyText(preview.description || '', `desc-${preview.id}`)}
-                      className={`text-xs font-black ${copiedId === `desc-${preview.id}` ? 'text-emerald-500' : 'text-blue-500 hover:text-blue-700'}`}
-                    >{copiedId === `desc-${preview.id}` ? '✓ 복사됨' : '복사'}</button>
-                  </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">{preview.description}</p>
-                </div>
-              )}
-
-              {preview.body && preview.body !== preview.description && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-[11px] font-black text-gray-400 uppercase">본문</p>
-                    <button
-                      type="button"
-                      onClick={() => copyText(preview.body || '', `body-${preview.id}`)}
-                      className={`text-xs font-black ${copiedId === `body-${preview.id}` ? 'text-emerald-500' : 'text-blue-500 hover:text-blue-700'}`}
-                    >{copiedId === `body-${preview.id}` ? '✓ 복사됨' : '복사'}</button>
-                  </div>
-                  <div className="max-h-60 overflow-y-auto rounded-xl bg-gray-50 p-3">
-                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">{preview.body}</p>
-                  </div>
-                </div>
-              )}
-
-              {preview.images.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-black text-gray-400 uppercase mb-2">이미지 ({preview.images.length})</p>
-                  <div className="flex flex-wrap gap-2">
-                    {preview.images.slice(0, 8).map((img, i) => (
-                      <a key={i} href={img} target="_blank" rel="noopener noreferrer">
-                        <img src={img} alt="" className="w-16 h-16 rounded-lg object-cover bg-gray-100" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => copyText(`제목: ${preview.title || ''}\n\n${preview.body || preview.description || ''}`, `all-${preview.id}`)}
-                className={`w-full py-2.5 rounded-xl font-black text-sm transition-colors ${copiedId === `all-${preview.id}` ? 'bg-emerald-500 text-white' : 'bg-gray-900 text-white hover:bg-gray-700'}`}
-              >
-                {copiedId === `all-${preview.id}` ? '✓ 전체 복사됨' : '📋 전체 복사'}
-              </button>
+          {/* 마지막 수집 정보 */}
+          {lastInfo && (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <p className="text-[11px] text-blue-600 font-bold leading-relaxed">
+                마지막 수집:<br />
+                {lastInfo.writer}...<br />
+                날짜: {lastInfo.date}<br />
+                페이지: {lastInfo.page}<br />
+                저장: {lastInfo.savedAt}
+              </p>
             </div>
           )}
         </div>
-      )}
+
+        {/* 버튼들 */}
+        <div className="p-3 space-y-1.5 border-t border-gray-200">
+          <button type="button" onClick={() => doCollect(false)} disabled={loading}
+            className="w-full py-2 rounded font-black text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            {loading ? '수집 중...' : '▶ 수집 시작'}
+          </button>
+          <button type="button" onClick={() => doCollect(true)} disabled={loading || !nextPage}
+            className="w-full py-2 rounded font-black text-sm text-white bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            ▶ 이어서 수집
+          </button>
+          <button type="button" onClick={stop} disabled={!loading}
+            className="w-full py-2 rounded font-black text-sm text-white bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            ■ 중지
+          </button>
+          <button type="button" onClick={deleteSelected} disabled={selected.size === 0}
+            className="w-full py-2 rounded font-black text-sm text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            × 선택글 삭제
+          </button>
+          <button type="button" onClick={openSheet}
+            className="w-full py-2 rounded font-black text-sm text-white bg-blue-500 hover:bg-blue-600 transition-colors">
+            구글 시트로 열기
+          </button>
+          <button type="button" onClick={() => exportCsv(false)} disabled={articles.length === 0}
+            className="w-full py-2 rounded font-black text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            💾 CSV 저장 (원문만)
+          </button>
+          <button type="button" onClick={() => exportCsv(true)} disabled={articles.length === 0}
+            className="w-full py-2 rounded font-black text-sm text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            🤖 리라이팅 후 저장
+          </button>
+        </div>
+      </div>
+
+      {/* ── 오른쪽 결과 영역 ── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-4 py-2 border-b border-gray-200 bg-white shrink-0">
+          <p className="text-xs text-gray-500 font-bold">수집 결과 (✓ 열 클릭 → 선택 후 삭제)</p>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <table className="min-w-full text-xs border-collapse">
+            <thead className="sticky top-0 bg-gray-50 z-10">
+              <tr>
+                <th className="w-8 border border-gray-200 px-2 py-2 text-center cursor-pointer select-none" onClick={toggleAll}>
+                  {selected.size > 0 && selected.size === articles.length ? '✓' : '✓'}
+                </th>
+                <th className="w-12 border border-gray-200 px-2 py-2 text-center font-black text-gray-500">번호</th>
+                <th className="w-24 border border-gray-200 px-2 py-2 text-center font-black text-gray-500">날짜</th>
+                <th className="border border-gray-200 px-2 py-2 text-left font-black text-gray-500">제목</th>
+                <th className="w-16 border border-gray-200 px-2 py-2 text-center font-black text-gray-500">댓글수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {articles.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center text-gray-300 font-bold">
+                    수집된 글이 없습니다
+                  </td>
+                </tr>
+              ) : articles.map(a => (
+                <tr key={a.no} className={`hover:bg-blue-50 transition-colors ${selected.has(a.no) ? 'bg-blue-50' : ''}`}>
+                  <td className="border border-gray-100 px-2 py-1.5 text-center cursor-pointer" onClick={() => toggleSelect(a.no)}>
+                    {selected.has(a.no) ? <span className="text-blue-600 font-black">✓</span> : ''}
+                  </td>
+                  <td className="border border-gray-100 px-2 py-1.5 text-center text-gray-400">{a.no}</td>
+                  <td className="border border-gray-100 px-2 py-1.5 text-center text-gray-500 whitespace-nowrap">{a.date}</td>
+                  <td className="border border-gray-100 px-2 py-1.5">
+                    <a href={a.url} target="_blank" rel="noopener noreferrer"
+                      className="text-gray-800 hover:text-blue-600 hover:underline font-medium">
+                      {a.title}
+                    </a>
+                    {a.comments.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {a.comments.map((c, i) => (
+                          <p key={i} className="text-[10px] text-gray-400 pl-2 border-l-2 border-gray-200">
+                            {c.writer}: {c.content}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="border border-gray-100 px-2 py-1.5 text-center text-gray-500">{a.commentCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 상태바 */}
+        <div className="px-4 py-1.5 border-t border-gray-200 bg-gray-50 shrink-0">
+          <p className="text-xs text-gray-400 font-bold">{status}</p>
+        </div>
+      </div>
     </div>
   );
 };
