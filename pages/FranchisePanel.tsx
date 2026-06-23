@@ -5,458 +5,242 @@ import { supabase } from '../supabase';
 
 type FranchiseTab = 'members' | 'revenue' | 'manuscripts' | 'convert';
 
-interface ManuscriptRow {
-  id: string;
-  date: string;
-  client: string;
-  channel: string;
-  title: string;
-  status: '작업전' | '진행중' | '완료' | '보류';
-  deadline: string;
-  notes: string;
-}
-
 interface Props {
   user: UserProfile;
   members: UserProfile[];
   onUpdateUser?: (u: UserProfile) => void;
 }
 
-const CHANNELS = ['인스타그램', '유튜브', '네이버블로그', '카카오채널', '틱톡', '트위터(X)', '기타'];
-
-const STATUS_STYLES: Record<ManuscriptRow['status'], string> = {
-  '작업전': 'bg-gray-100 text-gray-600',
-  '진행중': 'bg-blue-100 text-blue-700',
-  '완료': 'bg-emerald-100 text-emerald-700',
-  '보류': 'bg-amber-100 text-amber-700',
-};
-
 /* ══════════════════════════════════════════════
-   원고시트 — 구글 시트 스타일 스프레드시트
+   원고시트 — 구글 시트 기본형 (자유 셀 입력)
 ══════════════════════════════════════════════ */
 
-type ColKey = keyof Omit<ManuscriptRow, 'id'>;
+const NUM_COLS = 10;   // A ~ J
+const NUM_ROWS = 100;  // 기본 100행
 
-interface ColDef {
-  key: ColKey;
-  label: string;
-  minW: number;
-  type: 'text' | 'date' | 'select';
-  options?: string[];
-}
-
-const COLS: ColDef[] = [
-  { key: 'date',     label: '날짜',       minW: 112, type: 'date' },
-  { key: 'client',   label: '클라이언트', minW: 128, type: 'text' },
-  { key: 'channel',  label: '채널',       minW: 124, type: 'select', options: CHANNELS },
-  { key: 'title',    label: '제목',       minW: 220, type: 'text' },
-  { key: 'status',   label: '상태',       minW: 90,  type: 'select', options: ['작업전', '진행중', '완료', '보류'] },
-  { key: 'deadline', label: '마감일',     minW: 112, type: 'date' },
-  { key: 'notes',    label: '비고',       minW: 180, type: 'text' },
-];
-
-const EMPTY_ROW: Omit<ManuscriptRow, 'id'> = {
-  date: new Date().toISOString().slice(0, 10),
-  client: '',
-  channel: '인스타그램',
-  title: '',
-  status: '작업전',
-  deadline: '',
-  notes: '',
+const colLabel = (c: number) => {
+  let label = '';
+  let n = c;
+  while (n >= 0) { label = String.fromCharCode(65 + (n % 26)) + label; n = Math.floor(n / 26) - 1; }
+  return label;
 };
 
-/* ── 개별 셀 ── */
-interface CellProps {
-  value: string;
-  col: ColDef;
-  isEditing: boolean;
-  onStartEdit: () => void;
-  onChange: (v: string) => void;
-  onBlur: () => void;
-  onTab: (shift: boolean) => void;
-  onEnter: () => void;
-}
+const COL_LABELS = Array.from({ length: NUM_COLS }, (_, i) => colLabel(i));
 
-const SpreadsheetCell: React.FC<CellProps> = ({
-  value, col, isEditing, onStartEdit, onChange, onBlur, onTab, onEnter,
-}) => {
-  const inputRef = useRef<HTMLInputElement & HTMLSelectElement>(null);
+const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
+  const STORAGE_KEY = `franchise_sheet_${userId}`;
+
+  const [data, setData] = useState<Record<string, string>>({});
+  const [editCell, setEditCell] = useState<{ r: number; c: number } | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      if (col.type === 'text') {
-        try { (inputRef.current as HTMLInputElement).select(); } catch {}
-      }
-    }
-  }, [isEditing, col.type]);
+    try { const s = localStorage.getItem(STORAGE_KEY); if (s) setData(JSON.parse(s)); } catch {}
+  }, [STORAGE_KEY]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Tab')    { e.preventDefault(); onTab(e.shiftKey); }
-    else if (e.key === 'Enter') { e.preventDefault(); onEnter(); }
-    else if (e.key === 'Escape') onBlur();
+  const persist = (d: Record<string, string>) => {
+    setData(d);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch {}
   };
 
-  const baseInput = 'w-full h-full px-2 border-0 bg-transparent outline-none text-[13px] font-medium text-gray-800';
+  const key = (r: number, c: number) => `${r}:${c}`;
+  const getVal = (r: number, c: number) => data[key(r, c)] ?? '';
 
-  if (isEditing) {
-    if (col.type === 'select') {
-      return (
-        <select
-          ref={inputRef as React.RefObject<HTMLSelectElement>}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          onBlur={onBlur}
-          onKeyDown={handleKeyDown}
-          className={baseInput + ' cursor-pointer'}
-          style={{ minHeight: 28 }}
+  const startEdit = useCallback((r: number, c: number) => {
+    setEditCell({ r, c });
+    setEditValue(data[key(r, c)] ?? '');
+  }, [data]);
+
+  const commitEdit = useCallback((r: number, c: number, val: string) => {
+    const next = { ...data };
+    if (val) next[key(r, c)] = val; else delete next[key(r, c)];
+    persist(next);
+    setEditCell(null);
+  }, [data]);
+
+  const handleKeyDown = (e: React.KeyboardEvent, r: number, c: number) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      commitEdit(r, c, editValue);
+      const nc = e.shiftKey ? c - 1 : c + 1;
+      if (nc >= 0 && nc < NUM_COLS) startEdit(r, nc);
+      else if (!e.shiftKey && r + 1 < NUM_ROWS) startEdit(r + 1, 0);
+      else if (e.shiftKey && r > 0) startEdit(r - 1, NUM_COLS - 1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      commitEdit(r, c, editValue);
+      if (r + 1 < NUM_ROWS) startEdit(r + 1, c);
+    } else if (e.key === 'Escape') {
+      setEditCell(null);
+    }
+  };
+
+  useEffect(() => {
+    if (editCell && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
+  }, [editCell]);
+
+  const cellRef = (r: number, c: number) => `${COL_LABELS[c]}${r + 1}`;
+  const activeCellLabel = editCell ? cellRef(editCell.r, editCell.c) : '';
+
+  return (
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 260px)', minHeight: 320 }}>
+      {/* 구글 시트 수식 바 */}
+      <div
+        className="flex items-center shrink-0 border-b"
+        style={{ background: '#f8f9fa', borderColor: '#dadce0', height: 28 }}
+      >
+        {/* 셀 주소 */}
+        <div
+          className="flex items-center justify-center shrink-0 text-xs font-medium text-gray-600 border-r select-none"
+          style={{ width: 80, borderColor: '#dadce0', height: '100%', fontSize: 12 }}
         >
-          {col.options!.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-      );
-    }
-    return (
-      <input
-        ref={inputRef as React.RefObject<HTMLInputElement>}
-        type={col.type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        onBlur={onBlur}
-        onKeyDown={handleKeyDown}
-        className={baseInput}
-        style={{ minHeight: 28 }}
-      />
-    );
-  }
-
-  /* 표시 모드 */
-  if (col.key === 'status') {
-    return (
-      <div className="flex items-center h-full px-1.5 cursor-cell select-none" onClick={onStartEdit}
-        onDoubleClick={onStartEdit}>
-        <span className={`px-1.5 py-[1px] rounded text-[11px] font-black whitespace-nowrap ${STATUS_STYLES[value as ManuscriptRow['status']] || 'bg-gray-100 text-gray-500'}`}>
-          {value || '작업전'}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center h-full px-2 cursor-cell overflow-hidden select-none"
-      onClick={onStartEdit} onDoubleClick={onStartEdit}>
-      <span className="text-[13px] font-medium text-gray-800 truncate leading-none">
-        {value || ''}
-      </span>
-    </div>
-  );
-};
-
-/* ── 스프레드시트 메인 ── */
-interface SpreadsheetProps {
-  manuscripts: ManuscriptRow[];
-  onAdd: (row: Omit<ManuscriptRow, 'id'>) => void;
-  onUpdate: (row: ManuscriptRow) => void;
-  onDelete: (id: string) => void;
-}
-
-const ManuscriptSheet: React.FC<SpreadsheetProps> = ({ manuscripts, onAdd, onUpdate, onDelete }) => {
-  const [editingCell, setEditingCell] = useState<{ ri: number; ci: number } | null>(null);
-  const [filterStatus, setFilterStatus] = useState('전체');
-  const [filterChannel, setFilterChannel] = useState('전체');
-  const [search, setSearch] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-
-  const filtered = manuscripts.filter(m => {
-    if (filterStatus !== '전체' && m.status !== filterStatus) return false;
-    if (filterChannel !== '전체' && m.channel !== filterChannel) return false;
-    if (search && !m.client.includes(search) && !m.title.includes(search) && !m.notes.includes(search)) return false;
-    return true;
-  });
-
-  const stats = {
-    total: manuscripts.length,
-    inProgress: manuscripts.filter(m => m.status === '진행중').length,
-    done: manuscripts.filter(m => m.status === '완료').length,
-    hold: manuscripts.filter(m => m.status === '보류').length,
-  };
-
-  const startEdit = (ri: number, ci: number) => setEditingCell({ ri, ci });
-  const stopEdit  = () => setEditingCell(null);
-
-  const moveCell = useCallback((ri: number, ci: number, dRow: number, dCol: number) => {
-    const nextCi = ci + dCol;
-    const nextRi = ri + dRow;
-    if (nextCi >= 0 && nextCi < COLS.length && nextRi >= 0 && nextRi < filtered.length) {
-      setEditingCell({ ri: nextRi, ci: nextCi });
-    } else {
-      stopEdit();
-    }
-  }, [filtered.length]);
-
-  const handleChange = (rowId: string, key: ColKey, val: string) => {
-    const row = manuscripts.find(m => m.id === rowId);
-    if (row) onUpdate({ ...row, [key]: val });
-  };
-
-  const addRow = () => {
-    onAdd({ ...EMPTY_ROW });
-    setTimeout(() => setEditingCell({ ri: filtered.length, ci: 0 }), 30);
-  };
-
-  const exportCsv = () => {
-    const header = ['No.', ...COLS.map(c => c.label)];
-    const rows = manuscripts.map((m, i) => [i + 1, ...COLS.map(c => m[c.key])]);
-    const csv = [header, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }));
-    a.download = `원고시트_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-  };
-
-  return (
-    <div className="space-y-3">
-      {/* 통계 */}
-      <div className="grid grid-cols-4 gap-2">
-        {[
-          { label: '전체', val: stats.total,      cls: 'bg-gray-100 text-gray-700' },
-          { label: '진행중', val: stats.inProgress, cls: 'bg-blue-50 text-blue-700' },
-          { label: '완료',   val: stats.done,       cls: 'bg-emerald-50 text-emerald-700' },
-          { label: '보류',   val: stats.hold,       cls: 'bg-amber-50 text-amber-700' },
-        ].map(s => (
-          <div key={s.label} className={`${s.cls} rounded-xl p-2.5 text-center`}>
-            <p className="text-xl font-black leading-none">{s.val}</p>
-            <p className="text-[11px] font-bold mt-0.5">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* 툴바 */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="검색 (클라이언트·제목·비고)..."
-          className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium focus:outline-none focus:border-blue-400 w-44" />
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-bold focus:outline-none bg-white">
-          {['전체', '작업전', '진행중', '완료', '보류'].map(s => <option key={s}>{s}</option>)}
-        </select>
-        <select value={filterChannel} onChange={e => setFilterChannel(e.target.value)}
-          className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs font-bold focus:outline-none bg-white">
-          {['전체', ...CHANNELS].map(c => <option key={c}>{c}</option>)}
-        </select>
-        <div className="ml-auto flex gap-2">
-          <button type="button" onClick={exportCsv}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 text-[11px] font-black text-gray-400 hover:bg-gray-50 transition-colors whitespace-nowrap">
-            CSV 내보내기
-          </button>
-          <button type="button" onClick={addRow}
-            className="px-4 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-black hover:bg-blue-700 transition-colors whitespace-nowrap">
-            + 행 추가
-          </button>
+          {activeCellLabel || ''}
+        </div>
+        {/* 수식 입력칸 (표시 전용) */}
+        <div className="flex-1 px-3 text-xs text-gray-700 font-medium truncate" style={{ fontSize: 13 }}>
+          {editCell ? editValue : ''}
         </div>
       </div>
 
-      {/* 스프레드시트 */}
-      <div
-        ref={tableRef}
-        className="overflow-auto rounded-lg shadow-sm"
-        style={{
-          maxHeight: 'calc(100vh - 380px)',
-          minHeight: 240,
-          border: '1px solid #dadce0',
-        }}
-        onClick={e => { if (e.target === tableRef.current) stopEdit(); }}
-      >
+      {/* 스프레드시트 본체 */}
+      <div className="flex-1 overflow-auto" style={{ border: '1px solid #dadce0', borderTop: 'none' }}>
         <table
-          className="border-collapse"
-          style={{ minWidth: 'max-content', tableLayout: 'fixed' }}
+          style={{
+            borderCollapse: 'collapse',
+            minWidth: 'max-content',
+            tableLayout: 'fixed',
+          }}
         >
-          {/* 컬럼 너비 정의 */}
+          {/* 컬럼 너비 */}
           <colgroup>
-            <col style={{ width: 40 }} />
-            {COLS.map(c => <col key={c.key} style={{ width: c.minW }} />)}
-            <col style={{ width: 32 }} />
+            <col style={{ width: 46 }} />
+            {COL_LABELS.map(l => <col key={l} style={{ width: 120 }} />)}
           </colgroup>
 
-          {/* 헤더 */}
+          {/* 헤더 행 */}
           <thead>
             <tr>
-              {/* 코너 셀 */}
+              {/* 좌상단 코너 */}
               <th
-                className="sticky left-0 top-0 z-30 select-none"
                 style={{
+                  position: 'sticky', top: 0, left: 0, zIndex: 30,
                   background: '#f8f9fa',
-                  borderRight: '1px solid #dadce0',
-                  borderBottom: '1px solid #dadce0',
-                  height: 28,
+                  border: '1px solid #dadce0',
+                  height: 20,
                 }}
               />
-              {COLS.map(col => (
+              {COL_LABELS.map(label => (
                 <th
-                  key={col.key}
-                  className="sticky top-0 z-20 select-none text-center"
+                  key={label}
                   style={{
+                    position: 'sticky', top: 0, zIndex: 20,
                     background: '#f8f9fa',
-                    borderRight: '1px solid #dadce0',
-                    borderBottom: '2px solid #dadce0',
-                    height: 28,
+                    border: '1px solid #dadce0',
+                    height: 20,
                     fontSize: 11,
-                    fontWeight: 700,
-                    color: '#5f6368',
-                    letterSpacing: '0.03em',
-                    padding: '0 8px',
-                    whiteSpace: 'nowrap',
+                    fontWeight: 600,
+                    color: '#444746',
+                    textAlign: 'center',
+                    userSelect: 'none',
+                    letterSpacing: '0.02em',
                   }}
                 >
-                  {col.label}
+                  {label}
                 </th>
               ))}
-              {/* 삭제 컬럼 헤더 */}
-              <th
-                className="sticky top-0 z-20"
-                style={{
-                  background: '#f8f9fa',
-                  borderBottom: '2px solid #dadce0',
-                  height: 28,
-                }}
-              />
             </tr>
           </thead>
 
+          {/* 데이터 행 */}
           <tbody>
-            {filtered.map((row, ri) => (
-              <tr key={row.id} className="group">
+            {Array.from({ length: NUM_ROWS }, (_, r) => (
+              <tr key={r}>
                 {/* 행 번호 */}
                 <td
-                  className="sticky left-0 z-10 text-center select-none"
                   style={{
+                    position: 'sticky', left: 0, zIndex: 10,
                     background: '#f8f9fa',
                     borderRight: '1px solid #dadce0',
-                    borderBottom: '1px solid #e8eaed',
-                    height: 28,
+                    borderBottom: '1px solid #e2e3e3',
+                    height: 21,
                     fontSize: 11,
-                    color: '#80868b',
-                    fontWeight: 600,
-                    minWidth: 40,
+                    fontWeight: 500,
+                    color: '#444746',
+                    textAlign: 'center',
+                    userSelect: 'none',
+                    minWidth: 46,
                   }}
                 >
-                  {ri + 1}
+                  {r + 1}
                 </td>
 
                 {/* 데이터 셀 */}
-                {COLS.map((col, ci) => {
-                  const isEditing = editingCell?.ri === ri && editingCell?.ci === ci;
+                {COL_LABELS.map((_, c) => {
+                  const isEditing = editCell?.r === r && editCell?.c === c;
+                  const val = getVal(r, c);
+
                   return (
                     <td
-                      key={col.key}
+                      key={c}
+                      onClick={() => { if (!isEditing) startEdit(r, c); }}
                       style={{
-                        height: 28,
+                        height: 21,
                         padding: 0,
-                        borderRight: '1px solid #e8eaed',
-                        borderBottom: '1px solid #e8eaed',
+                        borderRight: '1px solid #e2e3e3',
+                        borderBottom: '1px solid #e2e3e3',
+                        background: '#fff',
                         position: 'relative',
-                        boxSizing: 'border-box',
-                        ...(isEditing
-                          ? { outline: '2px solid #1a73e8', outlineOffset: -1, zIndex: 15, background: '#fff' }
-                          : { background: '#fff' }),
+                        cursor: 'cell',
+                        ...(isEditing ? {
+                          outline: '2px solid #1a73e8',
+                          outlineOffset: -1,
+                          zIndex: 15,
+                        } : {}),
                       }}
                     >
-                      <SpreadsheetCell
-                        value={row[col.key] as string}
-                        col={col}
-                        isEditing={isEditing}
-                        onStartEdit={() => startEdit(ri, ci)}
-                        onChange={v => handleChange(row.id, col.key, v)}
-                        onBlur={stopEdit}
-                        onTab={shift => moveCell(ri, ci, 0, shift ? -1 : 1)}
-                        onEnter={() => moveCell(ri, ci, 1, 0)}
-                      />
+                      {isEditing ? (
+                        <input
+                          ref={inputRef}
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onBlur={() => commitEdit(r, c, editValue)}
+                          onKeyDown={e => handleKeyDown(e, r, c)}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            padding: '0 4px',
+                            border: 'none',
+                            outline: 'none',
+                            background: 'transparent',
+                            fontSize: 13,
+                            fontFamily: 'inherit',
+                            color: '#1f1f1f',
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            height: '100%',
+                            padding: '0 4px',
+                            fontSize: 13,
+                            color: '#1f1f1f',
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            lineHeight: '21px',
+                          }}
+                        >
+                          {val}
+                        </div>
+                      )}
                     </td>
                   );
                 })}
-
-                {/* 삭제 버튼 */}
-                <td
-                  style={{
-                    height: 28,
-                    borderBottom: '1px solid #e8eaed',
-                    background: '#fff',
-                    textAlign: 'center',
-                    verticalAlign: 'middle',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => onDelete(row.id)}
-                    className="text-gray-300 hover:text-red-400 text-sm font-black leading-none opacity-0 group-hover:opacity-100 transition-opacity px-1"
-                    tabIndex={-1}
-                  >
-                    ×
-                  </button>
-                </td>
-              </tr>
-            ))}
-
-            {/* 빈 행 (행 추가 클릭) */}
-            <tr
-              className="cursor-pointer hover:bg-[#f8f9fa] transition-colors"
-              onClick={addRow}
-            >
-              <td
-                className="sticky left-0"
-                style={{
-                  background: '#f8f9fa',
-                  borderRight: '1px solid #dadce0',
-                  borderBottom: '1px solid #e8eaed',
-                  height: 28,
-                  textAlign: 'center',
-                  fontSize: 11,
-                  color: '#bdc1c6',
-                }}
-              >
-                {filtered.length + 1}
-              </td>
-              <td
-                colSpan={COLS.length + 1}
-                style={{
-                  borderBottom: '1px solid #e8eaed',
-                  height: 28,
-                  paddingLeft: 12,
-                  fontSize: 12,
-                  color: '#bdc1c6',
-                  fontWeight: 600,
-                }}
-              >
-                + 클릭하여 행 추가
-              </td>
-            </tr>
-
-            {/* 아래 여백 행들 */}
-            {Array.from({ length: 5 }).map((_, i) => (
-              <tr key={`pad-${i}`} onClick={addRow} className="cursor-pointer hover:bg-[#f8f9fa] transition-colors">
-                <td
-                  className="sticky left-0"
-                  style={{
-                    background: '#f8f9fa',
-                    borderRight: '1px solid #dadce0',
-                    borderBottom: '1px solid #e8eaed',
-                    height: 28,
-                  }}
-                />
-                <td
-                  colSpan={COLS.length + 1}
-                  style={{ borderBottom: '1px solid #e8eaed', height: 28, background: '#fff' }}
-                />
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      {manuscripts.length === 0 && (
-        <p className="text-center text-xs text-gray-300 font-medium pt-1">
-          위 시트를 클릭하여 데이터를 입력하세요
-        </p>
-      )}
     </div>
   );
 };
@@ -470,22 +254,15 @@ function convertManuscript(input: string, platform: string): string {
   const bodyLines = lines.filter(l => !l.trim().startsWith('#'));
   const body = bodyLines.join('\n');
   const tags = hashLines.join(' ');
-
   switch (platform) {
     case '인스타그램': {
       const paras = body.split(/\n{2,}/).filter(Boolean).map(p => p.trim());
       return paras.join('\n.\n') + (tags ? `\n.\n\n${tags}` : '');
     }
-    case '카카오채널':
-      return body.replace(/\n{3,}/g, '\n\n').trim();
-    case '네이버블로그': {
-      const paras = body.split(/\n{2,}/).filter(Boolean).map(p => p.trim());
-      return paras.join('\n\n');
-    }
-    case '유튜브':
-      return `📌 영상 설명\n\n${body.trim()}${tags ? `\n\n${tags}` : ''}`;
-    default:
-      return input;
+    case '카카오채널': return body.replace(/\n{3,}/g, '\n\n').trim();
+    case '네이버블로그': return body.split(/\n{2,}/).filter(Boolean).map(p => p.trim()).join('\n\n');
+    case '유튜브': return `📌 영상 설명\n\n${body.trim()}${tags ? `\n\n${tags}` : ''}`;
+    default: return input;
   }
 }
 
@@ -501,13 +278,7 @@ const ConvertTab: React.FC = () => {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(output);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+  const handleCopy = () => { navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
     <div className="space-y-4 max-w-4xl">
       <div className="flex flex-wrap items-center gap-3">
@@ -518,32 +289,25 @@ const ConvertTab: React.FC = () => {
         </select>
         <span className="text-xs text-gray-400 font-bold">{PLATFORM_TIPS[platform]}</span>
       </div>
-
       <div className="grid md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-black text-gray-400 uppercase mb-2">원본 내용</label>
           <textarea value={input} onChange={e => setInput(e.target.value)}
             placeholder={'원고 내용을 붙여넣으세요...\n#해시태그는 # 로 시작하는 줄에 입력'}
-            className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-400 resize-none"
-          />
+            className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-400 resize-none" />
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-xs font-black text-gray-400 uppercase">{platform} 변환 결과</label>
-            {output && (
-              <button type="button" onClick={handleCopy}
-                className={`text-xs font-black ${copied ? 'text-emerald-500' : 'text-blue-600 hover:text-blue-700'}`}>
-                {copied ? '✓ 복사됨' : '복사'}
-              </button>
-            )}
+            {output && <button type="button" onClick={handleCopy}
+              className={`text-xs font-black ${copied ? 'text-emerald-500' : 'text-blue-600 hover:text-blue-700'}`}>
+              {copied ? '✓ 복사됨' : '복사'}
+            </button>}
           </div>
-          <textarea value={output} readOnly
-            placeholder="변환 버튼을 누르면 결과가 표시됩니다..."
-            className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 text-sm font-medium resize-none focus:outline-none"
-          />
+          <textarea value={output} readOnly placeholder="변환 버튼을 누르면 결과가 표시됩니다..."
+            className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 text-sm font-medium resize-none focus:outline-none" />
         </div>
       </div>
-
       <button type="button" onClick={() => setOutput(convertManuscript(input, platform))}
         disabled={!input.trim()}
         className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
@@ -556,39 +320,28 @@ const ConvertTab: React.FC = () => {
 /* ══════════════════════════════════════════════
    가맹점 현황 (어드민)
 ══════════════════════════════════════════════ */
-const MembersTab: React.FC<{
-  members: UserProfile[];
-  onUpdateUser?: (u: UserProfile) => void;
-}> = ({ members, onUpdateUser }) => {
+const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProfile) => void }> = ({ members, onUpdateUser }) => {
   const [search, setSearch] = useState('');
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [localMembers, setLocalMembers] = useState(members);
-
   useEffect(() => { setLocalMembers(members); }, [members]);
 
   const toggleFranchise = async (member: UserProfile) => {
     setTogglingId(member.id);
     try {
       const newVal = !member.isFranchise;
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_franchise: newVal, updated_at: new Date().toISOString() })
-        .eq('id', member.id);
+      const { error } = await supabase.from('profiles').update({ is_franchise: newVal, updated_at: new Date().toISOString() }).eq('id', member.id);
       if (!error) {
         const updated = { ...member, isFranchise: newVal };
         setLocalMembers(prev => prev.map(m => m.id === member.id ? updated : m));
         if (onUpdateUser) onUpdateUser(updated);
       }
-    } finally {
-      setTogglingId(null);
-    }
+    } finally { setTogglingId(null); }
   };
 
   const franchiseMembers = localMembers.filter(m => m.isFranchise);
   const visible = localMembers.filter(m =>
-    !search ||
-    m.nickname.toLowerCase().includes(search.toLowerCase()) ||
-    m.id.toLowerCase().includes(search.toLowerCase())
+    !search || m.nickname.toLowerCase().includes(search.toLowerCase()) || m.id.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -600,11 +353,9 @@ const MembersTab: React.FC<{
             현재 {franchiseMembers.length}개 가맹점 활성 · 가맹점으로 선택된 회원은 가맹점패널에 접근할 수 있습니다
           </p>
         </div>
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="닉네임·ID 검색..."
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="닉네임·ID 검색..."
           className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 w-48" />
       </div>
-
       {franchiseMembers.length > 0 && (
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
           <p className="text-xs font-black text-blue-700 mb-2">✓ 활성 가맹점</p>
@@ -618,7 +369,6 @@ const MembersTab: React.FC<{
           </div>
         </div>
       )}
-
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs">
@@ -642,22 +392,16 @@ const MembersTab: React.FC<{
                   <td className="px-4 py-3 text-gray-500">{member.email || '-'}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                      member.role === 'admin'   ? 'bg-purple-100 text-purple-700' :
-                      member.role === 'manager' ? 'bg-blue-100 text-blue-700' :
-                                                  'bg-gray-100 text-gray-500'
+                      member.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                      member.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
                     }`}>{member.role}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      disabled={togglingId === member.id || member.role === 'admin'}
+                    <button type="button" disabled={togglingId === member.id || member.role === 'admin'}
                       onClick={() => toggleFranchise(member)}
                       className={`px-3 py-1.5 rounded-lg font-black text-xs transition-all disabled:opacity-40 ${
-                        member.isFranchise
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                      }`}
-                    >
+                        member.isFranchise ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                      }`}>
                       {togglingId === member.id ? '...' : member.isFranchise ? '✓ 가맹점' : '가맹점 선택'}
                     </button>
                   </td>
@@ -680,22 +424,7 @@ const MembersTab: React.FC<{
 const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
   const isAdmin = user.role === 'admin' || user.id.toLowerCase() === 'admin';
   const canAccess = isAdmin || !!user.isFranchise;
-
   const [activeTab, setActiveTab] = useState<FranchiseTab>(isAdmin ? 'members' : 'revenue');
-  const [manuscripts, setManuscripts] = useState<ManuscriptRow[]>([]);
-  const STORAGE_KEY = `franchise_manuscripts_${user.id}`;
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setManuscripts(JSON.parse(saved));
-    } catch {}
-  }, [STORAGE_KEY]);
-
-  const saveManuscripts = (rows: ManuscriptRow[]) => {
-    setManuscripts(rows);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); } catch {}
-  };
 
   if (!canAccess) {
     return (
@@ -709,48 +438,33 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
 
   const tabs: { id: FranchiseTab; label: string; icon: string; adminOnly?: boolean }[] = [
     ...(isAdmin ? [{ id: 'members' as FranchiseTab, label: '가맹점 현황', icon: '🏢', adminOnly: true }] : []),
-    { id: 'revenue',     label: '매출관리',     icon: '📊' },
-    { id: 'manuscripts', label: '원고시트',      icon: '📝' },
-    { id: 'convert',     label: '원고시트변환',  icon: '🔄' },
+    { id: 'revenue',     label: '매출관리',    icon: '📊' },
+    { id: 'manuscripts', label: '원고시트',     icon: '📝' },
+    { id: 'convert',     label: '원고시트변환', icon: '🔄' },
   ];
 
   return (
     <div className="max-w-7xl mx-auto py-0 md:py-6">
-      {/* 상단 탭 */}
+      {/* 탭 */}
       <div className="flex overflow-x-auto no-scrollbar border-b border-gray-200 bg-white sticky top-14 xl:top-20 z-10">
         {tabs.map(tab => (
           <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 md:px-6 py-3.5 font-black text-sm whitespace-nowrap border-b-2 transition-all ${
-              activeTab === tab.id
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
+              activeTab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}>
             <span>{tab.icon}</span>
             <span>{tab.label}</span>
-            {tab.adminOnly && (
-              <span className="text-[9px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full leading-none">관리자</span>
-            )}
+            {tab.adminOnly && <span className="text-[9px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full leading-none">관리자</span>}
           </button>
         ))}
       </div>
 
-      {/* 탭 콘텐츠 */}
-      <div className="px-3 md:px-4 pt-4 md:pt-6">
-        {activeTab === 'members' && isAdmin && (
-          <MembersTab members={members} onUpdateUser={onUpdateUser} />
-        )}
-        {activeTab === 'revenue' && (
-          <RevenueManagement user={user} />
-        )}
-        {activeTab === 'manuscripts' && (
-          <ManuscriptSheet
-            manuscripts={manuscripts}
-            onAdd={row => saveManuscripts([...manuscripts, { ...row, id: Date.now().toString() }])}
-            onUpdate={row => saveManuscripts(manuscripts.map(m => m.id === row.id ? row : m))}
-            onDelete={id => saveManuscripts(manuscripts.filter(m => m.id !== id))}
-          />
-        )}
-        {activeTab === 'convert' && <ConvertTab />}
+      {/* 콘텐츠 */}
+      <div className={activeTab === 'manuscripts' ? 'px-0' : 'px-3 md:px-4 pt-4 md:pt-6'}>
+        {activeTab === 'members'     && isAdmin && <MembersTab members={members} onUpdateUser={onUpdateUser} />}
+        {activeTab === 'revenue'     && <RevenueManagement user={user} />}
+        {activeTab === 'manuscripts' && <ManuscriptSheet userId={user.id} />}
+        {activeTab === 'convert'     && <ConvertTab />}
       </div>
     </div>
   );
