@@ -8,14 +8,17 @@ const HEADERS = {
   'Content-Type': 'application/json; charset=UTF-8',
 };
 
-const NAVER_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  Accept: 'application/json, text/javascript, */*; q=0.01',
-  'Accept-Language': 'ko-KR,ko;q=0.9',
-  Referer: 'https://cafe.naver.com/',
-  'X-Requested-With': 'XMLHttpRequest',
-};
+function makeNaverHeaders(cookie) {
+  return {
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    Accept: 'application/json, text/javascript, */*; q=0.01',
+    'Accept-Language': 'ko-KR,ko;q=0.9',
+    Referer: 'https://cafe.naver.com/',
+    'X-Requested-With': 'XMLHttpRequest',
+    ...(cookie ? { Cookie: cookie.startsWith('NID_AUT=') ? cookie : `NID_AUT=${cookie}` } : {}),
+  };
+}
 
 function decodeHtmlEntities(str) {
   if (!str) return str;
@@ -45,7 +48,7 @@ function formatDate(dateObj) {
   return `${y}.${m}.${d}`;
 }
 
-async function fetchArticleList(cafeId, menuId, page, perPage) {
+async function fetchArticleList(cafeId, menuId, page, perPage, cookie) {
   // 네이버 카페 게시글 목록 API
   let url;
   if (menuId) {
@@ -55,7 +58,7 @@ async function fetchArticleList(cafeId, menuId, page, perPage) {
   }
 
   const res = await fetch(url, {
-    headers: NAVER_HEADERS,
+    headers: makeNaverHeaders(cookie),
     signal: AbortSignal.timeout(12000),
   });
 
@@ -65,12 +68,12 @@ async function fetchArticleList(cafeId, menuId, page, perPage) {
   return json;
 }
 
-async function fetchArticleComments(cafeId, articleId, maxComments) {
+async function fetchArticleComments(cafeId, articleId, maxComments, cookie) {
   if (!maxComments || maxComments <= 0) return [];
   try {
     const url = `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${cafeId}/articles/${articleId}/comments?page=1&perPage=${maxComments}`;
     const res = await fetch(url, {
-      headers: NAVER_HEADERS,
+      headers: makeNaverHeaders(cookie),
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return [];
@@ -107,6 +110,7 @@ exports.handler = async (event) => {
     maxArticles = 10,
     maxComments = 0,
     fetchComments = false,
+    naverCookie = '',
   } = body;
 
   if (!cafeId) {
@@ -126,7 +130,7 @@ exports.handler = async (event) => {
 
   try {
     while (articles.length < maxArticles && pagesScanned < MAX_PAGES) {
-      const data = await fetchArticleList(cafeId, menuId, page, perPage);
+      const data = await fetchArticleList(cafeId, menuId, page, perPage, naverCookie);
 
       // 다양한 API 응답 구조 처리
       const result = data?.message?.result || data?.result || data;
@@ -157,7 +161,7 @@ exports.handler = async (event) => {
 
         let comments = [];
         if (fetchComments && maxComments > 0 && articleId && commentCount > 0) {
-          comments = await fetchArticleComments(cafeId, articleId, maxComments);
+          comments = await fetchArticleComments(cafeId, articleId, maxComments, naverCookie);
         }
 
         articles.push({
