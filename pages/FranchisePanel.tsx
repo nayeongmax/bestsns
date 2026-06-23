@@ -599,6 +599,7 @@ const CollectorTab: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cafeId: resolvedCafeId,
+          cafeUrl: cafeUrl.trim(),
           menuId: menuId.trim(),
           startPage: page,
           startDate: startDate.trim() || undefined,
@@ -884,7 +885,7 @@ const CollectorTab: React.FC = () => {
               </table>
             </div>
             <div className="px-4 py-1.5 border-t border-gray-200 bg-gray-50 shrink-0">
-              <p className="text-xs text-gray-400 font-bold">수집 완료 — {articles.length}개 글</p>
+              <p className="text-xs font-bold" style={{ color: status.startsWith('오류') ? '#ef4444' : '#9ca3af' }}>{status}</p>
             </div>
           </div>
         </div>
