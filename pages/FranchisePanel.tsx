@@ -715,8 +715,8 @@ const CollectorTab: React.FC = () => {
       const row1 = `<Row>${cell('',1)}${cell('제목:')}${cell(title)}${cell(c1)}${cell(c2)}${cell(c3)}${cell(a.date)}${cell(a.url)}</Row>`;
       // 내용 행: 리라이팅 열은 병합되어 있으므로 셀 없음
       const row2 = `<Row><Cell ss:Index="2"/>${cell('내용:')}${cell('')}${cell('')}${cell('')}${cell('')}${cell('')}${cell('')}</Row>`;
-      // 구분 빈 행
-      const row3 = `<Row><Cell><Data ss:Type="String"></Data></Cell></Row>`;
+      // 구분 빈 행 (ss:Height로 높이 지정해야 Excel이 빈 행으로 인식)
+      const row3 = `<Row ss:Height="14"><Cell ss:Index="1"><Data ss:Type="String"> </Data></Cell></Row>`;
       return row1 + '\n' + row2 + '\n' + row3;
     }).join('\n');
 
