@@ -257,6 +257,17 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
       onPaste={handleContainerPaste}
       style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 260px)', minHeight: 320, outline: 'none' }}
     >
+      {/* ── 구글 시트 열기 버튼 ── */}
+      <div style={{ padding: '6px 8px', borderBottom: '1px solid #e0e0e0', background: '#fff', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <button
+          onClick={() => window.open('https://sheets.new', '_blank')}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+        >
+          <img src="https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_32dp.png" alt="" style={{ width: 16, height: 16 }} />
+          구글 스프레드시트 열기
+        </button>
+        <span style={{ fontSize: 11, color: '#888' }}>아래 시트에 작성 후 구글 시트에 붙여넣기 하거나, 구글 시트에서 바로 작업할 수 있습니다.</span>
+      </div>
       {/* ── 툴바 ── */}
       <div style={{ background: '#f8f9fa', borderBottom: '1px solid #e0e0e0', padding: '3px 8px', display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', flexShrink: 0, minHeight: 38 }}>
         {/* 실행취소 / 다시실행 */}
@@ -687,10 +698,21 @@ const CollectorTab: React.FC = () => {
   };
 
   const exportCsv = (rewritten = false) => {
-    const rows = [['번호', '날짜', '제목', '작성자', '댓글수', '조회수', 'URL']];
+    // 헤더: 리라이팅(빈칸) | 구분 | 원본제목/내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
+    const rows: string[][] = [
+      ['리라이팅', '구분', '원본', '댓글1', '댓글2', '댓글3', '날짜', 'URL'],
+    ];
     articles.forEach(a => {
       const title = rewritten ? applyKeywords(a.title) : a.title;
-      rows.push([String(a.no), a.date, title, a.writer, String(a.commentCount), String(a.readCount), a.url]);
+      const c1 = a.comments[0]?.content ?? '';
+      const c2 = a.comments[1]?.content ?? '';
+      const c3 = a.comments[2]?.content ?? '';
+      // 제목 행
+      rows.push(['', '제목:', title, c1, c2, c3, a.date, a.url]);
+      // 내용 행 (현재 본문 미수집 → 빈칸)
+      rows.push(['', '내용:', '', '', '', '', '', '']);
+      // 구분 빈 행
+      rows.push(['', '', '', '', '', '', '', '']);
     });
     const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
