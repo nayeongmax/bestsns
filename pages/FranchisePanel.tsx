@@ -698,26 +698,55 @@ const CollectorTab: React.FC = () => {
   };
 
   const exportCsv = (rewritten = false) => {
-    // 헤더: 리라이팅(빈칸) | 구분 | 원본제목/내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
-    const rows: string[][] = [
-      ['리라이팅', '구분', '원본', '댓글1', '댓글2', '댓글3', '날짜', 'URL'],
-    ];
-    articles.forEach(a => {
+    const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const cell = (v: string, mergeDown = 0, bg = '') =>
+      `<Cell${mergeDown ? ` ss:MergeDown="${mergeDown}"` : ''}${bg ? ` ss:StyleID="${bg}"` : ''}><Data ss:Type="String">${esc(v)}</Data></Cell>`;
+
+    const headerRow = `<Row>
+      ${cell('리라이팅',0,'hdr')}${cell('구분',0,'hdr')}${cell('원본',0,'hdr')}${cell('댓글1',0,'hdr')}${cell('댓글2',0,'hdr')}${cell('댓글3',0,'hdr')}${cell('날짜',0,'hdr')}${cell('URL',0,'hdr')}
+    </Row>`;
+
+    const articleRows = articles.map(a => {
       const title = rewritten ? applyKeywords(a.title) : a.title;
       const c1 = a.comments[0]?.content ?? '';
       const c2 = a.comments[1]?.content ?? '';
       const c3 = a.comments[2]?.content ?? '';
-      // 제목 행
-      rows.push(['', '제목:', title, c1, c2, c3, a.date, a.url]);
-      // 내용 행 (현재 본문 미수집 → 빈칸)
-      rows.push(['', '내용:', '', '', '', '', '', '']);
+      // 제목 행: 리라이팅 열은 MergeDown=1 로 2행 병합
+      const row1 = `<Row>${cell('',1)}${cell('제목:')}${cell(title)}${cell(c1)}${cell(c2)}${cell(c3)}${cell(a.date)}${cell(a.url)}</Row>`;
+      // 내용 행: 리라이팅 열은 병합되어 있으므로 셀 없음
+      const row2 = `<Row><Cell ss:Index="2"/>${cell('내용:')}${cell('')}${cell('')}${cell('')}${cell('')}${cell('')}${cell('')}</Row>`;
       // 구분 빈 행
-      rows.push(['', '', '', '', '', '', '', '']);
-    });
-    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const row3 = `<Row><Cell><Data ss:Type="String"></Data></Cell></Row>`;
+      return row1 + '\n' + row2 + '\n' + row3;
+    }).join('\n');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:x="urn:schemas-microsoft-com:office:excel">
+ <Styles>
+  <Style ss:ID="hdr"><Font ss:Bold="1"/><Interior ss:Color="#4472C4" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:Bold="1"/></Style>
+ </Styles>
+ <Worksheet ss:Name="수집결과">
+  <Table ss:DefaultColumnWidth="120">
+   <Column ss:Width="200"/>
+   <Column ss:Width="50"/>
+   <Column ss:Width="300"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="250"/>
+   ${headerRow}
+   ${articleRows}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const link = document.createElement('a');
-    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.csv`;
+    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xls`;
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
