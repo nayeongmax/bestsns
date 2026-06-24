@@ -341,14 +341,16 @@ async function handleScrape(body) {
   const endDateObj   = endDate   ? parseDateStr(endDate)   : null;
 
   const articles = [];
-  // startDate가 있으면 API 페이지 1부터 시작 (API perPage=50, 웹 perPage=15 불일치 때문)
-  let page = startDate ? 1 : (parseInt(startPage) || 1);
-  const MAX_PAGES = 30;
+  let page = parseInt(startPage) || 1;
+  const MAX_PAGES = 60;  // startDate가 오래될수록 더 많이 스캔 필요
   let pagesScanned = 0;
   let lastError = '';
   let method = '';
+  let enteredRange = false;  // startDate 범위에 진입했는지
 
-  while (articles.length < maxArticles && pagesScanned < MAX_PAGES) {
+  while (pagesScanned < MAX_PAGES) {
+    // 날짜 범위 안에 들어온 후에만 maxArticles 체크
+    if (enteredRange && articles.length >= maxArticles) break;
     let rawItems = [];
 
     // 방법 1: /ca-fe/ REST API (XHR 헤더)
@@ -398,11 +400,11 @@ async function handleScrape(body) {
     let reachedStart = false;
     console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
     for (const item of rawItems) {
-      if (articles.length >= maxArticles) break;
+      if (enteredRange && articles.length >= maxArticles) break;
       const dateObj = parseDateStr(item.dateStr);
-      console.log(`  article ${item.articleId}: dateStr="${item.dateStr}" → parsed=${dateObj ? fmtDate(dateObj) : 'null'}`);
-      if (endDateObj && dateObj && dateObj > endDateObj) { console.log(`    skip (too new)`); continue; }
-      if (startDateObj && dateObj && dateObj < startDateObj) { console.log(`    stop (too old)`); reachedStart = true; break; }
+      if (endDateObj && dateObj && dateObj > endDateObj) { continue; }  // 너무 최신 → 스킵
+      if (startDateObj && dateObj && dateObj < startDateObj) { reachedStart = true; break; }  // 너무 오래됨 → 중단
+      enteredRange = true;
       articles.push({
         no: articles.length + 1,
         articleId: item.articleId,
