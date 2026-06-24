@@ -223,8 +223,8 @@ async function tryArticleListHtml(cafeId, menuId, page, cookie) {
 // ── 방법 2: /ca-fe/ REST API (XHR 헤더 포함) ─────────────────────────────────
 async function tryCaFeApi(cafeId, menuId, page, cookie) {
   const url = menuId
-    ? `https://cafe.naver.com/ca-fe/cafes/${cafeId}/menus/${menuId}/articles?page=${page}&perPage=50&orderBy=date`
-    : `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles?page=${page}&perPage=50&orderBy=date&includeAllMenu=true`;
+    ? `https://cafe.naver.com/ca-fe/cafes/${cafeId}/menus/${menuId}/articles?page=${page}&perPage=15&orderBy=date`
+    : `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles?page=${page}&perPage=15&orderBy=date&includeAllMenu=true`;
 
   console.log(`[ca-fe API] ${url}`);
   const { status, body } = await httpsGet(url, buildApiHeaders(cookie, 'https://cafe.naver.com/'));
@@ -256,7 +256,7 @@ async function tryApisNaver(cafeId, menuId, page, cookie) {
   const qs = new URLSearchParams({
     'search.clubid': cafeId,
     'search.page': String(page),
-    'search.perPage': '50',
+    'search.perPage': '15',
     'search.boardType': 'L',
   });
   if (menuId) qs.set('search.menuid', menuId);
@@ -341,9 +341,9 @@ async function handleScrape(body) {
   const endDateObj   = endDate   ? parseDateStr(endDate)   : null;
 
   const articles = [];
-  // 카페 페이지(15개/page) → API 페이지(50개/page) 변환
+  // perPage=15 으로 요청하면 카페 페이지 번호 = API 페이지 번호 (1:1 대응)
   const cafePageNum = parseInt(startPage) || 1;
-  let page = Math.max(1, Math.ceil(cafePageNum * 15 / 50));
+  let page = Math.max(1, cafePageNum);
   const MAX_PAGES = 60;
   let pagesScanned = 0;
   let lastError = '';
