@@ -440,6 +440,8 @@ async function handleScrape(body) {
   let pagesScanned = 0;
   let lastError = '';
   let method = '';
+  let apiSuccess = false;   // API 자체가 성공했는지
+  let dateFilteredAll = false; // 날짜 필터로만 0개가 된 경우
 
   while (articles.length < maxArticles && pagesScanned < MAX_PAGES) {
     let rawItems = [];
@@ -448,6 +450,7 @@ async function handleScrape(body) {
     try {
       rawItems = await tryCaFeApi(cafeId, menuId, page, naverCookie);
       method = 'ca-fe REST API';
+      apiSuccess = true;
     } catch (e) {
       lastError = e.message;
       console.log(`[방법1 실패] ${e.message}`);
@@ -458,6 +461,7 @@ async function handleScrape(body) {
       try {
         rawItems = await tryApisNaver(cafeId, menuId, page, naverCookie);
         method = 'apis.naver.com';
+        apiSuccess = true;
       } catch (e) {
         lastError = e.message;
         console.log(`[방법2 실패] ${e.message}`);
@@ -469,6 +473,7 @@ async function handleScrape(body) {
       try {
         rawItems = await tryArticleListHtml(cafeId, menuId, page, naverCookie);
         method = 'ArticleList HTML';
+        apiSuccess = true;
       } catch (e) {
         lastError = e.message;
         console.log(`[방법3 실패] ${e.message}`);
@@ -480,21 +485,24 @@ async function handleScrape(body) {
       try {
         rawItems = await tryMobileApi(cafeId, menuId, page, naverCookie);
         method = '모바일 API';
+        apiSuccess = true;
       } catch (e) {
         lastError = e.message;
-        console.log(`[방법2 실패] ${e.message}`);
+        console.log(`[방법4 실패] ${e.message}`);
       }
     }
 
     if (rawItems.length === 0) break;
 
     let reachedStart = false;
+    let pageAllFiltered = true;
     console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
     for (const item of rawItems) {
-      if (articles.length >= maxArticles) break;
+      if (articles.length >= maxArticles) { pageAllFiltered = false; break; }
       const dateObj = parseDateStr(item.dateStr);
       if (endDateObj && dateObj && dateObj > endDateObj) continue;       // 종료일 이후 → 스킵
       if (startDateObj && dateObj && dateObj < startDateObj) { reachedStart = true; break; }  // 시작일 이전 → 중단
+      pageAllFiltered = false;
       // 본문 + 댓글 수집
       let content = '', comments = [];
       if (item.articleId) {
@@ -519,6 +527,7 @@ async function handleScrape(body) {
       });
     }
 
+    if (pageAllFiltered && articles.length === 0) dateFilteredAll = true;
     if (reachedStart) break;
     const totalPage = rawItems[0]?.totalPage || 0;
     if (totalPage && page >= totalPage) break;
@@ -528,6 +537,19 @@ async function handleScrape(body) {
   }
 
   if (articles.length === 0) {
+    if (dateFilteredAll && apiSuccess && startDateObj) {
+      const fmt = fmtDate(startDateObj);
+      return {
+        statusCode: 200,
+        body: {
+          status: 'ok',
+          articles: [],
+          totalCollected: 0,
+          method,
+          message: `페이지 ${cafePageNum}의 글이 모두 시작일(${fmt}) 이전입니다. 더 최신 페이지(낮은 번호)를 선택해주세요.`,
+        },
+      };
+    }
     const isLoginError = /401|403|login|로그인/.test(lastError);
     return {
       statusCode: isLoginError ? 401 : 502,
