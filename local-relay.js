@@ -334,7 +334,8 @@ async function tryMobileApi(cafeId, menuId, page, cookie) {
 }
 
 async function handleScrape(body) {
-  const { cafeId, menuId='', startPage=1, startDate, endDate, maxArticles=10, naverCookie='' } = body;
+  const { cafeId, menuId='', startPage=1, startDate, endDate, naverCookie='' } = body;
+  const maxArticles = (parseInt(body.maxArticles) || 0) === 0 ? Infinity : parseInt(body.maxArticles);
   if (!cafeId) return { statusCode: 400, body: { status: 'error', message: 'cafeId가 필요합니다.' } };
 
   const startDateObj = startDate ? parseDateStr(startDate) : null;
