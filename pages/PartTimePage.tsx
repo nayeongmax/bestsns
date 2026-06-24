@@ -407,6 +407,16 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
                     </div>
                     {user?.role === 'admin' && (
                       <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/part-time/register', { state: { copyTask: task } });
+                          }}
+                          className="px-2 py-1.5 rounded-lg bg-green-50 text-green-600 text-xs font-black hover:bg-green-100 whitespace-nowrap"
+                        >
+                          복사
+                        </button>
                         <Link to={`/part-time/register`} state={{ editTask: task }} className="px-2 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-black hover:bg-blue-100 whitespace-nowrap">수정</Link>
                         <button type="button" onClick={async (e) => { e.stopPropagation(); if (!confirm(`"${task.title}" 작업을 삭제할까요?`)) return; await deletePartTimeTask(task.id); setTasks(prev => prev.filter(x => x.id !== task.id)); }} className="px-2 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-black hover:bg-red-100 whitespace-nowrap">삭제</button>
                       </>
@@ -526,26 +536,30 @@ const sectionsToItems = (s: PartTimeTaskSections): SectionItem[] => {
 export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?: UserProfile[] }> = ({ user, members = [] }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const editTask = (location.state as { editTask?: PartTimeTask } | null)?.editTask ?? null;
+  const state = location.state as { editTask?: PartTimeTask; copyTask?: PartTimeTask } | null;
+  const editTask = state?.editTask ?? null;
+  // 복사 모드: 프리랜서 선정 초기화 + 새 ID로 등록
+  const copyTask = state?.copyTask ?? null;
+  const baseTask = editTask ?? copyTask;
 
-  const [title, setTitle] = useState(editTask?.title ?? '');
-  const [description, setDescription] = useState(editTask?.description ?? '');
-  const [category, setCategory] = useState(editTask?.category ?? REGISTER_CATEGORIES[0]);
-  const [reward, setReward] = useState(editTask?.reward ?? 300);
-  const [maxApplicants, setMaxApplicants] = useState(editTask?.maxApplicants ?? 0);
+  const [title, setTitle] = useState(baseTask?.title ?? '');
+  const [description, setDescription] = useState(baseTask?.description ?? '');
+  const [category, setCategory] = useState(baseTask?.category ?? REGISTER_CATEGORIES[0]);
+  const [reward, setReward] = useState(baseTask?.reward ?? 300);
+  const [maxApplicants, setMaxApplicants] = useState(baseTask?.maxApplicants ?? 0);
   const [sectionItems, setSectionItems] = useState<SectionItem[]>(() =>
-    editTask?.sections ? sectionsToItems(editTask.sections) : []
+    baseTask?.sections ? sectionsToItems(baseTask.sections) : []
   );
-  const [appStart, setAppStart] = useState(editTask?.applicationPeriod?.start ?? todayStr());
-  const [appEnd, setAppEnd] = useState(editTask?.applicationPeriod?.end ?? todayStr());
-  const [workStart, setWorkStart] = useState(editTask?.workPeriod?.start ?? todayStr());
-  const [workEnd, setWorkEnd] = useState(editTask?.workPeriod?.end ?? todayStr());
+  const [appStart, setAppStart] = useState(baseTask?.applicationPeriod?.start ?? todayStr());
+  const [appEnd, setAppEnd] = useState(baseTask?.applicationPeriod?.end ?? todayStr());
+  const [workStart, setWorkStart] = useState(baseTask?.workPeriod?.start ?? todayStr());
+  const [workEnd, setWorkEnd] = useState(baseTask?.workPeriod?.end ?? todayStr());
   const [applicantUserId, setApplicantUserId] = useState(editTask?.applicantUserId ?? '');
-  const [signupLink, setSignupLink] = useState(editTask?.signupLink ?? '');
-  const [postVisibility, setPostVisibility] = useState<'전체공개' | '멤버공개'>(editTask?.postVisibility ?? '전체공개');
-  const [dailyLimit, setDailyLimit] = useState(editTask?.dailyLimit ?? 2);
+  const [signupLink, setSignupLink] = useState(baseTask?.signupLink ?? '');
+  const [postVisibility, setPostVisibility] = useState<'전체공개' | '멤버공개'>(baseTask?.postVisibility ?? '전체공개');
+  const [dailyLimit, setDailyLimit] = useState(baseTask?.dailyLimit ?? 2);
   const [workTimeSlot, setWorkTimeSlot] = useState<'오전' | '오후' | ''>(
-    editTask?.workTimeSlot === '오전 (09:00~12:00)' ? '오전' : editTask?.workTimeSlot === '오후 (13:00~17:00)' ? '오후' : ''
+    baseTask?.workTimeSlot === '오전 (09:00~12:00)' ? '오전' : baseTask?.workTimeSlot === '오후 (13:00~17:00)' ? '오후' : ''
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
@@ -560,13 +574,13 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   // 목록 조회(경량)에서 sections가 누락된 채 editTask가 넘어온 경우,
   // DB에서 해당 작업의 전체 데이터(sections 포함)를 직접 조회해 섹션 복원
   useEffect(() => {
-    if (!editTask?.id) return;
-    if (editTask.sections && Object.keys(editTask.sections).length > 0) return;
-    fetchPartTimeTaskById(editTask.id).then((full) => {
+    if (!baseTask?.id) return;
+    if (baseTask.sections && Object.keys(baseTask.sections).length > 0) return;
+    fetchPartTimeTaskById(baseTask.id).then((full) => {
       if (!full?.sections || Object.keys(full.sections).length === 0) return;
       setSectionItems(sectionsToItems(full.sections));
     }).catch(() => {});
-  }, [editTask?.id]);
+  }, [baseTask?.id]);
 
   /** 결제 완료된 견적의 광고주 목록 (닉네임 표시, 드롭다운용) */
   const paidAdvertiserOptions = useMemo(() => {
@@ -743,7 +757,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
       return `ALBA-${String(maxN + 1).padStart(5, '0')}`;
     })();
     const newTask: PartTimeTask = editTask
-      ? {
+      ? { // 수정 모드: 기존 id 유지, 기존 applicants 유지
           ...editTask,
           title: title.trim(),
           description: description.trim() || title.trim(),
@@ -783,7 +797,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
         };
     try {
       await upsertPartTimeTask(newTask);
-      alert(editTask ? '작업이 수정되었습니다.' : '작업이 등록되었습니다.');
+      alert(editTask ? '작업이 수정되었습니다.' : copyTask ? '작업이 복사 등록되었습니다.' : '작업이 등록되었습니다.');
       navigate('/part-time');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : ((err as Record<string, unknown>)?.message ? String((err as Record<string, unknown>).message) : JSON.stringify(err));
@@ -801,7 +815,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           돌아가기
         </button>
-        <h2 className="flex-1 text-center text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-blue-500 underline-offset-8">{editTask ? '프리랜서 작업 수정' : '프리랜서 작업 등록'}</h2>
+        <h2 className="flex-1 text-center text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tighter italic uppercase underline decoration-blue-500 underline-offset-8">{editTask ? '프리랜서 작업 수정' : copyTask ? '작업 복사 등록' : '프리랜서 작업 등록'}</h2>
         <div className="w-16 sm:w-20 shrink-0" />
       </div>
       <form onSubmit={handleSubmit} formNoValidate className="bg-white p-5 sm:p-8 md:p-12 rounded-2xl sm:rounded-[48px] shadow-xl border border-gray-100 space-y-8 sm:space-y-12">
@@ -1091,7 +1105,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
           </div>
         </section>
         <div className="flex gap-4 pt-6">
-          <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? (editTask ? '수정 중...' : '등록 중...') : (editTask ? '작업 수정하기' : '작업 등록하기')}</button>
+          <button type="submit" disabled={isSubmitting} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-all text-lg disabled:opacity-70 disabled:cursor-not-allowed">{isSubmitting ? (editTask ? '수정 중...' : '등록 중...') : (editTask ? '작업 수정하기' : copyTask ? '복사 등록하기' : '작업 등록하기')}</button>
           <button type="button" onClick={() => navigate(-1)} className="px-8 py-4 rounded-2xl bg-gray-100 text-gray-600 font-black hover:bg-gray-200 transition-all">취소</button>
         </div>
       </form>
