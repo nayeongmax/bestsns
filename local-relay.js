@@ -341,8 +341,9 @@ async function handleScrape(body) {
   const endDateObj   = endDate   ? parseDateStr(endDate)   : null;
 
   const articles = [];
-  // startDate가 있으면 항상 1페이지부터 (API page≠카페 page, startDate로 원하는 위치 자동 탐색)
-  let page = startDate ? 1 : (parseInt(startPage) || 1);
+  // 카페 페이지(15개/page) → API 페이지(50개/page) 변환
+  const cafePageNum = parseInt(startPage) || 1;
+  let page = Math.max(1, Math.ceil(cafePageNum * 15 / 50));
   const MAX_PAGES = 60;  // startDate가 오래될수록 더 많이 스캔 필요
   let pagesScanned = 0;
   let lastError = '';
