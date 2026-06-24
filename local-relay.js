@@ -278,16 +278,24 @@ async function tryApisNaver(cafeId, menuId, page, cookie) {
   const result = json?.message?.result ?? json?.result ?? json;
   const list = result?.articleList ?? result?.items ?? [];
   if (!Array.isArray(list) || list.length === 0) throw new Error('apis.naver: 목록 없음');
+  if (list[0]) console.log(`  [apis.naver] 첫번째 아이템 키: ${Object.keys(list[0]).join(', ')}`);
+  if (list[0]) console.log(`  [apis.naver] 날짜관련 필드: writeDateTimestamp=${list[0].writeDateTimestamp} writeDate=${list[0].writeDate} addDate=${list[0].addDate}`);
 
-  return list.map(item => ({
-    articleId: item.articleId ?? item.id,
-    title: decodeHtml(item.subject ?? item.title ?? ''),
-    writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
-    dateStr: item.writeDate ?? item.writeDateText ?? '',
-    commentCount: parseInt(item.commentCount ?? 0),
-    readCount: parseInt(item.readCount ?? 0),
-    totalPage: result?.totalPage ?? 0,
-  }));
+  return list.map(item => {
+    const ts = item.writeDateTimestamp ?? item.addDate ?? item.lastUpdateDate ?? null;
+    const dateStr = ts
+      ? fmtDate(new Date(typeof ts === 'number' && ts < 9999999999 ? ts * 1000 : ts))
+      : (item.writeDate ?? item.writeDateText ?? item.addDateText ?? '');
+    return {
+      articleId: item.articleId ?? item.id,
+      title: decodeHtml(item.subject ?? item.title ?? ''),
+      writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
+      dateStr,
+      commentCount: parseInt(item.commentCount ?? 0),
+      readCount: parseInt(item.readCount ?? 0),
+      totalPage: result?.totalPage ?? 0,
+    };
+  });
 }
 
 // ── 방법 4: 모바일 API ────────────────────────────────────────────────────────
