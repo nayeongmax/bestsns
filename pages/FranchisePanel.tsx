@@ -660,6 +660,12 @@ const CollectorTab: React.FC = () => {
         const hint = data.hint ? `\n💡 ${data.hint}` : '';
         throw new Error(msg + hint);
       }
+      // API 성공이지만 날짜 필터로 0개인 경우 (status=ok, articles=[])
+      if (data.articles?.length === 0 && data.message) {
+        setStatus(`ℹ️ ${data.message}`);
+        setLoading(false);
+        return;
+      }
       const newList: CafeArticle[] = data.articles || [];
       const merged = resume
         ? [...articles, ...newList.map((a, i) => ({ ...a, no: articles.length + i + 1 }))]
