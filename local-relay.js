@@ -334,23 +334,22 @@ async function tryMobileApi(cafeId, menuId, page, cookie) {
 }
 
 async function handleScrape(body) {
-  const { cafeId, menuId='', startPage=1, startDate, endDate, maxArticles=10, naverCookie='' } = body;
+  const { cafeId, menuId='', startPage=1, startDate, endDate, maxArticles=50, naverCookie='' } = body;
   if (!cafeId) return { statusCode: 400, body: { status: 'error', message: 'cafeId가 필요합니다.' } };
 
   const startDateObj = startDate ? parseDateStr(startDate) : null;
   const endDateObj   = endDate   ? parseDateStr(endDate)   : null;
 
   const articles = [];
-  let page = parseInt(startPage) || 1;
-  const MAX_PAGES = 60;  // startDate가 오래될수록 더 많이 스캔 필요
+  // 카페 페이지(15개/page) → API 페이지(50개/page) 변환
+  const cafePageNum = parseInt(startPage) || 1;
+  let page = Math.max(1, Math.ceil(cafePageNum * 15 / 50));
+  const MAX_PAGES = 60;
   let pagesScanned = 0;
   let lastError = '';
   let method = '';
-  let enteredRange = false;  // startDate 범위에 진입했는지
 
-  while (pagesScanned < MAX_PAGES) {
-    // 날짜 범위 안에 들어온 후에만 maxArticles 체크
-    if (enteredRange && articles.length >= maxArticles) break;
+  while (articles.length < maxArticles && pagesScanned < MAX_PAGES) {
     let rawItems = [];
 
     // 방법 1: /ca-fe/ REST API (XHR 헤더)
@@ -400,11 +399,10 @@ async function handleScrape(body) {
     let reachedStart = false;
     console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
     for (const item of rawItems) {
-      if (enteredRange && articles.length >= maxArticles) break;
+      if (articles.length >= maxArticles) break;
       const dateObj = parseDateStr(item.dateStr);
-      if (endDateObj && dateObj && dateObj > endDateObj) { continue; }  // 너무 최신 → 스킵
-      if (startDateObj && dateObj && dateObj < startDateObj) { reachedStart = true; break; }  // 너무 오래됨 → 중단
-      enteredRange = true;
+      if (endDateObj && dateObj && dateObj > endDateObj) continue;       // 종료일 이후 → 스킵
+      if (startDateObj && dateObj && dateObj < startDateObj) { reachedStart = true; break; }  // 시작일 이전 → 중단
       articles.push({
         no: articles.length + 1,
         articleId: item.articleId,

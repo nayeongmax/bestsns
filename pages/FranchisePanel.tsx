@@ -564,7 +564,7 @@ const CollectorTab: React.FC = () => {
   const [startPage,     setStartPage]     = useState('1');
   const [startDate,     setStartDate]     = useState('');
   const [endDate,       setEndDate]       = useState('');
-  const [maxArticles,   setMaxArticles]   = useState('10');
+  const [maxArticles,   setMaxArticles]   = useState('50');
   const [maxComments,   setMaxComments]   = useState('3');
   const [aiRewrite,     setAiRewrite]     = useState(false);
   const [aiFillComment, setAiFillComment] = useState(false);
@@ -844,7 +844,7 @@ const CollectorTab: React.FC = () => {
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">최대 수집 글 수:</label>
-              <input className={inputCls} type="number" min="1" max="500" value={maxArticles} onChange={e => setMaxArticles(e.target.value)} />
+              <input className={inputCls} type="number" min="1" value={maxArticles} onChange={e => setMaxArticles(e.target.value)} />
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">댓글 수집 개수 (0~5):</label>
