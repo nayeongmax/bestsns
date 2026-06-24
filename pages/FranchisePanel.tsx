@@ -257,6 +257,17 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
       onPaste={handleContainerPaste}
       style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 260px)', minHeight: 320, outline: 'none' }}
     >
+      {/* ── 구글 시트 열기 버튼 ── */}
+      <div style={{ padding: '6px 8px', borderBottom: '1px solid #e0e0e0', background: '#fff', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <button
+          onClick={() => window.open('https://sheets.new', '_blank')}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+        >
+          <img src="https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_32dp.png" alt="" style={{ width: 16, height: 16 }} />
+          구글 스프레드시트 열기
+        </button>
+        <span style={{ fontSize: 11, color: '#888' }}>아래 시트에 작성 후 구글 시트에 붙여넣기 하거나, 구글 시트에서 바로 작업할 수 있습니다.</span>
+      </div>
       {/* ── 툴바 ── */}
       <div style={{ background: '#f8f9fa', borderBottom: '1px solid #e0e0e0', padding: '3px 8px', display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', flexShrink: 0, minHeight: 38 }}>
         {/* 실행취소 / 다시실행 */}
@@ -687,15 +698,55 @@ const CollectorTab: React.FC = () => {
   };
 
   const exportCsv = (rewritten = false) => {
-    const rows = [['번호', '날짜', '제목', '작성자', '댓글수', '조회수', 'URL']];
-    articles.forEach(a => {
+    const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const cell = (v: string, mergeDown = 0, bg = '') =>
+      `<Cell${mergeDown ? ` ss:MergeDown="${mergeDown}"` : ''}${bg ? ` ss:StyleID="${bg}"` : ''}><Data ss:Type="String">${esc(v)}</Data></Cell>`;
+
+    const headerRow = `<Row>
+      ${cell('리라이팅',0,'hdr')}${cell('구분',0,'hdr')}${cell('원본',0,'hdr')}${cell('댓글1',0,'hdr')}${cell('댓글2',0,'hdr')}${cell('댓글3',0,'hdr')}${cell('날짜',0,'hdr')}${cell('URL',0,'hdr')}
+    </Row>`;
+
+    const articleRows = articles.map(a => {
       const title = rewritten ? applyKeywords(a.title) : a.title;
-      rows.push([String(a.no), a.date, title, a.writer, String(a.commentCount), String(a.readCount), a.url]);
-    });
-    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const c1 = a.comments[0]?.content ?? '';
+      const c2 = a.comments[1]?.content ?? '';
+      const c3 = a.comments[2]?.content ?? '';
+      // 제목 행: 리라이팅 열은 MergeDown=1 로 2행 병합
+      const row1 = `<Row>${cell('',1)}${cell('제목:')}${cell(title)}${cell(c1)}${cell(c2)}${cell(c3)}${cell(a.date)}${cell(a.url)}</Row>`;
+      // 내용 행: 리라이팅 열은 병합되어 있으므로 셀 없음
+      const row2 = `<Row><Cell ss:Index="2"/>${cell('내용:')}${cell('')}${cell('')}${cell('')}${cell('')}${cell('')}${cell('')}</Row>`;
+      // 구분 빈 행 (ss:Height로 높이 지정해야 Excel이 빈 행으로 인식)
+      const row3 = `<Row ss:Height="14"><Cell ss:Index="1"><Data ss:Type="String"> </Data></Cell></Row>`;
+      return row1 + '\n' + row2 + '\n' + row3;
+    }).join('\n');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:x="urn:schemas-microsoft-com:office:excel">
+ <Styles>
+  <Style ss:ID="hdr"><Font ss:Bold="1"/><Interior ss:Color="#4472C4" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:Bold="1"/></Style>
+ </Styles>
+ <Worksheet ss:Name="수집결과">
+  <Table ss:DefaultColumnWidth="120">
+   <Column ss:Width="200"/>
+   <Column ss:Width="50"/>
+   <Column ss:Width="300"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="250"/>
+   ${headerRow}
+   ${articleRows}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const link = document.createElement('a');
-    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.csv`;
+    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xls`;
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();

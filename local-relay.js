@@ -341,7 +341,8 @@ async function handleScrape(body) {
   const endDateObj   = endDate   ? parseDateStr(endDate)   : null;
 
   const articles = [];
-  let page = parseInt(startPage) || 1;
+  // startDate가 있으면 API 페이지 1부터 시작 (API perPage=50, 웹 perPage=15 불일치 때문)
+  let page = startDate ? 1 : (parseInt(startPage) || 1);
   const MAX_PAGES = 30;
   let pagesScanned = 0;
   let lastError = '';
