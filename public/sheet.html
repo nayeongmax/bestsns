@@ -68,18 +68,18 @@
   }
 
   /* ── 시트 영역 ── */
-  .sheet-wrap { overflow: auto; flex: 1; padding: 6px 2px 4px; }
+  .sheet-wrap { overflow-x: hidden; overflow-y: auto; flex: 1; padding: 4px 0 4px; }
 
-  table { border-collapse: collapse; min-width: max-content; table-layout: fixed; }
-  col.col-cat   { width: 68px; }
-  col.col-label { width: 38px; }
-  col.col-main  { width: 300px; }
-  col.col-rlabel{ width: 38px; }
-  col.col-r1    { width: 200px; }
-  col.col-c1    { width: 150px; }
-  col.col-c2    { width: 150px; }
-  col.col-c3    { width: 150px; }
-  col.col-meta  { width: 220px; }
+  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  col.col-cat   { width: 5%; }
+  col.col-label { width: 3%; }
+  col.col-main  { width: 23%; }
+  col.col-rlabel{ width: 3%; }
+  col.col-r1    { width: 15%; }
+  col.col-c1    { width: 11%; }
+  col.col-c2    { width: 11%; }
+  col.col-c3    { width: 11%; }
+  col.col-meta  { width: 18%; }
 
   td { border: 1px solid #bbb; vertical-align: top; padding: 0; overflow: visible; }
 
