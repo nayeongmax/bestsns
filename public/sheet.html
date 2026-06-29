@@ -28,6 +28,9 @@
   .toolbar .title { font-weight: bold; font-size: 13px; margin-right: 6px; }
   .toolbar select { font-size: 11px; padding: 2px 5px; border: 1px solid #999; border-radius: 3px; }
   .saved-badge { display: none; color: green; font-size: 10px; }
+  .cloud-badge { display: none; font-size: 10px; }
+  .cloud-badge.ok  { color: #1a73e8; }
+  .cloud-badge.err { color: #c00; }
 
   /* ── 동기화 패널 ── */
   .sync-panel {
@@ -78,7 +81,7 @@
   col.col-c3    { width: 130px; }
   col.col-meta  { width: 280px; }
 
-  td { border: 1px solid #bbb; vertical-align: top; padding: 0; }
+  td { border: 1px solid #bbb; vertical-align: top; padding: 0; overflow: visible; }
 
   tr.section-header td {
     background: #ff0000; color: #fff; font-weight: bold;
@@ -104,13 +107,14 @@
   [contenteditable="true"] {
     outline: none; min-height: 18px; width: 100%; display: block;
     padding: 3px 4px; font-size: 11px; line-height: 1.5;
-    white-space: pre-wrap; word-break: break-all;
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
+    overflow: visible; height: auto;
   }
   [contenteditable="true"]:focus { background: #fffde7; box-shadow: inset 0 0 0 2px #ffc107; }
   [contenteditable="true"]:empty:before { content: attr(data-ph); color: #ccc; pointer-events: none; }
-  .main-text { min-height: 70px; }
-  .comment-text { min-height: 40px; }
-  .date-text { min-height: 18px; font-size: 10px; color: #666; }
+  .main-text { min-height: 70px; height: auto; }
+  .comment-text { min-height: 40px; height: auto; }
+  .date-text { min-height: 18px; height: auto; font-size: 10px; color: #666; }
 
   tr.add-row td { background: #f9f9f9; text-align: center; padding: 4px; }
   tr.add-row button {
@@ -189,6 +193,7 @@
     <option value="">-- 섹션 이동 --</option>
   </select>
   <span class="saved-badge" id="savedBadge">✔ 자동저장됨</span>
+  <span class="cloud-badge" id="cloudBadge"></span>
 </div>
 
 <!-- 동기화 오버레이 & 패널 -->
@@ -683,7 +688,8 @@ let _saveTimer = null;
 
 function autoSave() {
   collectCurrentTab();
-  localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+  const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
+  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId }));
   // 저장 인디케이터 살짝 표시
   const badge = document.getElementById('savedBadge');
   badge.textContent = '✔ 자동저장됨';
@@ -704,7 +710,17 @@ document.getElementById('sheetBody').addEventListener('input', debouncedSave);
 document.getElementById('tabsList').addEventListener('input', debouncedSave);
 
 // 30초마다 강제 백업 (혹시 input 이벤트가 누락되는 경우 대비)
-setInterval(autoSave, 30000);
+setInterval(async () => {
+  autoSave();
+  if (syncCode) {
+    try {
+      await cloudSave(syncCode);
+      showCloudBadge('☁ 클라우드 저장됨', 'ok');
+    } catch(e) {
+      showCloudBadge('⚠ 클라우드 저장 실패: ' + e.message, 'err');
+    }
+  }
+}, 30000);
 
 // 페이지 닫힐 때 즉시 저장
 window.addEventListener('beforeunload', () => {
@@ -768,14 +784,26 @@ function updateChip() {
   else chip.style.display = 'none';
 }
 
+let _cloudBadgeTimer = null;
+function showCloudBadge(msg, type) {
+  const el = document.getElementById('cloudBadge');
+  el.textContent = msg; el.className = 'cloud-badge ' + type; el.style.display = 'inline';
+  clearTimeout(_cloudBadgeTimer);
+  _cloudBadgeTimer = setTimeout(() => { el.style.display = 'none'; }, type === 'ok' ? 2000 : 5000);
+}
+
 // 클라우드에 저장
 async function cloudSave(key) {
   collectCurrentTab();
-  await fetch(`${SYNC_API}?${USER_ID ? 'userId' : 'code'}=${encodeURIComponent(key)}`, {
+  const res = await fetch(`${SYNC_API}?${USER_ID ? 'userId' : 'code'}=${encodeURIComponent(key)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ payload: { tabs, activeTabId } })
   });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
 }
 
 // 클라우드에서 불러오기
@@ -829,7 +857,12 @@ document.getElementById('sheetBody').addEventListener('input', () => {
   if (!syncCode) return;
   clearTimeout(_cloudTimer);
   _cloudTimer = setTimeout(async () => {
-    try { await cloudSave(syncCode); } catch(e) {}
+    try {
+      await cloudSave(syncCode);
+      showCloudBadge('☁ 클라우드 저장됨', 'ok');
+    } catch(e) {
+      showCloudBadge('⚠ 클라우드 저장 실패: ' + e.message, 'err');
+    }
   }, 3000);
 });
 
