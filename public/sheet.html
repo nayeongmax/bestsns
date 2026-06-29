@@ -270,27 +270,7 @@ function todayLabel() {
 
 function makeTabId() { return 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }
 
-function initTabs() {
-  const saved = localStorage.getItem('snsSheet_tabs_v2');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed && parsed.tabs && parsed.tabs.length > 0) {
-        tabs = parsed.tabs;
-        activeTabId = parsed.activeTabId || tabs[0].id;
-        renderTabBar();
-        switchTab(activeTabId, false);
-        return;
-      }
-    } catch(e) {}
-  }
-  // 기본값: 샘플 탭 하나
-  const firstId = makeTabId();
-  tabs = [{ id: firstId, name: '샘플', sections: JSON.parse(JSON.stringify(defaultSections)) }];
-  activeTabId = firstId;
-  renderTabBar();
-  switchTab(activeTabId, false);
-}
+function initTabs() { /* init()으로 대체됨 */ }
 
 function saveAll() {
   autoSave();
@@ -736,9 +716,29 @@ window.addEventListener('beforeunload', () => {
 // 기기 간 동기화 (Supabase via Netlify Function)
 // ═══════════════════════════════════════════════
 const SYNC_API = '/api/sheet-sync';
-let syncCode = localStorage.getItem('snsSheet_syncCode') || '';
+
+// URL 파라미터에서 userId 추출 (FranchisePanel iframe에서 전달)
+const _urlParams = new URLSearchParams(location.search);
+const USER_ID    = _urlParams.get('userId') || '';   // 로그인 유저 ID (자동 동기화)
+let syncCode     = USER_ID || localStorage.getItem('snsSheet_syncCode') || '';
+
+// userId 모드: 동기화 패널 숨기고 자동으로 클라우드 연동
+const isUserMode = Boolean(USER_ID);
+
+function updateSyncUI() {
+  const btn  = document.querySelector('button[onclick="openSyncPanel()"]');
+  const chip = document.getElementById('syncCodeChip');
+  if (isUserMode) {
+    // userId 모드: 동기화 버튼 숨기고 로그인 유저 표시
+    if (btn)  btn.style.display = 'none';
+    if (chip) { chip.textContent = '☁ ' + USER_ID; chip.style.display = 'inline'; }
+  } else {
+    updateChip();
+  }
+}
 
 function openSyncPanel() {
+  if (isUserMode) return; // userId 모드에선 패널 불필요
   document.getElementById('syncCodeInput').value = syncCode;
   document.getElementById('syncStatus').textContent = '';
   document.getElementById('syncPanel').style.display = 'block';
@@ -753,33 +753,41 @@ function closeSyncPanel() {
 
 function getSyncCode() {
   const val = document.getElementById('syncCodeInput').value.trim().toUpperCase();
-  if (!val || val.length < 2) {
-    setStatus('코드를 입력해주세요. (2자 이상)', 'err');
-    return null;
-  }
+  if (!val || val.length < 2) { setStatus('코드를 입력해주세요. (2자 이상)', 'err'); return null; }
   return val;
 }
 
 function setStatus(msg, type='ok') {
   const el = document.getElementById('syncStatus');
-  el.textContent = msg;
-  el.className = 'sync-status ' + type;
+  el.textContent = msg; el.className = 'sync-status ' + type;
 }
 
 function updateChip() {
   const chip = document.getElementById('syncCodeChip');
-  if (syncCode) {
-    chip.textContent = '☁ ' + syncCode;
-    chip.style.display = 'inline';
-  } else {
-    chip.style.display = 'none';
-  }
+  if (syncCode) { chip.textContent = '☁ ' + syncCode; chip.style.display = 'inline'; }
+  else chip.style.display = 'none';
+}
+
+// 클라우드에 저장
+async function cloudSave(key) {
+  collectCurrentTab();
+  await fetch(`${SYNC_API}?${USER_ID ? 'userId' : 'code'}=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ payload: { tabs, activeTabId } })
+  });
+}
+
+// 클라우드에서 불러오기
+async function cloudLoad(key) {
+  const res = await fetch(`${SYNC_API}?${USER_ID ? 'userId' : 'code'}=${encodeURIComponent(key)}`);
+  if (!res.ok) return null;
+  return res.json();
 }
 
 async function syncUpload() {
   const code = getSyncCode(); if (!code) return;
   setStatus('업로드 중...', 'ok');
-  collectCurrentTab();
   try {
     const res = await fetch(`${SYNC_API}?code=${encodeURIComponent(code)}`, {
       method: 'POST',
@@ -791,19 +799,16 @@ async function syncUpload() {
     syncCode = code;
     localStorage.setItem('snsSheet_syncCode', syncCode);
     updateChip();
-    setStatus(`✔ "${code}" 코드로 저장됐습니다. 다른 기기에서 같은 코드로 불러오세요.`, 'ok');
-  } catch(e) {
-    setStatus('오류: ' + e.message, 'err');
-  }
+    setStatus(`✔ "${code}" 코드로 저장됐습니다.`, 'ok');
+  } catch(e) { setStatus('오류: ' + e.message, 'err'); }
 }
 
 async function syncDownload() {
   const code = getSyncCode(); if (!code) return;
   setStatus('불러오는 중...', 'ok');
   try {
-    const res = await fetch(`${SYNC_API}?code=${encodeURIComponent(code)}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '불러오기 실패');
+    const data = await cloudLoad(code);
+    if (!data) throw new Error('해당 코드의 데이터가 없습니다.');
     if (!confirm(`"${code}" 코드의 데이터를 불러옵니다.\n현재 작업 내용이 덮어씌워집니다. 계속할까요?`)) return;
     tabs = data.payload.tabs;
     activeTabId = data.payload.activeTabId || tabs[0]?.id;
@@ -815,33 +820,90 @@ async function syncDownload() {
     switchTab(activeTabId, false);
     const t = data.updated_at ? new Date(data.updated_at).toLocaleString('ko-KR') : '';
     setStatus(`✔ 불러오기 완료! (저장 시각: ${t})`, 'ok');
-  } catch(e) {
-    setStatus('오류: ' + e.message, 'err');
-  }
+  } catch(e) { setStatus('오류: ' + e.message, 'err'); }
 }
 
-// 자동 업로드: 자동저장 시 syncCode가 있으면 클라우드에도 저장
-const _origAutoSave = autoSave;
-// autoSave 이후 클라우드 동기화 (debounce 별도)
+// 입력 시 클라우드 자동저장 (3초 debounce)
 let _cloudTimer = null;
 document.getElementById('sheetBody').addEventListener('input', () => {
   if (!syncCode) return;
   clearTimeout(_cloudTimer);
   _cloudTimer = setTimeout(async () => {
-    collectCurrentTab();
-    try {
-      await fetch(`${SYNC_API}?code=${encodeURIComponent(syncCode)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload: { tabs, activeTabId } })
-      });
-    } catch(e) { /* 클라우드 저장 실패는 조용히 무시 */ }
-  }, 3000); // 입력 멈춘 뒤 3초 후 클라우드 저장
+    try { await cloudSave(syncCode); } catch(e) {}
+  }, 3000);
 });
 
 // ─── 초기화 ───
-initTabs();
-updateChip();
+async function init() {
+  // userId 모드: 항상 클라우드에서 불러오기 시도
+  if (USER_ID) {
+    try {
+      const data = await cloudLoad(USER_ID);
+      if (data && data.payload && data.payload.tabs?.length > 0) {
+        tabs = data.payload.tabs;
+        activeTabId = data.payload.activeTabId || tabs[0].id;
+        // 로컬에도 캐시
+        localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId }));
+        renderTabBar();
+        switchTab(activeTabId, false);
+        updateSyncUI();
+        return;
+      }
+    } catch(e) {}
+    // 클라우드 없으면 유저별 로컬 캐시 확인
+    const local = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        if (parsed?.tabs?.length > 0) {
+          tabs = parsed.tabs; activeTabId = parsed.activeTabId || tabs[0].id;
+          renderTabBar(); switchTab(activeTabId, false); updateSyncUI(); return;
+        }
+      } catch(e) {}
+    }
+  } else {
+    // 일반 모드: 기존 로컬 저장 불러오기
+    const saved = localStorage.getItem('snsSheet_tabs_v2');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.tabs?.length > 0) {
+          tabs = parsed.tabs; activeTabId = parsed.activeTabId || tabs[0].id;
+          renderTabBar(); switchTab(activeTabId, false); updateSyncUI(); return;
+        }
+      } catch(e) {}
+    }
+  }
+  // 기본 샘플
+  const firstId = makeTabId();
+  tabs = [{ id: firstId, name: '샘플', sections: JSON.parse(JSON.stringify(defaultSections)) }];
+  activeTabId = firstId;
+  renderTabBar();
+  switchTab(activeTabId, false);
+  updateSyncUI();
+}
+
+// autoSave도 userId 모드에선 클라우드에 함께 저장
+const _baseAutoSave = autoSave;
+window._autoSaveWithCloud = async function() {
+  _baseAutoSave();
+  if (syncCode) {
+    try { await cloudSave(syncCode); } catch(e) {}
+  }
+};
+
+// beforeunload 시 동기화 저장
+window.addEventListener('beforeunload', () => {
+  collectCurrentTab();
+  if (USER_ID) {
+    const key = `snsSheet_tabs_${USER_ID}`;
+    localStorage.setItem(key, JSON.stringify({ tabs, activeTabId }));
+  } else {
+    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+  }
+});
+
+init();
 </script>
 </body>
 </html>
