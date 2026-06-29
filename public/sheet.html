@@ -10,14 +10,14 @@
   body {
     font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
     font-size: 11px; background: #fff;
-    display: flex; flex-direction: column; height: 100vh;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
   }
 
   /* ── 상단 툴바 ── */
   .toolbar {
     position: sticky; top: 0; z-index: 100;
     background: #f0f0f0; border-bottom: 1px solid #ccc;
-    padding: 5px 10px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+    padding: 4px 6px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
     flex-shrink: 0;
   }
   .toolbar button {
@@ -68,18 +68,18 @@
   }
 
   /* ── 시트 영역 ── */
-  .sheet-wrap { overflow: auto; flex: 1; padding: 10px 10px 4px; }
+  .sheet-wrap { overflow: auto; flex: 1; padding: 6px 2px 4px; }
 
-  table { border-collapse: collapse; min-width: 1400px; table-layout: fixed; }
-  col.col-cat   { width: 70px; }
-  col.col-label { width: 40px; }
-  col.col-main  { width: 320px; }
-  col.col-rlabel{ width: 40px; }
+  table { border-collapse: collapse; min-width: max-content; table-layout: fixed; }
+  col.col-cat   { width: 68px; }
+  col.col-label { width: 38px; }
+  col.col-main  { width: 300px; }
+  col.col-rlabel{ width: 38px; }
   col.col-r1    { width: 200px; }
-  col.col-c1    { width: 130px; }
-  col.col-c2    { width: 130px; }
-  col.col-c3    { width: 130px; }
-  col.col-meta  { width: 280px; }
+  col.col-c1    { width: 150px; }
+  col.col-c2    { width: 150px; }
+  col.col-c3    { width: 150px; }
+  col.col-meta  { width: 220px; }
 
   td { border: 1px solid #bbb; vertical-align: top; padding: 0; overflow: visible; }
 
