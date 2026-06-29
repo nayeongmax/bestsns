@@ -569,6 +569,7 @@ function addSection() {
     { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' }
   ]};
   sections.push(newSec);
+  updateJumpSelect();
   renderSection(newSec);
   document.getElementById(`section-${id}`)?.scrollIntoView({behavior:'smooth'});
 }
