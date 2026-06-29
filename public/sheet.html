@@ -242,11 +242,7 @@ function initTabs() {
 }
 
 function saveAll() {
-  collectCurrentTab();
-  localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
-  const badge = document.getElementById('savedBadge');
-  badge.style.display = 'inline';
-  setTimeout(() => badge.style.display = 'none', 2000);
+  autoSave();
 }
 
 // 현재 DOM → 현재 탭 데이터 동기화
@@ -649,8 +645,38 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-// 자동저장
-document.addEventListener('focusout', () => {
+// ═══════════════════════════════════════════════
+// 자동저장 (입력 즉시 + 주기적 백업)
+// ═══════════════════════════════════════════════
+let _saveTimer = null;
+
+function autoSave() {
+  collectCurrentTab();
+  localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+  // 저장 인디케이터 살짝 표시
+  const badge = document.getElementById('savedBadge');
+  badge.textContent = '✔ 자동저장됨';
+  badge.style.display = 'inline';
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => { badge.style.display = 'none'; }, 1500);
+}
+
+function debouncedSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(autoSave, 800); // 입력 멈춘 뒤 0.8초 후 저장
+}
+
+// 시트 내 모든 입력에 반응
+document.getElementById('sheetBody').addEventListener('input', debouncedSave);
+
+// 탭 바 변경에도 반응 (탭 이름 편집 등)
+document.getElementById('tabsList').addEventListener('input', debouncedSave);
+
+// 30초마다 강제 백업 (혹시 input 이벤트가 누락되는 경우 대비)
+setInterval(autoSave, 30000);
+
+// 페이지 닫힐 때 즉시 저장
+window.addEventListener('beforeunload', () => {
   collectCurrentTab();
   localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
 });
