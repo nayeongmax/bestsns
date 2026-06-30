@@ -3,7 +3,7 @@ import { UserProfile } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
 
-type FranchiseTab = 'members' | 'revenue' | 'manuscripts' | 'convert';
+type FranchiseTab = 'members' | 'subscription' | 'revenue' | 'manuscripts' | 'collector';
 
 interface Props {
   user: UserProfile;
@@ -21,14 +21,14 @@ const COL_BUF  = 5;
 const ROW_BUF  = 20;
 
 interface CellData {
-  v?:  string;              // value
-  b?:  boolean;             // bold
-  i?:  boolean;             // italic
-  s?:  boolean;             // strikethrough
-  sz?: number;              // font size
-  c?:  string;              // text color
-  bg?: string;              // background color
-  a?:  'l' | 'c' | 'r';   // alignment
+  v?:  string;
+  b?:  boolean;
+  i?:  boolean;
+  s?:  boolean;
+  sz?: number;
+  c?:  string;
+  bg?: string;
+  a?:  'l' | 'c' | 'r';
 }
 type SheetData = Record<string, CellData>;
 
@@ -61,7 +61,6 @@ function migrateData(raw: string): SheetData {
   } catch { return {}; }
 }
 
-/* 툴바 버튼 */
 const TBtn: React.FC<{
   children: React.ReactNode;
   title?: string;
@@ -95,18 +94,17 @@ const TBtn: React.FC<{
 
 const Sep = () => <div style={{ width: 1, height: 18, background: '#dadce0', margin: '0 3px', flexShrink: 0 }} />;
 
-/* ── 메인 스프레드시트 ── */
 const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
   const STORAGE_KEY = `franchise_sheet_${userId}`;
 
-  const [data, setData]               = useState<SheetData>({});
-  const [undoStack, setUndoStack]     = useState<SheetData[]>([]);
-  const [redoStack, setRedoStack]     = useState<SheetData[]>([]);
-  const [size, setSize]               = useState({ rows: MIN_ROWS, cols: MIN_COLS });
-  const [editCell, setEditCell]       = useState<{ r: number; c: number } | null>(null);
-  const [editValue, setEditValue]     = useState('');
+  const [data, setData]           = useState<SheetData>({});
+  const [undoStack, setUndoStack] = useState<SheetData[]>([]);
+  const [redoStack, setRedoStack] = useState<SheetData[]>([]);
+  const [size, setSize]           = useState({ rows: MIN_ROWS, cols: MIN_COLS });
+  const [editCell, setEditCell]   = useState<{ r: number; c: number } | null>(null);
+  const [editValue, setEditValue] = useState('');
   const inputRef    = useRef<HTMLInputElement>(null);
-  const lastCellRef = useRef<{ r: number; c: number } | null>(null); // 툴바 클릭 시 블러 후에도 대상 셀 유지
+  const lastCellRef = useRef<{ r: number; c: number } | null>(null);
 
   useEffect(() => {
     try {
@@ -124,7 +122,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
 
   useEffect(() => { if (editCell) lastCellRef.current = editCell; }, [editCell]);
 
-  /* ── 저장 + 히스토리 push ── */
   const persist = (newData: SheetData) => {
     setUndoStack(s => [...s, data].slice(-50));
     setRedoStack([]);
@@ -154,9 +151,8 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
   };
 
-  /* ── 셀 조작 ── */
-  const key    = (r: number, c: number) => `${r}:${c}`;
-  const getCell = (r: number, c: number): CellData => data[key(r, c)] ?? {};
+  const key      = (r: number, c: number) => `${r}:${c}`;
+  const getCell  = (r: number, c: number): CellData => data[key(r, c)] ?? {};
 
   const startEdit = (r: number, c: number) => {
     setSize(prev => ({
@@ -177,7 +173,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     setEditCell(null);
   };
 
-  /* 서식 적용 — 툴바에서 호출, 블러 후에도 lastCellRef 사용 */
   const applyFormat = (fmt: Partial<CellData>) => {
     const target = editCell ?? lastCellRef.current;
     if (!target) return;
@@ -186,7 +181,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     persist(next);
   };
 
-  /* 붙여넣기 (TSV 파싱) */
   const applyPaste = (startR: number, startC: number, text: string) => {
     const rows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd().split('\n');
     const next = { ...data };
@@ -200,7 +194,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     setEditCell(null);
   };
 
-  /* 키보드 핸들러 (input 안) */
   const handleKeyDown = (e: React.KeyboardEvent, r: number, c: number) => {
     const mod = e.ctrlKey || e.metaKey;
     if (mod) {
@@ -243,11 +236,9 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
     if (editCell && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
   }, [editCell]);
 
-  const activeFmt   = editCell ? getCell(editCell.r, editCell.c) : (lastCellRef.current ? getCell(lastCellRef.current.r, lastCellRef.current.c) : {});
-  const colLabels   = Array.from({ length: size.cols }, (_, i) => colLabel(i));
+  const activeFmt     = editCell ? getCell(editCell.r, editCell.c) : (lastCellRef.current ? getCell(lastCellRef.current.r, lastCellRef.current.c) : {});
+  const colLabels     = Array.from({ length: size.cols }, (_, i) => colLabel(i));
   const cellAddrLabel = editCell ? `${colLabel(editCell.c)}${editCell.r + 1}` : (lastCellRef.current ? `${colLabel(lastCellRef.current.c)}${lastCellRef.current.r + 1}` : '');
-
-  /* noBlur — 툴바 클릭 시 input 포커스 유지 */
   const noBlur = (e: React.MouseEvent) => e.preventDefault();
 
   return (
@@ -257,9 +248,7 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
       onPaste={handleContainerPaste}
       style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 260px)', minHeight: 320, outline: 'none' }}
     >
-      {/* ── 툴바 ── */}
       <div style={{ background: '#f8f9fa', borderBottom: '1px solid #e0e0e0', padding: '3px 8px', display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', flexShrink: 0, minHeight: 38 }}>
-        {/* 실행취소 / 다시실행 */}
         <TBtn title="실행 취소 (Ctrl+Z)" disabled={!undoStack.length} onClick={undo} onMouseDown={noBlur}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
         </TBtn>
@@ -267,8 +256,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
         </TBtn>
         <Sep />
-
-        {/* 글꼴 크기 */}
         <select
           value={activeFmt.sz ?? 10}
           onMouseDown={noBlur}
@@ -278,14 +265,10 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
           {[8,9,10,11,12,14,16,18,20,24,28,36,48,72].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <Sep />
-
-        {/* Bold / Italic / 취소선 */}
         <TBtn title="굵게 (Ctrl+B)" active={!!activeFmt.b} onMouseDown={noBlur} onClick={() => applyFormat({ b: !activeFmt.b })} style={{ fontWeight: 700 }}>B</TBtn>
         <TBtn title="기울임 (Ctrl+I)" active={!!activeFmt.i} onMouseDown={noBlur} onClick={() => applyFormat({ i: !activeFmt.i })} style={{ fontStyle: 'italic' }}>I</TBtn>
         <TBtn title="취소선" active={!!activeFmt.s} onMouseDown={noBlur} onClick={() => applyFormat({ s: !activeFmt.s })} style={{ textDecoration: 'line-through' }}>S</TBtn>
         <Sep />
-
-        {/* 글자색 */}
         <div title="글자색" style={{ position: 'relative', width: 28, height: 28, flexShrink: 0 }} onMouseDown={noBlur}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, height: '100%', pointerEvents: 'none' }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: activeFmt.c || '#000', lineHeight: 1 }}>A</span>
@@ -294,8 +277,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
           <input type="color" value={activeFmt.c || '#000000'} onChange={e => applyFormat({ c: e.target.value })}
             style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }} />
         </div>
-
-        {/* 배경색 */}
         <div title="배경색" style={{ position: 'relative', width: 28, height: 28, flexShrink: 0 }} onMouseDown={noBlur}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, height: '100%', pointerEvents: 'none' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill={activeFmt.bg || '#757575'}>
@@ -307,8 +288,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
             style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }} />
         </div>
         <Sep />
-
-        {/* 정렬 */}
         <TBtn title="왼쪽 정렬" active={!activeFmt.a || activeFmt.a === 'l'} onMouseDown={noBlur} onClick={() => applyFormat({ a: 'l' })}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15 15H3v2h12v-2zm0-8H3v2h12V7zM3 13h18v-2H3v2zm0 8h18v-2H3v2zM3 3v2h18V3H3z"/></svg>
         </TBtn>
@@ -320,7 +299,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
         </TBtn>
       </div>
 
-      {/* ── 수식 바 ── */}
       <div style={{ background: '#f8f9fa', borderBottom: '1px solid #e0e0e0', height: 26, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         <div style={{ width: 76, borderRight: '1px solid #e0e0e0', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#5f6368', userSelect: 'none', flexShrink: 0 }}>
           {cellAddrLabel}
@@ -330,7 +308,6 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
         </div>
       </div>
 
-      {/* ── 그리드 ── */}
       <div style={{ flex: 1, overflow: 'auto', border: '1px solid #dadce0', borderTop: 'none' }}>
         <table style={{ borderCollapse: 'collapse', minWidth: 'max-content', tableLayout: 'fixed' }}>
           <colgroup>
@@ -407,86 +384,417 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
 };
 
 /* ══════════════════════════════════════════════
-   원고시트변환
+   원고수집기 — 원고 템플릿 저장·관리
 ══════════════════════════════════════════════ */
-function convertManuscript(input: string, platform: string): string {
-  const lines = input.trim().split('\n');
-  const hashLines = lines.filter(l => l.trim().startsWith('#'));
-  const bodyLines = lines.filter(l => !l.trim().startsWith('#'));
-  const body = bodyLines.join('\n'), tags = hashLines.join(' ');
-  switch (platform) {
-    case '인스타그램': return body.split(/\n{2,}/).filter(Boolean).map(p => p.trim()).join('\n.\n') + (tags ? `\n.\n\n${tags}` : '');
-    case '카카오채널': return body.replace(/\n{3,}/g, '\n\n').trim();
-    case '네이버블로그': return body.split(/\n{2,}/).filter(Boolean).map(p => p.trim()).join('\n\n');
-    case '유튜브': return `📌 영상 설명\n\n${body.trim()}${tags ? `\n\n${tags}` : ''}`;
-    default: return input;
-  }
+interface ManuscriptItem {
+  id: string;
+  title: string;
+  content: string;
+  tag: string;
+  createdAt: string;
 }
-const PLATFORM_TIPS: Record<string, string> = {
-  '인스타그램': '단락 사이에 마침표(.) 줄 추가 · 해시태그 하단 분리',
-  '카카오채널': '3줄 이상 공백 → 2줄로 정리',
-  '네이버블로그': '단락 간 2줄 공백으로 정리',
-  '유튜브': '영상 설명 헤더 · 해시태그 섹션 자동 추가',
-};
-const ConvertTab: React.FC = () => {
-  const [platform, setPlatform] = useState('인스타그램');
-  const [input, setInput]       = useState('');
-  const [output, setOutput]     = useState('');
-  const [copied, setCopied]     = useState(false);
+
+const CollectorTab: React.FC<{ userId: string }> = ({ userId }) => {
+  const STORAGE_KEY = `franchise_collector_${userId}`;
+  const [items, setItems]       = useState<ManuscriptItem[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<ManuscriptItem | null>(null);
+  const [form, setForm]         = useState({ title: '', content: '', tag: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTag, setSelectedTag] = useState('전체');
+
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem(STORAGE_KEY);
+      if (s) setItems(JSON.parse(s));
+    } catch {}
+  }, [STORAGE_KEY]);
+
+  const save = (next: ManuscriptItem[]) => {
+    setItems(next);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+  };
+
+  const handleSubmit = () => {
+    if (!form.title.trim() || !form.content.trim()) return;
+    if (editingItem) {
+      save(items.map(it => it.id === editingItem.id ? { ...it, title: form.title.trim(), content: form.content.trim(), tag: form.tag.trim() || '일반' } : it));
+      setEditingItem(null);
+    } else {
+      const newItem: ManuscriptItem = {
+        id: `ms_${Date.now()}`,
+        title: form.title.trim(),
+        content: form.content.trim(),
+        tag: form.tag.trim() || '일반',
+        createdAt: new Date().toISOString(),
+      };
+      save([newItem, ...items]);
+    }
+    setForm({ title: '', content: '', tag: '' });
+    setShowForm(false);
+  };
+
+  const handleEdit = (item: ManuscriptItem) => {
+    setEditingItem(item);
+    setForm({ title: item.title, content: item.content, tag: item.tag });
+    setShowForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!confirm('이 원고를 삭제할까요?')) return;
+    save(items.filter(it => it.id !== id));
+    if (expandedId === id) setExpandedId(null);
+  };
+
+  const copyContent = (item: ManuscriptItem) => {
+    navigator.clipboard.writeText(item.content);
+    setCopiedId(item.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const allTags = ['전체', ...Array.from(new Set(items.map(it => it.tag)))];
+  const filtered = items.filter(it => {
+    const matchTag = selectedTag === '전체' || it.tag === selectedTag;
+    const matchSearch = !searchQuery || it.title.includes(searchQuery) || it.content.includes(searchQuery) || it.tag.includes(searchQuery);
+    return matchTag && matchSearch;
+  });
+
   return (
     <div className="space-y-4 max-w-4xl">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-black text-gray-900">원고시트변환</h2>
-        <select value={platform} onChange={e => { setPlatform(e.target.value); setOutput(''); }}
-          className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 bg-white">
-          {['인스타그램','카카오채널','네이버블로그','유튜브'].map(p => <option key={p}>{p}</option>)}
-        </select>
-        <span className="text-xs text-gray-400 font-bold">{PLATFORM_TIPS[platform]}</span>
-      </div>
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <label className="block text-xs font-black text-gray-400 uppercase mb-2">원본 내용</label>
-          <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={'원고 내용을 붙여넣으세요...\n#해시태그는 # 로 시작하는 줄에 입력'}
-            className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-400 resize-none" />
+          <h2 className="text-lg font-black text-gray-900">원고수집기</h2>
+          <p className="text-xs text-gray-400 font-bold mt-0.5">원고 템플릿을 저장하고 필요할 때 바로 복사해 사용하세요</p>
         </div>
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-black text-gray-400 uppercase">{platform} 변환 결과</label>
-            {output && <button type="button" onClick={() => { navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-              className={`text-xs font-black ${copied ? 'text-emerald-500' : 'text-blue-600 hover:text-blue-700'}`}>{copied ? '✓ 복사됨' : '복사'}</button>}
+        <button type="button" onClick={() => { setShowForm(true); setEditingItem(null); setForm({ title: '', content: '', tag: '' }); }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-colors">
+          + 원고 추가
+        </button>
+      </div>
+
+      {/* 추가/수정 폼 */}
+      {showForm && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+          <h3 className="font-black text-gray-800">{editingItem ? '원고 수정' : '새 원고 추가'}</h3>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <input
+              type="text"
+              placeholder="제목 (필수)"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              className="sm:col-span-2 px-4 py-2.5 rounded-xl border border-blue-200 text-sm font-bold focus:outline-none focus:border-blue-400 bg-white"
+            />
+            <input
+              type="text"
+              placeholder="태그 (예: 네이버, 카카오)"
+              value={form.tag}
+              onChange={e => setForm(f => ({ ...f, tag: e.target.value }))}
+              className="px-4 py-2.5 rounded-xl border border-blue-200 text-sm font-bold focus:outline-none focus:border-blue-400 bg-white"
+            />
           </div>
-          <textarea value={output} readOnly placeholder="변환 버튼을 누르면 결과가 표시됩니다..."
-            className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 text-sm font-medium resize-none focus:outline-none" />
+          <textarea
+            placeholder="원고 내용 (필수)"
+            value={form.content}
+            onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
+            rows={6}
+            className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-medium focus:outline-none focus:border-blue-400 resize-none bg-white"
+          />
+          <div className="flex gap-2">
+            <button type="button" onClick={handleSubmit} disabled={!form.title.trim() || !form.content.trim()}
+              className="px-5 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              {editingItem ? '수정 완료' : '저장'}
+            </button>
+            <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ title: '', content: '', tag: '' }); }}
+              className="px-5 py-2 rounded-xl bg-gray-100 text-gray-600 font-black text-sm hover:bg-gray-200 transition-colors">
+              취소
+            </button>
+          </div>
         </div>
-      </div>
-      <button type="button" onClick={() => setOutput(convertManuscript(input, platform))} disabled={!input.trim()}
-        className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-        🔄 변환하기
-      </button>
+      )}
+
+      {/* 필터 */}
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <input
+            type="text"
+            placeholder="검색..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 w-40"
+          />
+          {allTags.map(tag => (
+            <button key={tag} type="button" onClick={() => setSelectedTag(tag)}
+              className={`px-3 py-1 rounded-full text-xs font-black transition-colors ${selectedTag === tag ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 원고 목록 */}
+      {filtered.length === 0 ? (
+        <div className="py-16 text-center text-gray-300">
+          <div className="text-4xl mb-3">📝</div>
+          <p className="font-black text-base">{items.length === 0 ? '저장된 원고가 없습니다' : '검색 결과 없음'}</p>
+          <p className="text-xs mt-1">{items.length === 0 ? '원고 추가 버튼으로 첫 원고를 추가해보세요' : '다른 검색어나 태그를 시도해보세요'}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(item => (
+            <div key={item.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-black text-gray-900 text-sm">{item.title}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-600 border border-blue-100">{item.tag}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">{item.content.slice(0, 60)}{item.content.length > 60 ? '...' : ''}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button type="button" onClick={() => copyContent(item)}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-black transition-colors ${copiedId === item.id ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                    {copiedId === item.id ? '✓ 복사됨' : '📋 복사'}
+                  </button>
+                  <button type="button" onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-black bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                    {expandedId === item.id ? '접기' : '보기'}
+                  </button>
+                  <button type="button" onClick={() => handleEdit(item)}
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
+                    수정
+                  </button>
+                  <button type="button" onClick={() => handleDelete(item.id)}
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-black bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                    삭제
+                  </button>
+                </div>
+              </div>
+              {expandedId === item.id && (
+                <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{item.content}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
 /* ══════════════════════════════════════════════
-   가맹점 현황 (어드민)
+   구독관리
+══════════════════════════════════════════════ */
+const PLANS = [
+  {
+    id: 'basic',
+    name: '기본 플랜',
+    price: 39000,
+    color: 'blue',
+    features: ['매출관리 대시보드', '원고시트 (무제한)', '원고수집기', '카카오톡 기본 지원'],
+  },
+  {
+    id: 'premium',
+    name: '프리미엄 플랜',
+    price: 79000,
+    color: 'purple',
+    features: ['기본 플랜 전체 포함', '우선 지원 (당일 응답)', '맞춤 원고 컨설팅 월 2회', '월 1회 전략 미팅 (30분)'],
+  },
+];
+
+const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
+  const STORAGE_KEY = `franchise_sub_${user.id}`;
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [activePlan, setActivePlan]   = useState<string | null>(null);
+  const [activeUntil, setActiveUntil] = useState<string | null>(null);
+  const [showContact, setShowContact] = useState(false);
+
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem(STORAGE_KEY);
+      if (s) {
+        const d = JSON.parse(s);
+        setActivePlan(d.plan ?? null);
+        setActiveUntil(d.until ?? null);
+      }
+    } catch {}
+  }, [STORAGE_KEY]);
+
+  const isActive = activePlan && activeUntil && new Date(activeUntil) > new Date();
+  const planLabel = activePlan === 'basic' ? '기본 플랜' : activePlan === 'premium' ? '프리미엄 플랜' : null;
+
+  const handleRequestPayment = () => {
+    if (!selectedPlan) { alert('플랜을 선택해주세요.'); return; }
+    setShowContact(true);
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-lg font-black text-gray-900">구독관리</h2>
+        <p className="text-xs text-gray-400 font-bold mt-0.5">가맹점 구독료를 결제하고 모든 기능을 이용하세요</p>
+      </div>
+
+      {/* 현재 구독 상태 */}
+      <div className={`rounded-2xl p-5 border-2 ${isActive ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 ${isActive ? 'bg-emerald-100' : 'bg-gray-200'}`}>
+            {isActive ? '✅' : '⏸'}
+          </div>
+          <div>
+            <p className={`font-black text-base ${isActive ? 'text-emerald-800' : 'text-gray-600'}`}>
+              {isActive ? `구독 중 — ${planLabel}` : '구독 없음'}
+            </p>
+            {isActive && activeUntil && (
+              <p className="text-xs text-emerald-600 font-bold mt-0.5">
+                {activeUntil.slice(0, 10)} 까지 이용 가능
+              </p>
+            )}
+            {!isActive && (
+              <p className="text-xs text-gray-400 font-bold mt-0.5">아래에서 플랜을 선택하고 결제를 신청하세요</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 플랜 선택 */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        {PLANS.map(plan => {
+          const isSelected = selectedPlan === plan.id;
+          const isCurrent  = activePlan === plan.id && !!isActive;
+          const colorMap: Record<string, string> = {
+            blue:   isSelected ? 'border-blue-500 bg-blue-50'   : 'border-gray-200 bg-white hover:border-blue-300',
+            purple: isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300',
+          };
+          const badgeMap: Record<string, string> = {
+            blue: 'bg-blue-600', purple: 'bg-purple-600',
+          };
+          return (
+            <button
+              key={plan.id}
+              type="button"
+              onClick={() => setSelectedPlan(plan.id)}
+              className={`text-left rounded-2xl border-2 p-5 transition-all ${colorMap[plan.color]}`}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-gray-900">{plan.name}</span>
+                    {isCurrent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-black">현재 플랜</span>}
+                  </div>
+                  <p className="text-2xl font-black text-gray-900 mt-1">
+                    {plan.price.toLocaleString()}
+                    <span className="text-sm font-bold text-gray-400">원/월</span>
+                  </p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${isSelected ? `${badgeMap[plan.color]} border-transparent` : 'border-gray-300'}`}>
+                  {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                </div>
+              </div>
+              <ul className="space-y-1.5">
+                {plan.features.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-gray-600 font-bold">
+                    <span className="text-emerald-500 shrink-0">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 결제 신청 버튼 */}
+      <button
+        type="button"
+        onClick={handleRequestPayment}
+        disabled={!selectedPlan}
+        className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {selectedPlan
+          ? `${PLANS.find(p => p.id === selectedPlan)?.name} 결제 신청하기`
+          : '플랜을 선택하세요'}
+      </button>
+
+      {/* 결제 안내 모달 */}
+      {showContact && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">💳</div>
+              <h3 className="font-black text-gray-900 text-lg">결제 신청 안내</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                아래 채널로 문의 주시면<br />결제 링크를 보내드립니다
+              </p>
+            </div>
+            <div className="space-y-3 mb-5">
+              <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <span className="text-2xl shrink-0">💬</span>
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase">카카오톡 채널</p>
+                  <p className="font-black text-gray-900">@bestsns</p>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                <p className="text-xs font-bold text-blue-700">
+                  신청 시 아이디 <span className="font-black">{user.nickname}</span> 와{' '}
+                  선택 플랜 <span className="font-black">{PLANS.find(p => p.id === selectedPlan)?.name}</span> 을 함께 알려주세요
+                </p>
+              </div>
+            </div>
+            <button type="button" onClick={() => setShowContact(false)}
+              className="w-full py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200 transition-colors">
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
+   가맹점 현황 (어드민 전용)
 ══════════════════════════════════════════════ */
 const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProfile) => void }> = ({ members, onUpdateUser }) => {
-  const [search, setSearch]       = useState('');
-  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [search, setSearch]           = useState('');
+  const [togglingId, setTogglingId]   = useState<string | null>(null);
   const [localMembers, setLocalMembers] = useState(members);
+  const [errMsg, setErrMsg]           = useState<string | null>(null);
   useEffect(() => { setLocalMembers(members); }, [members]);
 
   const toggleFranchise = async (member: UserProfile) => {
+    if (togglingId) return;
     setTogglingId(member.id);
+    setErrMsg(null);
+    const newVal  = !member.isFranchise;
+    const updated = { ...member, isFranchise: newVal };
+
+    // 낙관적 업데이트 — 즉시 UI 반영
+    setLocalMembers(prev => prev.map(m => m.id === member.id ? updated : m));
+    if (onUpdateUser) onUpdateUser(updated);
+
     try {
-      const newVal = !member.isFranchise;
-      const { error } = await supabase.from('profiles').update({ is_franchise: newVal, updated_at: new Date().toISOString() }).eq('id', member.id);
-      if (!error) {
-        const updated = { ...member, isFranchise: newVal };
-        setLocalMembers(prev => prev.map(m => m.id === member.id ? updated : m));
-        if (onUpdateUser) onUpdateUser(updated);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_franchise: newVal })
+        .eq('id', member.id);
+
+      if (error) {
+        // 롤백
+        setLocalMembers(prev => prev.map(m => m.id === member.id ? member : m));
+        if (onUpdateUser) onUpdateUser(member);
+        setErrMsg(`저장 실패: ${error.message} — Supabase profiles 테이블에 is_franchise (boolean) 컬럼이 필요합니다.`);
       }
-    } finally { setTogglingId(null); }
+    } catch (e) {
+      setLocalMembers(prev => prev.map(m => m.id === member.id ? member : m));
+      if (onUpdateUser) onUpdateUser(member);
+      setErrMsg('네트워크 오류로 저장에 실패했습니다.');
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const franchiseMembers = localMembers.filter(m => m.isFranchise);
@@ -497,11 +805,19 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-black text-gray-900">가맹점 파트너 관리</h2>
-          <p className="text-xs text-gray-400 font-bold mt-0.5">현재 {franchiseMembers.length}개 가맹점 활성 · 가맹점으로 선택된 회원은 가맹점패널에 접근할 수 있습니다</p>
+          <p className="text-xs text-gray-400 font-bold mt-0.5">현재 {franchiseMembers.length}개 가맹점 활성 · 선택된 회원은 가맹점패널에 접근할 수 있습니다</p>
         </div>
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="닉네임·ID 검색..."
           className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 w-48" />
       </div>
+
+      {errMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700 flex items-start gap-2">
+          <span className="shrink-0">⚠️</span>
+          <span>{errMsg}</span>
+        </div>
+      )}
+
       {franchiseMembers.length > 0 && (
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
           <p className="text-xs font-black text-blue-700 mb-2">✓ 활성 가맹점</p>
@@ -515,6 +831,7 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
           </div>
         </div>
       )}
+
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs">
@@ -524,17 +841,34 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
             <tbody className="divide-y divide-gray-50">
               {visible.slice(0, 100).map(member => (
                 <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3"><div className="flex items-center gap-2"><img src={member.profileImage} alt="" className="w-6 h-6 rounded-full object-cover border border-gray-100 shrink-0" /><span className="font-black text-gray-900 whitespace-nowrap">{member.nickname}</span></div></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <img src={member.profileImage} alt="" className="w-6 h-6 rounded-full object-cover border border-gray-100 shrink-0" />
+                      <span className="font-black text-gray-900 whitespace-nowrap">{member.nickname}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-gray-400 font-mono text-[11px]">{member.id}</td>
                   <td className="px-4 py-3 text-gray-500">{member.email || '-'}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${member.role === 'admin' ? 'bg-purple-100 text-purple-700' : member.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>{member.role}</span></td>
-                  <td className="px-4 py-3"><button type="button" disabled={togglingId === member.id || member.role === 'admin'} onClick={() => toggleFranchise(member)}
-                    className={`px-3 py-1.5 rounded-lg font-black text-xs transition-all disabled:opacity-40 ${member.isFranchise ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
-                    {togglingId === member.id ? '...' : member.isFranchise ? '✓ 가맹점' : '가맹점 선택'}
-                  </button></td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${member.role === 'admin' ? 'bg-purple-100 text-purple-700' : member.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {member.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      disabled={togglingId === member.id || member.role === 'admin'}
+                      onClick={() => toggleFranchise(member)}
+                      className={`px-3 py-1.5 rounded-lg font-black text-xs transition-all disabled:opacity-40 ${member.isFranchise ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                    >
+                      {togglingId === member.id ? '저장 중...' : member.isFranchise ? '✓ 가맹점' : '가맹점 선택'}
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {visible.length === 0 && <tr><td colSpan={5} className="py-12 text-center text-gray-300 font-bold">검색 결과 없음</td></tr>}
+              {visible.length === 0 && (
+                <tr><td colSpan={5} className="py-12 text-center text-gray-300 font-bold">검색 결과 없음</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -547,9 +881,11 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
    메인 컴포넌트
 ══════════════════════════════════════════════ */
 const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
-  const isAdmin   = user.role === 'admin' || user.id.toLowerCase() === 'admin';
+  const isAdmin   = user.role === 'admin' || user.role === 'manager';
   const canAccess = isAdmin || !!user.isFranchise;
-  const [activeTab, setActiveTab] = useState<FranchiseTab>(isAdmin ? 'members' : 'revenue');
+
+  const defaultTab: FranchiseTab = isAdmin ? 'members' : 'subscription';
+  const [activeTab, setActiveTab] = useState<FranchiseTab>(defaultTab);
 
   if (!canAccess) {
     return (
@@ -563,9 +899,10 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
 
   const tabs: { id: FranchiseTab; label: string; icon: string; adminOnly?: boolean }[] = [
     ...(isAdmin ? [{ id: 'members' as FranchiseTab, label: '가맹점 현황', icon: '🏢', adminOnly: true }] : []),
-    { id: 'revenue',     label: '매출관리',    icon: '📊' },
-    { id: 'manuscripts', label: '원고시트',     icon: '📝' },
-    { id: 'convert',     label: '원고시트변환', icon: '🔄' },
+    { id: 'subscription', label: '구독관리', icon: '💳' },
+    { id: 'revenue',      label: '매출관리', icon: '📊' },
+    { id: 'manuscripts',  label: '원고시트', icon: '📝' },
+    { id: 'collector',    label: '원고수집기', icon: '🗂️' },
   ];
 
   return (
@@ -581,10 +918,11 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         ))}
       </div>
       <div className={activeTab === 'manuscripts' ? 'px-0' : 'px-3 md:px-4 pt-4 md:pt-6'}>
-        {activeTab === 'members'     && isAdmin && <MembersTab members={members} onUpdateUser={onUpdateUser} />}
-        {activeTab === 'revenue'     && <RevenueManagement user={user} />}
-        {activeTab === 'manuscripts' && <ManuscriptSheet userId={user.id} />}
-        {activeTab === 'convert'     && <ConvertTab />}
+        {activeTab === 'members'      && isAdmin      && <MembersTab members={members} onUpdateUser={onUpdateUser} />}
+        {activeTab === 'subscription'                 && <SubscriptionTab user={user} />}
+        {activeTab === 'revenue'                      && <RevenueManagement user={user} />}
+        {activeTab === 'manuscripts'                  && <ManuscriptSheet userId={user.id} />}
+        {activeTab === 'collector'                    && <CollectorTab userId={user.id} />}
       </div>
     </div>
   );
