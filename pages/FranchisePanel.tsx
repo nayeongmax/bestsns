@@ -31,6 +31,7 @@ interface CellData {
   c?:  string;
   bg?: string;
   a?:  'l' | 'c' | 'r';
+  va?: 't' | 'm' | 'b';
 }
 type SheetData = Record<string, CellData>;
 
@@ -299,6 +300,16 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
         <TBtn title="오른쪽 정렬" active={activeFmt.a === 'r'} onMouseDown={noBlur} onClick={() => applyFormat({ a: 'r' })}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 21h18v-2H3v2zm6-4h12v-2H9v2zm-6-4h18v-2H3v2zm6-4h12V7H9v2zM3 3v2h18V3H3z"/></svg>
         </TBtn>
+        <Sep />
+        <TBtn title="세로 위 정렬" active={activeFmt.va === 't'} onMouseDown={noBlur} onClick={() => applyFormat({ va: 't' })}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h18v2H3zm4 4h10v2H7zm-4 4h18v2H3zm4 4h10v2H7z" opacity=".3"/><path d="M3 3h18v2H3z"/></svg>
+        </TBtn>
+        <TBtn title="세로 가운데 정렬" active={!activeFmt.va || activeFmt.va === 'm'} onMouseDown={noBlur} onClick={() => applyFormat({ va: 'm' })}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 2h18v2H3zm0 18h18v2H3zm4-9h10v2H7z"/><path d="M7 6h10v2H7zm0 8h10v2H7z" opacity=".4"/></svg>
+        </TBtn>
+        <TBtn title="세로 아래 정렬" active={activeFmt.va === 'b'} onMouseDown={noBlur} onClick={() => applyFormat({ va: 'b' })}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 19h18v2H3zm4-8h10v2H7zm-4-8h18v2H3zm4 4h10v2H7z" opacity=".3"/><path d="M3 19h18v2H3z"/></svg>
+        </TBtn>
       </div>
 
       <div style={{ background: '#f8f9fa', borderBottom: '1px solid #e0e0e0', height: 26, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
@@ -329,16 +340,18 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
           <tbody>
             {Array.from({ length: size.rows }, (_, r) => (
               <tr key={r}>
-                <td style={{ position: 'sticky', left: 0, zIndex: 10, background: '#f8f9fa', borderRight: '1px solid #dadce0', borderBottom: '1px solid #e2e3e3', height: 21, fontSize: 11, fontWeight: 500, color: '#444746', textAlign: 'center', userSelect: 'none', minWidth: 46 }}>
+                <td style={{ position: 'sticky', left: 0, zIndex: 10, background: '#f8f9fa', borderRight: '1px solid #dadce0', borderBottom: '1px solid #e2e3e3', height: 28, fontSize: 11, fontWeight: 500, color: '#444746', textAlign: 'center', userSelect: 'none', minWidth: 46 }}>
                   {r + 1}
                 </td>
                 {colLabels.map((_, c) => {
                   const isEditing = editCell?.r === r && editCell?.c === c;
                   const cell      = getCell(r, c);
                   const val       = cell.v ?? '';
+                  const vaMap     = { t: 'flex-start', m: 'center', b: 'flex-end' } as const;
+                  const alignItems = vaMap[cell.va ?? 'm'];
 
                   const cellStyle: React.CSSProperties = {
-                    height: 21, padding: 0,
+                    height: 28, padding: 0,
                     borderRight: '1px solid #e2e3e3',
                     borderBottom: '1px solid #e2e3e3',
                     background: cell.bg || '#fff',
@@ -366,11 +379,14 @@ const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
                           onBlur={() => commitEdit(r, c, editValue)}
                           onKeyDown={e => handleKeyDown(e, r, c)}
                           onPaste={e => handleInputPaste(e, r, c)}
-                          style={{ width: '100%', height: '100%', padding: '0 4px', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', ...textStyle }}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', boxSizing: 'border-box', padding: '0 4px', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', ...textStyle }}
                         />
                       ) : val ? (
-                        <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', padding: '0 4px', whiteSpace: 'nowrap', lineHeight: '21px', pointerEvents: 'none', ...textStyle }}>
-                          {val}
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems, padding: '0 4px', overflow: 'hidden', pointerEvents: 'none', ...textStyle }}>
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{val}</span>
                         </div>
                       ) : null}
                     </td>
