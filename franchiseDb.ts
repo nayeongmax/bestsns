@@ -6,6 +6,7 @@ export interface FranchisePlan {
   id: string;
   name: string;
   price: number;
+  originalPrice?: number;
   period: string;
   features: string[];
   isActive: boolean;
@@ -17,6 +18,7 @@ export interface FranchiseProduct {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   minQuantity: number;
   maxQuantity: number;
   category: string;
@@ -55,10 +57,12 @@ export const DEFAULT_PLANS: FranchisePlan[] = [
 // ─── Row mappers ──────────────────────────────────────────────────────────────
 
 function rowToPlan(row: Record<string, unknown>): FranchisePlan {
+  const originalPrice = row.original_price != null ? Number(row.original_price) : undefined;
   return {
     id: String(row.id),
     name: String(row.name ?? ''),
     price: Number(row.price ?? 0),
+    ...(originalPrice ? { originalPrice } : {}),
     period: String(row.period ?? '월'),
     features: Array.isArray(row.features) ? (row.features as string[]) : [],
     isActive: Boolean(row.is_active),
@@ -71,6 +75,7 @@ function planToRow(plan: FranchisePlan): Record<string, unknown> {
     id: plan.id,
     name: plan.name,
     price: plan.price,
+    original_price: plan.originalPrice ?? null,
     period: plan.period,
     features: plan.features,
     is_active: plan.isActive,
@@ -79,11 +84,13 @@ function planToRow(plan: FranchisePlan): Record<string, unknown> {
 }
 
 function rowToProduct(row: Record<string, unknown>): FranchiseProduct {
+  const originalPrice = row.original_price != null ? Number(row.original_price) : undefined;
   return {
     id: String(row.id),
     name: String(row.name ?? ''),
     description: String(row.description ?? ''),
     price: Number(row.price ?? 0),
+    ...(originalPrice ? { originalPrice } : {}),
     minQuantity: Number(row.min_quantity ?? 1),
     maxQuantity: Number(row.max_quantity ?? 1),
     category: String(row.category ?? ''),
@@ -98,6 +105,7 @@ function productToRow(product: FranchiseProduct): Record<string, unknown> {
     name: product.name,
     description: product.description,
     price: product.price,
+    original_price: product.originalPrice ?? null,
     min_quantity: product.minQuantity,
     max_quantity: product.maxQuantity,
     category: product.category,
