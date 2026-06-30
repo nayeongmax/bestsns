@@ -32,6 +32,22 @@
   .cloud-badge.ok  { color: #1a73e8; }
   .cloud-badge.err { color: #c00; }
 
+  /* ── 서식 도구 바 ── */
+  .fmt-bar {
+    background: #f5f5f5; border-bottom: 1px solid #ddd;
+    padding: 3px 6px; display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .fmt-bar button {
+    padding: 2px 7px; font-size: 11px; cursor: pointer;
+    border: 1px solid #bbb; border-radius: 3px; background: #fff;
+  }
+  .fmt-bar button:hover { background: #e0e0e0; }
+  .fmt-bar select { font-size: 11px; padding: 2px 4px; border: 1px solid #bbb; border-radius: 3px; }
+  .fmt-bar label { font-size: 10px; color: #666; }
+  .fmt-bar .fsep { display: inline-block; width: 1px; height: 16px; background: #ccc; margin: 0 2px; vertical-align: middle; }
+  td.cell-focused { background: #fffde7 !important; box-shadow: inset 0 0 0 2px #ffc107; }
+
   /* ── 동기화 패널 ── */
   .sync-panel {
     display: none; position: fixed; top: 50%; left: 50%; z-index: 9999;
@@ -110,7 +126,7 @@
     white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
     overflow: visible; height: auto;
   }
-  [contenteditable="true"]:focus { background: #fffde7; box-shadow: inset 0 0 0 2px #ffc107; }
+  [contenteditable="true"]:focus { outline: none; }
   [contenteditable="true"]:empty:before { content: attr(data-ph); color: #ccc; pointer-events: none; }
   .main-text { min-height: 70px; height: auto; }
   .comment-text { min-height: 40px; height: auto; }
@@ -194,6 +210,27 @@
   </select>
   <span class="saved-badge" id="savedBadge">✔ 자동저장됨</span>
   <span class="cloud-badge" id="cloudBadge"></span>
+</div>
+
+<div class="fmt-bar" id="fmtBar">
+  <label>크기</label>
+  <select id="fmtSize" onmousedown="holdFocus(event)" onchange="applyFontSize(this.value)">
+    <option value="">-</option>
+    <option value="8">8</option><option value="9">9</option><option value="10">10</option>
+    <option value="11">11</option><option value="12">12</option><option value="13">13</option>
+    <option value="14">14</option><option value="16">16</option><option value="18">18</option>
+    <option value="20">20</option><option value="24">24</option>
+  </select>
+  <label style="margin-left:3px">색상</label>
+  <input type="color" id="fmtColor" value="#000000" title="글자 색상" oninput="applyFontColor(this.value)" onchange="applyFontColor(this.value)">
+  <span class="fsep"></span>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('left')" title="왼쪽 정렬">≡왼</button>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('center')" title="가운데 정렬">≡중</button>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('right')" title="오른쪽 정렬">≡오</button>
+  <span class="fsep"></span>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('top')" title="위 정렬">↑위</button>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('middle')" title="가운데 정렬">↕중</button>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('bottom')" title="아래 정렬">↓아</button>
 </div>
 
 <!-- 동기화 오버레이 & 패널 -->
@@ -389,6 +426,33 @@ function deleteTab(tabId) {
 // ═══════════════════════════════════════════════
 let sections = [];
 
+// ─── 서식 도구 ────────────────────────────────────────────────────────────────
+let activeDiv = null;
+let activeTd  = null;
+
+function holdFocus(e) { e.preventDefault(); }
+
+function applyFontSize(val) {
+  if (!activeDiv || !val) return;
+  activeDiv.style.fontSize = val + 'px';
+  debouncedSave();
+}
+function applyFontColor(val) {
+  if (!activeDiv) return;
+  activeDiv.style.color = val;
+  debouncedSave();
+}
+function applyHAlign(align) {
+  if (!activeDiv) return;
+  activeDiv.style.textAlign = align;
+  debouncedSave();
+}
+function applyVAlign(align) {
+  if (!activeTd) return;
+  activeTd.style.verticalAlign = align;
+  debouncedSave();
+}
+
 function loadSections(data) {
   sections = JSON.parse(JSON.stringify(data));
   const tbody = document.getElementById('sheetBody');
@@ -497,7 +561,10 @@ function renderEntry(secId, entry, ei) {
 
   const mainTd = document.createElement('td');
   const mainDiv = makeEditable('제목 입력'); mainDiv.className = 'main-text';
-  mainDiv.textContent = entry.title || ''; mainTd.appendChild(mainDiv);
+  if (entry.title) mainDiv.innerHTML = entry.title;
+  if (entry.ts) mainDiv.setAttribute('style', entry.ts);
+  if (entry.tva) mainTd.style.verticalAlign = entry.tva;
+  mainTd.appendChild(mainDiv);
   trow.appendChild(mainTd);
 
   const rlbl1 = document.createElement('td'); rlbl1.className = 'rlbl'; rlbl1.textContent = '제목:';
@@ -505,13 +572,20 @@ function renderEntry(secId, entry, ei) {
 
   const rtitleTd = document.createElement('td');
   const rtitleDiv = makeEditable('댓글 제목'); rtitleDiv.className = 'comment-text';
-  rtitleDiv.textContent = entry.rtitle || ''; rtitleTd.appendChild(rtitleDiv);
+  if (entry.rtitle) rtitleDiv.innerHTML = entry.rtitle;
+  if (entry.rs) rtitleDiv.setAttribute('style', entry.rs);
+  if (entry.rva) rtitleTd.style.verticalAlign = entry.rva;
+  rtitleTd.appendChild(rtitleDiv);
   trow.appendChild(rtitleTd);
 
-  ['c1','c2','c3'].forEach(key => {
+  ['c1','c2','c3'].forEach((key) => {
     const td = document.createElement('td'); td.className = 'comment-cell';
     const d = makeEditable('댓글'); d.className = 'comment-text';
-    d.textContent = entry[key] || ''; td.appendChild(d); trow.appendChild(td);
+    const sKey = key + 's', vaKey = key + 'va';
+    if (entry[key]) d.innerHTML = entry[key];
+    if (entry[sKey]) d.setAttribute('style', entry[sKey]);
+    if (entry[vaKey]) td.style.verticalAlign = entry[vaKey];
+    td.appendChild(d); trow.appendChild(td);
   });
 
   const linkTd = document.createElement('td');
@@ -531,15 +605,21 @@ function renderEntry(secId, entry, ei) {
 
   const bodyTd = document.createElement('td');
   const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text';
-  bodyDiv.textContent = entry.body || ''; bodyTd.appendChild(bodyDiv);
+  if (entry.body) bodyDiv.innerHTML = entry.body;
+  if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
+  if (entry.bva) bodyTd.style.verticalAlign = entry.bva;
+  bodyTd.appendChild(bodyDiv);
   crow.appendChild(bodyTd);
 
   const rlbl2 = document.createElement('td'); rlbl2.className = 'rlbl'; rlbl2.textContent = '내용:';
   crow.appendChild(rlbl2);
 
   const rbodyTd = document.createElement('td');
-  const rbodyDiv = makeEditable('댓글 내용'); rbodyDiv.className = 'main-text';
-  rbodyDiv.textContent = entry.rbody || ''; rbodyTd.appendChild(rbodyDiv);
+  const rbodyDiv = makeEditable('내용'); rbodyDiv.className = 'main-text';
+  if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
+  if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
+  if (entry.rbva) rbodyTd.style.verticalAlign = entry.rbva;
+  rbodyTd.appendChild(rbodyDiv);
   crow.appendChild(rbodyTd);
 
   for (let i=0;i<3;i++) {
@@ -638,17 +718,19 @@ function gatherSections() {
       const ds = [...trow.querySelectorAll('[contenteditable]')];
       const crow = trow.nextSibling;
       const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
+      const gs = d => d?.getAttribute('style')||'';
+      const gva = d => d?.closest('td')?.style.verticalAlign||'';
       entries.push({
         cat:   ds[0]?.textContent||'',
-        title: ds[1]?.textContent||'',
-        rtitle:ds[2]?.textContent||'',
-        c1:    ds[3]?.textContent||'',
-        c2:    ds[4]?.textContent||'',
-        c3:    ds[5]?.textContent||'',
+        title: ds[1]?.innerHTML||'',  ts:  gs(ds[1]),  tva:  gva(ds[1]),
+        rtitle:ds[2]?.innerHTML||'',  rs:  gs(ds[2]),  rva:  gva(ds[2]),
+        c1:    ds[3]?.innerHTML||'',  c1s: gs(ds[3]),  c1va: gva(ds[3]),
+        c2:    ds[4]?.innerHTML||'',  c2s: gs(ds[4]),  c2va: gva(ds[4]),
+        c3:    ds[5]?.innerHTML||'',  c3s: gs(ds[5]),  c3va: gva(ds[5]),
         date:  ds[6]?.textContent||'',
         link:  ds[7]?.textContent||'',
-        body:  cs[0]?.textContent||'',
-        rbody: cs[1]?.textContent||'',
+        body:  cs[0]?.innerHTML||'',  bs:  gs(cs[0]),  bva:  gva(cs[0]),
+        rbody: cs[1]?.innerHTML||'',  rbs: gs(cs[1]),  rbva: gva(cs[1]),
       });
     });
 
@@ -705,6 +787,27 @@ function debouncedSave() {
 
 // 시트 내 모든 입력에 반응
 document.getElementById('sheetBody').addEventListener('input', debouncedSave);
+
+// 셀 포커스 추적 — 서식 도구 연결
+document.getElementById('sheetBody').addEventListener('focusin', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (!div) return;
+  if (activeDiv && activeDiv !== div) {
+    const prevTd = activeDiv.closest('td');
+    if (prevTd) prevTd.classList.remove('cell-focused');
+  }
+  activeDiv = div;
+  activeTd = div.closest('td');
+  if (activeTd && !div.closest('tr.section-header')) {
+    activeTd.classList.add('cell-focused');
+  }
+});
+document.getElementById('sheetBody').addEventListener('focusout', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (!div) return;
+  const td = div.closest('td');
+  if (td) td.classList.remove('cell-focused');
+});
 
 // 탭 바 변경에도 반응 (탭 이름 편집 등)
 document.getElementById('tabsList').addEventListener('input', debouncedSave);
