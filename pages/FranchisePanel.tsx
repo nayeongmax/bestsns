@@ -744,6 +744,12 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
                       <span className="font-black text-gray-900">{plan.name}</span>
                       {isCurrent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-black">현재 플랜</span>}
                     </div>
+                    {plan.originalPrice && plan.originalPrice > plan.price && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-xs text-gray-400 font-bold line-through">{plan.originalPrice.toLocaleString()}원</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-black">{Math.round((1 - plan.price / plan.originalPrice) * 100)}% 할인</span>
+                      </div>
+                    )}
                     <p className="text-2xl font-black text-gray-900 mt-1">
                       {plan.price.toLocaleString()}
                       <span className="text-sm font-bold text-gray-400">원/{plan.period}</span>
@@ -927,7 +933,15 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 {product.category && <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-600">{product.category}</span>}
-                <span className="text-xs font-black text-blue-600 shrink-0 ml-auto">{product.price.toLocaleString()}원</span>
+                <div className="ml-auto shrink-0 text-right">
+                  {product.originalPrice && product.originalPrice > product.price ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-gray-400 font-bold line-through">{product.originalPrice.toLocaleString()}원</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-black">{Math.round((1 - product.price / product.originalPrice) * 100)}%</span>
+                    </div>
+                  ) : null}
+                  <p className="text-xs font-black text-blue-600">{product.price.toLocaleString()}원</p>
+                </div>
               </div>
               <p className="font-black text-gray-900 text-sm leading-snug">{product.name}</p>
               {product.description && <p className="text-[11px] text-gray-400 mt-1 font-bold line-clamp-2">{product.description}</p>}
