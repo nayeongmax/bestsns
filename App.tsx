@@ -773,7 +773,8 @@ const App: React.FC = () => {
   }, []);
 
   const handleGlobalUserUpdate = useCallback((updated: UserProfile) => {
-    setUser(updated);
+    // 현재 로그인된 사용자와 같은 id일 때만 user 상태 업데이트 (다른 회원 수정 시 계정 바뀌는 버그 방지)
+    setUser(prev => (prev && prev.id === updated.id) ? updated : prev);
     setMembers(prev => prev.map(m => m.id === updated.id ? updated : m));
   }, []);
 
