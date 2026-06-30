@@ -325,7 +325,7 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div>
         <h2 className="text-lg font-black text-gray-900">구독관리</h2>
         <p className="text-xs text-gray-400 font-bold mt-0.5">가맹점 구독료를 결제하고 모든 기능을 이용하세요</p>
@@ -360,7 +360,7 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
           <p className="text-xs mt-1">관리자에게 문의하세요</p>
         </div>
       ) : (
-        <div className={`grid gap-4 ${activePlans.length === 1 ? '' : 'sm:grid-cols-2'}`}>
+        <div className="flex flex-col sm:flex-row gap-4">
           {activePlans.map((plan, idx) => {
             const color      = PLAN_COLORS[idx % PLAN_COLORS.length];
             const isSelected = selectedPlan === plan.id;
@@ -380,7 +380,7 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
                 key={plan.id}
                 type="button"
                 onClick={() => setSelectedPlan(plan.id)}
-                className={`text-left rounded-2xl border-2 p-5 transition-all ${colorSel[color]}`}
+                className={`flex-1 text-left rounded-2xl border-2 p-5 transition-all ${colorSel[color]}`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
