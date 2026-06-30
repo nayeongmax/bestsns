@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile } from '@/types';
+import { UserProfile, SMMProduct } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
+import { fetchPublicSmmProducts, upsertSmmOrders } from '../smmDb';
 
-type FranchiseTab = 'members' | 'subscription' | 'revenue' | 'manuscripts' | 'collector';
+type FranchiseTab = 'members' | 'subscription' | 'revenue' | 'manuscripts' | 'collector' | 'marketing';
 
 interface Props {
   user: UserProfile;
@@ -756,6 +757,193 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
 };
 
 /* ══════════════════════════════════════════════
+   마케팅상품 주문
+══════════════════════════════════════════════ */
+const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
+  const [products, setProducts]   = useState<SMMProduct[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [selected, setSelected]   = useState<SMMProduct | null>(null);
+  const [link, setLink]           = useState('');
+  const [quantity, setQuantity]   = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [filterPlatform, setFilterPlatform] = useState('전체');
+
+  useEffect(() => {
+    fetchPublicSmmProducts()
+      .then(setProducts)
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const platforms = ['전체', ...Array.from(new Set(products.map(p => p.platform)))];
+  const visible = filterPlatform === '전체' ? products : products.filter(p => p.platform === filterPlatform);
+
+  const handleOrder = async () => {
+    if (!selected || !link.trim() || !quantity) return;
+    const qty = Number(quantity);
+    if (isNaN(qty) || qty < selected.minQuantity || qty > selected.maxQuantity) {
+      alert(`수량은 ${selected.minQuantity.toLocaleString()} ~ ${selected.maxQuantity.toLocaleString()} 사이여야 합니다.`);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const orderId = `fr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      await upsertSmmOrders([{
+        id: orderId,
+        userId: user.id,
+        userNickname: user.nickname,
+        orderTime: new Date().toISOString(),
+        platform: selected.platform,
+        productName: selected.name,
+        link: link.trim(),
+        quantity: qty,
+        initialCount: 0,
+        remains: qty,
+        providerName: '가맹점주문',
+        costPrice: 0,
+        sellingPrice: selected.sellingPrice * qty,
+        profit: 0,
+        status: 'pending',
+        externalOrderId: '',
+      }]);
+      setSuccessMsg(`[${selected.name}] 주문이 접수되었습니다. 관리자 확인 후 진행됩니다.`);
+      setSelected(null);
+      setLink('');
+      setQuantity('');
+    } catch (e) {
+      alert('주문 접수에 실패했습니다. 다시 시도해 주세요.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="py-20 text-center text-gray-400 font-bold">상품 불러오는 중...</div>;
+
+  return (
+    <div className="space-y-4 max-w-4xl">
+      <div>
+        <h2 className="text-lg font-black text-gray-900">마케팅상품 주문</h2>
+        <p className="text-xs text-gray-400 font-bold mt-0.5">운영자가 등록한 마케팅 상품을 주문하세요. 접수 후 관리자 확인을 거쳐 진행됩니다.</p>
+      </div>
+
+      {successMsg && (
+        <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-4">
+          <span className="text-2xl shrink-0">✅</span>
+          <div>
+            <p className="font-black text-emerald-800 text-sm">{successMsg}</p>
+            <button type="button" onClick={() => setSuccessMsg(null)} className="text-xs text-emerald-600 font-bold hover:underline mt-1">닫기</button>
+          </div>
+        </div>
+      )}
+
+      {/* 플랫폼 필터 */}
+      <div className="flex flex-wrap gap-2">
+        {platforms.map(p => (
+          <button key={p} type="button" onClick={() => setFilterPlatform(p)}
+            className={`px-3 py-1 rounded-full text-xs font-black transition-colors ${filterPlatform === p ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+            {p}
+          </button>
+        ))}
+      </div>
+
+      {/* 상품 그리드 */}
+      {visible.length === 0 ? (
+        <div className="py-16 text-center text-gray-300">
+          <div className="text-4xl mb-3">📦</div>
+          <p className="font-black">등록된 상품이 없습니다</p>
+          <p className="text-xs mt-1">운영자가 상품을 등록하면 여기에 표시됩니다</p>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {visible.map(product => (
+            <button
+              key={product.id}
+              type="button"
+              onClick={() => { setSelected(product); setLink(''); setQuantity(String(product.minQuantity)); setSuccessMsg(null); }}
+              className={`text-left rounded-2xl border-2 p-4 transition-all hover:shadow-md ${selected?.id === product.id ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-white hover:border-blue-200'}`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-600">{product.platform}</span>
+                <span className="text-xs font-black text-blue-600 shrink-0">{product.sellingPrice.toLocaleString()}원/개</span>
+              </div>
+              <p className="font-black text-gray-900 text-sm leading-snug">{product.name}</p>
+              <p className="text-[11px] text-gray-400 mt-1 font-bold">{product.category}</p>
+              <p className="text-[10px] text-gray-300 mt-1">최소 {product.minQuantity.toLocaleString()} ~ 최대 {product.maxQuantity.toLocaleString()}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 주문 폼 */}
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-black text-gray-900">주문 접수</h3>
+                <button type="button" onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 font-black text-lg leading-none">✕</button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-600">{selected.platform}</span>
+                <span className="text-sm font-black text-gray-800">{selected.name}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-gray-500 mb-1.5">대상 링크 <span className="text-red-500">*</span></label>
+              <input
+                type="url"
+                value={link}
+                onChange={e => setLink(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-gray-500 mb-1.5">
+                수량 <span className="text-red-500">*</span>
+                <span className="text-gray-300 ml-1 font-bold">({selected.minQuantity.toLocaleString()} ~ {selected.maxQuantity.toLocaleString()})</span>
+              </label>
+              <input
+                type="number"
+                value={quantity}
+                onChange={e => setQuantity(e.target.value)}
+                min={selected.minQuantity}
+                max={selected.maxQuantity}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm font-bold"
+              />
+            </div>
+
+            {quantity && !isNaN(Number(quantity)) && Number(quantity) > 0 && (
+              <div className="bg-blue-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                <span className="text-xs font-black text-blue-600">예상 금액</span>
+                <span className="font-black text-blue-800">{(selected.sellingPrice * Number(quantity)).toLocaleString()}원</span>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setSelected(null)}
+                className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 font-black text-sm hover:bg-gray-200 transition-colors">
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleOrder}
+                disabled={submitting || !link.trim() || !quantity}
+                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {submitting ? '접수 중...' : '주문 접수'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
    가맹점 현황 (어드민 전용)
 ══════════════════════════════════════════════ */
 const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProfile) => void }> = ({ members, onUpdateUser }) => {
@@ -899,10 +1087,11 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
 
   const tabs: { id: FranchiseTab; label: string; icon: string; adminOnly?: boolean }[] = [
     ...(isAdmin ? [{ id: 'members' as FranchiseTab, label: '가맹점 현황', icon: '🏢', adminOnly: true }] : []),
-    { id: 'subscription', label: '구독관리', icon: '💳' },
-    { id: 'revenue',      label: '매출관리', icon: '📊' },
-    { id: 'manuscripts',  label: '원고시트', icon: '📝' },
-    { id: 'collector',    label: '원고수집기', icon: '🗂️' },
+    { id: 'subscription', label: '구독관리',    icon: '💳' },
+    { id: 'revenue',      label: '매출관리',    icon: '📊' },
+    { id: 'manuscripts',  label: '원고시트',    icon: '📝' },
+    { id: 'collector',    label: '원고수집기',  icon: '🗂️' },
+    { id: 'marketing',    label: '마케팅상품',  icon: '📣' },
   ];
 
   return (
@@ -918,11 +1107,12 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         ))}
       </div>
       <div className={activeTab === 'manuscripts' ? 'px-0' : 'px-3 md:px-4 pt-4 md:pt-6'}>
-        {activeTab === 'members'      && isAdmin      && <MembersTab members={members} onUpdateUser={onUpdateUser} />}
-        {activeTab === 'subscription'                 && <SubscriptionTab user={user} />}
-        {activeTab === 'revenue'                      && <RevenueManagement user={user} />}
-        {activeTab === 'manuscripts'                  && <ManuscriptSheet userId={user.id} />}
-        {activeTab === 'collector'                    && <CollectorTab userId={user.id} />}
+        {activeTab === 'members'      && isAdmin && <MembersTab members={members} onUpdateUser={onUpdateUser} />}
+        {activeTab === 'subscription'              && <SubscriptionTab user={user} />}
+        {activeTab === 'revenue'                   && <RevenueManagement user={user} />}
+        {activeTab === 'manuscripts'               && <ManuscriptSheet userId={user.id} />}
+        {activeTab === 'collector'                 && <CollectorTab userId={user.id} />}
+        {activeTab === 'marketing'                 && <MarketingTab user={user} />}
       </div>
     </div>
   );
