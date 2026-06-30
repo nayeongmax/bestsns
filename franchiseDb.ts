@@ -177,7 +177,7 @@ export async function fetchFranchiseProducts(): Promise<FranchiseProduct[]> {
       .eq('is_hidden', false)
       .order('sort_order');
 
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       return data.map((row) => rowToProduct(row as Record<string, unknown>));
     }
   } catch {
@@ -207,7 +207,7 @@ export async function fetchFranchiseProductsAdmin(): Promise<FranchiseProduct[]>
       .select('*')
       .order('sort_order');
 
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       return data.map((row) => rowToProduct(row as Record<string, unknown>));
     }
   } catch {
