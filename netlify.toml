@@ -49,6 +49,18 @@
   schedule = "0 * * * *"
 
 [[redirects]]
+  from = "/api/sheet-sync"
+  to = "/.netlify/functions/sheet-sync"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/sheet"
+  to = "/sheet.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
