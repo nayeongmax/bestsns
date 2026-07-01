@@ -217,8 +217,8 @@ const CollectorTab: React.FC = () => {
 
     const maxC = 3;
 
-    // 헤더행
-    const header = `<Row>${C('번호')}${C('구분')}${C('내용')}${Array.from({length:maxC},(_,i)=>C(`댓글${i+1}`)).join('')}${C('날짜')}${C('URL')}</Row>`;
+    // 헤더행: 구분 | 내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
+    const header = `<Row>${C('구분')}${C('내용')}${Array.from({length:maxC},(_,i)=>C(`댓글${i+1}`)).join('')}${C('날짜')}${C('URL')}</Row>`;
     const rows: string[] = [header];
 
     articles.forEach(a => {
@@ -226,10 +226,9 @@ const CollectorTab: React.FC = () => {
       const body  = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
       const cmts  = a.comments ?? [];
 
-      // 제목 행: 번호 | 제목: | 제목내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
+      // 제목 행: 제목: | 제목내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
       rows.push(
         `<Row>` +
-        C(String(a.no)) +
         C('제목:') +
         C(title) +
         Array.from({length: maxC}, (_, i) => C(cmts[i]?.content ?? '')).join('') +
@@ -237,10 +236,9 @@ const CollectorTab: React.FC = () => {
         C(a.url) +
         `</Row>`
       );
-      // 내용 행: (빈칸) | 내용: | 내용내용 | | | | |
+      // 내용 행: 내용: | 내용내용 | | | | | |
       rows.push(
         `<Row>` +
-        C('') +
         C('내용:') +
         C(body) +
         Array.from({length: maxC}, () => C('')).join('') +
