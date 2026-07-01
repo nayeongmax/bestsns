@@ -46,7 +46,11 @@
   .fmt-bar select { font-size: 11px; padding: 2px 4px; border: 1px solid #bbb; border-radius: 3px; }
   .fmt-bar label { font-size: 10px; color: #666; }
   .fmt-bar .fsep { display: inline-block; width: 1px; height: 16px; background: #ccc; margin: 0 2px; vertical-align: middle; }
-  td.cell-focused { background: #fffde7 !important; box-shadow: inset 0 0 0 2px #ffc107; }
+  td.cell-focused  { background: #fffde7 !important; box-shadow: inset 0 0 0 2px #ffc107; }
+  td.cell-selected { background: #e8f4fd !important; outline: 2px solid #64b5f6; outline-offset: -2px; }
+  td.cell-va-mid   { display: flex; flex-direction: column; justify-content: center; padding: 0; }
+  td.cell-va-bot   { display: flex; flex-direction: column; justify-content: flex-end; padding: 0; }
+  td.cell-va-top   { vertical-align: top; }
 
   /* ── 동기화 패널 ── */
   .sync-panel {
@@ -214,7 +218,7 @@
 
 <div class="fmt-bar" id="fmtBar">
   <label>크기</label>
-  <select id="fmtSize" onmousedown="holdFocus(event)" onchange="applyFontSize(this.value)">
+  <select id="fmtSize" onchange="applyFontSize(this.value)">
     <option value="">-</option>
     <option value="8">8</option><option value="9">9</option><option value="10">10</option>
     <option value="11">11</option><option value="12">12</option><option value="13">13</option>
@@ -429,13 +433,18 @@ let sections = [];
 // ─── 서식 도구 ────────────────────────────────────────────────────────────────
 let activeDiv = null;
 let activeTd  = null;
+let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
 
 function holdFocus(e) { e.preventDefault(); }
 
 function applyFontSize(val) {
-  if (!activeDiv || !val) return;
-  activeDiv.style.fontSize = val + 'px';
-  debouncedSave();
+  if (!val) return;
+  // 편집 중이면 activeDiv, 선택모드면 selectedCells
+  const targets = document.activeElement?.isContentEditable && activeDiv
+    ? [activeDiv]
+    : [...selectedCells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
+  targets.forEach(d => { d.style.fontSize = val + 'px'; });
+  if (targets.length) debouncedSave();
 }
 function applyFontColor(val) {
   if (!activeDiv) return;
@@ -443,14 +452,33 @@ function applyFontColor(val) {
   debouncedSave();
 }
 function applyHAlign(align) {
-  if (!activeDiv) return;
-  activeDiv.style.textAlign = align;
-  debouncedSave();
+  const targets = document.activeElement?.isContentEditable && activeDiv
+    ? [activeDiv]
+    : [...selectedCells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
+  targets.forEach(d => { d.style.textAlign = align; });
+  if (targets.length) debouncedSave();
 }
 function applyVAlign(align) {
-  if (!activeTd) return;
-  activeTd.style.verticalAlign = align;
-  debouncedSave();
+  const tds = activeTd ? [activeTd] : [...selectedCells];
+  tds.forEach(td => {
+    td.classList.remove('cell-va-top', 'cell-va-mid', 'cell-va-bot');
+    td.style.verticalAlign = '';
+    if (align === 'top')    td.classList.add('cell-va-top');
+    else if (align === 'middle') td.classList.add('cell-va-mid');
+    else if (align === 'bottom') td.classList.add('cell-va-bot');
+    td.dataset.va = align;
+  });
+  if (tds.length) debouncedSave();
+}
+
+
+function restoreVA(td, va) {
+  if (!va) return;
+  td.classList.remove('cell-va-top','cell-va-mid','cell-va-bot');
+  if (va === 'top')    td.classList.add('cell-va-top');
+  else if (va === 'middle') td.classList.add('cell-va-mid');
+  else if (va === 'bottom') td.classList.add('cell-va-bot');
+  td.dataset.va = va;
 }
 
 function loadSections(data) {
@@ -563,7 +591,7 @@ function renderEntry(secId, entry, ei) {
   const mainDiv = makeEditable('제목 입력'); mainDiv.className = 'main-text';
   if (entry.title) mainDiv.innerHTML = entry.title;
   if (entry.ts) mainDiv.setAttribute('style', entry.ts);
-  if (entry.tva) mainTd.style.verticalAlign = entry.tva;
+  if (entry.tva) restoreVA(mainTd, entry.tva);
   mainTd.appendChild(mainDiv);
   trow.appendChild(mainTd);
 
@@ -574,7 +602,7 @@ function renderEntry(secId, entry, ei) {
   const rtitleDiv = makeEditable('댓글 제목'); rtitleDiv.className = 'comment-text';
   if (entry.rtitle) rtitleDiv.innerHTML = entry.rtitle;
   if (entry.rs) rtitleDiv.setAttribute('style', entry.rs);
-  if (entry.rva) rtitleTd.style.verticalAlign = entry.rva;
+  if (entry.rva) restoreVA(rtitleTd, entry.rva);
   rtitleTd.appendChild(rtitleDiv);
   trow.appendChild(rtitleTd);
 
@@ -607,7 +635,7 @@ function renderEntry(secId, entry, ei) {
   const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text';
   if (entry.body) bodyDiv.innerHTML = entry.body;
   if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
-  if (entry.bva) bodyTd.style.verticalAlign = entry.bva;
+  if (entry.bva) restoreVA(bodyTd, entry.bva);
   bodyTd.appendChild(bodyDiv);
   crow.appendChild(bodyTd);
 
@@ -618,7 +646,7 @@ function renderEntry(secId, entry, ei) {
   const rbodyDiv = makeEditable('내용'); rbodyDiv.className = 'main-text';
   if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
   if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
-  if (entry.rbva) rbodyTd.style.verticalAlign = entry.rbva;
+  if (entry.rbva) restoreVA(rbodyTd, entry.rbva);
   rbodyTd.appendChild(rbodyDiv);
   crow.appendChild(rbodyTd);
 
@@ -719,7 +747,7 @@ function gatherSections() {
       const crow = trow.nextSibling;
       const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
       const gs = d => d?.getAttribute('style')||'';
-      const gva = d => d?.closest('td')?.style.verticalAlign||'';
+      const gva = d => d?.closest('td')?.dataset.va||'';
       entries.push({
         cat:   ds[0]?.textContent||'',
         title: ds[1]?.innerHTML||'',  ts:  gs(ds[1]),  tva:  gva(ds[1]),
@@ -788,10 +816,50 @@ function debouncedSave() {
 // 시트 내 모든 입력에 반응
 document.getElementById('sheetBody').addEventListener('input', debouncedSave);
 
-// 셀 포커스 추적 — 서식 도구 연결
-document.getElementById('sheetBody').addEventListener('focusin', e => {
+// ─── 엑셀 스타일 셀 선택 ────────────────────────────────────────────────────
+function clearSelection() {
+  selectedCells.forEach(td => td.classList.remove('cell-selected'));
+  selectedCells.clear();
+}
+
+const sheetBodyEl = document.getElementById('sheetBody');
+
+// 더블클릭 → 편집모드 진입
+sheetBodyEl.addEventListener('dblclick', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (div) { div.focus(); }
+});
+
+// 싱글클릭 → 선택모드 (편집 안 함)
+sheetBodyEl.addEventListener('mousedown', e => {
+  if (e.target.closest('tr.section-header')) return;
+  if (e.target.closest('button')) return;       // 삭제버튼 등 무시
+  const td = e.target.closest('td');
+  if (!td || !td.querySelector('[contenteditable]')) return;
+
+  // 더블클릭은 편집모드: 선택 간섭 안 함
+  if (e.detail >= 2) { return; }
+
+  // 현재 편집 중이면 blur 후 선택 전환
+  if (document.activeElement?.isContentEditable) {
+    document.activeElement.blur();
+  }
+
+  // 선택 업데이트
+  if (!e.shiftKey) clearSelection();
+  selectedCells.add(td);
+  td.classList.add('cell-selected');
+  activeDiv = td.querySelector('[contenteditable]');
+  activeTd = td;
+
+  e.preventDefault();   // contenteditable 자동 포커스 방지
+}, true);
+
+// 셀 포커스 추적 — 편집모드 진입 시
+sheetBodyEl.addEventListener('focusin', e => {
   const div = e.target.closest('[contenteditable]');
   if (!div) return;
+  clearSelection();
   if (activeDiv && activeDiv !== div) {
     const prevTd = activeDiv.closest('td');
     if (prevTd) prevTd.classList.remove('cell-focused');
@@ -802,11 +870,58 @@ document.getElementById('sheetBody').addEventListener('focusin', e => {
     activeTd.classList.add('cell-focused');
   }
 });
-document.getElementById('sheetBody').addEventListener('focusout', e => {
+sheetBodyEl.addEventListener('focusout', e => {
   const div = e.target.closest('[contenteditable]');
   if (!div) return;
   const td = div.closest('td');
-  if (td) td.classList.remove('cell-focused');
+  if (td) {
+    td.classList.remove('cell-focused');
+    // 편집 종료 후 해당 셀 선택 상태로 유지
+    if (!div.closest('tr.section-header')) {
+      selectedCells.add(td);
+      td.classList.add('cell-selected');
+    }
+  }
+});
+
+// 키보드 단축키
+document.addEventListener('keydown', e => {
+  const inEdit = document.activeElement?.isContentEditable;
+
+  // Escape → 편집모드 탈출, 선택 유지
+  if (e.key === 'Escape' && inEdit) {
+    document.activeElement.blur();
+    e.preventDefault();
+    return;
+  }
+
+  if (!inEdit) {
+    // Delete / Backspace → 선택한 셀 내용 전체 삭제
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedCells.size > 0) {
+        selectedCells.forEach(td => {
+          td.querySelectorAll('[contenteditable]').forEach(d => { d.innerHTML = ''; });
+        });
+        debouncedSave();
+        e.preventDefault();
+      }
+      return;
+    }
+    // F2 → 선택한 셀 편집모드
+    if (e.key === 'F2' && selectedCells.size === 1) {
+      const td = [...selectedCells][0];
+      const div = td.querySelector('[contenteditable]');
+      if (div) { div.focus(); const r = document.createRange(); r.selectNodeContents(div); r.collapse(false); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+      e.preventDefault();
+      return;
+    }
+    // 일반 문자 입력 → 선택셀 내용 지우고 편집모드
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && selectedCells.size === 1) {
+      const td = [...selectedCells][0];
+      const div = td.querySelector('[contenteditable]');
+      if (div) { div.innerHTML = ''; div.focus(); }
+    }
+  }
 });
 
 // 탭 바 변경에도 반응 (탭 이름 편집 등)
