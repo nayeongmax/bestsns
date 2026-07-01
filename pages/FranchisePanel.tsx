@@ -538,7 +538,7 @@ const EMPTY_KW: ReplaceKw[] = Array.from({ length: 10 }, () => ({ from: '', to: 
 const DEFAULT_REWRITE_PROMPT = '원문을 완전히 다른 사람이 쓴 글처럼 리라이팅해줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
 const DEFAULT_COMMENT_PROMPT = '아래 글에 어울리는 자연스러운 댓글을 1개만 만들어줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
 
-const RELAY_URL = 'http://localhost:3333';
+const RELAY_URL = 'http://150.230.98.74:3333';
 
 async function checkRelay(): Promise<boolean> {
   try {
@@ -912,10 +912,10 @@ const CollectorTab: React.FC = () => {
               <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-bold mb-2 ${relayOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
                 <span>{relayOk ? '🟢' : '🔴'}</span>
                 {relayOk
-                  ? '로컬 릴레이 연결됨 — 한국 IP로 수집'
+                  ? '서버 릴레이 연결됨 — 일본(도쿄) 서버로 수집'
                   : relayOk === null
                     ? '릴레이 확인 중...'
-                    : <span>로컬 릴레이 꺼져 있음 — <span className="underline cursor-pointer" onClick={() => { navigator.clipboard?.writeText('node local-relay.js'); }}>PC에서 node local-relay.js 실행 필요</span></span>
+                    : '서버 릴레이 연결 실패 — 관리자에게 문의하세요'
                 }
               </div>
             </div>
