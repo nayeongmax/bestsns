@@ -562,6 +562,10 @@ async function handleScrape(body) {
     };
   }
 
+  // 오래된 글이 1번 (오름차순 정렬)
+  articles.reverse();
+  articles.forEach((a, i) => { a.no = i + 1; });
+
   return {
     statusCode: 200,
     body: { status: 'ok', articles, nextPage: page, totalCollected: articles.length, method },
