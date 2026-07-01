@@ -325,12 +325,14 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       ...buildApiHeaders(cookie, `https://cafe.naver.com/`),
       'sec-fetch-site': 'cross-site',
     });
+    console.log(`  [articleapi] articleId=${articleId} HTTP ${status}`);
     if (status === 200) {
       const j = JSON.parse(body);
       const result = j?.result ?? j?.message?.result ?? j;
       const article = result?.article ?? result;
       const rawContent = article?.contentHtml ?? article?.content ?? article?.contentText ?? '';
       const content = stripHtml(rawContent);
+      console.log(`  [상세] content길이=${content.length} 댓글=${(result?.comments?.items ?? result?.commentList ?? []).length}`);
 
       // 댓글
       let comments = [];
@@ -366,7 +368,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       }
       return { content, comments };
     }
-  } catch(e) { console.log(`  [articleapi] 실패: ${e.message}`); }
+  } catch(e) { console.log(`  [articleapi] articleId=${articleId} 실패: ${e.message}`); }
 
   // 방법 B: HTML 파싱
   try {
@@ -592,7 +594,7 @@ const server = http.createServer((req, res) => {
     try { body = JSON.parse(raw || '{}'); }
     catch { sendJson(400, { status: 'error', message: '요청 형식 오류' }); return; }
 
-    console.log(`\n수집 요청: cafeId=${body.cafeId} menuId=${body.menuId||''} page=${body.startPage||1}`);
+    console.log(`\n수집 요청: cafeId=${body.cafeId} menuId=${body.menuId||''} page=${body.startPage||1} cookie=${body.naverCookie ? '있음('+body.naverCookie.length+'자)' : '없음'}`);
     try {
       const result = await handleScrape(body);
       console.log(`결과: ${result.body.status} — ${result.body.totalCollected||0}개`);
