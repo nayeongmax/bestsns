@@ -48,9 +48,9 @@
   .fmt-bar .fsep { display: inline-block; width: 1px; height: 16px; background: #ccc; margin: 0 2px; vertical-align: middle; }
   td.cell-focused  { background: #fffde7 !important; box-shadow: inset 0 0 0 2px #ffc107; }
   td.cell-selected { background: #e8f4fd !important; outline: 2px solid #64b5f6; outline-offset: -2px; }
-  td.cell-va-mid   { display: flex; flex-direction: column; justify-content: center; padding: 0; }
-  td.cell-va-bot   { display: flex; flex-direction: column; justify-content: flex-end; padding: 0; }
-  td.cell-va-top   { vertical-align: top; }
+  td.cell-va-mid   { vertical-align: middle !important; }
+  td.cell-va-bot   { vertical-align: bottom !important; }
+  td.cell-va-top   { vertical-align: top !important; }
 
   /* ── 동기화 패널 ── */
   .sync-panel {
@@ -599,7 +599,7 @@ function renderEntry(secId, entry, ei) {
   trow.appendChild(rlbl1);
 
   const rtitleTd = document.createElement('td');
-  const rtitleDiv = makeEditable('댓글 제목'); rtitleDiv.className = 'comment-text';
+  const rtitleDiv = makeEditable('제목 입력'); rtitleDiv.className = 'comment-text';
   if (entry.rtitle) rtitleDiv.innerHTML = entry.rtitle;
   if (entry.rs) rtitleDiv.setAttribute('style', entry.rs);
   if (entry.rva) restoreVA(rtitleTd, entry.rva);
@@ -643,7 +643,7 @@ function renderEntry(secId, entry, ei) {
   crow.appendChild(rlbl2);
 
   const rbodyTd = document.createElement('td');
-  const rbodyDiv = makeEditable('내용'); rbodyDiv.className = 'main-text';
+  const rbodyDiv = makeEditable('내용 입력'); rbodyDiv.className = 'main-text';
   if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
   if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
   if (entry.rbva) restoreVA(rbodyTd, entry.rbva);
@@ -854,6 +854,26 @@ sheetBodyEl.addEventListener('mousedown', e => {
 
   e.preventDefault();   // contenteditable 자동 포커스 방지
 }, true);
+
+// 드래그로 다중 셀 선택
+let _isDragging = false;
+sheetBodyEl.addEventListener('mousemove', e => {
+  if (!_isDragging) return;
+  if (e.target.closest('tr.section-header')) return;
+  const td = e.target.closest('td');
+  if (!td || !td.querySelector('[contenteditable]')) return;
+  if (!selectedCells.has(td)) {
+    selectedCells.add(td);
+    td.classList.add('cell-selected');
+    activeDiv = td.querySelector('[contenteditable]');
+    activeTd = td;
+  }
+});
+sheetBodyEl.addEventListener('mousedown', e => {
+  if (e.target.closest('tr.section-header') || e.target.closest('button')) return;
+  if (e.target.closest('td')?.querySelector('[contenteditable]')) _isDragging = true;
+}, true);
+document.addEventListener('mouseup', () => { _isDragging = false; });
 
 // 셀 포커스 추적 — 편집모드 진입 시
 sheetBodyEl.addEventListener('focusin', e => {
