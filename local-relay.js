@@ -69,7 +69,9 @@ function parseDateStr(s) {
 
 function fmtDate(d) {
   if (!d) return '';
-  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  // KST = UTC+9
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${kst.getUTCFullYear()}.${String(kst.getUTCMonth()+1).padStart(2,'0')}.${String(kst.getUTCDate()).padStart(2,'0')}`;
 }
 
 function httpsGet(url, headers, depth=0) {
