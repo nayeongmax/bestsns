@@ -370,10 +370,34 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
     }
   } catch(e) { console.log(`  [articleapi] articleId=${articleId} 실패: ${e.message}`); }
 
+  // 방법 A2: ca-fe API로 글 상세
+  try {
+    const url2 = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
+    const { status: s2, body: b2 } = await httpsGet(url2, buildApiHeaders(cookie, 'https://cafe.naver.com/'));
+    console.log(`  [ca-fe detail] HTTP ${s2}, 앞80자: ${b2.slice(0,80).replace(/\n/g,' ')}`);
+    if (s2 === 200 && b2.trim().startsWith('{')) {
+      const j2 = JSON.parse(b2);
+      const result2 = j2?.result ?? j2?.message?.result ?? j2;
+      const article2 = result2?.article ?? result2;
+      const rawContent2 = article2?.contentHtml ?? article2?.content ?? article2?.contentText ?? '';
+      const content2 = stripHtml(rawContent2);
+      if (content2) {
+        const cList2 = result2?.comments?.items ?? result2?.commentList ?? [];
+        const comments2 = cList2.slice(0, maxComments).map(c => ({
+          content: decodeHtml(c.content ?? c.text ?? ''),
+          writer: c.writer?.nick ?? c.nick ?? '',
+          date: c.updateDate ?? c.writeDate ?? '',
+        }));
+        return { content: content2, comments: comments2 };
+      }
+    }
+  } catch(e) { console.log(`  [ca-fe detail] 실패: ${e.message}`); }
+
   // 방법 B: HTML 파싱
   try {
     const url = `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`;
     const { status, body: html } = await httpsGet(url, buildNaverHeaders(cookie, 'https://cafe.naver.com/'));
+    console.log(`  [HTML detail] HTTP ${status}, 앞80자: ${html.slice(0,80).replace(/\n/g,' ')}`);
     if (status === 200) {
       // __NEXT_DATA__에서 본문 추출
       const ndm = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
@@ -381,6 +405,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         const nd = JSON.parse(ndm[1]);
         const articleData = deepFind(nd, ['article', 'articleDetail', 'content', 'contentHtml']);
         if (articleData && typeof articleData === 'string') {
+          console.log(`  [HTML detail] __NEXT_DATA__ 파싱 성공, 길이=${articleData.length}`);
           return { content: stripHtml(articleData), comments: [] };
         }
       }
@@ -388,8 +413,9 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       const bodyM = html.match(/<div[^>]+class="[^"]*se-main-container[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
                  ?? html.match(/<div[^>]+id="tbody"[^>]*>([\s\S]*?)<\/div>/i);
       if (bodyM) return { content: stripHtml(bodyM[1]), comments: [] };
+      console.log(`  [HTML detail] 파싱 실패`);
     }
-  } catch(e) { /* 무시 */ }
+  } catch(e) { console.log(`  [HTML detail] 실패: ${e.message}`); }
 
   return { content: '', comments: [] };
 }
