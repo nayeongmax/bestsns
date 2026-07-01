@@ -1520,6 +1520,16 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-200 outline-none mb-3"
             />
             <div className="space-y-3 p-3 rounded-xl bg-amber-50 border border-amber-200 mb-3">
+              <label className="flex items-center gap-3 cursor-pointer border-b border-amber-200 pb-3">
+                <input
+                  type="checkbox"
+                  checked={agree1 && agree2 && agree3 && agree4}
+                  ref={(el) => { if (el) el.indeterminate = (agree1 || agree2 || agree3 || agree4) && !(agree1 && agree2 && agree3 && agree4); }}
+                  onChange={(e) => { setAgree1(e.target.checked); setAgree2(e.target.checked); setAgree3(e.target.checked); setAgree4(e.target.checked); }}
+                  className="mt-0.5 rounded"
+                />
+                <span className="text-sm font-black text-amber-800">전체 동의</span>
+              </label>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={agree1} onChange={(e) => setAgree1(e.target.checked)} className="mt-1 rounded" />
                 <span className="text-sm">(필수) 본 건은 플랫폼으로부터 재위탁받은 업무이며, 광고주와 직접 계약 관계가 없음을 인지합니다.</span>

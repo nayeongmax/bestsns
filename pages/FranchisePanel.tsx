@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
+import { upsertSmmOrders } from '../smmDb';
+import { FranchisePlan, FranchiseProduct, fetchFranchisePlans, fetchFranchiseProducts } from '../franchiseDb';
 
-type FranchiseTab = 'members' | 'revenue' | 'manuscripts' | 'convert' | 'collector';
+type FranchiseTab = 'members' | 'subscription' | 'revenue' | 'manuscripts' | 'collector' | 'marketing';
 
 interface Props {
   user: UserProfile;
@@ -12,480 +14,28 @@ interface Props {
 }
 
 /* ══════════════════════════════════════════════
-   원고시트 — 구글 시트 스타일 (서식 + 단축키)
+   원고시트 — SNS 수집 시트 (iframe 임베드)
 ══════════════════════════════════════════════ */
 
-const MIN_COLS = 26;
-const MIN_ROWS = 50;
-const COL_BUF  = 5;
-const ROW_BUF  = 20;
-
-interface CellData {
-  v?:  string;              // value
-  b?:  boolean;             // bold
-  i?:  boolean;             // italic
-  s?:  boolean;             // strikethrough
-  sz?: number;              // font size
-  c?:  string;              // text color
-  bg?: string;              // background color
-  a?:  'l' | 'c' | 'r';   // alignment
-}
-type SheetData = Record<string, CellData>;
-
-const colLabel = (c: number) => {
-  let label = '', n = c;
-  while (n >= 0) { label = String.fromCharCode(65 + (n % 26)) + label; n = Math.floor(n / 26) - 1; }
-  return label;
-};
-
-function computeSize(data: SheetData) {
-  let maxR = MIN_ROWS - 1, maxC = MIN_COLS - 1;
-  for (const k of Object.keys(data)) {
-    const [rs, cs] = k.split(':');
-    const r = Number(rs), c = Number(cs);
-    if (!isNaN(r)) maxR = Math.max(maxR, r);
-    if (!isNaN(c)) maxC = Math.max(maxC, c);
-  }
-  return { rows: maxR + ROW_BUF + 1, cols: maxC + COL_BUF + 1 };
-}
-
-function migrateData(raw: string): SheetData {
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const result: SheetData = {};
-    for (const [k, v] of Object.entries(parsed)) {
-      if (typeof v === 'string') result[k] = { v };
-      else if (v && typeof v === 'object') result[k] = v as CellData;
-    }
-    return result;
-  } catch { return {}; }
-}
-
-/* 툴바 버튼 */
-const TBtn: React.FC<{
-  children: React.ReactNode;
-  title?: string;
-  active?: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-  onMouseDown?: (e: React.MouseEvent) => void;
-  style?: React.CSSProperties;
-}> = ({ children, title, active, disabled, onClick, onMouseDown, style }) => (
-  <button
-    type="button"
-    title={title}
-    disabled={disabled}
-    onClick={onClick}
-    onMouseDown={onMouseDown}
-    style={{
-      width: 28, height: 28,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      border: 'none', borderRadius: 3, cursor: disabled ? 'not-allowed' : 'pointer',
-      background: active ? '#e8f0fe' : 'transparent',
-      color: active ? '#1a73e8' : disabled ? '#c0c0c0' : '#444',
-      fontSize: 13, transition: 'background 0.1s',
-      ...style,
-    }}
-    onMouseEnter={e => { if (!active && !disabled) (e.currentTarget as HTMLButtonElement).style.background = '#f0f0f0'; }}
-    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = active ? '#e8f0fe' : 'transparent'; }}
-  >
-    {children}
-  </button>
-);
-
-const Sep = () => <div style={{ width: 1, height: 18, background: '#dadce0', margin: '0 3px', flexShrink: 0 }} />;
-
-/* ── 메인 스프레드시트 ── */
 const ManuscriptSheet: React.FC<{ userId: string }> = ({ userId }) => {
-  const STORAGE_KEY = `franchise_sheet_${userId}`;
-
-  const [data, setData]               = useState<SheetData>({});
-  const [undoStack, setUndoStack]     = useState<SheetData[]>([]);
-  const [redoStack, setRedoStack]     = useState<SheetData[]>([]);
-  const [size, setSize]               = useState({ rows: MIN_ROWS, cols: MIN_COLS });
-  const [editCell, setEditCell]       = useState<{ r: number; c: number } | null>(null);
-  const [editValue, setEditValue]     = useState('');
-  const inputRef    = useRef<HTMLInputElement>(null);
-  const lastCellRef = useRef<{ r: number; c: number } | null>(null); // 툴바 클릭 시 블러 후에도 대상 셀 유지
-
-  useEffect(() => {
-    try {
-      const s = localStorage.getItem(STORAGE_KEY);
-      if (s) {
-        const d = migrateData(s);
-        setData(d);
-        setSize(prev => {
-          const { rows, cols } = computeSize(d);
-          return { rows: Math.max(prev.rows, rows), cols: Math.max(prev.cols, cols) };
-        });
-      }
-    } catch {}
-  }, [STORAGE_KEY]);
-
-  useEffect(() => { if (editCell) lastCellRef.current = editCell; }, [editCell]);
-
-  /* ── 저장 + 히스토리 push ── */
-  const persist = (newData: SheetData) => {
-    setUndoStack(s => [...s, data].slice(-50));
-    setRedoStack([]);
-    setData(newData);
-    setSize(prev => {
-      const { rows, cols } = computeSize(newData);
-      return { rows: Math.max(prev.rows, rows), cols: Math.max(prev.cols, cols) };
-    });
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newData)); } catch {}
-  };
-
-  const undo = () => {
-    if (!undoStack.length) return;
-    const prev = undoStack[undoStack.length - 1];
-    setRedoStack(s => [data, ...s].slice(0, 50));
-    setUndoStack(s => s.slice(0, -1));
-    setData(prev);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prev)); } catch {}
-  };
-
-  const redo = () => {
-    if (!redoStack.length) return;
-    const next = redoStack[0];
-    setUndoStack(s => [...s, data].slice(-50));
-    setRedoStack(s => s.slice(1));
-    setData(next);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
-  };
-
-  /* ── 셀 조작 ── */
-  const key    = (r: number, c: number) => `${r}:${c}`;
-  const getCell = (r: number, c: number): CellData => data[key(r, c)] ?? {};
-
-  const startEdit = (r: number, c: number) => {
-    setSize(prev => ({
-      rows: Math.max(prev.rows, r + ROW_BUF + 1),
-      cols: Math.max(prev.cols, c + COL_BUF + 1),
-    }));
-    setEditCell({ r, c });
-    setEditValue(data[key(r, c)]?.v ?? '');
-  };
-
-  const commitEdit = (r: number, c: number, val: string) => {
-    const k   = key(r, c);
-    const next = { ...data };
-    const existing = { ...(next[k] ?? {}) };
-    if (val) existing.v = val; else delete existing.v;
-    if (Object.keys(existing).length > 0) next[k] = existing; else delete next[k];
-    persist(next);
-    setEditCell(null);
-  };
-
-  /* 서식 적용 — 툴바에서 호출, 블러 후에도 lastCellRef 사용 */
-  const applyFormat = (fmt: Partial<CellData>) => {
-    const target = editCell ?? lastCellRef.current;
-    if (!target) return;
-    const k    = key(target.r, target.c);
-    const next = { ...data, [k]: { ...(data[k] ?? {}), ...fmt } };
-    persist(next);
-  };
-
-  /* 붙여넣기 (TSV 파싱) */
-  const applyPaste = (startR: number, startC: number, text: string) => {
-    const rows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd().split('\n');
-    const next = { ...data };
-    rows.forEach((rowStr, dr) =>
-      rowStr.split('\t').forEach((v, dc) => {
-        const k = key(startR + dr, startC + dc);
-        if (v) next[k] = { ...(next[k] ?? {}), v };
-      })
-    );
-    persist(next);
-    setEditCell(null);
-  };
-
-  /* 키보드 핸들러 (input 안) */
-  const handleKeyDown = (e: React.KeyboardEvent, r: number, c: number) => {
-    const mod = e.ctrlKey || e.metaKey;
-    if (mod) {
-      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); commitEdit(r, c, editValue); undo(); return; }
-      if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); commitEdit(r, c, editValue); redo(); return; }
-      if (e.key === 'b') { e.preventDefault(); applyFormat({ b: !getCell(r, c).b }); return; }
-      if (e.key === 'i') { e.preventDefault(); applyFormat({ i: !getCell(r, c).i }); return; }
-    }
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      commitEdit(r, c, editValue);
-      e.shiftKey ? (c > 0 ? startEdit(r, c - 1) : r > 0 && startEdit(r - 1, size.cols - 1)) : startEdit(r, c + 1);
-    } else if (e.key === 'Enter') {
-      e.preventDefault(); commitEdit(r, c, editValue); startEdit(r + 1, c);
-    } else if (e.key === 'Escape') {
-      setEditCell(null);
-    }
-  };
-
-  const handleInputPaste = (e: React.ClipboardEvent<HTMLInputElement>, r: number, c: number) => {
-    const text  = e.clipboardData.getData('text/plain');
-    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd().split('\n');
-    if (lines.length > 1 || lines[0]?.includes('\t')) { e.preventDefault(); applyPaste(r, c, text); }
-  };
-
-  const handleContainerKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (editCell) return;
-    const mod = e.ctrlKey || e.metaKey;
-    if (mod && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-    else if (mod && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
-  };
-
-  const handleContainerPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    if (editCell) return;
-    const text = e.clipboardData.getData('text/plain');
-    if (text) { e.preventDefault(); applyPaste(lastCellRef.current?.r ?? 0, lastCellRef.current?.c ?? 0, text); }
-  };
-
-  useEffect(() => {
-    if (editCell && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
-  }, [editCell]);
-
-  const activeFmt   = editCell ? getCell(editCell.r, editCell.c) : (lastCellRef.current ? getCell(lastCellRef.current.r, lastCellRef.current.c) : {});
-  const colLabels   = Array.from({ length: size.cols }, (_, i) => colLabel(i));
-  const cellAddrLabel = editCell ? `${colLabel(editCell.c)}${editCell.r + 1}` : (lastCellRef.current ? `${colLabel(lastCellRef.current.c)}${lastCellRef.current.r + 1}` : '');
-
-  /* noBlur — 툴바 클릭 시 input 포커스 유지 */
-  const noBlur = (e: React.MouseEvent) => e.preventDefault();
-
+  const src = `/sheet.html?userId=${encodeURIComponent(userId)}`;
   return (
-    <div
-      tabIndex={0}
-      onKeyDown={handleContainerKey}
-      onPaste={handleContainerPaste}
-      style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 260px)', minHeight: 320, outline: 'none' }}
-    >
-      {/* ── 구글 시트 열기 버튼 ── */}
-      <div style={{ padding: '6px 8px', borderBottom: '1px solid #e0e0e0', background: '#fff', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <button
-          onClick={() => window.open('https://sheets.new', '_blank')}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-        >
-          <img src="https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_32dp.png" alt="" style={{ width: 16, height: 16 }} />
-          구글 스프레드시트 열기
-        </button>
-        <span style={{ fontSize: 11, color: '#888' }}>아래 시트에 작성 후 구글 시트에 붙여넣기 하거나, 구글 시트에서 바로 작업할 수 있습니다.</span>
-      </div>
-      {/* ── 툴바 ── */}
-      <div style={{ background: '#f8f9fa', borderBottom: '1px solid #e0e0e0', padding: '3px 8px', display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', flexShrink: 0, minHeight: 38 }}>
-        {/* 실행취소 / 다시실행 */}
-        <TBtn title="실행 취소 (Ctrl+Z)" disabled={!undoStack.length} onClick={undo} onMouseDown={noBlur}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
-        </TBtn>
-        <TBtn title="다시 실행 (Ctrl+Y)" disabled={!redoStack.length} onClick={redo} onMouseDown={noBlur}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
-        </TBtn>
-        <Sep />
-
-        {/* 글꼴 크기 */}
-        <select
-          value={activeFmt.sz ?? 10}
-          onMouseDown={noBlur}
-          onChange={e => applyFormat({ sz: Number(e.target.value) })}
-          style={{ height: 26, padding: '0 2px', border: '1px solid #dadce0', borderRadius: 3, fontSize: 12, background: '#fff', cursor: 'pointer', width: 52, flexShrink: 0 }}
-        >
-          {[8,9,10,11,12,14,16,18,20,24,28,36,48,72].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <Sep />
-
-        {/* Bold / Italic / 취소선 */}
-        <TBtn title="굵게 (Ctrl+B)" active={!!activeFmt.b} onMouseDown={noBlur} onClick={() => applyFormat({ b: !activeFmt.b })} style={{ fontWeight: 700 }}>B</TBtn>
-        <TBtn title="기울임 (Ctrl+I)" active={!!activeFmt.i} onMouseDown={noBlur} onClick={() => applyFormat({ i: !activeFmt.i })} style={{ fontStyle: 'italic' }}>I</TBtn>
-        <TBtn title="취소선" active={!!activeFmt.s} onMouseDown={noBlur} onClick={() => applyFormat({ s: !activeFmt.s })} style={{ textDecoration: 'line-through' }}>S</TBtn>
-        <Sep />
-
-        {/* 글자색 */}
-        <div title="글자색" style={{ position: 'relative', width: 28, height: 28, flexShrink: 0 }} onMouseDown={noBlur}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, height: '100%', pointerEvents: 'none' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: activeFmt.c || '#000', lineHeight: 1 }}>A</span>
-            <div style={{ width: 16, height: 3, background: activeFmt.c || '#000', borderRadius: 1 }} />
-          </div>
-          <input type="color" value={activeFmt.c || '#000000'} onChange={e => applyFormat({ c: e.target.value })}
-            style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }} />
-        </div>
-
-        {/* 배경색 */}
-        <div title="배경색" style={{ position: 'relative', width: 28, height: 28, flexShrink: 0 }} onMouseDown={noBlur}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, height: '100%', pointerEvents: 'none' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill={activeFmt.bg || '#757575'}>
-              <path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 0 0 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/>
-            </svg>
-            <div style={{ width: 16, height: 3, background: activeFmt.bg || '#f4c20d', borderRadius: 1 }} />
-          </div>
-          <input type="color" value={activeFmt.bg || '#ffffff'} onChange={e => applyFormat({ bg: e.target.value === '#ffffff' ? undefined : e.target.value })}
-            style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }} />
-        </div>
-        <Sep />
-
-        {/* 정렬 */}
-        <TBtn title="왼쪽 정렬" active={!activeFmt.a || activeFmt.a === 'l'} onMouseDown={noBlur} onClick={() => applyFormat({ a: 'l' })}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15 15H3v2h12v-2zm0-8H3v2h12V7zM3 13h18v-2H3v2zm0 8h18v-2H3v2zM3 3v2h18V3H3z"/></svg>
-        </TBtn>
-        <TBtn title="가운데 정렬" active={activeFmt.a === 'c'} onMouseDown={noBlur} onClick={() => applyFormat({ a: 'c' })}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 15v2h10v-2H7zm-4 6h18v-2H3v2zm0-8h18v-2H3v2zm4-6v2h10V7H7zM3 3v2h18V3H3z"/></svg>
-        </TBtn>
-        <TBtn title="오른쪽 정렬" active={activeFmt.a === 'r'} onMouseDown={noBlur} onClick={() => applyFormat({ a: 'r' })}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 21h18v-2H3v2zm6-4h12v-2H9v2zm-6-4h18v-2H3v2zm6-4h12V7H9v2zM3 3v2h18V3H3z"/></svg>
-        </TBtn>
-      </div>
-
-      {/* ── 수식 바 ── */}
-      <div style={{ background: '#f8f9fa', borderBottom: '1px solid #e0e0e0', height: 26, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-        <div style={{ width: 76, borderRight: '1px solid #e0e0e0', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#5f6368', userSelect: 'none', flexShrink: 0 }}>
-          {cellAddrLabel}
-        </div>
-        <div style={{ flex: 1, padding: '0 8px', fontSize: 13, color: '#1f1f1f', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-          {editCell ? editValue : (lastCellRef.current ? (getCell(lastCellRef.current.r, lastCellRef.current.c).v ?? '') : '')}
-        </div>
-      </div>
-
-      {/* ── 그리드 ── */}
-      <div style={{ flex: 1, overflow: 'auto', border: '1px solid #dadce0', borderTop: 'none' }}>
-        <table style={{ borderCollapse: 'collapse', minWidth: 'max-content', tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: 46 }} />
-            {colLabels.map(l => <col key={l} style={{ width: 120 }} />)}
-          </colgroup>
-          <thead>
-            <tr>
-              <th style={{ position: 'sticky', top: 0, left: 0, zIndex: 30, background: '#f8f9fa', border: '1px solid #dadce0', height: 20 }} />
-              {colLabels.map(label => (
-                <th key={label} style={{ position: 'sticky', top: 0, zIndex: 20, background: '#f8f9fa', border: '1px solid #dadce0', height: 20, fontSize: 11, fontWeight: 600, color: '#444746', textAlign: 'center', userSelect: 'none' }}>
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: size.rows }, (_, r) => (
-              <tr key={r}>
-                <td style={{ position: 'sticky', left: 0, zIndex: 10, background: '#f8f9fa', borderRight: '1px solid #dadce0', borderBottom: '1px solid #e2e3e3', height: 21, fontSize: 11, fontWeight: 500, color: '#444746', textAlign: 'center', userSelect: 'none', minWidth: 46 }}>
-                  {r + 1}
-                </td>
-                {colLabels.map((_, c) => {
-                  const isEditing = editCell?.r === r && editCell?.c === c;
-                  const cell      = getCell(r, c);
-                  const val       = cell.v ?? '';
-
-                  const cellStyle: React.CSSProperties = {
-                    height: 21, padding: 0,
-                    borderRight: '1px solid #e2e3e3',
-                    borderBottom: '1px solid #e2e3e3',
-                    background: cell.bg || '#fff',
-                    position: 'relative',
-                    cursor: 'cell',
-                    ...(isEditing ? { outline: '2px solid #1a73e8', outlineOffset: -1, zIndex: 15 } : {}),
-                  };
-
-                  const textStyle: React.CSSProperties = {
-                    fontSize: cell.sz ?? 13,
-                    fontWeight: cell.b ? 700 : 400,
-                    fontStyle: cell.i ? 'italic' : 'normal',
-                    textDecoration: cell.s ? 'line-through' : 'none',
-                    color: cell.c || '#1f1f1f',
-                    textAlign: cell.a === 'c' ? 'center' : cell.a === 'r' ? 'right' : 'left',
-                  };
-
-                  return (
-                    <td key={c} onClick={() => { if (!isEditing) startEdit(r, c); }} style={cellStyle}>
-                      {isEditing ? (
-                        <input
-                          ref={inputRef}
-                          value={editValue}
-                          onChange={e => setEditValue(e.target.value)}
-                          onBlur={() => commitEdit(r, c, editValue)}
-                          onKeyDown={e => handleKeyDown(e, r, c)}
-                          onPaste={e => handleInputPaste(e, r, c)}
-                          style={{ width: '100%', height: '100%', padding: '0 4px', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', ...textStyle }}
-                        />
-                      ) : val ? (
-                        <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', padding: '0 4px', whiteSpace: 'nowrap', lineHeight: '21px', pointerEvents: 'none', ...textStyle }}>
-                          {val}
-                        </div>
-                      ) : null}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <iframe
+      src={src}
+      style={{ width: '100%', height: 'calc(100vh - 120px)', border: 'none', display: 'block' }}
+      title="원고시트"
+      allow="clipboard-read; clipboard-write"
+    />
   );
 };
 
 /* ══════════════════════════════════════════════
-   원고시트변환
-══════════════════════════════════════════════ */
-function convertManuscript(input: string, platform: string): string {
-  const lines = input.trim().split('\n');
-  const hashLines = lines.filter(l => l.trim().startsWith('#'));
-  const bodyLines = lines.filter(l => !l.trim().startsWith('#'));
-  const body = bodyLines.join('\n'), tags = hashLines.join(' ');
-  switch (platform) {
-    case '인스타그램': return body.split(/\n{2,}/).filter(Boolean).map(p => p.trim()).join('\n.\n') + (tags ? `\n.\n\n${tags}` : '');
-    case '카카오채널': return body.replace(/\n{3,}/g, '\n\n').trim();
-    case '네이버블로그': return body.split(/\n{2,}/).filter(Boolean).map(p => p.trim()).join('\n\n');
-    case '유튜브': return `📌 영상 설명\n\n${body.trim()}${tags ? `\n\n${tags}` : ''}`;
-    default: return input;
-  }
-}
-const PLATFORM_TIPS: Record<string, string> = {
-  '인스타그램': '단락 사이에 마침표(.) 줄 추가 · 해시태그 하단 분리',
-  '카카오채널': '3줄 이상 공백 → 2줄로 정리',
-  '네이버블로그': '단락 간 2줄 공백으로 정리',
-  '유튜브': '영상 설명 헤더 · 해시태그 섹션 자동 추가',
-};
-const ConvertTab: React.FC = () => {
-  const [platform, setPlatform] = useState('인스타그램');
-  const [input, setInput]       = useState('');
-  const [output, setOutput]     = useState('');
-  const [copied, setCopied]     = useState(false);
-  return (
-    <div className="space-y-4 max-w-4xl">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-black text-gray-900">원고시트변환</h2>
-        <select value={platform} onChange={e => { setPlatform(e.target.value); setOutput(''); }}
-          className="px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 bg-white">
-          {['인스타그램','카카오채널','네이버블로그','유튜브'].map(p => <option key={p}>{p}</option>)}
-        </select>
-        <span className="text-xs text-gray-400 font-bold">{PLATFORM_TIPS[platform]}</span>
-      </div>
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-black text-gray-400 uppercase mb-2">원본 내용</label>
-          <textarea value={input} onChange={e => setInput(e.target.value)} placeholder={'원고 내용을 붙여넣으세요...\n#해시태그는 # 로 시작하는 줄에 입력'}
-            className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-400 resize-none" />
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-black text-gray-400 uppercase">{platform} 변환 결과</label>
-            {output && <button type="button" onClick={() => { navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-              className={`text-xs font-black ${copied ? 'text-emerald-500' : 'text-blue-600 hover:text-blue-700'}`}>{copied ? '✓ 복사됨' : '복사'}</button>}
-          </div>
-          <textarea value={output} readOnly placeholder="변환 버튼을 누르면 결과가 표시됩니다..."
-            className="w-full h-72 px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 text-sm font-medium resize-none focus:outline-none" />
-        </div>
-      </div>
-      <button type="button" onClick={() => setOutput(convertManuscript(input, platform))} disabled={!input.trim()}
-        className="px-6 py-3 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-        🔄 변환하기
-      </button>
-    </div>
-  );
-};
-
-/* ══════════════════════════════════════════════
-   원고수집기 — 네이버 카페 크롤러
+      원고수집기 — 네이버 카페 크롤러
 ══════════════════════════════════════════════ */
 interface CafeArticle {
   no: number;
   articleId: string | number;
   title: string;
-  content: string;
   writer: string;
   date: string;
   commentCount: number;
@@ -520,15 +70,6 @@ function parseCafeId(input: string): string {
   }
 }
 
-function buildNaverCookie(aut: string, ses: string): string {
-  const parts: string[] = [];
-  const a = aut.trim();
-  const s = ses.trim();
-  if (a) parts.push(a.startsWith('NID_AUT=') ? a : `NID_AUT=${a}`);
-  if (s) parts.push(s.startsWith('NID_SES=') ? s : `NID_SES=${s}`);
-  return parts.join('; ');
-}
-
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
@@ -538,11 +79,8 @@ const EMPTY_KW: ReplaceKw[] = Array.from({ length: 10 }, () => ({ from: '', to: 
 const DEFAULT_REWRITE_PROMPT = '원문을 완전히 다른 사람이 쓴 글처럼 리라이팅해줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
 const DEFAULT_COMMENT_PROMPT = '아래 글에 어울리는 자연스러운 댓글을 1개만 만들어줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
 
-const SCRAPE_ENDPOINT = '/.netlify/functions/scrape-naver-cafe';
-
 const CollectorTab: React.FC = () => {
   const [crawlerTab, setCrawlerTab] = useState<CrawlerTab>('collect');
-  const [relayOk] = useState<boolean | null>(true);
 
   /* ── 수집 설정 ── */
   const [cafeUrl,       setCafeUrl]       = useState('https://cafe.naver.com/');
@@ -551,12 +89,11 @@ const CollectorTab: React.FC = () => {
   const [startPage,     setStartPage]     = useState('1');
   const [startDate,     setStartDate]     = useState('');
   const [endDate,       setEndDate]       = useState('');
-  const [maxArticles,   setMaxArticles]   = useState('50');
+  const [maxArticles,   setMaxArticles]   = useState('10');
   const [maxComments,   setMaxComments]   = useState('3');
   const [aiRewrite,     setAiRewrite]     = useState(false);
   const [aiFillComment, setAiFillComment] = useState(false);
   const [naverCookie,   setNaverCookie]   = useState('');
-  const [naverSes,      setNaverSes]      = useState('');
   const [showCookie,    setShowCookie]    = useState(false);
 
   /* ── 수집 상태 ── */
@@ -619,13 +156,11 @@ const CollectorTab: React.FC = () => {
     const page = resume && nextPage ? nextPage : parseInt(startPage) || 1;
     setStatus(`수집 중... (페이지 ${page})`);
     try {
-      const endpoint = SCRAPE_ENDPOINT;
-      const res = await fetch(endpoint, {
+      const res = await fetch('/.netlify/functions/scrape-naver-cafe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cafeId: resolvedCafeId,
-          cafeUrl: cafeUrl.trim(),
           menuId: menuId.trim(),
           startPage: page,
           startDate: startDate.trim() || undefined,
@@ -633,21 +168,11 @@ const CollectorTab: React.FC = () => {
           maxArticles: parseInt(maxArticles) || 10,
           maxComments: parseInt(maxComments) || 0,
           fetchComments: parseInt(maxComments) > 0,
-          naverCookie: buildNaverCookie(naverCookie, naverSes) || undefined,
+          naverCookie: naverCookie.trim() || undefined,
         }),
       });
       const data = await res.json();
-      if (data.status !== 'ok') {
-        const msg = data.message || '수집 실패';
-        const hint = data.hint ? `\n💡 ${data.hint}` : '';
-        throw new Error(msg + hint);
-      }
-      // API 성공이지만 날짜 필터로 0개인 경우 (status=ok, articles=[])
-      if (data.articles?.length === 0 && data.message) {
-        setStatus(`ℹ️ ${data.message}`);
-        setLoading(false);
-        return;
-      }
+      if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
       const newList: CafeArticle[] = data.articles || [];
       const merged = resume
         ? [...articles, ...newList.map((a, i) => ({ ...a, no: articles.length + i + 1 }))]
@@ -687,56 +212,15 @@ const CollectorTab: React.FC = () => {
   };
 
   const exportCsv = (rewritten = false) => {
-    const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    const cell = (v: string, mergeDown = 0, bg = '') =>
-      `<Cell${mergeDown ? ` ss:MergeDown="${mergeDown}"` : ''}${bg ? ` ss:StyleID="${bg}"` : ''}><Data ss:Type="String">${esc(v)}</Data></Cell>`;
-
-    const headerRow = `<Row>
-      ${cell('리라이팅',0,'hdr')}${cell('구분',0,'hdr')}${cell('원본',0,'hdr')}${cell('댓글1',0,'hdr')}${cell('댓글2',0,'hdr')}${cell('댓글3',0,'hdr')}${cell('날짜',0,'hdr')}${cell('URL',0,'hdr')}
-    </Row>`;
-
-    const articleRows = articles.map(a => {
+    const rows = [['번호', '날짜', '제목', '작성자', '댓글수', '조회수', 'URL']];
+    articles.forEach(a => {
       const title = rewritten ? applyKeywords(a.title) : a.title;
-      const c1 = a.comments[0]?.content ?? '';
-      const c2 = a.comments[1]?.content ?? '';
-      const c3 = a.comments[2]?.content ?? '';
-      // 제목 행: 리라이팅 열은 MergeDown=1 로 2행 병합
-      const row1 = `<Row>${cell('',1)}${cell('제목:')}${cell(title)}${cell(c1)}${cell(c2)}${cell(c3)}${cell(a.date)}${cell(a.url)}</Row>`;
-      // 내용 행: 실제 본문 내용 삽입
-      const bodyText = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
-      const row2 = `<Row><Cell ss:Index="2"/>${cell('내용:')}${cell(bodyText)}${cell('')}${cell('')}${cell('')}${cell('')}${cell('')}</Row>`;
-      // 구분 빈 행 (ss:Height로 높이 지정해야 Excel이 빈 행으로 인식)
-      const row3 = `<Row ss:Height="14"><Cell ss:Index="1"><Data ss:Type="String"> </Data></Cell></Row>`;
-      return row1 + '\n' + row2 + '\n' + row3;
-    }).join('\n');
-
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:x="urn:schemas-microsoft-com:office:excel">
- <Styles>
-  <Style ss:ID="hdr"><Font ss:Bold="1"/><Interior ss:Color="#4472C4" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:Bold="1"/></Style>
- </Styles>
- <Worksheet ss:Name="수집결과">
-  <Table ss:DefaultColumnWidth="120">
-   <Column ss:Width="200"/>
-   <Column ss:Width="50"/>
-   <Column ss:Width="300"/>
-   <Column ss:Width="180"/>
-   <Column ss:Width="180"/>
-   <Column ss:Width="180"/>
-   <Column ss:Width="90"/>
-   <Column ss:Width="250"/>
-   ${headerRow}
-   ${articleRows}
-  </Table>
- </Worksheet>
-</Workbook>`;
-
-    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      rows.push([String(a.no), a.date, title, a.writer, String(a.commentCount), String(a.readCount), a.url]);
+    });
+    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xls`;
+    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.csv`;
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
@@ -834,7 +318,7 @@ const CollectorTab: React.FC = () => {
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">최대 수집 글 수:</label>
-              <input className={inputCls} type="number" min="1" value={maxArticles} onChange={e => setMaxArticles(e.target.value)} />
+              <input className={inputCls} type="number" min="1" max="500" value={maxArticles} onChange={e => setMaxArticles(e.target.value)} />
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">댓글 수집 개수 (0~5):</label>
@@ -855,26 +339,23 @@ const CollectorTab: React.FC = () => {
               <p className="text-[10px] text-gray-400">※ API 키·프롬프트는 치환키워드 탭에서</p>
             </div>
 
-            {/* 네이버 쿠키 인증 — 필수 */}
+            {/* 네이버 로그인 (비공개 카페) */}
             <div className="mt-2 pt-2 border-t border-gray-200">
-              <p className="text-xs font-black text-red-500 mb-1">⚠ 쿠키 인증 필요 (2개 모두)</p>
-              <p className="text-[10px] text-gray-500 mb-1.5 leading-relaxed">
-                ① <button type="button" onClick={openNaverLogin} className="text-blue-500 underline font-bold">네이버 로그인 팝업</button> 으로 로그인<br/>
-                ② F12 → Application → Cookies → cafe.naver.com<br/>
-                ③ NID_AUT <b>와</b> NID_SES 값 <b>둘 다</b> 복사
-              </p>
-              <label className="block text-[10px] font-bold text-gray-500 mb-0.5">NID_AUT:</label>
-              <input className={inputCls} value={naverCookie} onChange={e => setNaverCookie(e.target.value)}
-                placeholder="값만 붙여넣기 (NID_AUT= 제외 가능)" autoComplete="off"
-                style={{ borderColor: naverCookie.trim() ? '#22c55e' : '#fca5a5' }} />
-              <label className="block text-[10px] font-bold text-gray-500 mt-1.5 mb-0.5">NID_SES:</label>
-              <input className={inputCls} value={naverSes} onChange={e => setNaverSes(e.target.value)}
-                placeholder="값만 붙여넣기 (NID_SES= 제외 가능)" autoComplete="off"
-                style={{ borderColor: naverSes.trim() ? '#22c55e' : '#fca5a5' }} />
-              {naverCookie.trim() && naverSes.trim()
-                ? <p className="text-[10px] text-green-600 font-bold mt-0.5">✓ 쿠키 2개 입력됨 — 수집 가능</p>
-                : <p className="text-[10px] text-orange-500 font-bold mt-0.5">NID_AUT, NID_SES 모두 입력해야 수집됩니다</p>
-              }
+              <p className="text-xs font-black text-gray-500 mb-1.5">■ 네이버 로그인 (비공개 카페)</p>
+              <button type="button" onClick={openNaverLogin}
+                className="w-full py-1.5 rounded text-xs font-black text-white bg-green-600 hover:bg-green-700 mb-1.5">
+                🔐 네이버 로그인 팝업
+              </button>
+              <button type="button" onClick={() => setShowCookie(v => !v)}
+                className="text-[10px] text-blue-500 hover:underline font-bold">
+                {showCookie ? '▲ 세션쿠키 숨기기' : '▼ 세션쿠키 직접 입력'}
+              </button>
+              {showCookie && (
+                <div className="mt-1">
+                  <p className="text-[10px] text-gray-400 mb-0.5">NID_AUT 쿠키값 (브라우저 개발자도구 → Application → Cookies)</p>
+                  <input className={inputCls} value={naverCookie} onChange={e => setNaverCookie(e.target.value)} placeholder="NID_AUT=..." autoComplete="off" />
+                </div>
+              )}
             </div>
 
             {/* 마지막 수집 정보 */}
@@ -897,8 +378,9 @@ const CollectorTab: React.FC = () => {
               </div>
             </div>
 
+
             {/* 버튼들 */}
-            <div className="space-y-1.5">
+            <div className="mt-3 pt-2 border-t border-gray-200 space-y-1.5">
               <button type="button" onClick={() => doCollect(false)} disabled={loading}
                 className="w-full py-2 rounded font-black text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 {loading ? '수집 중...' : '▶ 수집 시작'}
@@ -973,7 +455,7 @@ const CollectorTab: React.FC = () => {
               </table>
             </div>
             <div className="px-4 py-1.5 border-t border-gray-200 bg-gray-50 shrink-0">
-              <p className="text-xs font-bold" style={{ color: status.startsWith('오류') ? '#ef4444' : '#9ca3af' }}>{status}</p>
+              <p className="text-xs text-gray-400 font-bold">수집 완료 — {articles.length}개 글</p>
             </div>
           </div>
         </div>
@@ -1108,26 +590,421 @@ const CollectorTab: React.FC = () => {
   );
 };
 
+
 /* ══════════════════════════════════════════════
-   가맹점 현황 (어드민)
+   구독관리
+══════════════════════════════════════════════ */
+const PLAN_COLORS = ['blue', 'purple', 'emerald', 'orange', 'pink'];
+
+const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
+  const STORAGE_KEY = `franchise_sub_${user.id}`;
+  const [plans, setPlans]           = useState<FranchisePlan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [activePlan, setActivePlan]   = useState<string | null>(null);
+  const [activeUntil, setActiveUntil] = useState<string | null>(null);
+  const [showContact, setShowContact] = useState(false);
+
+  useEffect(() => {
+    fetchFranchisePlans().then(setPlans);
+    try {
+      const s = localStorage.getItem(STORAGE_KEY);
+      if (s) {
+        const d = JSON.parse(s);
+        setActivePlan(d.plan ?? null);
+        setActiveUntil(d.until ?? null);
+      }
+    } catch {}
+  }, [STORAGE_KEY]);
+
+  const activePlans = plans.filter(p => p.isActive);
+  const isActive    = activePlan && activeUntil && new Date(activeUntil) > new Date();
+  const planLabel   = activePlans.find(p => p.id === activePlan)?.name ?? null;
+
+  const handleRequestPayment = () => {
+    if (!selectedPlan) { alert('플랜을 선택해주세요.'); return; }
+    setShowContact(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-black text-gray-900">구독관리</h2>
+        <p className="text-xs text-gray-400 font-bold mt-0.5">가맹점 구독료를 결제하고 모든 기능을 이용하세요</p>
+      </div>
+
+      {/* 현재 구독 상태 */}
+      <div className={`rounded-2xl p-5 border-2 ${isActive ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 ${isActive ? 'bg-emerald-100' : 'bg-gray-200'}`}>
+            {isActive ? '✅' : '⏸'}
+          </div>
+          <div>
+            <p className={`font-black text-base ${isActive ? 'text-emerald-800' : 'text-gray-600'}`}>
+              {isActive ? `구독 중 — ${planLabel}` : '구독 없음'}
+            </p>
+            {isActive && activeUntil && (
+              <p className="text-xs text-emerald-600 font-bold mt-0.5">
+                {activeUntil.slice(0, 10)} 까지 이용 가능
+              </p>
+            )}
+            {!isActive && (
+              <p className="text-xs text-gray-400 font-bold mt-0.5">아래에서 플랜을 선택하고 결제를 신청하세요</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 플랜 선택 */}
+      {activePlans.length === 0 ? (
+        <div className="py-10 text-center text-gray-300">
+          <p className="font-black">등록된 플랜이 없습니다</p>
+          <p className="text-xs mt-1">관리자에게 문의하세요</p>
+        </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row gap-4">
+          {activePlans.map((plan, idx) => {
+            const color      = PLAN_COLORS[idx % PLAN_COLORS.length];
+            const isSelected = selectedPlan === plan.id;
+            const isCurrent  = activePlan === plan.id && !!isActive;
+            const colorSel: Record<string, string> = {
+              blue:    isSelected ? 'border-blue-500 bg-blue-50'    : 'border-gray-200 bg-white hover:border-blue-300',
+              purple:  isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300',
+              emerald: isSelected ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 bg-white hover:border-emerald-300',
+              orange:  isSelected ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white hover:border-orange-300',
+              pink:    isSelected ? 'border-pink-500 bg-pink-50'    : 'border-gray-200 bg-white hover:border-pink-300',
+            };
+            const dotColor: Record<string, string> = {
+              blue: 'bg-blue-600', purple: 'bg-purple-600', emerald: 'bg-emerald-600', orange: 'bg-orange-500', pink: 'bg-pink-500',
+            };
+            return (
+              <button
+                key={plan.id}
+                type="button"
+                onClick={() => setSelectedPlan(plan.id)}
+                className={`flex-1 text-left rounded-2xl border-2 p-5 transition-all ${colorSel[color]}`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-gray-900">{plan.name}</span>
+                      {isCurrent && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-black">현재 플랜</span>}
+                    </div>
+                    {plan.originalPrice && plan.originalPrice > plan.price && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-xs text-gray-400 font-bold line-through">{plan.originalPrice.toLocaleString()}원</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-black">{Math.round((1 - plan.price / plan.originalPrice) * 100)}% 할인</span>
+                      </div>
+                    )}
+                    <p className="text-2xl font-black text-gray-900 mt-1">
+                      {plan.price.toLocaleString()}
+                      <span className="text-sm font-bold text-gray-400">원/{plan.period}</span>
+                    </p>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${isSelected ? `${dotColor[color]} border-transparent` : 'border-gray-300'}`}>
+                    {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                  </div>
+                </div>
+                <ul className="space-y-1.5">
+                  {plan.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-gray-600 font-bold">
+                      <span className="text-emerald-500 shrink-0">✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 결제 신청 버튼 */}
+      <button
+        type="button"
+        onClick={handleRequestPayment}
+        disabled={!selectedPlan}
+        className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {selectedPlan
+          ? `${activePlans.find(p => p.id === selectedPlan)?.name} 결제 신청하기`
+          : '플랜을 선택하세요'}
+      </button>
+
+      {/* 결제 안내 모달 */}
+      {showContact && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">💳</div>
+              <h3 className="font-black text-gray-900 text-lg">결제 신청 안내</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                아래 채널로 문의 주시면<br />결제 링크를 보내드립니다
+              </p>
+            </div>
+            <div className="space-y-3 mb-5">
+              <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <span className="text-2xl shrink-0">💬</span>
+                <div>
+                  <p className="text-xs font-black text-gray-500 uppercase">카카오톡 채널</p>
+                  <p className="font-black text-gray-900">@bestsns</p>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                <p className="text-xs font-bold text-blue-700">
+                  신청 시 아이디 <span className="font-black">{user.nickname}</span> 와{' '}
+                  선택 플랜 <span className="font-black">{activePlans.find(p => p.id === selectedPlan)?.name}</span> 을 함께 알려주세요
+                </p>
+              </div>
+            </div>
+            <button type="button" onClick={() => setShowContact(false)}
+              className="w-full py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200 transition-colors">
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
+   마케팅상품 주문
+══════════════════════════════════════════════ */
+const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
+  const [products, setProducts]   = useState<FranchiseProduct[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [selected, setSelected]   = useState<FranchiseProduct | null>(null);
+  const [link, setLink]           = useState('');
+  const [quantity, setQuantity]   = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState('전체');
+
+  useEffect(() => {
+    fetchFranchiseProducts()
+      .then(setProducts)
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const categories = ['전체', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  const visible    = filterCategory === '전체' ? products : products.filter(p => p.category === filterCategory);
+
+  const handleOrder = async () => {
+    if (!selected || !link.trim() || !quantity) return;
+    const qty = Number(quantity);
+    if (isNaN(qty) || qty < selected.minQuantity || qty > selected.maxQuantity) {
+      alert(`수량은 ${selected.minQuantity.toLocaleString()} ~ ${selected.maxQuantity.toLocaleString()} 사이여야 합니다.`);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const orderId = `fr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      await upsertSmmOrders([{
+        id: orderId,
+        userId: user.id,
+        userNickname: user.nickname,
+        orderTime: new Date().toISOString(),
+        platform: selected.category || '가맹점',
+        productName: selected.name,
+        link: link.trim(),
+        quantity: qty,
+        initialCount: 0,
+        remains: qty,
+        providerName: '가맹점주문',
+        costPrice: 0,
+        sellingPrice: selected.price * qty,
+        profit: 0,
+        status: 'pending',
+        externalOrderId: '',
+      }]);
+      setSuccessMsg(`[${selected.name}] 주문이 접수되었습니다. 관리자 확인 후 진행됩니다.`);
+      setSelected(null);
+      setLink('');
+      setQuantity('');
+    } catch {
+      alert('주문 접수에 실패했습니다. 다시 시도해 주세요.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="py-20 text-center text-gray-400 font-bold">상품 불러오는 중...</div>;
+
+  return (
+    <div className="space-y-4 max-w-4xl">
+      <div>
+        <h2 className="text-lg font-black text-gray-900">마케팅상품 주문</h2>
+        <p className="text-xs text-gray-400 font-bold mt-0.5">운영자가 등록한 마케팅 프로그램 상품을 주문하세요. 접수 후 관리자 확인을 거쳐 진행됩니다.</p>
+      </div>
+
+      {successMsg && (
+        <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-4">
+          <span className="text-2xl shrink-0">✅</span>
+          <div>
+            <p className="font-black text-emerald-800 text-sm">{successMsg}</p>
+            <button type="button" onClick={() => setSuccessMsg(null)} className="text-xs text-emerald-600 font-bold hover:underline mt-1">닫기</button>
+          </div>
+        </div>
+      )}
+
+      {/* 카테고리 필터 */}
+      {categories.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {categories.map(c => (
+            <button key={c} type="button" onClick={() => setFilterCategory(c)}
+              className={`px-3 py-1 rounded-full text-xs font-black transition-colors ${filterCategory === c ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 상품 그리드 */}
+      {visible.length === 0 ? (
+        <div className="py-16 text-center text-gray-300">
+          <div className="text-4xl mb-3">📦</div>
+          <p className="font-black">등록된 상품이 없습니다</p>
+          <p className="text-xs mt-1">운영자가 상품을 등록하면 여기에 표시됩니다</p>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {visible.map(product => (
+            <button
+              key={product.id}
+              type="button"
+              onClick={() => { setSelected(product); setLink(''); setQuantity(String(product.minQuantity)); setSuccessMsg(null); }}
+              className={`text-left rounded-2xl border-2 p-4 transition-all hover:shadow-md ${selected?.id === product.id ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-white hover:border-blue-200'}`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                {product.category && <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-600">{product.category}</span>}
+                <div className="ml-auto shrink-0 text-right">
+                  {product.originalPrice && product.originalPrice > product.price ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-gray-400 font-bold line-through">{product.originalPrice.toLocaleString()}원</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-black">{Math.round((1 - product.price / product.originalPrice) * 100)}%</span>
+                    </div>
+                  ) : null}
+                  <p className="text-xs font-black text-blue-600">{product.price.toLocaleString()}원</p>
+                </div>
+              </div>
+              <p className="font-black text-gray-900 text-sm leading-snug">{product.name}</p>
+              {product.description && <p className="text-[11px] text-gray-400 mt-1 font-bold line-clamp-2">{product.description}</p>}
+              <p className="text-[10px] text-gray-300 mt-1">최소 {product.minQuantity.toLocaleString()} ~ 최대 {product.maxQuantity.toLocaleString()}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 주문 폼 모달 */}
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-black text-gray-900">주문 접수</h3>
+                <button type="button" onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 font-black text-lg leading-none">✕</button>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {selected.category && <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-600">{selected.category}</span>}
+                <span className="text-sm font-black text-gray-800">{selected.name}</span>
+              </div>
+              {selected.description && <p className="text-xs text-gray-400 mt-1">{selected.description}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-gray-500 mb-1.5">대상 링크 <span className="text-red-500">*</span></label>
+              <input
+                type="url"
+                value={link}
+                onChange={e => setLink(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-gray-500 mb-1.5">
+                수량 <span className="text-red-500">*</span>
+                <span className="text-gray-300 ml-1 font-bold">({selected.minQuantity.toLocaleString()} ~ {selected.maxQuantity.toLocaleString()})</span>
+              </label>
+              <input
+                type="number"
+                value={quantity}
+                onChange={e => setQuantity(e.target.value)}
+                min={selected.minQuantity}
+                max={selected.maxQuantity}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm font-bold"
+              />
+            </div>
+
+            {quantity && !isNaN(Number(quantity)) && Number(quantity) > 0 && (
+              <div className="bg-blue-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                <span className="text-xs font-black text-blue-600">예상 금액</span>
+                <span className="font-black text-blue-800">{(selected.price * Number(quantity)).toLocaleString()}원</span>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setSelected(null)}
+                className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 font-black text-sm hover:bg-gray-200 transition-colors">
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleOrder}
+                disabled={submitting || !link.trim() || !quantity}
+                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {submitting ? '접수 중...' : '주문 접수'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
+   가맹점 현황 (어드민 전용)
 ══════════════════════════════════════════════ */
 const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProfile) => void }> = ({ members, onUpdateUser }) => {
-  const [search, setSearch]       = useState('');
-  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [search, setSearch]           = useState('');
+  const [togglingId, setTogglingId]   = useState<string | null>(null);
   const [localMembers, setLocalMembers] = useState(members);
+  const [errMsg, setErrMsg]           = useState<string | null>(null);
   useEffect(() => { setLocalMembers(members); }, [members]);
 
   const toggleFranchise = async (member: UserProfile) => {
+    if (togglingId) return;
     setTogglingId(member.id);
+    setErrMsg(null);
+    const newVal  = !member.isFranchise;
+    const updated = { ...member, isFranchise: newVal };
+
+    // 낙관적 업데이트 — 즉시 UI 반영
+    setLocalMembers(prev => prev.map(m => m.id === member.id ? updated : m));
+    if (onUpdateUser) onUpdateUser(updated);
+
     try {
-      const newVal = !member.isFranchise;
-      const { error } = await supabase.from('profiles').update({ is_franchise: newVal, updated_at: new Date().toISOString() }).eq('id', member.id);
-      if (!error) {
-        const updated = { ...member, isFranchise: newVal };
-        setLocalMembers(prev => prev.map(m => m.id === member.id ? updated : m));
-        if (onUpdateUser) onUpdateUser(updated);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_franchise: newVal })
+        .eq('id', member.id);
+
+      if (error) {
+        // 롤백
+        setLocalMembers(prev => prev.map(m => m.id === member.id ? member : m));
+        if (onUpdateUser) onUpdateUser(member);
+        setErrMsg(`저장 실패: ${error.message} — Supabase profiles 테이블에 is_franchise (boolean) 컬럼이 필요합니다.`);
       }
-    } finally { setTogglingId(null); }
+    } catch (e) {
+      setLocalMembers(prev => prev.map(m => m.id === member.id ? member : m));
+      if (onUpdateUser) onUpdateUser(member);
+      setErrMsg('네트워크 오류로 저장에 실패했습니다.');
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const franchiseMembers = localMembers.filter(m => m.isFranchise);
@@ -1138,11 +1015,19 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-black text-gray-900">가맹점 파트너 관리</h2>
-          <p className="text-xs text-gray-400 font-bold mt-0.5">현재 {franchiseMembers.length}개 가맹점 활성 · 가맹점으로 선택된 회원은 가맹점패널에 접근할 수 있습니다</p>
+          <p className="text-xs text-gray-400 font-bold mt-0.5">현재 {franchiseMembers.length}개 가맹점 활성 · 선택된 회원은 가맹점패널에 접근할 수 있습니다</p>
         </div>
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="닉네임·ID 검색..."
           className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-blue-400 w-48" />
       </div>
+
+      {errMsg && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs font-bold text-red-700 flex items-start gap-2">
+          <span className="shrink-0">⚠️</span>
+          <span>{errMsg}</span>
+        </div>
+      )}
+
       {franchiseMembers.length > 0 && (
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
           <p className="text-xs font-black text-blue-700 mb-2">✓ 활성 가맹점</p>
@@ -1156,6 +1041,7 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
           </div>
         </div>
       )}
+
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs">
@@ -1165,17 +1051,34 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
             <tbody className="divide-y divide-gray-50">
               {visible.slice(0, 100).map(member => (
                 <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3"><div className="flex items-center gap-2"><img src={member.profileImage} alt="" className="w-6 h-6 rounded-full object-cover border border-gray-100 shrink-0" /><span className="font-black text-gray-900 whitespace-nowrap">{member.nickname}</span></div></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <img src={member.profileImage} alt="" className="w-6 h-6 rounded-full object-cover border border-gray-100 shrink-0" />
+                      <span className="font-black text-gray-900 whitespace-nowrap">{member.nickname}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-gray-400 font-mono text-[11px]">{member.id}</td>
                   <td className="px-4 py-3 text-gray-500">{member.email || '-'}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${member.role === 'admin' ? 'bg-purple-100 text-purple-700' : member.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>{member.role}</span></td>
-                  <td className="px-4 py-3"><button type="button" disabled={togglingId === member.id || member.role === 'admin'} onClick={() => toggleFranchise(member)}
-                    className={`px-3 py-1.5 rounded-lg font-black text-xs transition-all disabled:opacity-40 ${member.isFranchise ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
-                    {togglingId === member.id ? '...' : member.isFranchise ? '✓ 가맹점' : '가맹점 선택'}
-                  </button></td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${member.role === 'admin' ? 'bg-purple-100 text-purple-700' : member.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {member.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      disabled={togglingId === member.id || member.role === 'admin'}
+                      onClick={() => toggleFranchise(member)}
+                      className={`px-3 py-1.5 rounded-lg font-black text-xs transition-all disabled:opacity-40 ${member.isFranchise ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`}
+                    >
+                      {togglingId === member.id ? '저장 중...' : member.isFranchise ? '✓ 가맹점' : '가맹점 선택'}
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {visible.length === 0 && <tr><td colSpan={5} className="py-12 text-center text-gray-300 font-bold">검색 결과 없음</td></tr>}
+              {visible.length === 0 && (
+                <tr><td colSpan={5} className="py-12 text-center text-gray-300 font-bold">검색 결과 없음</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -1188,9 +1091,11 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
    메인 컴포넌트
 ══════════════════════════════════════════════ */
 const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
-  const isAdmin   = user.role === 'admin' || user.id.toLowerCase() === 'admin';
+  const isAdmin   = user.role === 'admin' || user.role === 'manager';
   const canAccess = isAdmin || !!user.isFranchise;
-  const [activeTab, setActiveTab] = useState<FranchiseTab>(isAdmin ? 'members' : 'revenue');
+
+  const defaultTab: FranchiseTab = isAdmin ? 'members' : 'subscription';
+  const [activeTab, setActiveTab] = useState<FranchiseTab>(defaultTab);
 
   if (!canAccess) {
     return (
@@ -1204,10 +1109,11 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
 
   const tabs: { id: FranchiseTab; label: string; icon: string; adminOnly?: boolean }[] = [
     ...(isAdmin ? [{ id: 'members' as FranchiseTab, label: '가맹점 현황', icon: '🏢', adminOnly: true }] : []),
-    { id: 'revenue',     label: '매출관리',    icon: '📊' },
-    { id: 'manuscripts', label: '원고시트',     icon: '📝' },
-    { id: 'convert',     label: '원고시트변환', icon: '🔄' },
-    { id: 'collector',   label: '원고수집기',   icon: '🔍' },
+    { id: 'subscription', label: '구독관리',    icon: '💳' },
+    { id: 'revenue',      label: '매출관리',    icon: '📊' },
+    { id: 'manuscripts',  label: '원고시트',    icon: '📝' },
+    { id: 'collector',    label: '원고수집프로그램',  icon: '🔍' },
+    { id: 'marketing',    label: '마케팅프로그램',  icon: '📣' },
   ];
 
   return (
@@ -1223,11 +1129,12 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         ))}
       </div>
       <div className={activeTab === 'manuscripts' ? 'px-0' : 'px-3 md:px-4 pt-4 md:pt-6'}>
-        {activeTab === 'members'     && isAdmin && <MembersTab members={members} onUpdateUser={onUpdateUser} />}
-        {activeTab === 'revenue'     && <RevenueManagement user={user} />}
-        {activeTab === 'manuscripts' && <ManuscriptSheet userId={user.id} />}
-        {activeTab === 'convert'     && <ConvertTab />}
-        {activeTab === 'collector'   && <CollectorTab />}
+        {activeTab === 'members'      && isAdmin && <MembersTab members={members} onUpdateUser={onUpdateUser} />}
+        {activeTab === 'subscription'              && <SubscriptionTab user={user} />}
+        {activeTab === 'revenue'                   && <RevenueManagement user={user} />}
+        {activeTab === 'manuscripts'               && <ManuscriptSheet userId={user.id} />}
+        {activeTab === 'collector'                 && <CollectorTab />}
+        {activeTab === 'marketing'                 && <MarketingTab user={user} />}
       </div>
     </div>
   );

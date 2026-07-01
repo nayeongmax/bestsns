@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNS 수집 시트</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+    font-size: 11px; background: #fff;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  }
+
+  /* ── 상단 툴바 ── */
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #f0f0f0; border-bottom: 1px solid #ccc;
+    padding: 4px 6px; display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .toolbar button {
+    padding: 3px 9px; font-size: 11px; cursor: pointer;
+    border: 1px solid #999; border-radius: 3px; background: #fff;
+  }
+  .toolbar button:hover { background: #e0e0e0; }
+  .toolbar .title { font-weight: bold; font-size: 13px; margin-right: 6px; }
+  .toolbar select { font-size: 11px; padding: 2px 5px; border: 1px solid #999; border-radius: 3px; }
+  .saved-badge { display: none; color: green; font-size: 10px; }
+  .cloud-badge { display: none; font-size: 10px; }
+  .cloud-badge.ok  { color: #1a73e8; }
+  .cloud-badge.err { color: #c00; }
+
+  /* ── 서식 도구 바 ── */
+  .fmt-bar {
+    background: #f5f5f5; border-bottom: 1px solid #ddd;
+    padding: 3px 6px; display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .fmt-bar button {
+    padding: 2px 7px; font-size: 11px; cursor: pointer;
+    border: 1px solid #bbb; border-radius: 3px; background: #fff;
+  }
+  .fmt-bar button:hover { background: #e0e0e0; }
+  .fmt-bar select { font-size: 11px; padding: 2px 4px; border: 1px solid #bbb; border-radius: 3px; }
+  .fmt-bar label { font-size: 10px; color: #666; }
+  .fmt-bar .fsep { display: inline-block; width: 1px; height: 16px; background: #ccc; margin: 0 2px; vertical-align: middle; }
+  td.cell-focused  { background: #fffde7 !important; box-shadow: inset 0 0 0 2px #ffc107; }
+  td.cell-selected { background: #e8f4fd !important; outline: 2px solid #64b5f6; outline-offset: -2px; }
+  td.cell-va-mid   { vertical-align: middle !important; }
+  td.cell-va-bot   { vertical-align: bottom !important; }
+  td.cell-va-top   { vertical-align: top !important; }
+
+  /* ── 동기화 패널 ── */
+  .sync-panel {
+    display: none; position: fixed; top: 50%; left: 50%; z-index: 9999;
+    transform: translate(-50%, -50%);
+    background: #fff; border: 1px solid #ccc; border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2); padding: 20px 24px; width: 320px;
+  }
+  .sync-panel h3 { font-size: 14px; margin-bottom: 12px; color: #333; }
+  .sync-panel p  { font-size: 11px; color: #666; margin-bottom: 10px; line-height: 1.6; }
+  .sync-panel input {
+    width: 100%; padding: 7px 10px; font-size: 14px; letter-spacing: 3px;
+    border: 2px solid #ccc; border-radius: 5px; text-transform: uppercase;
+    text-align: center; margin-bottom: 8px;
+  }
+  .sync-panel input:focus { border-color: #1a73e8; outline: none; }
+  .sync-panel .sync-btns { display: flex; gap: 6px; }
+  .sync-panel .sync-btns button {
+    flex: 1; padding: 7px; font-size: 12px; cursor: pointer;
+    border: 1px solid #ccc; border-radius: 5px; background: #f5f5f5;
+  }
+  .sync-panel .sync-btns button.primary {
+    background: #1a73e8; color: #fff; border-color: #1a73e8;
+  }
+  .sync-panel .sync-btns button:hover { filter: brightness(0.95); }
+  .sync-panel .sync-status { font-size: 11px; margin-top: 8px; min-height: 16px; text-align: center; }
+  .sync-panel .sync-status.ok  { color: green; }
+  .sync-panel .sync-status.err { color: #c00; }
+  .sync-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 9998;
+  }
+  .sync-code-chip {
+    font-size: 10px; background: #e8f0fe; color: #1a73e8;
+    border: 1px solid #c5d8fb; border-radius: 10px; padding: 2px 8px; cursor: pointer;
+  }
+
+  /* ── 시트 영역 ── */
+  .sheet-wrap { overflow-x: hidden; overflow-y: auto; flex: 1; padding: 4px 0 4px; }
+
+  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  col.col-cat   { width: 5%; }
+  col.col-label { width: 3%; }
+  col.col-main  { width: 23%; }
+  col.col-rlabel{ width: 3%; }
+  col.col-r1    { width: 15%; }
+  col.col-c1    { width: 11%; }
+  col.col-c2    { width: 11%; }
+  col.col-c3    { width: 11%; }
+  col.col-date  { width: 7%; }
+  col.col-link  { width: 11%; }
+
+  td { border: 1px solid #bbb; vertical-align: top; padding: 0; overflow: visible; }
+
+  tr.section-header td {
+    background: #ff0000; color: #fff; font-weight: bold;
+    font-size: 11px; padding: 3px 5px; vertical-align: middle;
+  }
+  tr.sep td { height: 6px; background: #f5deb3; border-color: #ccc; }
+
+  tr.title-row td.cat-cell, tr.content-row td.cat-cell {
+    background: #f2dce4; font-size: 10px; font-weight: bold;
+    text-align: center; vertical-align: middle; padding: 2px; word-break: keep-all;
+  }
+  tr.title-row td.lbl, tr.content-row td.lbl {
+    background: #f2dce4; font-size: 10px; color: #555;
+    padding: 2px 3px; vertical-align: top; white-space: nowrap;
+  }
+  td.rlbl {
+    background: #fff; font-size: 10px; color: #555;
+    padding: 2px 3px; vertical-align: top; white-space: nowrap;
+  }
+  td.comment-cell, td.link-cell, td.date-cell { background: #fff; vertical-align: top; }
+  td.link-cell { font-size: 9px; color: #555; padding: 2px 3px; word-break: break-all; }
+  td.date-cell { font-size: 10px; color: #555; padding: 2px 3px; }
+
+  [contenteditable="true"] {
+    outline: none; min-height: 18px; width: 100%; display: block;
+    padding: 3px 4px; font-size: 11px; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
+    overflow: visible; height: auto;
+  }
+  [contenteditable="true"]:focus { outline: none; }
+  [contenteditable="true"]:empty:before { content: attr(data-ph); color: #ccc; pointer-events: none; }
+  .main-text { min-height: 70px; height: auto; }
+  .comment-text { min-height: 40px; height: auto; }
+  .date-text { min-height: 18px; height: auto; font-size: 10px; color: #666; }
+  .body-div { border-top: 1px dashed #ddd; margin-top: 3px; padding-top: 3px; }
+
+  tr.add-row td { background: #f9f9f9; text-align: center; padding: 4px; }
+  tr.add-row button {
+    font-size: 10px; padding: 2px 8px; cursor: pointer;
+    border: 1px dashed #999; background: #fff; border-radius: 3px;
+  }
+  tr.add-row button:hover { background: #e8f5e9; }
+
+  /* ── 하단 탭 바 ── */
+  .tab-bar {
+    display: flex; align-items: stretch;
+    background: #f1f3f4; border-top: 2px solid #e0e0e0;
+    min-height: 34px; flex-shrink: 0;
+    overflow-x: auto; overflow-y: hidden;
+    user-select: none;
+  }
+  .tab-bar::-webkit-scrollbar { height: 4px; }
+  .tab-bar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+  .tab-actions {
+    display: flex; align-items: center; gap: 2px;
+    padding: 0 6px; border-right: 1px solid #ddd; flex-shrink: 0;
+  }
+  .tab-actions button {
+    width: 26px; height: 26px; border: 1px solid #ccc; border-radius: 3px;
+    background: #fff; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: #444;
+  }
+  .tab-actions button:hover { background: #e8f0fe; }
+
+  .tabs-list { display: flex; align-items: stretch; }
+
+  .tab {
+    display: flex; align-items: center; gap: 4px;
+    padding: 0 14px; border-right: 1px solid #ddd;
+    cursor: pointer; white-space: nowrap; font-size: 12px;
+    color: #444; position: relative; min-width: 80px;
+    background: #f1f3f4; transition: background 0.1s;
+  }
+  .tab:hover { background: #e8eaed; }
+  .tab.active {
+    background: #fff; color: #1a73e8; font-weight: bold;
+    border-top: 2px solid #c0392b; margin-top: -2px;
+    border-bottom: 1px solid #fff;
+  }
+  .tab .tab-name { flex: 1; }
+  .tab .tab-name[contenteditable="true"] { outline: none; padding: 1px 2px; }
+  .tab .tab-name[contenteditable="true"]:focus { background: #e8f0fe; border-radius: 2px; }
+  .tab .tab-del {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: transparent; border: none; cursor: pointer;
+    font-size: 10px; color: #888; display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+  }
+  .tab:hover .tab-del, .tab.active .tab-del { opacity: 1; }
+  .tab .tab-del:hover { background: #f28b82; color: #fff; }
+
+  @media print {
+    .toolbar, .tab-bar { display: none; }
+    [contenteditable] { border: none !important; box-shadow: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="title">📋 SNS 수집 시트</span>
+  <button onclick="addSection()">+ 섹션 추가</button>
+  <button onclick="saveAll()">💾 저장</button>
+  <button onclick="exportCSV()">📤 CSV</button>
+  <button onclick="window.print()">🖨️ 인쇄</button>
+  <button onclick="openSyncPanel()" style="background:#e8f0fe;border-color:#c5d8fb;color:#1a73e8;">☁ 기기 동기화</button>
+  <span id="syncCodeChip" class="sync-code-chip" style="display:none" onclick="openSyncPanel()"></span>
+  <select id="jumpSelect" onchange="jumpToSection(this.value)">
+    <option value="">-- 섹션 이동 --</option>
+  </select>
+  <span class="saved-badge" id="savedBadge">✔ 자동저장됨</span>
+  <span class="cloud-badge" id="cloudBadge"></span>
+</div>
+
+<div class="fmt-bar" id="fmtBar">
+  <label>크기</label>
+  <select id="fmtSize" onchange="applyFontSize(this.value)">
+    <option value="">-</option>
+    <option value="8">8</option><option value="9">9</option><option value="10">10</option>
+    <option value="11">11</option><option value="12">12</option><option value="13">13</option>
+    <option value="14">14</option><option value="16">16</option><option value="18">18</option>
+    <option value="20">20</option><option value="24">24</option>
+  </select>
+  <label style="margin-left:3px">색상</label>
+  <input type="color" id="fmtColor" value="#000000" title="글자 색상" oninput="applyFontColor(this.value)" onchange="applyFontColor(this.value)">
+  <span class="fsep"></span>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('left')" title="왼쪽 정렬">≡왼</button>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('center')" title="가운데 정렬">≡중</button>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('right')" title="오른쪽 정렬">≡오</button>
+  <span class="fsep"></span>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('top')" title="위 정렬">↑위</button>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('middle')" title="가운데 정렬">↕중</button>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('bottom')" title="아래 정렬">↓아</button>
+</div>
+
+<!-- 동기화 오버레이 & 패널 -->
+<div class="sync-overlay" id="syncOverlay" onclick="closeSyncPanel()"></div>
+<div class="sync-panel" id="syncPanel">
+  <h3>☁ 기기 간 동기화</h3>
+  <p>동기화 코드를 설정하면 어느 기기에서든<br>같은 코드로 작업 내용을 이어서 할 수 있습니다.</p>
+  <input id="syncCodeInput" type="text" maxlength="16" placeholder="코드 입력 (예: MY-WORK-01)" />
+  <div class="sync-btns">
+    <button onclick="closeSyncPanel()">취소</button>
+    <button class="primary" onclick="syncUpload()">☁ 업로드 (저장)</button>
+    <button class="primary" style="background:#34a853;border-color:#34a853;" onclick="syncDownload()">⬇ 불러오기</button>
+  </div>
+  <div class="sync-status" id="syncStatus"></div>
+</div>
+
+<div class="sheet-wrap">
+  <table id="mainTable">
+    <colgroup>
+      <col class="col-cat"><col class="col-label"><col class="col-main">
+      <col class="col-rlabel"><col class="col-r1">
+      <col class="col-c1"><col class="col-c2"><col class="col-c3">
+      <col class="col-date"><col class="col-link">
+    </colgroup>
+    <tbody id="sheetBody"></tbody>
+  </table>
+</div>
+
+<!-- 하단 탭 바 -->
+<div class="tab-bar">
+  <div class="tab-actions">
+    <button onclick="addTab()" title="새 탭 추가">+</button>
+    <button onclick="copyTab()" title="현재 탭 복사">⧉</button>
+  </div>
+  <div class="tabs-list" id="tabsList"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// 기본 섹션 데이터
+// ═══════════════════════════════════════════════
+const defaultSections = [
+  {
+    id: 'witwork', name: '위트워크 10개',
+    tags: '#위탁교육 #직업계고 #검정고시 #학업중단 #대안학교 #특성화고 #미용위탁 #요리위탁 #게임디자인 #정보보안 #바리스타자격증 #3D프린터 #항공서비스학과 #실무체험 #자격증준비 #위탁학원추천 #진로교육 #위탁수업 #직업훈련 #청소년교육 #위탁진로 #위탁프로그램 #위트워크 #위탁입학',
+    metaHeader: '수만휘 : 위탁검색시 ~17페이지\n2021.12.29.',
+    entries: [
+      { cat:'미용', title:'미용학과 졸업하면 화장품 브랜드 교육팀도 많이 가나요', body:'미용실 취업만 생각했는데\n브랜드 본사 교육팀으로 가는 선배들도 종종 보이더라구요\n신제품 사용법 교육하거나 세미나 진행하는 업무라고 합니다\n아모스나 밀본 같은 브랜드 교육팀 이야기도 들었고요\n현장 경험 쌓고 넘어가는 경우가 많다고 하는데\n디자이너 경력 몇 년 정도 있어야 유리한지 궁금하네요ㅎㅎ', rtitle:'말 잘하고 교육 좋아하는 성향이면 잘 맞는다고 들었습니다ㅎㅎ 브랜드 강사 하시는데 전국 돌아다니시더라구요ㅋㅋ', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' },
+      { cat:'미용', title:'친구는 웨딩메이크업 쪽 준비하던데', body:'웨딩샵 알아보는 친구 이야기 들어보니까\n메이크업뿐 아니라 헤어 연출도 같이 보는 곳 많다고 하더라구요\n특히 주말 성수기에는 예약이 엄청 몰린다고 하고요\n신부보다 혼주 메이크업 비중이 더 큰 날도 있다고 들었습니다\n웨딩 쪽은 포트폴리오가 진짜 중요하다는 이야기를 자주 듣네요ㅎㅎ', rtitle:'알바 다녀봤는데 웨딩은 새벽부터 준비해요~ 결과물이 사진으로 오래 남으니까 더 신경 쓴다더라구요ㅠㅠ', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' },
+      { cat:'요리', title:'친구는 푸드스타일리스트 쪽으로 간다는데', body:'요리만 잘하면 되는 줄 알았는데\n잡지나 광고 촬영 음식 연출하는 직업도 있다고 합니다\n실제로 레시피보다 연출 감각이 중요한 경우도 많다고 하고요\n요즘은 SNS 콘텐츠 촬영 때문에 관련 수요도 있는 것 같더라구요\n조리 전공 활용 범위가 생각보다 다양해서 신기했습니다', rtitle:'음식도 보여지는 게 중요한 시대인 것 같습니다ㅋㅋ 광고 음식 사진 보면 진짜 예술 작품 같더라구요ㅎㅎ', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' },
+      { cat:'요리', title:'단체급식 메뉴개발도 경쟁력 있겠네요', body:'학교 선배 중에 급식업체 메뉴개발팀 들어간 분이 있는데\n매달 새로운 메뉴 구성 회의를 한다고 합니다\n학생식당이나 기업 구내식당도 메뉴 만족도 조사 많이 본다고 하고요\n최근에는 고단백 식단이나 저염식 메뉴 비중도 늘어나는 분위기라고 합니다\n조리 실력 외에도 영양 지식이 중요하다는 이야기가 인상적이었습니다', rtitle:'메뉴개발은 트렌드도 계속 봐야 해서 쉽지 않을 것 같습니다ㅋㅋ 요즘 회사 구내식당 퀄리티 진짜 좋아졌더라구요ㅎㅎ', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' },
+      { cat:'게임', title:'게임학과는 게임 데이터 분석 직무도 있더라구요', body:'게임회사 채용공고 보다 보니까\n유저 데이터를 분석하는 직무도 꽤 보였습니다\n어떤 콘텐츠에서 이탈하는지 통계로 확인한다고 하고요\n게임 기획 수정이나 이벤트 운영에도 활용된다고 들었습니다\n게임 좋아하는 것과 별개로 숫자 감각도 중요해 보이더라구요', rtitle:'유저 행동 분석하는 거 은근 재밌어 보였습니다ㅋㅋ 게임회사 데이터 직군 수요 많아진 것 같아요ㅎㅎ', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' },
+      { cat:'정비', title:'자동차정비학과는 판금도장 쪽 연봉 어떤가요', body:'정비만 생각했는데\n판금도장 전문으로 가는 선배들도 꽤 있더라구요\n사고차 복원이나 도장 작업 위주로 한다고 합니다\n기술 숙련도에 따라 수입 차이도 크다는 이야기를 들었고요\n생각보다 전문 기술직 느낌이 강해 보였습니다', rtitle:'판금 잘하는 분들은 예약 밀린다는 얘기도 들었습니다ㅎㅎ 색 맞추는 작업이 진짜 어렵다던데요ㄷㄷ', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' },
+      { cat:'기타', title:'건축학과는 건축기사 취득 시기 언제가 좋을까요', body:'졸업 전부터 준비하는 사람도 있고 취업 후 준비하는 사람도 있더라구요\n공기업이나 건설사 지원할 때 가산점 이야기 나오는 경우도 있고요\n실무 경험 쌓고 공부하는 게 낫다는 의견도 있었습니다\n준비해보신 분들은 언제 시작하는 게 가장 효율적이었는지 궁금하네요', rtitle:'학교 다닐 때 미리 준비하는 친구들도 꽤 보이더라구요ㅋㅋ 건축기사는 확실히 있으면 도움 된다는 말 많이 들었습니다ㅎㅎ', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' },
+    ]
+  },
+  {
+    id: 'casino', name: '카지노이야기 11개 중 7개',
+    tags: '#카지노이야기 #슬롯 #온라인사이트 #강원랜드 #강원랜드호텔 #강원랜드후기 #강원랜드위치 #강원랜드그랜드호텔 #강원랜드컨벤션타워 #강원랜드시간 #강원랜드여행 #강원랜드게임 #강원랜드호텔식당 #강원랜드호텔뷔페 #강랜 #강랜여행 #하이원리조트 #하이원 #하이원여행',
+    metaHeader: '카지노이야기 : https://cafe.naver.com/f-e/cafes/22765223/menus/0?page=379 2025.08.18~\n모여라강랜 : https://cafe.naver.com/f-e/cafes/25683718/menus/0?page=567 2026.01.20~',
+    entries: [
+      { cat:'해외원정', title:'클락이랑 마닐라 어디가 더 괜찮을까요?', body:'클락이랑 마닐라 둘 중 어디가 더 괜찮은지 고민 중입니다\n오프라인도 한번 가보려고 하는데\n분위기나 장단점이 하나도 감이 안 오네요\n처음 가는 사람 기준이면 어디가 더 편한지 궁금합니다\n다녀오신 분들 추천 부탁드려요', rtitle:'클락 마닐라 어디가 좋나요??? 요새는 클락많이가는듯', rbody:'클락 마닐라 어디가 좋나요??? 오프라인 저도 함 갈려고합니다\n근데 어디가 괜찮은지 분위기가어떤지부터 하나도모르겠네요 ㅠㅠㅠ', c1:'요새는 클락많이가는듯', c2:'둘다 비슷하지 않은감', c3:'둘다 얘기는 많더라구요 ㅎㅎ', link:'https://cafe.naver.com/f-e/cafes/22765223/articles/8451', date:'2025.08.21' },
+      { cat:'온라인카지노', title:'돈 잃는 건 왜 이렇게 빠른지...', body:'진짜 돈 잃는 속도는 엄청 빠르네요\n100만원 사라지는 건 순식간인데\n버는 건 왜 이렇게 힘든지 모르겠습니다', rtitle:'진짜 뭐이리 쉽노? 고생하셨습니다...', rbody:'진짜 뭐이리 쉽노???\n100만원 날리는거 말이야ㅡㅡ', c1:'고생하셨습니다...', c2:'힘내세요.ㅠ', c3:'ㄷㄷ 좀 크긴하네', link:'https://cafe.naver.com/f-e/cafes/22765223/articles/8448', date:'2025.08.21' },
+      { cat:'강원랜드', title:'린카 생각보다 괜찮네요', body:'컨벤션호텔 쪽 린카 다녀왔는데\n생각보다 만족스러웠습니다\n음식도 괜찮고 가격도 크게 부담 없더라구요', rtitle:'와~ 이렇게 비교가된다고? 일식집 먹을만한가보네요', rbody:'새로생긴 컨벤션호텔쪽 린카 괜찬네요\n맛도 괜찮고 가격도 이정도면 무난하다?', c1:'일식집 먹을만한가보네요', c2:'저도 들려봐야겟습니다ㅎ', c3:'', link:'https://cafe.naver.com/f-e/cafes/25683718/articles/63978', date:'2026.01.24' },
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════
+// 탭 상태
+// ═══════════════════════════════════════════════
+let tabs = [];        // [{ id, name, sections }]
+let activeTabId = '';
+
+function todayLabel() {
+  const d = new Date();
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+function makeTabId() { return 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }
+
+function initTabs() { /* init()으로 대체됨 */ }
+
+function saveAll() {
+  autoSave();
+}
+
+// 현재 DOM → 현재 탭 데이터 동기화
+function collectCurrentTab() {
+  const tab = tabs.find(t => t.id === activeTabId);
+  if (!tab) return;
+  tab.sections = gatherSections();
+}
+
+// ═══════════════════════════════════════════════
+// 탭 바 렌더
+// ═══════════════════════════════════════════════
+function renderTabBar() {
+  const list = document.getElementById('tabsList');
+  list.innerHTML = '';
+  tabs.forEach(tab => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+    el.dataset.tabId = tab.id;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'tab-name';
+    nameSpan.textContent = tab.name;
+    // 더블클릭으로 이름 편집
+    nameSpan.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      nameSpan.contentEditable = 'true';
+      nameSpan.focus();
+      const range = document.createRange();
+      range.selectNodeContents(nameSpan);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+    });
+    nameSpan.addEventListener('blur', () => {
+      nameSpan.contentEditable = 'false';
+      tab.name = nameSpan.textContent.trim() || tab.name;
+      saveAll();
+    });
+    nameSpan.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); nameSpan.blur(); }
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'tab-del';
+    delBtn.textContent = '✕';
+    delBtn.title = '탭 삭제';
+    delBtn.addEventListener('click', e => { e.stopPropagation(); deleteTab(tab.id); });
+
+    el.appendChild(nameSpan);
+    el.appendChild(delBtn);
+    el.addEventListener('click', () => switchTab(tab.id));
+    list.appendChild(el);
+  });
+}
+
+function switchTab(tabId, doCollect = true) {
+  if (doCollect && activeTabId) collectCurrentTab();
+  activeTabId = tabId;
+  const tab = tabs.find(t => t.id === tabId);
+  if (!tab) return;
+  renderTabBar();
+  loadSections(tab.sections);
+}
+
+function addTab() {
+  collectCurrentTab();
+  const label = todayLabel();
+  // 이미 같은 이름 있으면 번호 붙이기
+  let name = label;
+  let cnt = 2;
+  while (tabs.find(t => t.name === name)) { name = `${label}(${cnt++})`; }
+  const id = makeTabId();
+  tabs.push({ id, name, sections: JSON.parse(JSON.stringify(defaultSections)) });
+  activeTabId = id;
+  renderTabBar();
+  loadSections(tabs.find(t=>t.id===id).sections);
+  saveAll();
+}
+
+function copyTab() {
+  collectCurrentTab();
+  const src = tabs.find(t => t.id === activeTabId);
+  if (!src) return;
+  const id = makeTabId();
+  const name = src.name + ' 사본';
+  tabs.push({ id, name, sections: JSON.parse(JSON.stringify(src.sections)) });
+  activeTabId = id;
+  renderTabBar();
+  loadSections(tabs.find(t=>t.id===id).sections);
+  saveAll();
+}
+
+function deleteTab(tabId) {
+  if (tabs.length <= 1) { alert('마지막 탭은 삭제할 수 없습니다.'); return; }
+  if (!confirm('이 탭을 삭제하시겠습니까?')) return;
+  const idx = tabs.findIndex(t => t.id === tabId);
+  tabs.splice(idx, 1);
+  if (activeTabId === tabId) {
+    activeTabId = tabs[Math.max(0, idx-1)].id;
+  }
+  renderTabBar();
+  switchTab(activeTabId, false);
+  saveAll();
+}
+
+// ═══════════════════════════════════════════════
+// 시트 렌더
+// ═══════════════════════════════════════════════
+let sections = [];
+
+// ─── 서식 도구 ────────────────────────────────────────────────────────────────
+let activeDiv = null;
+let activeTd  = null;
+let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
+let _pasteTargetTd = null;     // 붙여넣기 대상 셀
+
+function holdFocus(e) { e.preventDefault(); }
+
+function applyFontSize(val) {
+  if (!val) return;
+  // 편집 중이면 activeDiv, 선택모드면 selectedCells
+  const targets = document.activeElement?.isContentEditable && activeDiv
+    ? [activeDiv]
+    : [...selectedCells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
+  targets.forEach(d => { d.style.fontSize = val + 'px'; });
+  if (targets.length) debouncedSave();
+}
+function applyFontColor(val) {
+  if (!activeDiv) return;
+  activeDiv.style.color = val;
+  debouncedSave();
+}
+function applyHAlign(align) {
+  const targets = document.activeElement?.isContentEditable && activeDiv
+    ? [activeDiv]
+    : [...selectedCells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
+  targets.forEach(d => { d.style.textAlign = align; });
+  if (targets.length) debouncedSave();
+}
+function applyVAlign(align) {
+  const tds = activeTd ? [activeTd] : [...selectedCells];
+  tds.forEach(td => {
+    td.classList.remove('cell-va-top', 'cell-va-mid', 'cell-va-bot');
+    td.style.verticalAlign = '';
+    if (align === 'top')    td.classList.add('cell-va-top');
+    else if (align === 'middle') td.classList.add('cell-va-mid');
+    else if (align === 'bottom') td.classList.add('cell-va-bot');
+    td.dataset.va = align;
+  });
+  if (tds.length) debouncedSave();
+}
+
+
+function restoreVA(td, va) {
+  if (!va) return;
+  td.classList.remove('cell-va-top','cell-va-mid','cell-va-bot');
+  if (va === 'top')    td.classList.add('cell-va-top');
+  else if (va === 'middle') td.classList.add('cell-va-mid');
+  else if (va === 'bottom') td.classList.add('cell-va-bot');
+  td.dataset.va = va;
+}
+
+function loadSections(data) {
+  sections = JSON.parse(JSON.stringify(data));
+  const tbody = document.getElementById('sheetBody');
+  tbody.innerHTML = '';
+  updateJumpSelect();
+  sections.forEach((sec, i) => renderSection(sec, i));
+}
+
+function makeEditable(ph='') {
+  const div = document.createElement('div');
+  div.contentEditable = 'true';
+  div.setAttribute('data-ph', ph);
+  div.spellcheck = false;
+  return div;
+}
+
+function renderSection(sec) {
+  const tbody = document.getElementById('sheetBody');
+  const sectionId = `section-${sec.id}`;
+
+  const hrow = document.createElement('tr');
+  hrow.className = 'section-header';
+  hrow.id = sectionId;
+
+  const nameCell = document.createElement('td');
+  nameCell.colSpan = 3;
+  nameCell.style.cssText = 'background:#ff0000;color:#fff;font-weight:bold;';
+  const nameDiv = makeEditable('섹션명');
+  nameDiv.style.color = '#fff';
+  nameDiv.textContent = sec.name;
+  nameCell.appendChild(nameDiv);
+  if (sec.tags) {
+    const tagDiv = document.createElement('div');
+    tagDiv.style.cssText = 'font-size:9px;margin-top:3px;opacity:0.9;color:#fff;';
+    tagDiv.textContent = sec.tags;
+    nameCell.appendChild(tagDiv);
+  }
+  hrow.appendChild(nameCell);
+
+  const emptyHdr = document.createElement('td');
+  emptyHdr.colSpan = 2; emptyHdr.style.background = '#ff0000';
+  hrow.appendChild(emptyHdr);
+
+  ['댓글1','댓글2','댓글3'].forEach(lbl => {
+    const c = document.createElement('td');
+    c.style.cssText = 'background:#ff0000;color:#fff;font-weight:bold;text-align:center;vertical-align:middle;';
+    c.textContent = lbl; hrow.appendChild(c);
+  });
+
+  const metaCell = document.createElement('td');
+  metaCell.colSpan = 2;
+  metaCell.style.background = '#ff0000';
+  const metaDiv = makeEditable('메타/링크');
+  metaDiv.style.cssText = 'font-size:9px;color:#fff;';
+  metaDiv.textContent = sec.metaHeader || '';
+  metaCell.appendChild(metaDiv);
+
+  const btnDiv = document.createElement('div');
+  btnDiv.style.marginTop = '4px';
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '+ 행 추가';
+  addBtn.style.cssText = 'font-size:9px;padding:1px 5px;cursor:pointer;background:#fff;color:#333;border:1px solid #ccc;border-radius:2px;margin-right:3px;';
+  addBtn.onclick = () => addEntry(sec.id);
+  const delBtn = document.createElement('button');
+  delBtn.textContent = '섹션 삭제';
+  delBtn.style.cssText = 'font-size:9px;padding:1px 5px;cursor:pointer;background:#fdd;color:#900;border:1px solid #ccc;border-radius:2px;';
+  delBtn.onclick = () => deleteSection(sec.id);
+  btnDiv.appendChild(addBtn); btnDiv.appendChild(delBtn);
+  metaCell.appendChild(btnDiv);
+  hrow.appendChild(metaCell);
+  tbody.appendChild(hrow);
+
+  sec.entries.forEach((entry, ei) => renderEntry(sec.id, entry, ei));
+
+  const addRow = document.createElement('tr');
+  addRow.className = 'add-row'; addRow.id = `add-row-${sec.id}`;
+  const addTd = document.createElement('td'); addTd.colSpan = 10;
+  const ab = document.createElement('button');
+  ab.textContent = `+ "${sec.name}" 에 행 추가`;
+  ab.onclick = () => addEntry(sec.id);
+  addTd.appendChild(ab); addRow.appendChild(addTd);
+  tbody.appendChild(addRow);
+}
+
+function renderEntry(secId, entry, ei) {
+  const tbody = document.getElementById('sheetBody');
+  const insertBefore = document.getElementById(`add-row-${secId}`) || null;
+
+  const trow = document.createElement('tr');
+  trow.className = 'title-row';
+  trow.dataset.secId = secId; trow.dataset.entryIdx = ei;
+
+  const catTd = document.createElement('td');
+  catTd.className = 'cat-cell'; catTd.rowSpan = 2;
+  const catDiv = makeEditable('분류');
+  catDiv.style.textAlign = 'center'; catDiv.textContent = entry.cat || '';
+  catTd.appendChild(catDiv);
+  const delBtn = document.createElement('button');
+  delBtn.textContent = '✕'; delBtn.title = '행 삭제';
+  delBtn.style.cssText = 'font-size:8px;padding:0 2px;cursor:pointer;background:#fdd;border:1px solid #ccc;border-radius:2px;display:block;margin:2px auto 0;';
+  delBtn.onclick = () => deleteEntry(trow);
+  catTd.appendChild(delBtn);
+  trow.appendChild(catTd);
+
+  const lbl1 = document.createElement('td'); lbl1.className = 'lbl'; lbl1.textContent = '제목:';
+  trow.appendChild(lbl1);
+
+  const mainTd = document.createElement('td');
+  mainTd.rowSpan = 2;
+  const mainDiv = makeEditable('제목 입력'); mainDiv.className = 'main-text';
+  if (entry.title) mainDiv.innerHTML = entry.title;
+  if (entry.ts) mainDiv.setAttribute('style', entry.ts);
+  if (entry.tva) restoreVA(mainTd, entry.tva);
+  mainTd.appendChild(mainDiv);
+  const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text body-div';
+  if (entry.body) bodyDiv.innerHTML = entry.body;
+  if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
+  mainTd.appendChild(bodyDiv);
+  trow.appendChild(mainTd);
+
+  const rlbl1 = document.createElement('td'); rlbl1.className = 'rlbl'; rlbl1.textContent = '제목:';
+  trow.appendChild(rlbl1);
+
+  const rtitleTd = document.createElement('td');
+  rtitleTd.rowSpan = 2;
+  const rtitleDiv = makeEditable('제목 입력'); rtitleDiv.className = 'comment-text';
+  if (entry.rtitle) rtitleDiv.innerHTML = entry.rtitle;
+  if (entry.rs) rtitleDiv.setAttribute('style', entry.rs);
+  if (entry.rva) restoreVA(rtitleTd, entry.rva);
+  rtitleTd.appendChild(rtitleDiv);
+  const rbodyDiv = makeEditable('내용 입력'); rbodyDiv.className = 'comment-text body-div';
+  if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
+  if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
+  rtitleTd.appendChild(rbodyDiv);
+  trow.appendChild(rtitleTd);
+
+  ['c1','c2','c3'].forEach((key) => {
+    const td = document.createElement('td'); td.className = 'comment-cell';
+    const d = makeEditable('댓글'); d.className = 'comment-text';
+    const sKey = key + 's', vaKey = key + 'va';
+    if (entry[key]) d.innerHTML = entry[key];
+    if (entry[sKey]) d.setAttribute('style', entry[sKey]);
+    if (entry[vaKey]) td.style.verticalAlign = entry[vaKey];
+    td.appendChild(d); trow.appendChild(td);
+  });
+
+  const dateTd = document.createElement('td');
+  dateTd.className = 'date-cell'; dateTd.rowSpan = 2;
+  const dateDiv = makeEditable('날짜'); dateDiv.className = 'date-text';
+  dateDiv.textContent = entry.date || ''; dateTd.appendChild(dateDiv);
+  trow.appendChild(dateTd);
+
+  const linkTd = document.createElement('td');
+  linkTd.className = 'link-cell'; linkTd.rowSpan = 2;
+  const linkDiv = makeEditable('링크'); linkDiv.style.fontSize = '9px';
+  linkDiv.textContent = entry.link || ''; linkTd.appendChild(linkDiv);
+  trow.appendChild(linkTd);
+
+  const crow = document.createElement('tr');
+  crow.className = 'content-row';
+  crow.dataset.secId = secId; crow.dataset.entryIdx = ei;
+
+  const lbl2 = document.createElement('td'); lbl2.className = 'lbl'; lbl2.textContent = '내용:';
+  crow.appendChild(lbl2);
+
+  const rlbl2 = document.createElement('td'); rlbl2.className = 'rlbl'; rlbl2.textContent = '내용:';
+  crow.appendChild(rlbl2);
+
+  for (let i=0;i<3;i++) {
+    const td = document.createElement('td'); td.style.background='#fff'; crow.appendChild(td);
+  }
+
+  const srow = document.createElement('tr'); srow.className = 'sep';
+  for (let i=0;i<10;i++) srow.appendChild(document.createElement('td'));
+
+  if (insertBefore) {
+    tbody.insertBefore(trow, insertBefore);
+    tbody.insertBefore(crow, insertBefore);
+    tbody.insertBefore(srow, insertBefore);
+  } else {
+    tbody.appendChild(trow); tbody.appendChild(crow); tbody.appendChild(srow);
+  }
+}
+
+function addEntry(secId) {
+  const sec = sections.find(s => s.id === secId); if (!sec) return;
+  const e = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' };
+  sec.entries.push(e);
+  renderEntry(secId, e, sec.entries.length - 1);
+}
+
+function deleteEntry(titleRow) {
+  if (!confirm('이 행을 삭제하시겠습니까?')) return;
+  const n1 = titleRow.nextSibling, n2 = n1?.nextSibling;
+  titleRow.remove();
+  if (n1?.classList?.contains('content-row') || n1?.classList?.contains('sep')) n1.remove();
+  if (n2?.classList?.contains('sep')) n2.remove();
+}
+
+function deleteSection(secId) {
+  if (!confirm('이 섹션 전체를 삭제하시겠습니까?')) return;
+  sections = sections.filter(s => s.id !== secId);
+  document.getElementById('sheetBody').innerHTML = '';
+  updateJumpSelect();
+  sections.forEach(sec => renderSection(sec));
+  // add-row 재생성
+  sections.forEach(sec => {
+    if (!document.getElementById(`add-row-${sec.id}`)) {
+      const addRow = document.createElement('tr');
+      addRow.className = 'add-row'; addRow.id = `add-row-${sec.id}`;
+      const td = document.createElement('td'); td.colSpan = 10;
+      const btn = document.createElement('button');
+      btn.textContent = `+ "${sec.name}" 에 행 추가`;
+      btn.onclick = () => addEntry(sec.id);
+      td.appendChild(btn); addRow.appendChild(td);
+      document.getElementById('sheetBody').appendChild(addRow);
+    }
+  });
+}
+
+function addSection() {
+  const name = prompt('새 섹션 이름:', '새 섹션'); if (!name) return;
+  const id = 'sec_' + Date.now();
+  const newSec = { id, name, tags:'', metaHeader:'', entries:[
+    { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' }
+  ]};
+  sections.push(newSec);
+  updateJumpSelect();
+  renderSection(newSec);
+  document.getElementById(`section-${id}`)?.scrollIntoView({behavior:'smooth'});
+}
+
+function updateJumpSelect() {
+  const sel = document.getElementById('jumpSelect');
+  sel.innerHTML = '<option value="">-- 섹션 이동 --</option>';
+  sections.forEach(sec => {
+    const opt = document.createElement('option');
+    opt.value = `section-${sec.id}`; opt.textContent = sec.name;
+    sel.appendChild(opt);
+  });
+}
+
+function jumpToSection(id) {
+  if (!id) return;
+  document.getElementById(id)?.scrollIntoView({behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════
+// DOM → 데이터 수집
+// ═══════════════════════════════════════════════
+function gatherSections() {
+  const result = [];
+  sections.forEach(sec => {
+    const hrow = document.getElementById(`section-${sec.id}`);
+    const nameDiv = hrow?.querySelector('div[contenteditable]');
+    const metaTds = hrow?.querySelectorAll('td');
+    const metaDiv = metaTds ? metaTds[metaTds.length-1]?.querySelector('div[contenteditable]') : null;
+
+    const entries = [];
+    const titleRows = [...document.querySelectorAll(`tr.title-row[data-sec-id="${sec.id}"]`)];
+    titleRows.forEach(trow => {
+      const ds = [...trow.querySelectorAll('[contenteditable]')];
+      const gs = d => d?.getAttribute('style')||'';
+      const gva = d => d?.closest('td')?.dataset.va||'';
+      // ds indices after cell merge:
+      // 0=catDiv 1=mainDiv 2=bodyDiv 3=rtitleDiv 4=rbodyDiv 5=c1 6=c2 7=c3 8=date 9=link
+      entries.push({
+        cat:   ds[0]?.textContent||'',
+        title: ds[1]?.innerHTML||'',  ts:  gs(ds[1]),  tva:  gva(ds[1]),
+        body:  ds[2]?.innerHTML||'',  bs:  gs(ds[2]),
+        rtitle:ds[3]?.innerHTML||'',  rs:  gs(ds[3]),  rva:  gva(ds[3]),
+        rbody: ds[4]?.innerHTML||'',  rbs: gs(ds[4]),
+        c1:    ds[5]?.innerHTML||'',  c1s: gs(ds[5]),  c1va: gva(ds[5]),
+        c2:    ds[6]?.innerHTML||'',  c2s: gs(ds[6]),  c2va: gva(ds[6]),
+        c3:    ds[7]?.innerHTML||'',  c3s: gs(ds[7]),  c3va: gva(ds[7]),
+        date:  ds[8]?.textContent||'',
+        link:  ds[9]?.textContent||'',
+      });
+    });
+
+    result.push({
+      id: sec.id,
+      name: nameDiv?.textContent || sec.name,
+      tags: sec.tags || '',
+      metaHeader: metaDiv?.textContent || sec.metaHeader || '',
+      entries
+    });
+  });
+  return result;
+}
+
+// CSV
+function exportCSV() {
+  collectCurrentTab();
+  const tab = tabs.find(t=>t.id===activeTabId);
+  if (!tab) return;
+  let csv = '﻿탭,섹션,분류,제목,내용,댓글제목,댓글내용,댓글1,댓글2,댓글3,날짜,링크\n';
+  tab.sections.forEach(sec => {
+    sec.entries.forEach(e => {
+      const row = [tab.name, sec.name, e.cat, e.title, e.body, e.rtitle, e.rbody, e.c1, e.c2, e.c3, e.date, e.link];
+      csv += row.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(',') + '\n';
+    });
+  });
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='sns_sheet.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════
+// 자동저장 (입력 즉시 + 주기적 백업)
+// ═══════════════════════════════════════════════
+let _saveTimer = null;
+
+function autoSave() {
+  collectCurrentTab();
+  const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
+  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId }));
+  // 저장 인디케이터 살짝 표시
+  const badge = document.getElementById('savedBadge');
+  badge.textContent = '✔ 자동저장됨';
+  badge.style.display = 'inline';
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => { badge.style.display = 'none'; }, 1500);
+}
+
+function debouncedSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(autoSave, 800); // 입력 멈춘 뒤 0.8초 후 저장
+}
+
+// 시트 내 모든 입력에 반응
+document.getElementById('sheetBody').addEventListener('input', debouncedSave);
+
+// ─── 엑셀 스타일 셀 선택 ────────────────────────────────────────────────────
+function clearSelection() {
+  selectedCells.forEach(td => td.classList.remove('cell-selected'));
+  selectedCells.clear();
+}
+
+const sheetBodyEl = document.getElementById('sheetBody');
+
+// 더블클릭 → 편집모드 진입
+sheetBodyEl.addEventListener('dblclick', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (div) { div.focus(); }
+});
+
+// 싱글클릭 → 선택모드 (편집 안 함)
+sheetBodyEl.addEventListener('mousedown', e => {
+  if (e.target.closest('tr.section-header')) return;
+  if (e.target.closest('button')) return;       // 삭제버튼 등 무시
+  const td = e.target.closest('td');
+  if (!td || !td.querySelector('[contenteditable]')) return;
+
+  // 더블클릭은 편집모드: 선택 간섭 안 함
+  if (e.detail >= 2) { return; }
+
+  // 현재 편집 중이면 blur 후 선택 전환
+  if (document.activeElement?.isContentEditable) {
+    document.activeElement.blur();
+  }
+
+  // 선택 업데이트
+  if (!e.shiftKey) clearSelection();
+  selectedCells.add(td);
+  td.classList.add('cell-selected');
+  activeDiv = td.querySelector('[contenteditable]');
+  activeTd = td;
+
+  e.preventDefault();   // contenteditable 자동 포커스 방지
+}, true);
+
+// 드래그로 다중 셀 선택
+let _isDragging = false;
+sheetBodyEl.addEventListener('mousemove', e => {
+  if (!_isDragging) return;
+  if (e.target.closest('tr.section-header')) return;
+  const td = e.target.closest('td');
+  if (!td || !td.querySelector('[contenteditable]')) return;
+  if (!selectedCells.has(td)) {
+    selectedCells.add(td);
+    td.classList.add('cell-selected');
+    activeDiv = td.querySelector('[contenteditable]');
+    activeTd = td;
+  }
+});
+sheetBodyEl.addEventListener('mousedown', e => {
+  if (e.target.closest('tr.section-header') || e.target.closest('button')) return;
+  if (e.target.closest('td')?.querySelector('[contenteditable]')) _isDragging = true;
+}, true);
+document.addEventListener('mouseup', () => { _isDragging = false; });
+
+// 셀 포커스 추적 — 편집모드 진입 시
+sheetBodyEl.addEventListener('focusin', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (!div) return;
+  clearSelection();
+  if (activeDiv && activeDiv !== div) {
+    const prevTd = activeDiv.closest('td');
+    if (prevTd) prevTd.classList.remove('cell-focused');
+  }
+  activeDiv = div;
+  activeTd = div.closest('td');
+  if (activeTd && !div.closest('tr.section-header')) {
+    activeTd.classList.add('cell-focused');
+  }
+});
+sheetBodyEl.addEventListener('focusout', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (!div) return;
+  const td = div.closest('td');
+  if (td) {
+    td.classList.remove('cell-focused');
+    // 편집 종료 후 해당 셀 선택 상태로 유지
+    if (!div.closest('tr.section-header')) {
+      selectedCells.add(td);
+      td.classList.add('cell-selected');
+    }
+  }
+});
+
+// 키보드 단축키
+document.addEventListener('keydown', e => {
+  const inEdit = document.activeElement?.isContentEditable;
+
+  // Escape → 편집모드 탈출, 선택 유지
+  if (e.key === 'Escape' && inEdit) {
+    document.activeElement.blur();
+    e.preventDefault();
+    return;
+  }
+
+  if (!inEdit) {
+    // Delete / Backspace → 선택한 셀 내용 전체 삭제
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedCells.size > 0) {
+        selectedCells.forEach(td => {
+          td.querySelectorAll('[contenteditable]').forEach(d => { d.innerHTML = ''; });
+        });
+        debouncedSave();
+        e.preventDefault();
+      }
+      return;
+    }
+    // F2 → 선택한 셀 편집모드
+    if (e.key === 'F2' && selectedCells.size === 1) {
+      const td = [...selectedCells][0];
+      const div = td.querySelector('[contenteditable]');
+      if (div) { div.focus(); const r = document.createRange(); r.selectNodeContents(div); r.collapse(false); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+      e.preventDefault();
+      return;
+    }
+    // Ctrl+V / Ctrl+Shift+V / Cmd+V → 선택셀에 붙여넣기
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && selectedCells.size > 0) {
+      _pasteTargetTd = [...selectedCells][0];
+      const hp = document.getElementById('hiddenPaste');
+      hp.innerHTML = '';
+      hp.focus();
+      // Don't preventDefault — let browser fire paste event on hiddenPaste
+      return;
+    }
+
+    // 일반 문자 입력 → 선택셀 내용 지우고 편집모드
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && selectedCells.size === 1) {
+      const td = [...selectedCells][0];
+      const div = td.querySelector('[contenteditable]');
+      if (div) { div.innerHTML = ''; div.focus(); }
+    }
+  }
+});
+
+// hiddenPaste → TSV 파싱 후 선택 셀에 분배
+document.addEventListener('DOMContentLoaded', () => {
+  const hp = document.getElementById('hiddenPaste');
+  if (!hp) return;
+  hp.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+    hp.innerHTML = '';
+    hp.blur();
+    if (!text || !_pasteTargetTd) { _pasteTargetTd = null; return; }
+
+    const targetTd = _pasteTargetTd;
+    _pasteTargetTd = null;
+
+    const parentRow = targetTd.closest('tr');
+    const secId = parentRow?.dataset?.secId;
+    const entryIdxStr = parentRow?.dataset?.entryIdx;
+
+    const targetDiv = targetTd.querySelector('[contenteditable]');
+    if (!targetDiv) return;
+
+    // 섹션/행 정보가 없으면 단순 붙여넣기
+    if (!secId || entryIdxStr === undefined) {
+      targetDiv.innerHTML = text.split('\n')[0];
+      debouncedSave(); return;
+    }
+
+    const rows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    if (rows[rows.length - 1] === '') rows.pop();
+    if (rows.length === 0) return;
+
+    const startIdx = parseInt(entryIdxStr, 10);
+    const sec = sections.find(s => s.id === secId);
+    if (!sec) return;
+
+    const rowDivs = Array.from(parentRow.querySelectorAll('[contenteditable]'));
+    const divIdx = rowDivs.indexOf(targetDiv);
+    // 병합 셀(mainTd/rtitleTd)은 contenteditable이 2개: 제목+내용
+    const cellDivCount = targetTd.querySelectorAll('[contenteditable]').length;
+
+    rows.forEach((rowText, rowOffset) => {
+      const cols = rowText.split('\t');
+      let entryOffset, intraOffset;
+      if (cellDivCount >= 2) {
+        // 2개 div 병합 셀: 2행 = 1 항목 (row0=제목, row1=내용)
+        entryOffset = Math.floor(rowOffset / cellDivCount);
+        intraOffset = rowOffset % cellDivCount;
+      } else {
+        entryOffset = rowOffset;
+        intraOffset = 0;
+      }
+      const entryIdx = startIdx + entryOffset;
+      if (entryIdx >= sec.entries.length) return;
+
+      const entryRow = document.querySelector(
+        `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
+      );
+      if (!entryRow) return;
+      const entryDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
+
+      if (cellDivCount >= 2) {
+        // 병합 셀: intraOffset 번째 div에 col[0] 붙여넣기
+        const div = entryDivs[divIdx + intraOffset];
+        if (div) div.innerHTML = cols[0] || '';
+      } else {
+        // 단일 셀: 각 col을 연속 div에 붙여넣기
+        cols.forEach((colText, colOffset) => {
+          const div = entryDivs[divIdx + colOffset];
+          if (div) div.innerHTML = colText || '';
+        });
+      }
+    });
+
+    debouncedSave();
+  });
+});
+
+// 탭 바 변경에도 반응 (탭 이름 편집 등)
+document.getElementById('tabsList').addEventListener('input', debouncedSave);
+
+// 30초마다 강제 백업 (혹시 input 이벤트가 누락되는 경우 대비)
+setInterval(async () => {
+  autoSave();
+  if (syncCode) {
+    try {
+      await cloudSave(syncCode);
+      showCloudBadge('☁ 클라우드 저장됨', 'ok');
+    } catch(e) {
+      showCloudBadge('⚠ 클라우드 저장 실패: ' + e.message, 'err');
+    }
+  }
+}, 30000);
+
+// 페이지 닫힐 때 즉시 저장
+window.addEventListener('beforeunload', () => {
+  collectCurrentTab();
+  localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+});
+
+// ═══════════════════════════════════════════════
+// 기기 간 동기화 (Supabase via Netlify Function)
+// ═══════════════════════════════════════════════
+const SYNC_API = '/api/sheet-sync';
+
+// URL 파라미터에서 userId 추출 (FranchisePanel iframe에서 전달)
+const _urlParams = new URLSearchParams(location.search);
+const USER_ID    = _urlParams.get('userId') || '';   // 로그인 유저 ID (자동 동기화)
+let syncCode     = USER_ID || localStorage.getItem('snsSheet_syncCode') || '';
+
+// userId 모드: 동기화 패널 숨기고 자동으로 클라우드 연동
+const isUserMode = Boolean(USER_ID);
+
+function updateSyncUI() {
+  const btn  = document.querySelector('button[onclick="openSyncPanel()"]');
+  const chip = document.getElementById('syncCodeChip');
+  if (isUserMode) {
+    // userId 모드: 동기화 버튼 숨기고 로그인 유저 표시
+    if (btn)  btn.style.display = 'none';
+    if (chip) { chip.textContent = '☁ ' + USER_ID; chip.style.display = 'inline'; }
+  } else {
+    updateChip();
+  }
+}
+
+function openSyncPanel() {
+  if (isUserMode) return; // userId 모드에선 패널 불필요
+  document.getElementById('syncCodeInput').value = syncCode;
+  document.getElementById('syncStatus').textContent = '';
+  document.getElementById('syncPanel').style.display = 'block';
+  document.getElementById('syncOverlay').style.display = 'block';
+  document.getElementById('syncCodeInput').focus();
+}
+
+function closeSyncPanel() {
+  document.getElementById('syncPanel').style.display = 'none';
+  document.getElementById('syncOverlay').style.display = 'none';
+}
+
+function getSyncCode() {
+  const val = document.getElementById('syncCodeInput').value.trim().toUpperCase();
+  if (!val || val.length < 2) { setStatus('코드를 입력해주세요. (2자 이상)', 'err'); return null; }
+  return val;
+}
+
+function setStatus(msg, type='ok') {
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg; el.className = 'sync-status ' + type;
+}
+
+function updateChip() {
+  const chip = document.getElementById('syncCodeChip');
+  if (syncCode) { chip.textContent = '☁ ' + syncCode; chip.style.display = 'inline'; }
+  else chip.style.display = 'none';
+}
+
+let _cloudBadgeTimer = null;
+function showCloudBadge(msg, type) {
+  const el = document.getElementById('cloudBadge');
+  el.textContent = msg; el.className = 'cloud-badge ' + type; el.style.display = 'inline';
+  clearTimeout(_cloudBadgeTimer);
+  _cloudBadgeTimer = setTimeout(() => { el.style.display = 'none'; }, type === 'ok' ? 2000 : 5000);
+}
+
+// 클라우드에 저장
+async function cloudSave(key) {
+  collectCurrentTab();
+  const res = await fetch(`${SYNC_API}?${USER_ID ? 'userId' : 'code'}=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ payload: { tabs, activeTabId } })
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+}
+
+// 클라우드에서 불러오기
+async function cloudLoad(key) {
+  const res = await fetch(`${SYNC_API}?${USER_ID ? 'userId' : 'code'}=${encodeURIComponent(key)}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function syncUpload() {
+  const code = getSyncCode(); if (!code) return;
+  setStatus('업로드 중...', 'ok');
+  try {
+    const res = await fetch(`${SYNC_API}?code=${encodeURIComponent(code)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload: { tabs, activeTabId } })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '업로드 실패');
+    syncCode = code;
+    localStorage.setItem('snsSheet_syncCode', syncCode);
+    updateChip();
+    setStatus(`✔ "${code}" 코드로 저장됐습니다.`, 'ok');
+  } catch(e) { setStatus('오류: ' + e.message, 'err'); }
+}
+
+async function syncDownload() {
+  const code = getSyncCode(); if (!code) return;
+  setStatus('불러오는 중...', 'ok');
+  try {
+    const data = await cloudLoad(code);
+    if (!data) throw new Error('해당 코드의 데이터가 없습니다.');
+    if (!confirm(`"${code}" 코드의 데이터를 불러옵니다.\n현재 작업 내용이 덮어씌워집니다. 계속할까요?`)) return;
+    tabs = data.payload.tabs;
+    activeTabId = data.payload.activeTabId || tabs[0]?.id;
+    syncCode = code;
+    localStorage.setItem('snsSheet_syncCode', syncCode);
+    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+    updateChip();
+    renderTabBar();
+    switchTab(activeTabId, false);
+    const t = data.updated_at ? new Date(data.updated_at).toLocaleString('ko-KR') : '';
+    setStatus(`✔ 불러오기 완료! (저장 시각: ${t})`, 'ok');
+  } catch(e) { setStatus('오류: ' + e.message, 'err'); }
+}
+
+// 입력 시 클라우드 자동저장 (3초 debounce)
+let _cloudTimer = null;
+document.getElementById('sheetBody').addEventListener('input', () => {
+  if (!syncCode) return;
+  clearTimeout(_cloudTimer);
+  _cloudTimer = setTimeout(async () => {
+    try {
+      await cloudSave(syncCode);
+      showCloudBadge('☁ 클라우드 저장됨', 'ok');
+    } catch(e) {
+      showCloudBadge('⚠ 클라우드 저장 실패: ' + e.message, 'err');
+    }
+  }, 3000);
+});
+
+// ─── 초기화 ───
+async function init() {
+  // userId 모드: 항상 클라우드에서 불러오기 시도
+  if (USER_ID) {
+    try {
+      const data = await cloudLoad(USER_ID);
+      if (data && data.payload && data.payload.tabs?.length > 0) {
+        tabs = data.payload.tabs;
+        activeTabId = data.payload.activeTabId || tabs[0].id;
+        // 로컬에도 캐시
+        localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId }));
+        renderTabBar();
+        switchTab(activeTabId, false);
+        updateSyncUI();
+        return;
+      }
+    } catch(e) {}
+    // 클라우드 없으면 유저별 로컬 캐시 확인
+    const local = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        if (parsed?.tabs?.length > 0) {
+          tabs = parsed.tabs; activeTabId = parsed.activeTabId || tabs[0].id;
+          renderTabBar(); switchTab(activeTabId, false); updateSyncUI(); return;
+        }
+      } catch(e) {}
+    }
+  } else {
+    // 일반 모드: 기존 로컬 저장 불러오기
+    const saved = localStorage.getItem('snsSheet_tabs_v2');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.tabs?.length > 0) {
+          tabs = parsed.tabs; activeTabId = parsed.activeTabId || tabs[0].id;
+          renderTabBar(); switchTab(activeTabId, false); updateSyncUI(); return;
+        }
+      } catch(e) {}
+    }
+  }
+  // 기본 샘플
+  const firstId = makeTabId();
+  tabs = [{ id: firstId, name: '샘플', sections: JSON.parse(JSON.stringify(defaultSections)) }];
+  activeTabId = firstId;
+  renderTabBar();
+  switchTab(activeTabId, false);
+  updateSyncUI();
+}
+
+// autoSave도 userId 모드에선 클라우드에 함께 저장
+const _baseAutoSave = autoSave;
+window._autoSaveWithCloud = async function() {
+  _baseAutoSave();
+  if (syncCode) {
+    try { await cloudSave(syncCode); } catch(e) {}
+  }
+};
+
+// beforeunload 시 동기화 저장
+window.addEventListener('beforeunload', () => {
+  collectCurrentTab();
+  if (USER_ID) {
+    const key = `snsSheet_tabs_${USER_ID}`;
+    localStorage.setItem(key, JSON.stringify({ tabs, activeTabId }));
+  } else {
+    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+  }
+});
+
+init();
+</script>
+<!-- 붙여넣기 인터셉터: iframe 내에서 clipboardData 접근용 -->
+<div id="hiddenPaste" contenteditable="true" tabindex="-1"
+  style="position:fixed;opacity:0;pointer-events:none;top:-200px;left:0;width:1px;height:1px;overflow:hidden;"></div>
+</body>
+</html>
