@@ -137,6 +137,7 @@
   .main-text { min-height: 70px; height: auto; }
   .comment-text { min-height: 40px; height: auto; }
   .date-text { min-height: 18px; height: auto; font-size: 10px; color: #666; }
+  .body-div { border-top: 1px dashed #ddd; margin-top: 3px; padding-top: 3px; }
 
   tr.add-row td { background: #f9f9f9; text-align: center; padding: 4px; }
   tr.add-row button {
@@ -436,6 +437,7 @@ let sections = [];
 let activeDiv = null;
 let activeTd  = null;
 let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
+let _pasteTargetTd = null;     // 붙여넣기 대상 셀
 
 function holdFocus(e) { e.preventDefault(); }
 
@@ -591,22 +593,32 @@ function renderEntry(secId, entry, ei) {
   trow.appendChild(lbl1);
 
   const mainTd = document.createElement('td');
+  mainTd.rowSpan = 2;
   const mainDiv = makeEditable('제목 입력'); mainDiv.className = 'main-text';
   if (entry.title) mainDiv.innerHTML = entry.title;
   if (entry.ts) mainDiv.setAttribute('style', entry.ts);
   if (entry.tva) restoreVA(mainTd, entry.tva);
   mainTd.appendChild(mainDiv);
+  const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text body-div';
+  if (entry.body) bodyDiv.innerHTML = entry.body;
+  if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
+  mainTd.appendChild(bodyDiv);
   trow.appendChild(mainTd);
 
   const rlbl1 = document.createElement('td'); rlbl1.className = 'rlbl'; rlbl1.textContent = '제목:';
   trow.appendChild(rlbl1);
 
   const rtitleTd = document.createElement('td');
+  rtitleTd.rowSpan = 2;
   const rtitleDiv = makeEditable('제목 입력'); rtitleDiv.className = 'comment-text';
   if (entry.rtitle) rtitleDiv.innerHTML = entry.rtitle;
   if (entry.rs) rtitleDiv.setAttribute('style', entry.rs);
   if (entry.rva) restoreVA(rtitleTd, entry.rva);
   rtitleTd.appendChild(rtitleDiv);
+  const rbodyDiv = makeEditable('내용 입력'); rbodyDiv.className = 'comment-text body-div';
+  if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
+  if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
+  rtitleTd.appendChild(rbodyDiv);
   trow.appendChild(rtitleTd);
 
   ['c1','c2','c3'].forEach((key) => {
@@ -638,24 +650,8 @@ function renderEntry(secId, entry, ei) {
   const lbl2 = document.createElement('td'); lbl2.className = 'lbl'; lbl2.textContent = '내용:';
   crow.appendChild(lbl2);
 
-  const bodyTd = document.createElement('td');
-  const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text';
-  if (entry.body) bodyDiv.innerHTML = entry.body;
-  if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
-  if (entry.bva) restoreVA(bodyTd, entry.bva);
-  bodyTd.appendChild(bodyDiv);
-  crow.appendChild(bodyTd);
-
   const rlbl2 = document.createElement('td'); rlbl2.className = 'rlbl'; rlbl2.textContent = '내용:';
   crow.appendChild(rlbl2);
-
-  const rbodyTd = document.createElement('td');
-  const rbodyDiv = makeEditable('내용 입력'); rbodyDiv.className = 'main-text';
-  if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
-  if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
-  if (entry.rbva) restoreVA(rbodyTd, entry.rbva);
-  rbodyTd.appendChild(rbodyDiv);
-  crow.appendChild(rbodyTd);
 
   for (let i=0;i<3;i++) {
     const td = document.createElement('td'); td.style.background='#fff'; crow.appendChild(td);
@@ -751,21 +747,21 @@ function gatherSections() {
     const titleRows = [...document.querySelectorAll(`tr.title-row[data-sec-id="${sec.id}"]`)];
     titleRows.forEach(trow => {
       const ds = [...trow.querySelectorAll('[contenteditable]')];
-      const crow = trow.nextSibling;
-      const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
       const gs = d => d?.getAttribute('style')||'';
       const gva = d => d?.closest('td')?.dataset.va||'';
+      // ds indices after cell merge:
+      // 0=catDiv 1=mainDiv 2=bodyDiv 3=rtitleDiv 4=rbodyDiv 5=c1 6=c2 7=c3 8=date 9=link
       entries.push({
         cat:   ds[0]?.textContent||'',
         title: ds[1]?.innerHTML||'',  ts:  gs(ds[1]),  tva:  gva(ds[1]),
-        rtitle:ds[2]?.innerHTML||'',  rs:  gs(ds[2]),  rva:  gva(ds[2]),
-        c1:    ds[3]?.innerHTML||'',  c1s: gs(ds[3]),  c1va: gva(ds[3]),
-        c2:    ds[4]?.innerHTML||'',  c2s: gs(ds[4]),  c2va: gva(ds[4]),
-        c3:    ds[5]?.innerHTML||'',  c3s: gs(ds[5]),  c3va: gva(ds[5]),
-        date:  ds[6]?.textContent||'',
-        link:  ds[7]?.textContent||'',
-        body:  cs[0]?.innerHTML||'',  bs:  gs(cs[0]),  bva:  gva(cs[0]),
-        rbody: cs[1]?.innerHTML||'',  rbs: gs(cs[1]),  rbva: gva(cs[1]),
+        body:  ds[2]?.innerHTML||'',  bs:  gs(ds[2]),
+        rtitle:ds[3]?.innerHTML||'',  rs:  gs(ds[3]),  rva:  gva(ds[3]),
+        rbody: ds[4]?.innerHTML||'',  rbs: gs(ds[4]),
+        c1:    ds[5]?.innerHTML||'',  c1s: gs(ds[5]),  c1va: gva(ds[5]),
+        c2:    ds[6]?.innerHTML||'',  c2s: gs(ds[6]),  c2va: gva(ds[6]),
+        c3:    ds[7]?.innerHTML||'',  c3s: gs(ds[7]),  c3va: gva(ds[7]),
+        date:  ds[8]?.textContent||'',
+        link:  ds[9]?.textContent||'',
       });
     });
 
@@ -942,63 +938,13 @@ document.addEventListener('keydown', e => {
       e.preventDefault();
       return;
     }
-    // Ctrl+V / Cmd+V → 선택셀에 붙여넣기 (구글 워크시트 TSV 지원)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && selectedCells.size > 0) {
-      const targetTd = [...selectedCells][0];
-      const targetDiv = targetTd.querySelector('[contenteditable]');
-      if (!targetDiv) return;
-
-      const parentRow = targetTd.closest('tr');
-      const secId = parentRow?.dataset?.secId;
-      const entryIdxStr = parentRow?.dataset?.entryIdx;
-
-      if (secId === undefined || entryIdxStr === undefined) {
-        targetDiv.focus();
-        return;
-      }
-
-      e.preventDefault();
-
-      const applyPaste = (text) => {
-        if (!text) return;
-        const rows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-        if (rows[rows.length - 1] === '') rows.pop();
-        if (rows.length === 0) return;
-
-        const startIdx = parseInt(entryIdxStr, 10);
-        const sec = sections.find(s => s.id === secId);
-        if (!sec) return;
-
-        const rowDivs = Array.from(parentRow.querySelectorAll('[contenteditable]'));
-        const divIdx = rowDivs.indexOf(targetDiv);
-        const isTitleRow = parentRow.classList.contains('title-row');
-        const rowClass = isTitleRow ? 'title-row' : 'content-row';
-
-        rows.forEach((rowText, offset) => {
-          const entryIdx = startIdx + offset;
-          if (entryIdx >= sec.entries.length) return;
-          const cols = rowText.split('\t');
-          const entryRow = document.querySelector(
-            `tr.${rowClass}[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
-          );
-          if (!entryRow) return;
-          const entryDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
-          cols.forEach((colText, colOffset) => {
-            const div = entryDivs[divIdx + colOffset];
-            if (div) div.innerHTML = colText.trim() ? colText : '';
-          });
-        });
-
-        debouncedSave();
-      };
-
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        navigator.clipboard.readText().then(applyPaste).catch(() => {
-          targetDiv.focus();
-        });
-      } else {
-        targetDiv.focus();
-      }
+    // Ctrl+V / Ctrl+Shift+V / Cmd+V → 선택셀에 붙여넣기
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && selectedCells.size > 0) {
+      _pasteTargetTd = [...selectedCells][0];
+      const hp = document.getElementById('hiddenPaste');
+      hp.innerHTML = '';
+      hp.focus();
+      // Don't preventDefault — let browser fire paste event on hiddenPaste
       return;
     }
 
@@ -1009,6 +955,83 @@ document.addEventListener('keydown', e => {
       if (div) { div.innerHTML = ''; div.focus(); }
     }
   }
+});
+
+// hiddenPaste → TSV 파싱 후 선택 셀에 분배
+document.addEventListener('DOMContentLoaded', () => {
+  const hp = document.getElementById('hiddenPaste');
+  if (!hp) return;
+  hp.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+    hp.innerHTML = '';
+    hp.blur();
+    if (!text || !_pasteTargetTd) { _pasteTargetTd = null; return; }
+
+    const targetTd = _pasteTargetTd;
+    _pasteTargetTd = null;
+
+    const parentRow = targetTd.closest('tr');
+    const secId = parentRow?.dataset?.secId;
+    const entryIdxStr = parentRow?.dataset?.entryIdx;
+
+    const targetDiv = targetTd.querySelector('[contenteditable]');
+    if (!targetDiv) return;
+
+    // 섹션/행 정보가 없으면 단순 붙여넣기
+    if (!secId || entryIdxStr === undefined) {
+      targetDiv.innerHTML = text.split('\n')[0];
+      debouncedSave(); return;
+    }
+
+    const rows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    if (rows[rows.length - 1] === '') rows.pop();
+    if (rows.length === 0) return;
+
+    const startIdx = parseInt(entryIdxStr, 10);
+    const sec = sections.find(s => s.id === secId);
+    if (!sec) return;
+
+    const rowDivs = Array.from(parentRow.querySelectorAll('[contenteditable]'));
+    const divIdx = rowDivs.indexOf(targetDiv);
+    // 병합 셀(mainTd/rtitleTd)은 contenteditable이 2개: 제목+내용
+    const cellDivCount = targetTd.querySelectorAll('[contenteditable]').length;
+
+    rows.forEach((rowText, rowOffset) => {
+      const cols = rowText.split('\t');
+      let entryOffset, intraOffset;
+      if (cellDivCount >= 2) {
+        // 2개 div 병합 셀: 2행 = 1 항목 (row0=제목, row1=내용)
+        entryOffset = Math.floor(rowOffset / cellDivCount);
+        intraOffset = rowOffset % cellDivCount;
+      } else {
+        entryOffset = rowOffset;
+        intraOffset = 0;
+      }
+      const entryIdx = startIdx + entryOffset;
+      if (entryIdx >= sec.entries.length) return;
+
+      const entryRow = document.querySelector(
+        `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
+      );
+      if (!entryRow) return;
+      const entryDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
+
+      if (cellDivCount >= 2) {
+        // 병합 셀: intraOffset 번째 div에 col[0] 붙여넣기
+        const div = entryDivs[divIdx + intraOffset];
+        if (div) div.innerHTML = cols[0] || '';
+      } else {
+        // 단일 셀: 각 col을 연속 div에 붙여넣기
+        cols.forEach((colText, colOffset) => {
+          const div = entryDivs[divIdx + colOffset];
+          if (div) div.innerHTML = colText || '';
+        });
+      }
+    });
+
+    debouncedSave();
+  });
 });
 
 // 탭 바 변경에도 반응 (탭 이름 편집 등)
@@ -1243,5 +1266,8 @@ window.addEventListener('beforeunload', () => {
 
 init();
 </script>
+<!-- 붙여넣기 인터셉터: iframe 내에서 clipboardData 접근용 -->
+<div id="hiddenPaste" contenteditable="true" tabindex="-1"
+  style="position:fixed;opacity:0;pointer-events:none;top:-200px;left:0;width:1px;height:1px;overflow:hidden;"></div>
 </body>
 </html>
