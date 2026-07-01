@@ -602,7 +602,7 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n✅ 네이버 카페 릴레이 서버 실행 중`);
   console.log(`   http://localhost:${PORT}`);
   console.log(`\n   웹앱에서 수집 시 이 창을 열어두세요.`);
