@@ -497,7 +497,8 @@ async function handleScrape(body) {
     let reachedStart = false;
     let pageAllFiltered = true;
     console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
-    for (const item of rawItems) {
+    // 페이지 내 아이템은 최신→오래된 순으로 오므로, 역순 처리해서 오래된→최신 순으로 push
+    for (const item of [...rawItems].reverse()) {
       if (articles.length >= maxArticles) { pageAllFiltered = false; break; }
       const dateObj = parseDateStr(item.dateStr);
       if (endDateObj && dateObj && dateObj > endDateObj) continue;       // 종료일 이후 → 스킵
@@ -561,8 +562,6 @@ async function handleScrape(body) {
     };
   }
 
-  // 오래된 글이 1번 (오름차순 정렬)
-  articles.reverse();
   articles.forEach((a, i) => { a.no = i + 1; });
 
   return {
