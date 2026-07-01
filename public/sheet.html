@@ -997,11 +997,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 병합 셀(mainTd/rtitleTd)은 contenteditable이 2개: 제목+내용
     const cellDivCount = targetTd.querySelectorAll('[contenteditable]').length;
 
+    // 구글 시트 라벨 컬럼 (제목:, 내용: 등) 스킵용
+    const LABEL_RE = /^(제목|내용)[*:]?\s*[:]\s*$/;
+    const isLabel = s => LABEL_RE.test(s.trim());
+
     rows.forEach((rowText, rowOffset) => {
       const cols = rowText.split('\t');
       let entryOffset, intraOffset;
       if (cellDivCount >= 2) {
-        // 2개 div 병합 셀: 2행 = 1 항목 (row0=제목, row1=내용)
         entryOffset = Math.floor(rowOffset / cellDivCount);
         intraOffset = rowOffset % cellDivCount;
       } else {
@@ -1018,15 +1021,34 @@ document.addEventListener('DOMContentLoaded', () => {
       const entryDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
 
       if (cellDivCount >= 2) {
-        // 병합 셀: intraOffset 번째 div에 col[0] 붙여넣기
-        const div = entryDivs[divIdx + intraOffset];
-        if (div) div.innerHTML = cols[0] || '';
+        if (intraOffset === 0) {
+          // 제목 행: divIdx부터 순서대로 body-div 건너뛰고, 라벨 컬럼 건너뜀
+          let colI = 0;
+          for (let i = divIdx; i < entryDivs.length; i++) {
+            if (entryDivs[i].classList.contains('body-div')) continue;
+            while (colI < cols.length && isLabel(cols[colI])) colI++;
+            if (colI >= cols.length) break;
+            entryDivs[i].innerHTML = cols[colI++];
+          }
+        } else {
+          // 내용 행: divIdx+1부터 body-div만, 선두 공백·라벨 건너뜀
+          let colI = 0;
+          while (colI < cols.length && cols[colI].trim() === '') colI++;
+          for (let i = divIdx + 1; i < entryDivs.length; i++) {
+            if (!entryDivs[i].classList.contains('body-div')) continue;
+            while (colI < cols.length && isLabel(cols[colI])) colI++;
+            if (colI >= cols.length) break;
+            entryDivs[i].innerHTML = cols[colI++];
+          }
+        }
       } else {
-        // 단일 셀: 각 col을 연속 div에 붙여넣기
-        cols.forEach((colText, colOffset) => {
-          const div = entryDivs[divIdx + colOffset];
-          if (div) div.innerHTML = colText || '';
-        });
+        // 단일 셀: 각 col을 순서대로 붙여넣기 (라벨 건너뜀)
+        let colI = 0;
+        for (let i = divIdx; i < entryDivs.length; i++) {
+          while (colI < cols.length && isLabel(cols[colI])) colI++;
+          if (colI >= cols.length) break;
+          entryDivs[i].innerHTML = cols[colI++];
+        }
       }
     });
 
