@@ -212,15 +212,56 @@ const CollectorTab: React.FC = () => {
   };
 
   const exportCsv = (rewritten = false) => {
-    const rows = [['번호', '날짜', '제목', '작성자', '댓글수', '조회수', 'URL']];
+    const esc = (s: string) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const C = (v: string) => `<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>`;
+
+    const maxC = 3;
+
+    // 헤더행
+    const header = `<Row>${C('번호')}${C('구분')}${C('내용')}${Array.from({length:maxC},(_,i)=>C(`댓글${i+1}`)).join('')}${C('날짜')}${C('URL')}</Row>`;
+    const rows: string[] = [header];
+
     articles.forEach(a => {
       const title = rewritten ? applyKeywords(a.title) : a.title;
-      rows.push([String(a.no), a.date, title, a.writer, String(a.commentCount), String(a.readCount), a.url]);
+      const body  = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
+      const cmts  = a.comments ?? [];
+
+      // 제목 행: 번호 | 제목: | 제목내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
+      rows.push(
+        `<Row>` +
+        C(String(a.no)) +
+        C('제목:') +
+        C(title) +
+        Array.from({length: maxC}, (_, i) => C(cmts[i]?.content ?? '')).join('') +
+        C(a.date) +
+        C(a.url) +
+        `</Row>`
+      );
+      // 내용 행: (빈칸) | 내용: | 내용내용 | | | | |
+      rows.push(
+        `<Row>` +
+        C('') +
+        C('내용:') +
+        C(body) +
+        Array.from({length: maxC}, () => C('')).join('') +
+        C('') +
+        C('') +
+        `</Row>`
+      );
     });
-    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Worksheet ss:Name="수집결과">
+<Table>${rows.join('')}</Table>
+</Worksheet>
+</Workbook>`;
+
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const link = document.createElement('a');
-    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.csv`;
+    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xls`;
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
