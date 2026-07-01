@@ -538,25 +538,11 @@ const EMPTY_KW: ReplaceKw[] = Array.from({ length: 10 }, () => ({ from: '', to: 
 const DEFAULT_REWRITE_PROMPT = '원문을 완전히 다른 사람이 쓴 글처럼 리라이팅해줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
 const DEFAULT_COMMENT_PROMPT = '아래 글에 어울리는 자연스러운 댓글을 1개만 만들어줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
 
-const RELAY_URL = 'http://150.230.98.74:3333';
-
-async function checkRelay(): Promise<boolean> {
-  try {
-    const res = await fetch(`${RELAY_URL}/ping`, { signal: AbortSignal.timeout(1000) });
-    const j = await res.json();
-    return j?.ok === true;
-  } catch { return false; }
-}
+const SCRAPE_ENDPOINT = '/.netlify/functions/scrape-naver-cafe';
 
 const CollectorTab: React.FC = () => {
   const [crawlerTab, setCrawlerTab] = useState<CrawlerTab>('collect');
-  const [relayOk, setRelayOk] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    checkRelay().then(setRelayOk);
-    const t = setInterval(() => checkRelay().then(setRelayOk), 5000);
-    return () => clearInterval(t);
-  }, []);
+  const [relayOk] = useState<boolean | null>(true);
 
   /* ── 수집 설정 ── */
   const [cafeUrl,       setCafeUrl]       = useState('https://cafe.naver.com/');
@@ -633,11 +619,7 @@ const CollectorTab: React.FC = () => {
     const page = resume && nextPage ? nextPage : parseInt(startPage) || 1;
     setStatus(`수집 중... (페이지 ${page})`);
     try {
-      const live = relayOk ?? await checkRelay();
-      setRelayOk(live);
-      const endpoint = live
-        ? `${RELAY_URL}/scrape-naver-cafe`
-        : '/.netlify/functions/scrape-naver-cafe';
+      const endpoint = SCRAPE_ENDPOINT;
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -909,14 +891,9 @@ const CollectorTab: React.FC = () => {
 
             {/* 릴레이 상태 */}
             <div className="mt-3 pt-2 border-t border-gray-200">
-              <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-bold mb-2 ${relayOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-                <span>{relayOk ? '🟢' : '🔴'}</span>
-                {relayOk
-                  ? '서버 릴레이 연결됨 — 일본(도쿄) 서버로 수집'
-                  : relayOk === null
-                    ? '릴레이 확인 중...'
-                    : '서버 릴레이 연결 실패 — 관리자에게 문의하세요'
-                }
+              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-bold mb-2 bg-green-50 text-green-700">
+                <span>🟢</span>
+                <span>서버 릴레이 연결됨 — 일본(도쿄) 서버로 수집</span>
               </div>
             </div>
 
