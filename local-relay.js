@@ -501,7 +501,7 @@ async function handleScrape(body) {
       if (articles.length >= maxArticles) { pageAllFiltered = false; break; }
       const dateObj = parseDateStr(item.dateStr);
       if (endDateObj && dateObj && dateObj > endDateObj) continue;       // 종료일 이후 → 스킵
-      if (startDateObj && dateObj && dateObj < startDateObj) { reachedStart = true; break; }  // 시작일 이전 → 중단
+      if (startDateObj && dateObj && dateObj < startDateObj) continue;   // 시작일 이전 → 스킵(페이지 내 혼재 가능)
       pageAllFiltered = false;
       // 본문 + 댓글 수집
       let content = '', comments = [];
@@ -529,9 +529,8 @@ async function handleScrape(body) {
 
     if (pageAllFiltered && articles.length === 0) dateFilteredAll = true;
     if (reachedStart) break;
-    const totalPage = rawItems[0]?.totalPage || 0;
-    if (totalPage && page >= totalPage) break;
-    page++;
+    page--;
+    if (page < 1) break;
     pagesScanned++;
     await new Promise(r => setTimeout(r, 300));
   }
@@ -546,7 +545,7 @@ async function handleScrape(body) {
           articles: [],
           totalCollected: 0,
           method,
-          message: `페이지 ${cafePageNum}의 글이 모두 시작일(${fmt}) 이전입니다. 더 최신 페이지(낮은 번호)를 선택해주세요.`,
+          message: `페이지 ${cafePageNum}의 글이 모두 시작일(${fmt}) 이후입니다. 더 과거 페이지(높은 번호)를 선택해주세요.`,
         },
       };
     }
