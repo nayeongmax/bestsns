@@ -325,7 +325,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       ...buildApiHeaders(cookie, `https://cafe.naver.com/`),
       'sec-fetch-site': 'cross-site',
     });
-    console.log(`  [articleapi] articleId=${articleId} HTTP ${status}`);
+    console.log(`  [articleapi] articleId=${articleId} HTTP ${status}${status !== 200 ? ' body앞100자: ' + body.slice(0,100).replace(/\n/g,' ') : ''}`);
     if (status === 200) {
       const j = JSON.parse(body);
       const result = j?.result ?? j?.message?.result ?? j;
