@@ -370,6 +370,15 @@ const CollectorTab: React.FC = () => {
               </div>
             )}
 
+            {/* 릴레이 상태 */}
+            <div className="mt-3 pt-2 border-t border-gray-200">
+              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-bold mb-2 bg-green-50 text-green-700">
+                <span>🟢</span>
+                <span>서버 릴레이 연결됨 — 일본(도쿄) 서버로 수집</span>
+              </div>
+            </div>
+
+
             {/* 버튼들 */}
             <div className="mt-3 pt-2 border-t border-gray-200 space-y-1.5">
               <button type="button" onClick={() => doCollect(false)} disabled={loading}
