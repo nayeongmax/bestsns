@@ -99,7 +99,8 @@
   col.col-c1    { width: 11%; }
   col.col-c2    { width: 11%; }
   col.col-c3    { width: 11%; }
-  col.col-meta  { width: 18%; }
+  col.col-date  { width: 7%; }
+  col.col-link  { width: 11%; }
 
   td { border: 1px solid #bbb; vertical-align: top; padding: 0; overflow: visible; }
 
@@ -121,8 +122,9 @@
     background: #fff; font-size: 10px; color: #555;
     padding: 2px 3px; vertical-align: top; white-space: nowrap;
   }
-  td.comment-cell, td.link-cell { background: #fff; vertical-align: top; }
+  td.comment-cell, td.link-cell, td.date-cell { background: #fff; vertical-align: top; }
   td.link-cell { font-size: 9px; color: #555; padding: 2px 3px; word-break: break-all; }
+  td.date-cell { font-size: 10px; color: #555; padding: 2px 3px; }
 
   [contenteditable="true"] {
     outline: none; min-height: 18px; width: 100%; display: block;
@@ -257,7 +259,7 @@
       <col class="col-cat"><col class="col-label"><col class="col-main">
       <col class="col-rlabel"><col class="col-r1">
       <col class="col-c1"><col class="col-c2"><col class="col-c3">
-      <col class="col-meta">
+      <col class="col-date"><col class="col-link">
     </colgroup>
     <tbody id="sheetBody"></tbody>
   </table>
@@ -531,6 +533,7 @@ function renderSection(sec) {
   });
 
   const metaCell = document.createElement('td');
+  metaCell.colSpan = 2;
   metaCell.style.background = '#ff0000';
   const metaDiv = makeEditable('메타/링크');
   metaDiv.style.cssText = 'font-size:9px;color:#fff;';
@@ -556,7 +559,7 @@ function renderSection(sec) {
 
   const addRow = document.createElement('tr');
   addRow.className = 'add-row'; addRow.id = `add-row-${sec.id}`;
-  const addTd = document.createElement('td'); addTd.colSpan = 9;
+  const addTd = document.createElement('td'); addTd.colSpan = 10;
   const ab = document.createElement('button');
   ab.textContent = `+ "${sec.name}" 에 행 추가`;
   ab.onclick = () => addEntry(sec.id);
@@ -616,10 +619,14 @@ function renderEntry(secId, entry, ei) {
     td.appendChild(d); trow.appendChild(td);
   });
 
+  const dateTd = document.createElement('td');
+  dateTd.className = 'date-cell'; dateTd.rowSpan = 2;
+  const dateDiv = makeEditable('날짜'); dateDiv.className = 'date-text';
+  dateDiv.textContent = entry.date || ''; dateTd.appendChild(dateDiv);
+  trow.appendChild(dateTd);
+
   const linkTd = document.createElement('td');
   linkTd.className = 'link-cell'; linkTd.rowSpan = 2;
-  const dateDiv = makeEditable('날짜'); dateDiv.className = 'date-text';
-  dateDiv.textContent = entry.date || ''; linkTd.appendChild(dateDiv);
   const linkDiv = makeEditable('링크'); linkDiv.style.fontSize = '9px';
   linkDiv.textContent = entry.link || ''; linkTd.appendChild(linkDiv);
   trow.appendChild(linkTd);
@@ -655,7 +662,7 @@ function renderEntry(secId, entry, ei) {
   }
 
   const srow = document.createElement('tr'); srow.className = 'sep';
-  for (let i=0;i<9;i++) srow.appendChild(document.createElement('td'));
+  for (let i=0;i<10;i++) srow.appendChild(document.createElement('td'));
 
   if (insertBefore) {
     tbody.insertBefore(trow, insertBefore);
@@ -692,7 +699,7 @@ function deleteSection(secId) {
     if (!document.getElementById(`add-row-${sec.id}`)) {
       const addRow = document.createElement('tr');
       addRow.className = 'add-row'; addRow.id = `add-row-${sec.id}`;
-      const td = document.createElement('td'); td.colSpan = 9;
+      const td = document.createElement('td'); td.colSpan = 10;
       const btn = document.createElement('button');
       btn.textContent = `+ "${sec.name}" 에 행 추가`;
       btn.onclick = () => addEntry(sec.id);
@@ -935,6 +942,66 @@ document.addEventListener('keydown', e => {
       e.preventDefault();
       return;
     }
+    // Ctrl+V / Cmd+V → 선택셀에 붙여넣기 (구글 워크시트 TSV 지원)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && selectedCells.size > 0) {
+      const targetTd = [...selectedCells][0];
+      const targetDiv = targetTd.querySelector('[contenteditable]');
+      if (!targetDiv) return;
+
+      const parentRow = targetTd.closest('tr');
+      const secId = parentRow?.dataset?.secId;
+      const entryIdxStr = parentRow?.dataset?.entryIdx;
+
+      if (secId === undefined || entryIdxStr === undefined) {
+        targetDiv.focus();
+        return;
+      }
+
+      e.preventDefault();
+
+      const applyPaste = (text) => {
+        if (!text) return;
+        const rows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+        if (rows[rows.length - 1] === '') rows.pop();
+        if (rows.length === 0) return;
+
+        const startIdx = parseInt(entryIdxStr, 10);
+        const sec = sections.find(s => s.id === secId);
+        if (!sec) return;
+
+        const rowDivs = Array.from(parentRow.querySelectorAll('[contenteditable]'));
+        const divIdx = rowDivs.indexOf(targetDiv);
+        const isTitleRow = parentRow.classList.contains('title-row');
+        const rowClass = isTitleRow ? 'title-row' : 'content-row';
+
+        rows.forEach((rowText, offset) => {
+          const entryIdx = startIdx + offset;
+          if (entryIdx >= sec.entries.length) return;
+          const cols = rowText.split('\t');
+          const entryRow = document.querySelector(
+            `tr.${rowClass}[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
+          );
+          if (!entryRow) return;
+          const entryDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
+          cols.forEach((colText, colOffset) => {
+            const div = entryDivs[divIdx + colOffset];
+            if (div) div.innerHTML = colText.trim() ? colText : '';
+          });
+        });
+
+        debouncedSave();
+      };
+
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText().then(applyPaste).catch(() => {
+          targetDiv.focus();
+        });
+      } else {
+        targetDiv.focus();
+      }
+      return;
+    }
+
     // 일반 문자 입력 → 선택셀 내용 지우고 편집모드
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && selectedCells.size === 1) {
       const td = [...selectedCells][0];

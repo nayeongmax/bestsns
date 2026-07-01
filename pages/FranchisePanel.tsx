@@ -1103,8 +1103,8 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
     { id: 'subscription', label: '구독관리',    icon: '💳' },
     { id: 'revenue',      label: '매출관리',    icon: '📊' },
     { id: 'manuscripts',  label: '원고시트',    icon: '📝' },
-    { id: 'collector',    label: '원고수집기',  icon: '🔍' },
-    { id: 'marketing',    label: '마케팅상품',  icon: '📣' },
+    { id: 'collector',    label: '원고수집프로그램',  icon: '🔍' },
+    { id: 'marketing',    label: '마케팅프로그램',  icon: '📣' },
   ];
 
   return (
