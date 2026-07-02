@@ -997,6 +997,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 병합 셀(mainTd/rtitleTd)은 contenteditable이 2개: 제목+내용
     const cellDivCount = targetTd.querySelectorAll('[contenteditable]').length;
 
+    // 붙여넣기에 필요한 행 수만큼 미리 생성 (부족하면 자동 추가)
+    const totalEntriesNeeded = cellDivCount >= 2
+      ? Math.ceil(rows.length / cellDivCount)
+      : rows.length;
+    const addRowEl = document.getElementById(`add-row-${secId}`);
+    while (sec.entries.length < startIdx + totalEntriesNeeded) {
+      const newE = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' };
+      sec.entries.push(newE);
+      renderEntry(secId, newE, sec.entries.length - 1, addRowEl);
+    }
+
     // 구글 시트 라벨 컬럼 (제목:, 내용: 등) 스킵용
     const LABEL_RE = /^(제목|내용)[*:]?\s*[:]\s*$/;
     const isLabel = s => LABEL_RE.test(s.trim());
