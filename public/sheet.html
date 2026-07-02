@@ -239,6 +239,10 @@ let pasteTargetSecId = null;
 
 function setPasteTarget(secId) {
   pasteTargetSecId = secId;
+  // 포커스된 셀이 있으면 blur (Ctrl+V가 셀로 가는 걸 방지)
+  if (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true') {
+    document.activeElement.blur();
+  }
   // 모든 섹션 헤더 outline 초기화
   document.querySelectorAll('tr.section-header').forEach(r => {
     r.style.outline = '';
@@ -319,14 +323,11 @@ function parseTsvToEntries(text) {
 
 // 전역 붙여넣기 이벤트 (구글 시트 TSV)
 document.addEventListener('paste', (e) => {
-  const active = document.activeElement;
-  const isInCell = active && active.getAttribute('contenteditable') === 'true';
-
   const text = e.clipboardData.getData('text/plain');
-  if (!text.includes('\t')) return; // 탭이 없으면 일반 텍스트 — 셀 자체 처리에 맡김
+  if (!text.includes('\t')) return; // 탭 없으면 일반 텍스트 — 셀 처리에 맡김
+  if (!pasteTargetSecId) return;   // 붙여넣기 대상 없으면 일반 처리
 
-  if (isInCell) return; // 셀 안에서 붙여넣기는 해당 셀이 처리
-
+  // 붙여넣기 대상이 지정된 상태에서 탭 데이터 → 항상 가로채기
   e.preventDefault();
 
   if (!pasteTargetSecId) {
