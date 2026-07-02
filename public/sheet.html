@@ -1136,7 +1136,8 @@ function fillTrowDivs(trowDivs, contentCols, startIdx) {
   if (!contentCols.length) return;
   const fillDivs = [];
   for (let i = startIdx; i < trowDivs.length; i++) {
-    if (!isRS(trowDivs[i])) fillDivs.push(trowDivs[i]);
+    // 사용자가 명시적으로 선택한 시작 셀은 우측 셀이어도 포함
+    if (i === startIdx || !isRS(trowDivs[i])) fillDivs.push(trowDivs[i]);
   }
   if (!fillDivs.length) return;
   fillDivs[0].innerHTML = textToHtml(contentCols[0]);
@@ -1308,8 +1309,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const hasCrowTarget = firstCrow?.classList.contains('content-row') &&
         firstCrow.querySelectorAll('[contenteditable]').length > 0;
       const rowsPerEntry = hasCrowTarget ? 2 : 1;
-      // 제목행 채우기 시작점: crow 구조가 있으면 항상 mainDiv(1)에서 시작
-      const startFillIdx = hasCrowTarget ? 1 : effectiveDivIdx;
+      // 채우기 시작점: 사용자가 선택한 셀(catDiv는 선택 불가이므로 항상 ≥1)
+      const startFillIdx = effectiveDivIdx;
 
       const totalEntriesNeeded = Math.ceil(rows.length / rowsPerEntry);
       while (sec.entries.length < startIdx + totalEntriesNeeded) {
@@ -1331,8 +1332,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (intraOffset === 0) {
           const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
-          // 기존 내용 초기화 (분류 셀 제외) — 덮어쓰기 동작
-          trowDivs.forEach(d => { if (!d.closest('td.cat-cell')) d.innerHTML = ''; });
+          // 채우기 범위(startFillIdx 이후)만 초기화, 분류 셀 제외 — 덮어쓰기
+          trowDivs.forEach((d, idx) => {
+            if (idx < startFillIdx || d.closest('td.cat-cell')) return;
+            d.innerHTML = '';
+          });
           const clearCrow = entryRow.nextElementSibling;
           if (clearCrow?.classList.contains('content-row')) {
             clearCrow.querySelectorAll('[contenteditable]').forEach(d => { d.innerHTML = ''; });
