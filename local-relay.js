@@ -8,6 +8,18 @@
 const http = require('http');
 const https = require('https');
 const zlib = require('zlib');
+const { chromium } = require('playwright-core');
+
+let _browser = null;
+async function getBrowser() {
+  if (!_browser || !_browser.isConnected()) {
+    _browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-setuid-sandbox', '--single-process'],
+    });
+  }
+  return _browser;
+}
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3333;
 
@@ -416,6 +428,52 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       console.log(`  [HTML detail] 파싱 실패`);
     }
   } catch(e) { console.log(`  [HTML detail] 실패: ${e.message}`); }
+
+  // 방법 C: Playwright 헤드리스 브라우저
+  try {
+    const browser = await getBrowser();
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    });
+    if (cookie) {
+      const cookies = [];
+      for (const part of cookie.split(';').map(p => p.trim())) {
+        const idx = part.indexOf('=');
+        if (idx > 0) cookies.push({ name: part.slice(0, idx).trim(), value: part.slice(idx + 1).trim(), domain: '.naver.com', path: '/' });
+      }
+      if (cookies.length > 0) await context.addCookies(cookies);
+    }
+    const page = await context.newPage();
+    try {
+      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      // iframe 안에 있는 경우 처리
+      let content = '';
+      const frames = page.frames();
+      for (const frame of frames) {
+        try {
+          const el = await frame.$('.se-main-container, #tbody, .article_body, .contentText');
+          if (el) { content = (await el.innerText()).trim(); break; }
+        } catch {}
+      }
+      if (!content) {
+        await page.waitForSelector('.se-main-container, #tbody, .article_body', { timeout: 10000 }).catch(() => {});
+        content = await page.evaluate(() => {
+          const el = document.querySelector('.se-main-container') || document.querySelector('#tbody') || document.querySelector('.article_body');
+          return el ? (el.innerText || el.textContent || '').trim() : '';
+        });
+      }
+      // 댓글
+      const comments = await page.evaluate((max) => {
+        const els = Array.from(document.querySelectorAll('.comment_text_box, ._content, .u_cbox_contents')).slice(0, max);
+        return els.map(el => ({ content: (el.innerText || el.textContent || '').trim(), writer: '', date: '' }));
+      }, maxComments);
+      console.log(`  [Playwright] content길이=${content.length} 댓글=${comments.length}`);
+      if (content) return { content, comments };
+    } finally {
+      await page.close();
+      await context.close();
+    }
+  } catch(e) { console.log(`  [Playwright] 실패: ${e.message}`); }
 
   return { content: '', comments: [] };
 }
