@@ -104,10 +104,7 @@
     padding: 2px 3px; vertical-align: top; white-space: nowrap;
     user-select: none;
   }
-  tr.entry-selected td { background: #dbeafe !important; outline: 2px solid #1a73e8; outline-offset: -1px; }
-  tr.entry-selected td.cat-cell,
-  tr.entry-selected td.lbl,
-  tr.entry-selected td.rlbl { background: inherit !important; outline: none; }
+  .cell-selected { background: #dbeafe !important; outline: 2px solid #1a73e8; outline-offset: -1px; }
   td.comment-cell, td.link-cell { background: #fff; vertical-align: top; }
   td.link-cell { font-size: 9px; color: #555; padding: 2px 3px; word-break: break-all; }
 
@@ -240,104 +237,108 @@
 
 <script>
 // ═══════════════════════════════════════════════
-// 드래그 행 선택 (구글 시트 범위 선택처럼)
+// 셀 단위 범위 선택 (구글 시트처럼)
 // ═══════════════════════════════════════════════
-let dragSelection = null;   // { secId, minIdx, maxIdx } or null
-let _dragActive   = false;
-let _dragSecId    = null;
-let _dragAnchor   = -1;
-let _dragCur      = -1;
 
-function getEntryRow(el) {
-  const row = el.closest('tr.title-row, tr.content-row');
-  if (!row || !row.dataset.secId) return null;
-  return { row, secId: row.dataset.secId, idx: parseInt(row.dataset.entryIdx, 10) };
+// 시각적 좌→우 필드 순서 (선택 가능한 편집 칸)
+const FIELD_ORDER = ['title', 'rtitle', 'c1', 'c2', 'c3', 'date', 'link'];
+// title-row 필드 ↔ content-row 페어 (세로로 같은 칸)
+const CONTENT_PAIR = { title: 'body', rtitle: 'rbody' };
+
+let cellDragActive = false;
+let cellSelStart   = null; // { el, secId, entryIdx, field, fi }
+let cellSelEnd     = null;
+let cellSel        = null; // { secId, minEi, maxEi, minFi, maxFi }
+let _mdEl          = null; // mousedown 시작 element
+
+function getCellDiv(target) {
+  // data-field 가 있는 contenteditable div 찾기
+  return target.closest('[data-field]');
 }
 
-function clearEntryHighlight() {
-  document.querySelectorAll('tr.entry-selected').forEach(r => r.classList.remove('entry-selected'));
+function getCellInfo(div) {
+  if (!div || !div.dataset.field) return null;
+  const field = div.dataset.field;
+  const fi = FIELD_ORDER.indexOf(field);
+  if (fi === -1) return null; // cat/body/rbody 등은 선택 체인 밖
+  const tr = div.closest('tr[data-sec-id]');
+  if (!tr) return null;
+  return { el: div, field, fi, secId: tr.dataset.secId, entryIdx: parseInt(tr.dataset.entryIdx, 10) };
 }
 
-function clearEntrySelection() {
-  clearEntryHighlight();
-  dragSelection = null;
+function clearCellHighlight() {
+  document.querySelectorAll('.cell-selected').forEach(e => e.classList.remove('cell-selected'));
 }
 
-function highlightEntryRange(secId, minIdx, maxIdx) {
-  clearEntryHighlight();
-  document.querySelectorAll(`tr[data-sec-id="${secId}"]`).forEach(row => {
-    const idx = parseInt(row.dataset.entryIdx, 10);
-    if (idx >= minIdx && idx <= maxIdx) row.classList.add('entry-selected');
-  });
+function applyCellHighlight() {
+  clearCellHighlight();
+  if (!cellSelStart || !cellSelEnd || cellSelStart.secId !== cellSelEnd.secId) return;
+  const { secId } = cellSelStart;
+  const minEi = Math.min(cellSelStart.entryIdx, cellSelEnd.entryIdx);
+  const maxEi = Math.max(cellSelStart.entryIdx, cellSelEnd.entryIdx);
+  const minFi = Math.min(cellSelStart.fi, cellSelEnd.fi);
+  const maxFi = Math.max(cellSelStart.fi, cellSelEnd.fi);
+  cellSel = { secId, minEi, maxEi, minFi, maxFi };
+  for (let ei = minEi; ei <= maxEi; ei++) {
+    for (let fi = minFi; fi <= maxFi; fi++) {
+      const f = FIELD_ORDER[fi];
+      const el = document.querySelector(`[data-field="${f}"][data-sec-id="${secId}"][data-entry-idx="${ei}"]`);
+      if (el) el.classList.add('cell-selected');
+      const pf = CONTENT_PAIR[f];
+      if (pf) {
+        const pel = document.querySelector(`[data-field="${pf}"][data-sec-id="${secId}"][data-entry-idx="${ei}"]`);
+        if (pel) pel.classList.add('cell-selected');
+      }
+    }
+  }
 }
 
-// 어디서 드래그를 시작하든 행을 넘어가면 커스텀 범위 선택으로 전환
-let _mousedownInfo = null;
+function clearCellSelection() {
+  clearCellHighlight();
+  cellSelStart = cellSelEnd = cellSel = null;
+}
 
 document.addEventListener('mousedown', (e) => {
   if (e.target.tagName === 'BUTTON') return;
-  const info = getEntryRow(e.target);
-  _mousedownInfo = info || null;
+  const div = getCellDiv(e.target);
+  const info = getCellInfo(div);
+  _mdEl = div || null;
   if (!info) {
-    // 엔트리 행 외부 클릭 → 선택 해제
-    if (!e.target.closest('tr.section-header')) clearEntrySelection();
-    return;
+    if (!e.target.closest('tr.section-header')) clearCellSelection();
   }
-  if (e.target.getAttribute('contenteditable') !== 'true') {
-    // 비편집 칸 (cat, lbl 등) 클릭 → 즉시 커스텀 선택 시작
-    e.preventDefault();
-    clearEntrySelection();
-    _dragActive = true;
-    _dragSecId  = info.secId;
-    _dragAnchor = info.idx;
-    _dragCur    = info.idx;
-    highlightEntryRange(info.secId, info.idx, info.idx);
-    pasteTargetSecId = info.secId;
-  }
-  // contenteditable 클릭은 일단 허용 (드래그 여부는 mousemove에서 판단)
+  // 클릭은 정상 허용 — 드래그 여부는 mousemove에서 판단
 });
 
 document.addEventListener('mousemove', (e) => {
-  if (!e.buttons) return; // 마우스 버튼 안 눌린 상태면 무시
+  if (!e.buttons || !_mdEl) return;
+  const div = getCellDiv(e.target);
+  const endInfo = getCellInfo(div);
+  if (!endInfo) return;
+  const startInfo = getCellInfo(_mdEl);
+  if (!startInfo || startInfo.secId !== endInfo.secId) return;
 
-  if (_dragActive) {
-    // 이미 커스텀 선택 중
-    const info = getEntryRow(e.target);
-    if (!info || info.secId !== _dragSecId) return;
-    if (info.idx === _dragCur) return;
-    _dragCur = info.idx;
-    highlightEntryRange(_dragSecId, Math.min(_dragAnchor, _dragCur), Math.max(_dragAnchor, _dragCur));
-    return;
-  }
-
-  // contenteditable에서 드래그 시작 → 행을 넘어가면 커스텀 선택으로 전환
-  if (!_mousedownInfo) return;
-  const info = getEntryRow(e.target);
-  if (!info) return;
-  if (info.secId === _mousedownInfo.secId && info.idx !== _mousedownInfo.idx) {
-    // 다른 행으로 드래그 → 브라우저 텍스트 선택 취소하고 커스텀 선택 시작
+  if (!cellDragActive) {
+    // 드래그 시작: 브라우저 텍스트 선택 취소
     window.getSelection().removeAllRanges();
     document.documentElement.style.userSelect = 'none';
-    clearEntrySelection();
-    _dragActive = true;
-    _dragSecId  = _mousedownInfo.secId;
-    _dragAnchor = _mousedownInfo.idx;
-    _dragCur    = info.idx;
-    highlightEntryRange(_dragSecId, Math.min(_dragAnchor, _dragCur), Math.max(_dragAnchor, _dragCur));
-    pasteTargetSecId = _dragSecId;
+    cellDragActive = true;
+    cellSelStart = startInfo;
+    pasteTargetSecId = startInfo.secId;
   }
+  cellSelEnd = endInfo;
+  applyCellHighlight();
 });
 
-document.addEventListener('mouseup', (e) => {
+document.addEventListener('mouseup', () => {
   document.documentElement.style.userSelect = '';
-  _mousedownInfo = null;
-  if (!_dragActive) return;
-  _dragActive = false;
-  const min = Math.min(_dragAnchor, _dragCur);
-  const max = Math.max(_dragAnchor, _dragCur);
-  dragSelection = { secId: _dragSecId, minIdx: min, maxIdx: max };
-  const count = max - min + 1;
-  showCloudBadge(`📋 ${count}개 행 선택됨 — Ctrl+V로 붙여넣기`, 'ok');
+  _mdEl = null;
+  if (!cellDragActive) return;
+  cellDragActive = false;
+  if (cellSel) {
+    const rows = cellSel.maxEi - cellSel.minEi + 1;
+    const cols = cellSel.maxFi - cellSel.minFi + 1;
+    showCloudBadge(`📋 ${rows}행 × ${cols}열 선택됨 — Ctrl+V로 붙여넣기`, 'ok');
+  }
 });
 
 // ═══════════════════════════════════════════════
@@ -347,16 +348,13 @@ let pasteTargetSecId = null;
 
 function setPasteTarget(secId) {
   pasteTargetSecId = secId;
-  // 포커스된 셀이 있으면 blur (Ctrl+V가 셀로 가는 걸 방지)
   if (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true') {
     document.activeElement.blur();
   }
-  // 모든 섹션 헤더 outline 초기화
   document.querySelectorAll('tr.section-header').forEach(r => {
     r.style.outline = '';
     r.style.outlineOffset = '';
   });
-  // 선택된 섹션 강조
   const hrow = document.getElementById(`section-${secId}`);
   if (hrow) {
     hrow.style.outline = '3px solid #fbbc04';
@@ -429,69 +427,73 @@ function parseTsvToEntries(text) {
   return entries;
 }
 
-// DOM의 기존 entry 행을 데이터로 덮어씀
-function updateEntryDom(secId, entryIdx, entry) {
-  const trow = document.querySelector(`tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`);
-  if (!trow) return;
-  const crow = trow.nextElementSibling;
-  const ds = [...trow.querySelectorAll('[contenteditable]')];
-  const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
-  // title-row: cat(0), title(1), rtitle(2), c1(3), c2(4), c3(5), date(6), link(7)
-  // cat은 건드리지 않음 (기존 분류값 유지)
-  // if (ds[0]) ds[0].textContent = entry.cat || '';
-  if (ds[1]) ds[1].textContent = entry.title || '';
-  if (ds[2]) ds[2].textContent = entry.rtitle|| '';
-  if (ds[3]) ds[3].textContent = entry.c1    || '';
-  if (ds[4]) ds[4].textContent = entry.c2    || '';
-  if (ds[5]) ds[5].textContent = entry.c3    || '';
-  if (ds[6]) ds[6].textContent = entry.date  || '';
-  if (ds[7]) ds[7].textContent = entry.link  || '';
-  // content-row: body(0), rbody(1)
-  if (cs[0]) cs[0].textContent = entry.body  || '';
-  if (cs[1]) cs[1].textContent = entry.rbody || '';
+// 특정 셀의 contenteditable div에 값 쓰기
+function setCellValue(secId, entryIdx, field, value) {
+  const el = document.querySelector(`[data-field="${field}"][data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`);
+  if (el) el.textContent = value;
+  const sec = sections.find(s => s.id === secId);
+  if (sec && sec.entries[entryIdx] !== undefined) sec.entries[entryIdx][field] = value;
 }
 
 // 전역 붙여넣기 이벤트 (구글 시트 TSV)
 document.addEventListener('paste', (e) => {
   const text = e.clipboardData.getData('text/plain');
-  if (!text.includes('\t')) return; // 탭 없으면 일반 텍스트 — 셀 처리에 맡김
+  if (!text.includes('\t')) return;
 
-  const targetSecId = dragSelection?.secId || pasteTargetSecId;
-  if (!targetSecId) return; // 대상 없으면 일반 처리
+  // 셀 범위 선택 중이면 그 범위에 붙여넣기
+  if (cellSel) {
+    e.preventDefault();
+    const { secId, minEi, maxEi, minFi, maxFi } = cellSel;
+    const fields = FIELD_ORDER.slice(minFi, maxFi + 1);
+    const sec = sections.find(s => s.id === secId);
+    if (!sec) return;
 
-  e.preventDefault();
+    const rawRows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd().split('\n');
+    const grid = rawRows.map(r => r.split('\t'));
+    const nSlots = maxEi - minEi + 1;
 
-  const entries = parseTsvToEntries(text);
-  if (!entries.length) { alert('붙여넣을 데이터가 없습니다.'); return; }
+    // 2행씩 쌍(제목+내용)인지 1행씩인지 판단
+    const usePaired = grid.length >= nSlots * 2;
 
-  const sec = sections.find(s => s.id === targetSecId);
-  if (!sec) return;
+    if (!confirm(`${fields.length}개 열 × ${nSlots}개 행에 붙여넣을까요?`)) return;
 
-  if (dragSelection) {
-    // 선택 범위에 덮어쓰기 (범위 초과분은 뒤에 추가)
-    const { minIdx, maxIdx } = dragSelection;
-    const slotCount = maxIdx - minIdx + 1;
-    if (!confirm(`${entries.length}개 행을 선택한 ${slotCount}개 위치에 붙여넣을까요?`)) return;
-    entries.forEach((entry, i) => {
-      const targetIdx = minIdx + i;
-      if (targetIdx <= maxIdx) {
-        sec.entries[targetIdx] = entry;
-        updateEntryDom(targetSecId, targetIdx, entry);
-      } else {
-        sec.entries.push(entry);
-        renderEntry(targetSecId, entry, sec.entries.length - 1);
+    for (let i = 0; i < nSlots; i++) {
+      const ei = minEi + i;
+      // 필요하면 빈 행 추가
+      while (sec.entries.length <= ei) {
+        const empty = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', date:'', link:'' };
+        sec.entries.push(empty);
+        renderEntry(secId, empty, sec.entries.length - 1);
       }
-    });
-    clearEntrySelection();
-  } else {
-    // 섹션 끝에 추가
-    if (!confirm(`${entries.length}개 행을 "${sec.name}" 섹션에 추가할까요?`)) return;
-    entries.forEach(entry => {
-      sec.entries.push(entry);
-      renderEntry(targetSecId, entry, sec.entries.length - 1);
-    });
+      const r1 = usePaired ? grid[i * 2]     : grid[i];
+      const r2 = usePaired ? grid[i * 2 + 1] : null;
+      fields.forEach((f, ci) => {
+        const val = (r1?.[ci] ?? '').trim();
+        setCellValue(secId, ei, f, val);
+        const pf = CONTENT_PAIR[f];
+        if (pf) setCellValue(secId, ei, pf, (r2?.[ci] ?? '').trim());
+      });
+    }
+    clearCellSelection();
+    doCloudSave();
+    showCloudBadge(`✔ ${nSlots}개 행 붙여넣기 완료`, 'ok');
+    return;
   }
 
+  // 셀 선택 없으면 섹션에 전체 추가
+  if (!pasteTargetSecId) return;
+  e.preventDefault();
+  const entries = parseTsvToEntries(text);
+  if (!entries.length) { alert('붙여넣을 데이터가 없습니다.'); return; }
+  const sec = sections.find(s => s.id === pasteTargetSecId);
+  if (!sec) return;
+  if (!confirm(`${entries.length}개 행을 "${sec.name}" 섹션에 추가할까요?`)) return;
+  entries.forEach(entry => { sec.entries.push(entry); renderEntry(pasteTargetSecId, entry, sec.entries.length - 1); });
+  doCloudSave();
+  showCloudBadge(`✔ ${entries.length}개 행 추가됨`, 'ok');
+});
+
+function doCloudSave() {
   autoSave();
   if (syncCode) {
     clearTimeout(_cloudTimer);
@@ -500,8 +502,7 @@ document.addEventListener('paste', (e) => {
       catch(e) { showCloudBadge('⚠ 클라우드 저장 실패', 'err'); }
     }, 1000);
   }
-  showCloudBadge(`✔ ${entries.length}개 행 붙여넣기 완료`, 'ok');
-});
+}
 
 // ═══════════════════════════════════════════════
 // 기본 섹션 데이터
@@ -774,6 +775,7 @@ function renderEntry(secId, entry, ei) {
 
   const mainTd = document.createElement('td');
   const mainDiv = makeEditable('제목 입력'); mainDiv.className = 'main-text';
+  mainDiv.dataset.field = 'title'; mainDiv.dataset.secId = secId; mainDiv.dataset.entryIdx = ei;
   mainDiv.textContent = entry.title || ''; mainTd.appendChild(mainDiv);
   trow.appendChild(mainTd);
 
@@ -782,20 +784,24 @@ function renderEntry(secId, entry, ei) {
 
   const rtitleTd = document.createElement('td');
   const rtitleDiv = makeEditable('댓글 제목'); rtitleDiv.className = 'comment-text';
+  rtitleDiv.dataset.field = 'rtitle'; rtitleDiv.dataset.secId = secId; rtitleDiv.dataset.entryIdx = ei;
   rtitleDiv.textContent = entry.rtitle || ''; rtitleTd.appendChild(rtitleDiv);
   trow.appendChild(rtitleTd);
 
   ['c1','c2','c3'].forEach(key => {
     const td = document.createElement('td'); td.className = 'comment-cell';
     const d = makeEditable('댓글'); d.className = 'comment-text';
+    d.dataset.field = key; d.dataset.secId = secId; d.dataset.entryIdx = ei;
     d.textContent = entry[key] || ''; td.appendChild(d); trow.appendChild(td);
   });
 
   const linkTd = document.createElement('td');
   linkTd.className = 'link-cell'; linkTd.rowSpan = 2;
   const dateDiv = makeEditable('날짜'); dateDiv.className = 'date-text';
+  dateDiv.dataset.field = 'date'; dateDiv.dataset.secId = secId; dateDiv.dataset.entryIdx = ei;
   dateDiv.textContent = entry.date || ''; linkTd.appendChild(dateDiv);
   const linkDiv = makeEditable('링크'); linkDiv.style.fontSize = '9px';
+  linkDiv.dataset.field = 'link'; linkDiv.dataset.secId = secId; linkDiv.dataset.entryIdx = ei;
   linkDiv.textContent = entry.link || ''; linkTd.appendChild(linkDiv);
   trow.appendChild(linkTd);
 
@@ -808,6 +814,7 @@ function renderEntry(secId, entry, ei) {
 
   const bodyTd = document.createElement('td');
   const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text';
+  bodyDiv.dataset.field = 'body'; bodyDiv.dataset.secId = secId; bodyDiv.dataset.entryIdx = ei;
   bodyDiv.textContent = entry.body || ''; bodyTd.appendChild(bodyDiv);
   crow.appendChild(bodyTd);
 
@@ -816,6 +823,7 @@ function renderEntry(secId, entry, ei) {
 
   const rbodyTd = document.createElement('td');
   const rbodyDiv = makeEditable('댓글 내용'); rbodyDiv.className = 'main-text';
+  rbodyDiv.dataset.field = 'rbody'; rbodyDiv.dataset.secId = secId; rbodyDiv.dataset.entryIdx = ei;
   rbodyDiv.textContent = entry.rbody || ''; rbodyTd.appendChild(rbodyDiv);
   crow.appendChild(rbodyTd);
 
