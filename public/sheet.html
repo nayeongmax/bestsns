@@ -871,7 +871,7 @@ document.getElementById('sheetBody').addEventListener('input', debouncedSave);
 
 // ─── 엑셀 스타일 셀 선택 ────────────────────────────────────────────────────
 function clearSelection() {
-  selectedCells.forEach(td => td.classList.remove('cell-selected'));
+  sheetBodyEl.querySelectorAll('.cell-selected').forEach(t => t.classList.remove('cell-selected'));
   selectedCells.clear();
 }
 
@@ -953,12 +953,12 @@ sheetBodyEl.addEventListener('mousemove', e => {
   clearSelection();
   const lo = Math.min(startIdx, endIdx), hi = Math.max(startIdx, endIdx);
   for (let i = lo; i <= hi; i++) {
+    const hasCE = allTrs[i].querySelector('[contenteditable]');
+    if (!hasCE) continue; // sep 행 등 편집 셀 없는 행은 건너뜀
     allTrs[i].querySelectorAll('td').forEach(t => {
-      if (!t.querySelector('[contenteditable]')) return;
-      selectedCells.add(t);
-      t.classList.add('cell-selected');
-      activeDiv = t.querySelector('[contenteditable]');
-      activeTd  = t;
+      t.classList.add('cell-selected'); // 빈 TD도 시각적으로 선택 표시
+      const ce = t.querySelector('[contenteditable]');
+      if (ce) { selectedCells.add(t); activeDiv = ce; activeTd = t; }
     });
   }
 });
@@ -1120,6 +1120,44 @@ function textToHtml(s) {
           .replace(/\n/g, '<br>');
 }
 
+// trow의 contenteditable 셀들에 GS 열 데이터를 구조화해서 채움
+// - startIdx: 채우기 시작할 trowDivs 인덱스 (보통 1 = mainDiv)
+// - contentCols: 채울 내용 배열 [제목, 댓글..., 날짜, 링크]
+// 마지막 열이 https://로 시작하면 linkDiv에, 그 앞이 날짜 형식이면 dateDiv에 고정 배치
+function fillTrowDivs(trowDivs, contentCols, startIdx) {
+  const isRS   = div => div.parentElement?.previousElementSibling?.classList?.contains('rlbl');
+  const isDate = s => /^\d{4}[\.\-\/]\d{1,2}[\.\-\/]\d{1,2}$/.test(s.trim());
+  const isLink = s => /^https?:\/\//.test(s.trim());
+  if (!contentCols.length) return;
+  const fillDivs = [];
+  for (let i = startIdx; i < trowDivs.length; i++) {
+    if (!isRS(trowDivs[i])) fillDivs.push(trowDivs[i]);
+  }
+  if (!fillDivs.length) return;
+  fillDivs[0].innerHTML = textToHtml(contentCols[0]);
+  let linkIdx = -1, dateIdx = -1;
+  if (isLink(contentCols[contentCols.length - 1])) {
+    linkIdx = contentCols.length - 1;
+    if (contentCols.length >= 2 && isDate(contentCols[contentCols.length - 2])) {
+      dateIdx = contentCols.length - 2;
+    }
+  } else if (isDate(contentCols[contentCols.length - 1])) {
+    dateIdx = contentCols.length - 1;
+  }
+  const fixedCount = (dateIdx !== -1 ? 1 : 0) + (linkIdx !== -1 ? 1 : 0);
+  if (linkIdx !== -1 && fillDivs.length >= 2) {
+    fillDivs[fillDivs.length - 1].innerHTML = textToHtml(contentCols[linkIdx]);
+  }
+  if (dateIdx !== -1 && fillDivs.length >= (linkIdx !== -1 ? 3 : 2)) {
+    fillDivs[fillDivs.length - (linkIdx !== -1 ? 2 : 1)].innerHTML = textToHtml(contentCols[dateIdx]);
+  }
+  const commentDivs = fillDivs.slice(1, fillDivs.length - fixedCount);
+  const commentEnd  = dateIdx !== -1 ? dateIdx : (linkIdx !== -1 ? linkIdx : contentCols.length);
+  for (let j = 1; j < commentEnd && (j - 1) < commentDivs.length; j++) {
+    commentDivs[j - 1].innerHTML = textToHtml(contentCols[j]);
+  }
+}
+
 // hiddenPaste → TSV 파싱 후 선택 셀에 분배
 document.addEventListener('DOMContentLoaded', () => {
   const hp = document.getElementById('hiddenPaste');
@@ -1225,17 +1263,12 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         if (!entryRow) return;
 
-        // trow 채우기 — titleStart 열부터 (레이블 앞 열이 있으면 catDiv(0)에)
+        // trow 채우기 — titleStart 이후 열을 fillTrowDivs로 구조화 배치
         const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
         if (titleStart > 1 && titleCols[0] && titleCols[0].trim() && !isLabel(titleCols[0])) {
-          trowDivs[0].innerHTML = textToHtml(titleCols[0]);
+          trowDivs[0].innerHTML = textToHtml(titleCols[0]); // 레이블 앞 열 → catDiv
         }
-        let colI = titleStart;
-        for (let i = 1; i < trowDivs.length; i++) {
-          if (isRightSide(trowDivs[i])) continue; // rtitleDiv 건너뜀
-          if (colI >= titleCols.length) break;
-          trowDivs[i].innerHTML = textToHtml(titleCols[colI++]);
-        }
+        fillTrowDivs(trowDivs, titleCols.slice(titleStart), 1);
 
         // crow 채우기
         if (bodyCols) {
@@ -1260,10 +1293,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const firstEntryRow = document.querySelector(`tr.title-row[data-sec-id="${secId}"][data-entry-idx="${startIdx}"]`);
       const firstCrow = firstEntryRow?.nextElementSibling;
+      // crow가 존재하면 항상 2줄 1세트(제목+내용) 구조로 처리
+      // effectiveDivIdx 제한 제거 → catDiv(0) 클릭해도 rowsPerEntry=2 보장
       const hasCrowTarget = firstCrow?.classList.contains('content-row') &&
-        firstCrow.querySelectorAll('[contenteditable]').length > 0 &&
-        effectiveDivIdx >= 1 && effectiveDivIdx <= 2;
+        firstCrow.querySelectorAll('[contenteditable]').length > 0;
       const rowsPerEntry = hasCrowTarget ? 2 : 1;
+      // 제목행 채우기 시작점: crow 구조가 있으면 항상 mainDiv(1)에서 시작
+      const startFillIdx = hasCrowTarget ? 1 : effectiveDivIdx;
 
       const totalEntriesNeeded = Math.ceil(rows.length / rowsPerEntry);
       while (sec.entries.length < startIdx + totalEntriesNeeded) {
@@ -1286,13 +1322,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (intraOffset === 0) {
           const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
           let colI = 0;
-          // 선두 빈 열과 레이블 스킵
           while (colI < cols.length && (cols[colI].trim() === '' || isLabel(cols[colI]))) colI++;
-          for (let i = effectiveDivIdx; i < trowDivs.length; i++) {
-            if (isRightSide(trowDivs[i])) continue; // rtitleDiv 건너뜀
-            if (colI >= cols.length) break;
-            trowDivs[i].innerHTML = textToHtml(cols[colI++]);
-          }
+          fillTrowDivs(trowDivs, cols.slice(colI), startFillIdx);
         } else {
           const crow = entryRow.nextElementSibling;
           if (!crow?.classList.contains('content-row')) return;
