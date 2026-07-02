@@ -445,25 +445,27 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
     }
     const page = await context.newPage();
     try {
-      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'networkidle', timeout: 40000 });
-      // iframe 포함 모든 프레임에서 내용 추출
+      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 40000 });
+      // #cafe_main iframe이 생길 때까지 대기
+      await page.waitForSelector('iframe#cafe_main', { timeout: 15000 }).catch(() => {});
       let content = '';
       let comments = [];
+      // 모든 프레임에서 내용 추출 (iframe 포함)
       const allFrames = page.frames();
+      console.log(`  [Playwright] 총 frames=${allFrames.length}`);
       for (const frame of allFrames) {
         try {
-          await frame.waitForSelector('.se-main-container, #tbody, .article_body, .ContentRenderer', { timeout: 5000 }).catch(() => {});
+          await frame.waitForSelector('.se-main-container, #tbody, .article_body, .ContentRenderer', { timeout: 8000 }).catch(() => {});
           const el = await frame.$('.se-main-container, #tbody, .article_body, .ContentRenderer, .article_viewer');
           if (el) {
             content = (await el.innerText()).trim();
-            // 댓글 같은 프레임에서
             const cEls = await frame.$$('.comment_text_box, ._content, .u_cbox_contents');
             comments = (await Promise.all(cEls.slice(0, maxComments).map(e => e.innerText().catch(() => '')))).map(t => ({ content: t.trim(), writer: '', date: '' })).filter(c => c.content);
             break;
           }
         } catch {}
       }
-      console.log(`  [Playwright] frames=${allFrames.length} content길이=${content.length} 댓글=${comments.length}`);
+      console.log(`  [Playwright] content길이=${content.length} 댓글=${comments.length}`);
       if (content) return { content, comments };
     } finally {
       await page.close();
