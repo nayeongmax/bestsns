@@ -105,6 +105,9 @@
     user-select: none;
   }
   tr.entry-selected td { background: #dbeafe !important; outline: 2px solid #1a73e8; outline-offset: -1px; }
+  tr.entry-selected td.cat-cell,
+  tr.entry-selected td.lbl,
+  tr.entry-selected td.rlbl { background: inherit !important; outline: none; }
   td.comment-cell, td.link-cell { background: #fff; vertical-align: top; }
   td.link-cell { font-size: 9px; color: #555; padding: 2px 3px; word-break: break-all; }
 
@@ -268,39 +271,66 @@ function highlightEntryRange(secId, minIdx, maxIdx) {
   });
 }
 
-// mousedown on non-editable part of an entry row → start range drag
+// 어디서 드래그를 시작하든 행을 넘어가면 커스텀 범위 선택으로 전환
+let _mousedownInfo = null;
+
 document.addEventListener('mousedown', (e) => {
-  if (e.target.getAttribute('contenteditable') === 'true') {
-    // Clicking a cell: clear selection but don't start drag
-    clearEntrySelection();
-    return;
-  }
   if (e.target.tagName === 'BUTTON') return;
   const info = getEntryRow(e.target);
-  if (!info) { clearEntrySelection(); return; }
-
-  e.preventDefault(); // prevent browser text-selection
-  clearEntrySelection();
-  _dragActive = true;
-  _dragSecId  = info.secId;
-  _dragAnchor = info.idx;
-  _dragCur    = info.idx;
-  highlightEntryRange(info.secId, info.idx, info.idx);
-  pasteTargetSecId = info.secId;
+  _mousedownInfo = info || null;
+  if (!info) {
+    // 엔트리 행 외부 클릭 → 선택 해제
+    if (!e.target.closest('tr.section-header')) clearEntrySelection();
+    return;
+  }
+  if (e.target.getAttribute('contenteditable') !== 'true') {
+    // 비편집 칸 (cat, lbl 등) 클릭 → 즉시 커스텀 선택 시작
+    e.preventDefault();
+    clearEntrySelection();
+    _dragActive = true;
+    _dragSecId  = info.secId;
+    _dragAnchor = info.idx;
+    _dragCur    = info.idx;
+    highlightEntryRange(info.secId, info.idx, info.idx);
+    pasteTargetSecId = info.secId;
+  }
+  // contenteditable 클릭은 일단 허용 (드래그 여부는 mousemove에서 판단)
 });
 
 document.addEventListener('mousemove', (e) => {
-  if (!_dragActive) return;
+  if (!e.buttons) return; // 마우스 버튼 안 눌린 상태면 무시
+
+  if (_dragActive) {
+    // 이미 커스텀 선택 중
+    const info = getEntryRow(e.target);
+    if (!info || info.secId !== _dragSecId) return;
+    if (info.idx === _dragCur) return;
+    _dragCur = info.idx;
+    highlightEntryRange(_dragSecId, Math.min(_dragAnchor, _dragCur), Math.max(_dragAnchor, _dragCur));
+    return;
+  }
+
+  // contenteditable에서 드래그 시작 → 행을 넘어가면 커스텀 선택으로 전환
+  if (!_mousedownInfo) return;
   const info = getEntryRow(e.target);
-  if (!info || info.secId !== _dragSecId) return;
-  if (info.idx === _dragCur) return;
-  _dragCur = info.idx;
-  const min = Math.min(_dragAnchor, _dragCur);
-  const max = Math.max(_dragAnchor, _dragCur);
-  highlightEntryRange(_dragSecId, min, max);
+  if (!info) return;
+  if (info.secId === _mousedownInfo.secId && info.idx !== _mousedownInfo.idx) {
+    // 다른 행으로 드래그 → 브라우저 텍스트 선택 취소하고 커스텀 선택 시작
+    window.getSelection().removeAllRanges();
+    document.documentElement.style.userSelect = 'none';
+    clearEntrySelection();
+    _dragActive = true;
+    _dragSecId  = _mousedownInfo.secId;
+    _dragAnchor = _mousedownInfo.idx;
+    _dragCur    = info.idx;
+    highlightEntryRange(_dragSecId, Math.min(_dragAnchor, _dragCur), Math.max(_dragAnchor, _dragCur));
+    pasteTargetSecId = _dragSecId;
+  }
 });
 
 document.addEventListener('mouseup', (e) => {
+  document.documentElement.style.userSelect = '';
+  _mousedownInfo = null;
   if (!_dragActive) return;
   _dragActive = false;
   const min = Math.min(_dragAnchor, _dragCur);
@@ -407,7 +437,8 @@ function updateEntryDom(secId, entryIdx, entry) {
   const ds = [...trow.querySelectorAll('[contenteditable]')];
   const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
   // title-row: cat(0), title(1), rtitle(2), c1(3), c2(4), c3(5), date(6), link(7)
-  if (ds[0]) ds[0].textContent = entry.cat   || '';
+  // cat은 건드리지 않음 (기존 분류값 유지)
+  // if (ds[0]) ds[0].textContent = entry.cat || '';
   if (ds[1]) ds[1].textContent = entry.title || '';
   if (ds[2]) ds[2].textContent = entry.rtitle|| '';
   if (ds[3]) ds[3].textContent = entry.c1    || '';
