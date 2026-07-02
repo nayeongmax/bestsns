@@ -233,6 +233,133 @@
 
 <script>
 // ═══════════════════════════════════════════════
+// 구글 시트 붙여넣기 (TSV 파싱)
+// ═══════════════════════════════════════════════
+let pasteTargetSecId = null;
+
+function setPasteTarget(secId) {
+  pasteTargetSecId = secId;
+  // 모든 섹션 헤더 outline 초기화
+  document.querySelectorAll('tr.section-header').forEach(r => {
+    r.style.outline = '';
+    r.style.outlineOffset = '';
+  });
+  // 선택된 섹션 강조
+  const hrow = document.getElementById(`section-${secId}`);
+  if (hrow) {
+    hrow.style.outline = '3px solid #fbbc04';
+    hrow.style.outlineOffset = '-3px';
+  }
+  const sec = sections.find(s => s.id === secId);
+  showCloudBadge(`📋 "${sec?.name}" 섹션 선택됨 — Ctrl+V로 붙여넣기`, 'ok');
+}
+
+// 구글 시트에서 복사한 TSV 파싱
+// 구조: 각 항목 = 2줄 (제목: 줄 + 내용: 줄)
+// 컬럼: [제목:/내용:] [제목/내용] [댓글제목/댓글내용] [댓글1] [댓글2] [댓글3?] [날짜] [링크]
+function parseTsvToEntries(text) {
+  const rawRows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd().split('\n');
+  const rows = rawRows.map(r => r.split('\t'));
+  const entries = [];
+  let i = 0;
+
+  while (i < rows.length) {
+    const r1 = rows[i];
+    const r2 = rows[i + 1];
+
+    // 첫 컬럼이 "제목:" 패턴인지 확인
+    const label0 = (r1[0] || '').trim();
+    const isLabelRow = label0 === '제목:' || label0 === '제목';
+
+    let offset = isLabelRow ? 1 : 0; // 라벨 컬럼 건너뛸지 여부
+
+    // 다음 줄이 "내용:" 패턴이면 쌍으로 처리
+    const label2 = r2 ? (r2[0] || '').trim() : '';
+    const hasPair = r2 && (label2 === '내용:' || label2 === '내용' || label2 === '');
+
+    const get = (row, idx) => (row && row[idx] !== undefined ? row[idx].trim() : '');
+
+    // 날짜 패턴 감지 (YYYY.MM.DD 형식)
+    const isDate = v => /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/.test(v.trim());
+    // URL 패턴 감지
+    const isUrl  = v => /^https?:\/\//.test(v.trim());
+
+    // 컬럼 값 추출
+    const cols = r1.slice(offset);              // 라벨 이후 컬럼들
+    const bcols = hasPair ? r2.slice(offset) : [];
+
+    // 동적 매핑: 날짜/URL 컬럼 자동 감지
+    let title='', rtitle='', c1='', c2='', c3='', date='', link='';
+    let body='', rbody='';
+
+    title  = get(r1, offset);
+    rtitle = get(r1, offset + 1);
+    c1     = get(r1, offset + 2);
+    c2     = get(r1, offset + 3);
+
+    // offset+4 이후: 날짜/링크/c3 자동 감지
+    const rest = cols.slice(4);
+    rest.forEach(v => {
+      if (isUrl(v))       link = v.trim();
+      else if (isDate(v)) date = v.trim();
+      else if (!c3)       c3   = v.trim();
+    });
+
+    body  = get(r2, offset);
+    rbody = get(r2, offset + 1);
+
+    if (title || body) {
+      entries.push({ cat:'', title, body, rtitle, rbody, c1, c2, c3, date, link });
+    }
+
+    i += (hasPair && r2) ? 2 : 1;
+  }
+  return entries;
+}
+
+// 전역 붙여넣기 이벤트 (구글 시트 TSV)
+document.addEventListener('paste', (e) => {
+  const active = document.activeElement;
+  const isInCell = active && active.getAttribute('contenteditable') === 'true';
+
+  const text = e.clipboardData.getData('text/plain');
+  if (!text.includes('\t')) return; // 탭이 없으면 일반 텍스트 — 셀 자체 처리에 맡김
+
+  if (isInCell) return; // 셀 안에서 붙여넣기는 해당 셀이 처리
+
+  e.preventDefault();
+
+  if (!pasteTargetSecId) {
+    alert('붙여넣기 위치를 먼저 선택해주세요.\n섹션 헤더(빨간 행)를 클릭하면 선택됩니다.');
+    return;
+  }
+
+  const entries = parseTsvToEntries(text);
+  if (!entries.length) { alert('붙여넣을 데이터가 없습니다.'); return; }
+
+  const sec = sections.find(s => s.id === pasteTargetSecId);
+  if (!sec) return;
+
+  if (!confirm(`${entries.length}개 행을 "${sec.name}" 섹션에 추가할까요?`)) return;
+
+  entries.forEach((entry, ei) => {
+    sec.entries.push(entry);
+    renderEntry(pasteTargetSecId, entry, sec.entries.length - 1);
+  });
+
+  autoSave();
+  if (syncCode) {
+    clearTimeout(_cloudTimer);
+    _cloudTimer = setTimeout(async () => {
+      try { await cloudSave(syncCode); showCloudBadge('☁ 클라우드 저장됨', 'ok'); }
+      catch(e) { showCloudBadge('⚠ 클라우드 저장 실패', 'err'); }
+    }, 1000);
+  }
+
+  showCloudBadge(`✔ ${entries.length}개 행 추가됨`, 'ok');
+});
+
+// ═══════════════════════════════════════════════
 // 기본 섹션 데이터
 // ═══════════════════════════════════════════════
 const defaultSections = [
@@ -459,6 +586,12 @@ function renderSection(sec) {
   metaCell.appendChild(btnDiv);
   hrow.appendChild(metaCell);
   tbody.appendChild(hrow);
+
+  // 섹션 헤더 클릭 → 붙여넣기 대상 지정
+  hrow.addEventListener('click', (e) => {
+    if (e.target.getAttribute('contenteditable') === 'true') return;
+    setPasteTarget(sec.id);
+  });
 
   sec.entries.forEach((entry, ei) => renderEntry(sec.id, entry, ei));
 
