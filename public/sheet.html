@@ -963,6 +963,38 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// RFC 4180 TSV 파서 — 셀 내부의 \n (구글 시트 멀티라인 셀)을 올바르게 처리
+function parseTSV(text) {
+  const rows = [];
+  let row = [], cell = '', inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuote) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }  // "" → 이스케이프된 따옴표
+        else inQuote = false;                             // 따옴표 필드 종료
+      } else {
+        cell += ch;  // 필드 내부의 줄바꿈도 그대로 포함
+      }
+    } else {
+      if (ch === '"' && cell === '') { inQuote = true; }
+      else if (ch === '\t') { row.push(cell); cell = ''; }
+      else if (ch === '\r') { /* CR 무시 */ }
+      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else { cell += ch; }
+    }
+  }
+  row.push(cell);
+  if (row.some(c => c !== '')) rows.push(row);
+  return rows;
+}
+
+// 일반 텍스트를 innerHTML 안전하게 변환 (줄바꿈 → <br>)
+function textToHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>');
+}
+
 // hiddenPaste → TSV 파싱 후 선택 셀에 분배
 document.addEventListener('DOMContentLoaded', () => {
   const hp = document.getElementById('hiddenPaste');
@@ -986,12 +1018,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 섹션/행 정보가 없으면 단순 붙여넣기
     if (!secId || entryIdxStr === undefined) {
-      targetDiv.innerHTML = text.split('\n')[0];
+      targetDiv.innerHTML = textToHtml(text);
       debouncedSave(); return;
     }
 
-    const rows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-    if (rows[rows.length - 1] === '') rows.pop();
+    const rows = parseTSV(text);
     if (rows.length === 0) return;
 
     const startIdx = parseInt(entryIdxStr, 10);
@@ -1023,8 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const LABEL_RE = /^(제목|내용)[*:]?\s*[:]\s*$/;
     const isLabel = s => LABEL_RE.test(s.trim());
 
-    rows.forEach((rowText, rowOffset) => {
-      const cols = rowText.split('\t');
+    rows.forEach((cols, rowOffset) => {
       const entryOffset = Math.floor(rowOffset / rowsPerEntry);
       const intraOffset = rowOffset % rowsPerEntry; // 0=제목행, 1=내용행
 
@@ -1043,7 +1073,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = divIdx; i < trowDivs.length; i++) {
           while (colI < cols.length && isLabel(cols[colI])) colI++;
           if (colI >= cols.length) break;
-          trowDivs[i].innerHTML = cols[colI++];
+          trowDivs[i].innerHTML = textToHtml(cols[colI++]);
         }
       } else {
         // 내용 행 → crow (선두 공백·라벨 건너뜀)
@@ -1059,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = crowStart; i < crowDivs.length; i++) {
           while (colI < cols.length && isLabel(cols[colI])) colI++;
           if (colI >= cols.length) break;
-          crowDivs[i].innerHTML = cols[colI++];
+          crowDivs[i].innerHTML = textToHtml(cols[colI++]);
         }
       }
     });
