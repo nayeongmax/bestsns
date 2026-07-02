@@ -137,7 +137,7 @@
   .main-text { min-height: 70px; height: auto; }
   .comment-text { min-height: 40px; height: auto; }
   .date-text { min-height: 18px; height: auto; font-size: 10px; color: #666; }
-  .body-div { border-top: 1px dashed #ddd; margin-top: 3px; padding-top: 3px; }
+  .body-div { min-height: 60px; }
 
   tr.add-row td { background: #f9f9f9; text-align: center; padding: 4px; }
   tr.add-row button {
@@ -593,32 +593,22 @@ function renderEntry(secId, entry, ei) {
   trow.appendChild(lbl1);
 
   const mainTd = document.createElement('td');
-  mainTd.rowSpan = 2;
   const mainDiv = makeEditable('제목 입력'); mainDiv.className = 'main-text';
   if (entry.title) mainDiv.innerHTML = entry.title;
   if (entry.ts) mainDiv.setAttribute('style', entry.ts);
   if (entry.tva) restoreVA(mainTd, entry.tva);
   mainTd.appendChild(mainDiv);
-  const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text body-div';
-  if (entry.body) bodyDiv.innerHTML = entry.body;
-  if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
-  mainTd.appendChild(bodyDiv);
   trow.appendChild(mainTd);
 
   const rlbl1 = document.createElement('td'); rlbl1.className = 'rlbl'; rlbl1.textContent = '제목:';
   trow.appendChild(rlbl1);
 
   const rtitleTd = document.createElement('td');
-  rtitleTd.rowSpan = 2;
   const rtitleDiv = makeEditable('제목 입력'); rtitleDiv.className = 'comment-text';
   if (entry.rtitle) rtitleDiv.innerHTML = entry.rtitle;
   if (entry.rs) rtitleDiv.setAttribute('style', entry.rs);
   if (entry.rva) restoreVA(rtitleTd, entry.rva);
   rtitleTd.appendChild(rtitleDiv);
-  const rbodyDiv = makeEditable('내용 입력'); rbodyDiv.className = 'comment-text body-div';
-  if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
-  if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
-  rtitleTd.appendChild(rbodyDiv);
   trow.appendChild(rtitleTd);
 
   ['c1','c2','c3'].forEach((key) => {
@@ -650,8 +640,24 @@ function renderEntry(secId, entry, ei) {
   const lbl2 = document.createElement('td'); lbl2.className = 'lbl'; lbl2.textContent = '내용:';
   crow.appendChild(lbl2);
 
+  const bodyTd = document.createElement('td');
+  const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text body-div';
+  if (entry.body) bodyDiv.innerHTML = entry.body;
+  if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
+  if (entry.bva) restoreVA(bodyTd, entry.bva);
+  bodyTd.appendChild(bodyDiv);
+  crow.appendChild(bodyTd);
+
   const rlbl2 = document.createElement('td'); rlbl2.className = 'rlbl'; rlbl2.textContent = '내용:';
   crow.appendChild(rlbl2);
+
+  const rbodyTd = document.createElement('td');
+  const rbodyDiv = makeEditable('내용 입력'); rbodyDiv.className = 'comment-text body-div';
+  if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
+  if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
+  if (entry.rbva) restoreVA(rbodyTd, entry.rbva);
+  rbodyTd.appendChild(rbodyDiv);
+  crow.appendChild(rbodyTd);
 
   for (let i=0;i<3;i++) {
     const td = document.createElement('td'); td.style.background='#fff'; crow.appendChild(td);
@@ -747,21 +753,21 @@ function gatherSections() {
     const titleRows = [...document.querySelectorAll(`tr.title-row[data-sec-id="${sec.id}"]`)];
     titleRows.forEach(trow => {
       const ds = [...trow.querySelectorAll('[contenteditable]')];
+      const crow = trow.nextSibling;
+      const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
       const gs = d => d?.getAttribute('style')||'';
       const gva = d => d?.closest('td')?.dataset.va||'';
-      // ds indices after cell merge:
-      // 0=catDiv 1=mainDiv 2=bodyDiv 3=rtitleDiv 4=rbodyDiv 5=c1 6=c2 7=c3 8=date 9=link
       entries.push({
         cat:   ds[0]?.textContent||'',
         title: ds[1]?.innerHTML||'',  ts:  gs(ds[1]),  tva:  gva(ds[1]),
-        body:  ds[2]?.innerHTML||'',  bs:  gs(ds[2]),
-        rtitle:ds[3]?.innerHTML||'',  rs:  gs(ds[3]),  rva:  gva(ds[3]),
-        rbody: ds[4]?.innerHTML||'',  rbs: gs(ds[4]),
-        c1:    ds[5]?.innerHTML||'',  c1s: gs(ds[5]),  c1va: gva(ds[5]),
-        c2:    ds[6]?.innerHTML||'',  c2s: gs(ds[6]),  c2va: gva(ds[6]),
-        c3:    ds[7]?.innerHTML||'',  c3s: gs(ds[7]),  c3va: gva(ds[7]),
-        date:  ds[8]?.textContent||'',
-        link:  ds[9]?.textContent||'',
+        rtitle:ds[2]?.innerHTML||'',  rs:  gs(ds[2]),  rva:  gva(ds[2]),
+        c1:    ds[3]?.innerHTML||'',  c1s: gs(ds[3]),  c1va: gva(ds[3]),
+        c2:    ds[4]?.innerHTML||'',  c2s: gs(ds[4]),  c2va: gva(ds[4]),
+        c3:    ds[5]?.innerHTML||'',  c3s: gs(ds[5]),  c3va: gva(ds[5]),
+        date:  ds[6]?.textContent||'',
+        link:  ds[7]?.textContent||'',
+        body:  cs[0]?.innerHTML||'',  bs:  gs(cs[0]),  bva:  gva(cs[0]),
+        rbody: cs[1]?.innerHTML||'',  rbs: gs(cs[1]),  rbva: gva(cs[1]),
       });
     });
 
@@ -994,8 +1000,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const rowDivs = Array.from(parentRow.querySelectorAll('[contenteditable]'));
     const divIdx = rowDivs.indexOf(targetDiv);
-    // 병합 셀(mainTd/rtitleTd)은 contenteditable이 2개: 제목+내용
-    const cellDivCount = targetTd.querySelectorAll('[contenteditable]').length;
+
+    // crow에 contenteditable이 있는 셀(mainTd, rtitleTd)은 2행 1항목 모드
+    // divIdx 1=mainDiv → crow[0]=bodyDiv, divIdx 2=rtitleDiv → crow[1]=rbodyDiv
+    const firstEntryRow = document.querySelector(`tr.title-row[data-sec-id="${secId}"][data-entry-idx="${startIdx}"]`);
+    const firstCrow = firstEntryRow?.nextElementSibling;
+    const hasCrowTarget = firstCrow?.classList.contains('content-row') &&
+      firstCrow.querySelectorAll('[contenteditable]').length > 0 &&
+      divIdx >= 1 && divIdx <= 2; // mainDiv(1) or rtitleDiv(2)
+    const rowsPerEntry = hasCrowTarget ? 2 : 1;
+
+    // 붙여넣기에 필요한 행 수만큼 미리 생성
+    const totalEntriesNeeded = Math.ceil(rows.length / rowsPerEntry);
+    const addRowEl = document.getElementById(`add-row-${secId}`);
+    while (sec.entries.length < startIdx + totalEntriesNeeded) {
+      const newE = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' };
+      sec.entries.push(newE);
+      renderEntry(secId, newE, sec.entries.length - 1, addRowEl);
+    }
 
     // 구글 시트 라벨 컬럼 (제목:, 내용: 등) 스킵용
     const LABEL_RE = /^(제목|내용)[*:]?\s*[:]\s*$/;
@@ -1003,14 +1025,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     rows.forEach((rowText, rowOffset) => {
       const cols = rowText.split('\t');
-      let entryOffset, intraOffset;
-      if (cellDivCount >= 2) {
-        entryOffset = Math.floor(rowOffset / cellDivCount);
-        intraOffset = rowOffset % cellDivCount;
-      } else {
-        entryOffset = rowOffset;
-        intraOffset = 0;
-      }
+      const entryOffset = Math.floor(rowOffset / rowsPerEntry);
+      const intraOffset = rowOffset % rowsPerEntry; // 0=제목행, 1=내용행
+
       const entryIdx = startIdx + entryOffset;
       if (entryIdx >= sec.entries.length) return;
 
@@ -1018,36 +1035,31 @@ document.addEventListener('DOMContentLoaded', () => {
         `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
       );
       if (!entryRow) return;
-      const entryDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
 
-      if (cellDivCount >= 2) {
-        if (intraOffset === 0) {
-          // 제목 행: divIdx부터 순서대로 body-div 건너뛰고, 라벨 컬럼 건너뜀
-          let colI = 0;
-          for (let i = divIdx; i < entryDivs.length; i++) {
-            if (entryDivs[i].classList.contains('body-div')) continue;
-            while (colI < cols.length && isLabel(cols[colI])) colI++;
-            if (colI >= cols.length) break;
-            entryDivs[i].innerHTML = cols[colI++];
-          }
-        } else {
-          // 내용 행: divIdx+1부터 body-div만, 선두 공백·라벨 건너뜀
-          let colI = 0;
-          while (colI < cols.length && cols[colI].trim() === '') colI++;
-          for (let i = divIdx + 1; i < entryDivs.length; i++) {
-            if (!entryDivs[i].classList.contains('body-div')) continue;
-            while (colI < cols.length && isLabel(cols[colI])) colI++;
-            if (colI >= cols.length) break;
-            entryDivs[i].innerHTML = cols[colI++];
-          }
-        }
-      } else {
-        // 단일 셀: 각 col을 순서대로 붙여넣기 (라벨 건너뜀)
+      if (intraOffset === 0) {
+        // 제목 행 → trow의 divIdx부터 채움 (라벨 건너뜀)
+        const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
         let colI = 0;
-        for (let i = divIdx; i < entryDivs.length; i++) {
+        for (let i = divIdx; i < trowDivs.length; i++) {
           while (colI < cols.length && isLabel(cols[colI])) colI++;
           if (colI >= cols.length) break;
-          entryDivs[i].innerHTML = cols[colI++];
+          trowDivs[i].innerHTML = cols[colI++];
+        }
+      } else {
+        // 내용 행 → crow (선두 공백·라벨 건너뜀)
+        const crow = entryRow.nextElementSibling;
+        if (!crow?.classList.contains('content-row')) return;
+        const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
+        if (!crowDivs.length) return;
+
+        let colI = 0;
+        while (colI < cols.length && cols[colI].trim() === '') colI++; // 선두 빈셀 스킵
+
+        const crowStart = Math.max(0, divIdx - 1); // main(1)→crow[0], rtitle(2)→crow[1]
+        for (let i = crowStart; i < crowDivs.length; i++) {
+          while (colI < cols.length && isLabel(cols[colI])) colI++;
+          if (colI >= cols.length) break;
+          crowDivs[i].innerHTML = cols[colI++];
         }
       }
     });
