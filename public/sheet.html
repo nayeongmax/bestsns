@@ -852,7 +852,7 @@ let _saveTimer = null;
 function autoSave() {
   collectCurrentTab();
   const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
-  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId }));
+  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
   // 저장 인디케이터 살짝 표시
   const badge = document.getElementById('savedBadge');
   badge.textContent = '✔ 자동저장됨';
@@ -883,7 +883,16 @@ sheetBodyEl.addEventListener('dblclick', e => {
   if (div) { div.focus(); }
 });
 
+// 키보드 이벤트용 포커스 앵커 (contenteditable 아님 → inEdit=false 보장)
+const _kbFocus = document.createElement('div');
+_kbFocus.setAttribute('tabindex', '-1');
+_kbFocus.style.cssText = 'position:fixed;opacity:0;top:-200px;left:0;width:1px;height:1px;pointer-events:none;';
+document.body.appendChild(_kbFocus);
+
 // 싱글클릭 → 선택모드 (편집 안 함)
+let _dragStartTd = null;
+let _isDragging = false;
+
 sheetBodyEl.addEventListener('mousedown', e => {
   if (e.target.closest('tr.section-header')) return;
   if (e.target.closest('button')) return;       // 삭제버튼 등 무시
@@ -891,12 +900,15 @@ sheetBodyEl.addEventListener('mousedown', e => {
   if (!td || !td.querySelector('[contenteditable]')) return;
 
   // 더블클릭은 편집모드: 선택 간섭 안 함
-  if (e.detail >= 2) { return; }
+  if (e.detail >= 2) { _dragStartTd = null; _isDragging = false; return; }
 
   // 현재 편집 중이면 blur 후 선택 전환
   if (document.activeElement?.isContentEditable) {
     document.activeElement.blur();
   }
+
+  _isDragging = true;
+  _dragStartTd = td;
 
   // 선택 업데이트
   if (!e.shiftKey) clearSelection();
@@ -915,27 +927,41 @@ sheetBodyEl.addEventListener('mousedown', e => {
     }
   }
 
+  // 키보드 이벤트 수신 보장 (Delete/Ctrl+C 등)
+  _kbFocus.focus();
+
   e.preventDefault();   // contenteditable 자동 포커스 방지
 }, true);
 
-// 드래그로 다중 셀 선택
-let _isDragging = false;
+// 드래그로 다중 셀 선택 — 시작/현재 셀 사이의 사각형 영역 전체 선택
 sheetBodyEl.addEventListener('mousemove', e => {
-  if (!_isDragging) return;
+  if (!_isDragging || !_dragStartTd) return;
   if (e.target.closest('tr.section-header')) return;
   const td = e.target.closest('td');
   if (!td || !td.querySelector('[contenteditable]')) return;
-  if (!selectedCells.has(td)) {
-    selectedCells.add(td);
-    td.classList.add('cell-selected');
-    activeDiv = td.querySelector('[contenteditable]');
-    activeTd = td;
-  }
+
+  // 시작셀과 현재셀의 bounding rect로 선택 사각형 계산
+  const startRect = _dragStartTd.getBoundingClientRect();
+  const curRect   = td.getBoundingClientRect();
+  const selLeft   = Math.min(startRect.left,   curRect.left);
+  const selRight  = Math.max(startRect.right,  curRect.right);
+  const selTop    = Math.min(startRect.top,    curRect.top);
+  const selBottom = Math.max(startRect.bottom, curRect.bottom);
+
+  clearSelection();
+  sheetBodyEl.querySelectorAll('td').forEach(t => {
+    if (!t.querySelector('[contenteditable]')) return;
+    const r = t.getBoundingClientRect();
+    // 셀 중심이 선택 사각형 안에 있으면 선택
+    const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+    if (cx >= selLeft && cx <= selRight && cy >= selTop && cy <= selBottom) {
+      selectedCells.add(t);
+      t.classList.add('cell-selected');
+      activeDiv = t.querySelector('[contenteditable]');
+      activeTd  = t;
+    }
+  });
 });
-sheetBodyEl.addEventListener('mousedown', e => {
-  if (e.target.closest('tr.section-header') || e.target.closest('button')) return;
-  if (e.target.closest('td')?.querySelector('[contenteditable]')) _isDragging = true;
-}, true);
 document.addEventListener('mouseup', () => { _isDragging = false; });
 
 // 셀 포커스 추적 — 편집모드 진입 시
@@ -1150,6 +1176,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // GS 데이터에 제목:/내용: 레이블 구조가 있는지 확인 (첫 3열 탐색)
     const hasLabels = rows.some(r => detectRow(r).type !== 'none');
 
+    // rlbl(우측 제목:/내용: 레이블) 바로 다음 셀 = 우측 복사 영역 → 항상 건너뜀
+    const isRightSide = div => div.parentElement?.previousElementSibling?.classList?.contains('rlbl');
+
     const addRowEl = document.getElementById(`add-row-${secId}`);
 
     if (hasLabels) {
@@ -1196,8 +1225,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!entryRow) return;
 
         // trow 채우기 — titleStart 열부터 (레이블 앞 열이 있으면 catDiv(0)에)
-        // rlbl(제목:/내용: 우측 레이블) 다음 셀은 우측 복사 영역이므로 건너뜀
-        const isRightSide = div => div.parentElement?.previousElementSibling?.classList?.contains('rlbl');
         const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
         if (titleStart > 1 && titleCols[0] && titleCols[0].trim() && !isLabel(titleCols[0])) {
           trowDivs[0].innerHTML = textToHtml(titleCols[0]);
@@ -1225,12 +1252,16 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
     } else {
-      // ── 레이블 없음: divIdx 기반 rowsPerEntry (기존 로직) ──────────
+      // ── 레이블 없음: divIdx 기반 rowsPerEntry ──────────────────────────
+      // 내용 행(crow)의 셀을 선택한 경우 → trow의 mainDiv(index 1) 기준으로 취급
+      const isCrowClick = parentRow.classList.contains('content-row');
+      const effectiveDivIdx = isCrowClick ? 1 : divIdx;
+
       const firstEntryRow = document.querySelector(`tr.title-row[data-sec-id="${secId}"][data-entry-idx="${startIdx}"]`);
       const firstCrow = firstEntryRow?.nextElementSibling;
       const hasCrowTarget = firstCrow?.classList.contains('content-row') &&
         firstCrow.querySelectorAll('[contenteditable]').length > 0 &&
-        divIdx >= 1 && divIdx <= 2;
+        effectiveDivIdx >= 1 && effectiveDivIdx <= 2;
       const rowsPerEntry = hasCrowTarget ? 2 : 1;
 
       const totalEntriesNeeded = Math.ceil(rows.length / rowsPerEntry);
@@ -1254,8 +1285,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (intraOffset === 0) {
           const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
           let colI = 0;
-          for (let i = divIdx; i < trowDivs.length; i++) {
-            while (colI < cols.length && isLabel(cols[colI])) colI++;
+          // 선두 빈 열과 레이블 스킵
+          while (colI < cols.length && (cols[colI].trim() === '' || isLabel(cols[colI]))) colI++;
+          for (let i = effectiveDivIdx; i < trowDivs.length; i++) {
+            if (isRightSide(trowDivs[i])) continue; // rtitleDiv 건너뜀
             if (colI >= cols.length) break;
             trowDivs[i].innerHTML = textToHtml(cols[colI++]);
           }
@@ -1265,10 +1298,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
           if (!crowDivs.length) return;
           let colI = 0;
-          while (colI < cols.length && cols[colI].trim() === '') colI++;
-          const crowStart = Math.max(0, divIdx - 1);
-          for (let i = crowStart; i < crowDivs.length; i++) {
-            while (colI < cols.length && isLabel(cols[colI])) colI++;
+          // 선두 빈 열과 레이블 스킵
+          while (colI < cols.length && (cols[colI].trim() === '' || isLabel(cols[colI]))) colI++;
+          for (let i = 0; i < crowDivs.length; i++) {
+            if (isRightSide(crowDivs[i])) continue; // rbodyDiv 건너뜀
             if (colI >= cols.length) break;
             crowDivs[i].innerHTML = textToHtml(cols[colI++]);
           }
@@ -1442,31 +1475,50 @@ document.getElementById('sheetBody').addEventListener('input', () => {
 
 // ─── 초기화 ───
 async function init() {
-  // userId 모드: 항상 클라우드에서 불러오기 시도
   if (USER_ID) {
+    // ① 로컬 캐시 먼저 확인
+    let localData = null, localTime = 0;
     try {
-      const data = await cloudLoad(USER_ID);
-      if (data && data.payload && data.payload.tabs?.length > 0) {
-        tabs = data.payload.tabs;
-        activeTabId = data.payload.activeTabId || tabs[0].id;
-        // 로컬에도 캐시
-        localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId }));
-        renderTabBar();
-        switchTab(activeTabId, false);
-        updateSyncUI();
-        return;
+      const raw = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p?.tabs?.length > 0) { localData = p; localTime = p.savedAt || 0; }
       }
     } catch(e) {}
-    // 클라우드 없으면 유저별 로컬 캐시 확인
-    const local = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
-    if (local) {
-      try {
-        const parsed = JSON.parse(local);
-        if (parsed?.tabs?.length > 0) {
-          tabs = parsed.tabs; activeTabId = parsed.activeTabId || tabs[0].id;
-          renderTabBar(); switchTab(activeTabId, false); updateSyncUI(); return;
-        }
-      } catch(e) {}
+
+    // ② 클라우드 데이터 확인 (로컬이 있어도 반드시 체크해서 더 최신인지 비교)
+    let cloudData = null, cloudTime = 0;
+    try {
+      const data = await cloudLoad(USER_ID);
+      if (data && data.payload?.tabs?.length > 0) {
+        cloudData = data.payload;
+        // 서버 updated_at을 타임스탬프로 변환 (클라우드에 savedAt 없으면 updated_at 사용)
+        cloudTime = data.payload.savedAt || (data.updated_at ? new Date(data.updated_at).getTime() : 0);
+      }
+    } catch(e) {}
+
+    // ③ 더 최신 데이터 사용 (타임스탬프 같으면 로컬 우선)
+    let chosen = null;
+    if (cloudData && cloudTime > localTime) {
+      chosen = { ...cloudData, savedAt: cloudTime };
+      // 클라우드가 더 최신 → 로컬 캐시 갱신
+      localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(chosen));
+    } else if (localData) {
+      chosen = localData;
+      // 로컬이 더 최신 → 클라우드 업데이트
+      if (cloudData && localTime > cloudTime) {
+        try { await cloudSave(USER_ID); } catch(e) {}
+      }
+    } else if (cloudData) {
+      chosen = { ...cloudData, savedAt: cloudTime };
+      localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(chosen));
+    }
+
+    if (chosen) {
+      tabs = chosen.tabs;
+      activeTabId = chosen.activeTabId || tabs[0].id;
+      renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
+      return;
     }
   } else {
     // 일반 모드: 기존 로컬 저장 불러오기
@@ -1502,11 +1554,11 @@ window._autoSaveWithCloud = async function() {
 // beforeunload 시 동기화 저장
 window.addEventListener('beforeunload', () => {
   collectCurrentTab();
+  const ts = Date.now();
   if (USER_ID) {
-    const key = `snsSheet_tabs_${USER_ID}`;
-    localStorage.setItem(key, JSON.stringify({ tabs, activeTabId }));
+    localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId, savedAt: ts }));
   } else {
-    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId, savedAt: ts }));
   }
 });
 
