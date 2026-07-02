@@ -200,20 +200,25 @@ const AdminPanel: React.FC<Props> = ({
 ══════════════════════════════════════════════ */
 type FranchiseAdminSub = 'plans' | 'products';
 
+const discountPct = (price: number, originalPrice: number) =>
+  originalPrice > 0 ? Math.round((1 - price / originalPrice) * 100) : 0;
+
 const FranchiseAdmin: React.FC = () => {
   const [sub, setSub] = useState<FranchiseAdminSub>('plans');
 
   // ── 구독플랜 ──
   const [plans, setPlans]         = useState<FranchisePlan[]>([]);
   const [editPlan, setEditPlan]   = useState<FranchisePlan | null>(null);
-  const [planForm, setPlanForm]   = useState({ name: '', price: '', period: '월', features: '', isActive: true });
+  const [planForm, setPlanForm]   = useState({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true });
   const [planSaving, setPlanSaving] = useState(false);
+  const [showPlanForm, setShowPlanForm] = useState(false);
 
   // ── 마케팅상품 ──
   const [products, setProducts]     = useState<FranchiseProduct[]>([]);
   const [editProduct, setEditProduct] = useState<FranchiseProduct | null>(null);
-  const [prodForm, setProdForm]     = useState({ name: '', description: '', price: '', minQuantity: '1', maxQuantity: '10000', category: '', isHidden: false });
+  const [prodForm, setProdForm]     = useState({ name: '', description: '', price: '', originalPrice: '', minQuantity: '1', maxQuantity: '10000', category: '', isHidden: false });
   const [prodSaving, setProdSaving] = useState(false);
+  const [showProductForm, setShowProductForm] = useState(false);
 
   useEffect(() => {
     fetchFranchisePlans().then(setPlans).catch(() => setPlans(DEFAULT_PLANS));
@@ -223,19 +228,28 @@ const FranchiseAdmin: React.FC = () => {
   // ── 플랜 저장 ──
   const openNewPlan = () => {
     setEditPlan(null);
-    setPlanForm({ name: '', price: '', period: '월', features: '', isActive: true });
+    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true });
+    setShowPlanForm(true);
   };
   const openEditPlan = (p: FranchisePlan) => {
     setEditPlan(p);
-    setPlanForm({ name: p.name, price: String(p.price), period: p.period, features: p.features.join('\n'), isActive: p.isActive });
+    setPlanForm({ name: p.name, price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : '', period: p.period, features: p.features.join('\n'), isActive: p.isActive });
+    setShowPlanForm(true);
+  };
+  const closePlanForm = () => {
+    setEditPlan(null);
+    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true });
+    setShowPlanForm(false);
   };
   const savePlan = async () => {
     if (!planForm.name.trim() || !planForm.price) return;
     setPlanSaving(true);
+    const originalPrice = Number(planForm.originalPrice) || 0;
     const plan: FranchisePlan = {
       id: editPlan?.id ?? `plan_${Date.now()}`,
       name: planForm.name.trim(),
       price: Number(planForm.price),
+      ...(originalPrice > Number(planForm.price) ? { originalPrice } : {}),
       period: planForm.period,
       features: planForm.features.split('\n').map(s => s.trim()).filter(Boolean),
       isActive: planForm.isActive,
@@ -244,6 +258,7 @@ const FranchiseAdmin: React.FC = () => {
     const next = editPlan ? plans.map(p => p.id === editPlan.id ? plan : p) : [...plans, plan];
     await upsertFranchisePlans(next).catch(() => {});
     setPlans(next);
+    setShowPlanForm(false);
     setEditPlan(null);
     setPlanSaving(false);
   };
@@ -257,20 +272,30 @@ const FranchiseAdmin: React.FC = () => {
   // ── 상품 저장 ──
   const openNewProduct = () => {
     setEditProduct(null);
-    setProdForm({ name: '', description: '', price: '', minQuantity: '1', maxQuantity: '10000', category: '', isHidden: false });
+    setProdForm({ name: '', description: '', price: '', originalPrice: '', minQuantity: '1', maxQuantity: '10000', category: '', isHidden: false });
+    setShowProductForm(true);
   };
   const openEditProduct = (p: FranchiseProduct) => {
     setEditProduct(p);
-    setProdForm({ name: p.name, description: p.description, price: String(p.price), minQuantity: String(p.minQuantity), maxQuantity: String(p.maxQuantity), category: p.category, isHidden: p.isHidden });
+    setProdForm({ name: p.name, description: p.description, price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : '', minQuantity: String(p.minQuantity), maxQuantity: String(p.maxQuantity), category: p.category, isHidden: p.isHidden });
+    setShowProductForm(true);
+  };
+  const closeProductForm = () => {
+    setEditProduct(null);
+    setProdForm({ name: '', description: '', price: '', originalPrice: '', minQuantity: '1', maxQuantity: '10000', category: '', isHidden: false });
+    setShowProductForm(false);
   };
   const saveProduct = async () => {
     if (!prodForm.name.trim()) return;
     setProdSaving(true);
+    const originalPrice = Number(prodForm.originalPrice) || 0;
+    const price = Number(prodForm.price);
     const product: FranchiseProduct = {
       id: editProduct?.id ?? `fp_${Date.now()}`,
       name: prodForm.name.trim(),
       description: prodForm.description.trim(),
-      price: Number(prodForm.price),
+      price,
+      ...(originalPrice > price ? { originalPrice } : {}),
       minQuantity: Number(prodForm.minQuantity) || 1,
       maxQuantity: Number(prodForm.maxQuantity) || 10000,
       category: prodForm.category.trim() || '일반',
@@ -280,6 +305,7 @@ const FranchiseAdmin: React.FC = () => {
     const next = editProduct ? products.map(p => p.id === editProduct.id ? product : p) : [...products, product];
     await upsertFranchiseProducts(next).catch(() => {});
     setProducts(next);
+    setShowProductForm(false);
     setEditProduct(null);
     setProdSaving(false);
   };
@@ -322,13 +348,16 @@ const FranchiseAdmin: React.FC = () => {
           </div>
 
           {/* 플랜 폼 */}
-          {(editPlan !== null || planForm.name !== '' || planForm.price !== '') && (
+          {showPlanForm && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 space-y-3">
               <h3 className="font-black text-gray-800">{editPlan ? '플랜 수정' : '새 플랜'}</h3>
-              <div className="grid sm:grid-cols-3 gap-3">
+              <div className="grid sm:grid-cols-2 gap-3">
                 <input className={inputCls} placeholder="플랜명 (예: 기본 플랜)" value={planForm.name} onChange={e => setPlanForm(f => ({ ...f, name: e.target.value }))} />
-                <input className={inputCls} placeholder="가격 (원)" type="number" value={planForm.price} onChange={e => setPlanForm(f => ({ ...f, price: e.target.value }))} />
                 <input className={inputCls} placeholder="기간 (예: 월)" value={planForm.period} onChange={e => setPlanForm(f => ({ ...f, period: e.target.value }))} />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <input className={inputCls} placeholder="정가 (할인 전, 선택)" type="number" value={planForm.originalPrice} onChange={e => setPlanForm(f => ({ ...f, originalPrice: e.target.value }))} />
+                <input className={inputCls} placeholder="판매가 (원) *" type="number" value={planForm.price} onChange={e => setPlanForm(f => ({ ...f, price: e.target.value }))} />
               </div>
               <textarea className={`${inputCls} resize-none`} rows={4} placeholder="기능 목록 (한 줄에 하나씩)" value={planForm.features} onChange={e => setPlanForm(f => ({ ...f, features: e.target.value }))} />
               <div className="flex items-center gap-3">
@@ -340,7 +369,7 @@ const FranchiseAdmin: React.FC = () => {
                   className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-black disabled:opacity-40 hover:bg-indigo-700 transition-colors">
                   {planSaving ? '저장 중...' : '저장'}
                 </button>
-                <button type="button" onClick={() => { setEditPlan(null); setPlanForm({ name: '', price: '', period: '월', features: '', isActive: true }); }}
+                <button type="button" onClick={closePlanForm}
                   className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 text-sm font-black hover:bg-gray-200 transition-colors">
                   취소
                 </button>
@@ -356,6 +385,12 @@ const FranchiseAdmin: React.FC = () => {
                   <div>
                     <span className="font-black text-gray-900">{plan.name}</span>
                     {!plan.isActive && <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded font-black">비활성</span>}
+                    {plan.originalPrice && plan.originalPrice > plan.price && (
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-gray-400 font-bold line-through">{plan.originalPrice.toLocaleString()}원</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-black">{discountPct(plan.price, plan.originalPrice)}% 할인</span>
+                      </div>
+                    )}
                     <p className="text-xl font-black text-indigo-600 mt-0.5">{plan.price.toLocaleString()}원<span className="text-xs text-gray-400 font-bold">/{plan.period}</span></p>
                   </div>
                   <div className="flex gap-1.5">
@@ -385,7 +420,7 @@ const FranchiseAdmin: React.FC = () => {
           </div>
 
           {/* 상품 폼 */}
-          {(editProduct !== null || prodForm.name !== '') && (
+          {showProductForm && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 space-y-3">
               <h3 className="font-black text-gray-800">{editProduct ? '상품 수정' : '새 상품'}</h3>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -393,8 +428,11 @@ const FranchiseAdmin: React.FC = () => {
                 <input className={inputCls} placeholder="카테고리 (예: SNS마케팅)" value={prodForm.category} onChange={e => setProdForm(f => ({ ...f, category: e.target.value }))} />
               </div>
               <textarea className={`${inputCls} resize-none`} rows={3} placeholder="상품 설명" value={prodForm.description} onChange={e => setProdForm(f => ({ ...f, description: e.target.value }))} />
-              <div className="grid grid-cols-3 gap-3">
-                <input className={inputCls} placeholder="단가 (원)" type="number" value={prodForm.price} onChange={e => setProdForm(f => ({ ...f, price: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-3">
+                <input className={inputCls} placeholder="정가 (할인 전, 선택)" type="number" value={prodForm.originalPrice} onChange={e => setProdForm(f => ({ ...f, originalPrice: e.target.value }))} />
+                <input className={inputCls} placeholder="판매단가 (원) *" type="number" value={prodForm.price} onChange={e => setProdForm(f => ({ ...f, price: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <input className={inputCls} placeholder="최소 수량" type="number" value={prodForm.minQuantity} onChange={e => setProdForm(f => ({ ...f, minQuantity: e.target.value }))} />
                 <input className={inputCls} placeholder="최대 수량" type="number" value={prodForm.maxQuantity} onChange={e => setProdForm(f => ({ ...f, maxQuantity: e.target.value }))} />
               </div>
@@ -407,7 +445,7 @@ const FranchiseAdmin: React.FC = () => {
                   className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-black disabled:opacity-40 hover:bg-indigo-700 transition-colors">
                   {prodSaving ? '저장 중...' : '저장'}
                 </button>
-                <button type="button" onClick={() => { setEditProduct(null); setProdForm({ name: '', description: '', price: '', minQuantity: '1', maxQuantity: '10000', category: '', isHidden: false }); }}
+                <button type="button" onClick={closeProductForm}
                   className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 text-sm font-black hover:bg-gray-200 transition-colors">
                   취소
                 </button>
@@ -429,7 +467,19 @@ const FranchiseAdmin: React.FC = () => {
                       {product.description && <p className="text-gray-400 text-[11px] truncate max-w-[200px]">{product.description}</p>}
                     </td>
                     <td className="px-4 py-3 text-gray-500">{product.category}</td>
-                    <td className="px-4 py-3 font-black text-gray-800">{product.price.toLocaleString()}원</td>
+                    <td className="px-4 py-3">
+                      {product.originalPrice && product.originalPrice > product.price ? (
+                        <div className="space-y-0.5">
+                          <p className="text-gray-400 font-bold line-through text-[10px]">{product.originalPrice.toLocaleString()}원</p>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-gray-800">{product.price.toLocaleString()}원</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-black">{discountPct(product.price, product.originalPrice)}%</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="font-black text-gray-800">{product.price.toLocaleString()}원</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-400">{product.minQuantity.toLocaleString()}~{product.maxQuantity.toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <button type="button" onClick={() => toggleHidden(product)}

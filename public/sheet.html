@@ -32,6 +32,26 @@
   .cloud-badge.ok  { color: #1a73e8; }
   .cloud-badge.err { color: #c00; }
 
+  /* ── 서식 도구 바 ── */
+  .fmt-bar {
+    background: #f5f5f5; border-bottom: 1px solid #ddd;
+    padding: 3px 6px; display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .fmt-bar button {
+    padding: 2px 7px; font-size: 11px; cursor: pointer;
+    border: 1px solid #bbb; border-radius: 3px; background: #fff;
+  }
+  .fmt-bar button:hover { background: #e0e0e0; }
+  .fmt-bar select { font-size: 11px; padding: 2px 4px; border: 1px solid #bbb; border-radius: 3px; }
+  .fmt-bar label { font-size: 10px; color: #666; }
+  .fmt-bar .fsep { display: inline-block; width: 1px; height: 16px; background: #ccc; margin: 0 2px; vertical-align: middle; }
+  td.cell-focused  { background: #fffde7 !important; box-shadow: inset 0 0 0 2px #ffc107; }
+  td.cell-selected { background: #e8f4fd !important; outline: 2px solid #64b5f6; outline-offset: -2px; }
+  td.cell-va-mid   { vertical-align: middle !important; }
+  td.cell-va-bot   { vertical-align: bottom !important; }
+  td.cell-va-top   { vertical-align: top !important; }
+
   /* ── 동기화 패널 ── */
   .sync-panel {
     display: none; position: fixed; top: 50%; left: 50%; z-index: 9999;
@@ -79,7 +99,8 @@
   col.col-c1    { width: 11%; }
   col.col-c2    { width: 11%; }
   col.col-c3    { width: 11%; }
-  col.col-meta  { width: 18%; }
+  col.col-date  { width: 7%; }
+  col.col-link  { width: 11%; }
 
   td { border: 1px solid #bbb; vertical-align: top; padding: 0; overflow: visible; }
 
@@ -92,21 +113,18 @@
   tr.title-row td.cat-cell, tr.content-row td.cat-cell {
     background: #f2dce4; font-size: 10px; font-weight: bold;
     text-align: center; vertical-align: middle; padding: 2px; word-break: keep-all;
-    user-select: none;
   }
   tr.title-row td.lbl, tr.content-row td.lbl {
     background: #f2dce4; font-size: 10px; color: #555;
     padding: 2px 3px; vertical-align: top; white-space: nowrap;
-    user-select: none;
   }
   td.rlbl {
     background: #fff; font-size: 10px; color: #555;
     padding: 2px 3px; vertical-align: top; white-space: nowrap;
-    user-select: none;
   }
-  .cell-selected { background: #dbeafe !important; outline: 2px solid #1a73e8; outline-offset: -1px; }
-  td.comment-cell, td.link-cell { background: #fff; vertical-align: top; }
+  td.comment-cell, td.link-cell, td.date-cell { background: #fff; vertical-align: top; }
   td.link-cell { font-size: 9px; color: #555; padding: 2px 3px; word-break: break-all; }
+  td.date-cell { font-size: 10px; color: #555; padding: 2px 3px; }
 
   [contenteditable="true"] {
     outline: none; min-height: 18px; width: 100%; display: block;
@@ -114,11 +132,12 @@
     white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
     overflow: visible; height: auto;
   }
-  [contenteditable="true"]:focus { background: #fffde7; box-shadow: inset 0 0 0 2px #ffc107; }
+  [contenteditable="true"]:focus { outline: none; }
   [contenteditable="true"]:empty:before { content: attr(data-ph); color: #ccc; pointer-events: none; }
   .main-text { min-height: 70px; height: auto; }
   .comment-text { min-height: 40px; height: auto; }
   .date-text { min-height: 18px; height: auto; font-size: 10px; color: #666; }
+  .body-div { min-height: 60px; }
 
   tr.add-row td { background: #f9f9f9; text-align: center; padding: 4px; }
   tr.add-row button {
@@ -200,6 +219,27 @@
   <span class="cloud-badge" id="cloudBadge"></span>
 </div>
 
+<div class="fmt-bar" id="fmtBar">
+  <label>크기</label>
+  <select id="fmtSize" onchange="applyFontSize(this.value)">
+    <option value="">-</option>
+    <option value="8">8</option><option value="9">9</option><option value="10">10</option>
+    <option value="11">11</option><option value="12">12</option><option value="13">13</option>
+    <option value="14">14</option><option value="16">16</option><option value="18">18</option>
+    <option value="20">20</option><option value="24">24</option>
+  </select>
+  <label style="margin-left:3px">색상</label>
+  <input type="color" id="fmtColor" value="#000000" title="글자 색상" oninput="applyFontColor(this.value)" onchange="applyFontColor(this.value)">
+  <span class="fsep"></span>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('left')" title="왼쪽 정렬">≡왼</button>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('center')" title="가운데 정렬">≡중</button>
+  <button onmousedown="holdFocus(event)" onclick="applyHAlign('right')" title="오른쪽 정렬">≡오</button>
+  <span class="fsep"></span>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('top')" title="위 정렬">↑위</button>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('middle')" title="가운데 정렬">↕중</button>
+  <button onmousedown="holdFocus(event)" onclick="applyVAlign('bottom')" title="아래 정렬">↓아</button>
+</div>
+
 <!-- 동기화 오버레이 & 패널 -->
 <div class="sync-overlay" id="syncOverlay" onclick="closeSyncPanel()"></div>
 <div class="sync-panel" id="syncPanel">
@@ -220,7 +260,7 @@
       <col class="col-cat"><col class="col-label"><col class="col-main">
       <col class="col-rlabel"><col class="col-r1">
       <col class="col-c1"><col class="col-c2"><col class="col-c3">
-      <col class="col-meta">
+      <col class="col-date"><col class="col-link">
     </colgroup>
     <tbody id="sheetBody"></tbody>
   </table>
@@ -237,164 +277,22 @@
 
 <script>
 // ═══════════════════════════════════════════════
-// 셀 단위 범위 선택 (구글 시트처럼)
-// ═══════════════════════════════════════════════
-
-// 시각적 좌→우 필드 순서 (선택 가능한 편집 칸)
-const FIELD_ORDER = ['title', 'rtitle', 'c1', 'c2', 'c3', 'date', 'link'];
-// title-row 필드 ↔ content-row 페어 (세로로 같은 칸)
-const CONTENT_PAIR = { title: 'body', rtitle: 'rbody' };
-
-let cellDragActive = false;
-let cellSelStart   = null; // { el, secId, entryIdx, field, fi }
-let cellSelEnd     = null;
-let cellSel        = null; // { secId, minEi, maxEi, minFi, maxFi }
-let _mdEl          = null; // mousedown 시작 element
-
-function getCellDiv(target) {
-  // data-field 가 있는 contenteditable div 찾기
-  return target.closest('[data-field]');
-}
-
-function getCellInfo(div) {
-  if (!div || !div.dataset.field) return null;
-  const field = div.dataset.field;
-  const fi = FIELD_ORDER.indexOf(field);
-  if (fi === -1) return null; // cat/body/rbody 등은 선택 체인 밖
-  const tr = div.closest('tr[data-sec-id]');
-  if (!tr) return null;
-  return { el: div, field, fi, secId: tr.dataset.secId, entryIdx: parseInt(tr.dataset.entryIdx, 10) };
-}
-
-function clearCellHighlight() {
-  document.querySelectorAll('.cell-selected').forEach(e => e.classList.remove('cell-selected'));
-}
-
-function applyCellHighlight() {
-  clearCellHighlight();
-  if (!cellSelStart || !cellSelEnd || cellSelStart.secId !== cellSelEnd.secId) return;
-  const { secId } = cellSelStart;
-  const minEi = Math.min(cellSelStart.entryIdx, cellSelEnd.entryIdx);
-  const maxEi = Math.max(cellSelStart.entryIdx, cellSelEnd.entryIdx);
-  const minFi = Math.min(cellSelStart.fi, cellSelEnd.fi);
-  const maxFi = Math.max(cellSelStart.fi, cellSelEnd.fi);
-  cellSel = { secId, minEi, maxEi, minFi, maxFi };
-  for (let ei = minEi; ei <= maxEi; ei++) {
-    for (let fi = minFi; fi <= maxFi; fi++) {
-      const f = FIELD_ORDER[fi];
-      const el = document.querySelector(`[data-field="${f}"][data-sec-id="${secId}"][data-entry-idx="${ei}"]`);
-      if (el) el.classList.add('cell-selected');
-      const pf = CONTENT_PAIR[f];
-      if (pf) {
-        const pel = document.querySelector(`[data-field="${pf}"][data-sec-id="${secId}"][data-entry-idx="${ei}"]`);
-        if (pel) pel.classList.add('cell-selected');
-      }
-    }
-  }
-}
-
-function clearCellSelection() {
-  clearCellHighlight();
-  cellSelStart = cellSelEnd = cellSel = null;
-}
-
-let _pendingFocus  = null; // { el, x, y }
-let _dragDir       = null; // 'row' | 'col' — 드래그 확정 방향
-let _dragStartX    = 0;
-let _dragStartY    = 0;
-
-document.addEventListener('mousedown', (e) => {
-  if (e.button !== 0) return;
-  if (e.target.tagName === 'BUTTON') return;
-  const div = getCellDiv(e.target);
-  const info = getCellInfo(div);
-  _mdEl = div || null;
-  _pendingFocus = null;
-  _dragDir = null;
-  if (!info) {
-    if (!e.target.closest('tr.section-header')) clearCellSelection();
-    return;
-  }
-  // 브라우저 텍스트 선택 완전 차단 — 클릭 시 커서는 mouseup에서 수동 복원
-  e.preventDefault();
-  _pendingFocus = { el: div, x: e.clientX, y: e.clientY };
-  _dragStartX = e.clientX;
-  _dragStartY = e.clientY;
-});
-
-document.addEventListener('mousemove', (e) => {
-  if (!e.buttons || !_mdEl) return;
-  const div = getCellDiv(e.target);
-  const endInfo = getCellInfo(div);
-  if (!endInfo) return;
-  const startInfo = getCellInfo(_mdEl);
-  if (!startInfo || startInfo.secId !== endInfo.secId) return;
-
-  if (!cellDragActive) {
-    cellDragActive = true;
-    cellSelStart = startInfo;
-    pasteTargetSecId = startInfo.secId;
-    _pendingFocus = null;
-  }
-
-  // 드래그 방향 결정 (한 번만): 세로 우세 → 컬럼 고정, 가로 우세 → 행 고정
-  if (!_dragDir) {
-    const dx = Math.abs(e.clientX - _dragStartX);
-    const dy = Math.abs(e.clientY - _dragStartY);
-    if (dx > 12 || dy > 12) _dragDir = dy >= dx ? 'row' : 'col';
-  }
-
-  // 방향에 따라 fi(컬럼) 또는 ei(행) 고정
-  let fi = endInfo.fi;
-  let ei = endInfo.entryIdx;
-  if (_dragDir === 'row') fi = cellSelStart.fi;   // 세로 드래그: 컬럼 고정
-  if (_dragDir === 'col') ei = cellSelStart.entryIdx; // 가로 드래그: 행 고정
-
-  cellSelEnd = { ...endInfo, fi, entryIdx: ei };
-  applyCellHighlight();
-});
-
-document.addEventListener('mouseup', (e) => {
-  _dragDir = null;
-  _mdEl = null;
-  if (!cellDragActive && _pendingFocus) {
-    // 클릭(드래그 없음): 셀 포커스 + 클릭 위치에 커서 배치
-    _pendingFocus.el.focus();
-    try {
-      let range = null;
-      if (document.caretRangeFromPoint) {
-        range = document.caretRangeFromPoint(_pendingFocus.x, _pendingFocus.y);
-      } else if (document.caretPositionFromPoint) {
-        const pos = document.caretPositionFromPoint(_pendingFocus.x, _pendingFocus.y);
-        if (pos) { range = document.createRange(); range.setStart(pos.offsetNode, pos.offset); range.collapse(true); }
-      }
-      if (range) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); }
-    } catch(_) {}
-  }
-  _pendingFocus = null;
-  if (!cellDragActive) return;
-  cellDragActive = false;
-  if (cellSel) {
-    const rows = cellSel.maxEi - cellSel.minEi + 1;
-    const cols = cellSel.maxFi - cellSel.minFi + 1;
-    showCloudBadge(`📋 ${rows}행 × ${cols}열 선택됨 — Ctrl+V로 붙여넣기`, 'ok');
-  }
-});
-
-// ═══════════════════════════════════════════════
 // 구글 시트 붙여넣기 (TSV 파싱)
 // ═══════════════════════════════════════════════
 let pasteTargetSecId = null;
 
 function setPasteTarget(secId) {
   pasteTargetSecId = secId;
+  // 포커스된 셀이 있으면 blur (Ctrl+V가 셀로 가는 걸 방지)
   if (document.activeElement && document.activeElement.getAttribute('contenteditable') === 'true') {
     document.activeElement.blur();
   }
+  // 모든 섹션 헤더 outline 초기화
   document.querySelectorAll('tr.section-header').forEach(r => {
     r.style.outline = '';
     r.style.outlineOffset = '';
   });
+  // 선택된 섹션 강조
   const hrow = document.getElementById(`section-${secId}`);
   if (hrow) {
     hrow.style.outline = '3px solid #fbbc04';
@@ -467,73 +365,33 @@ function parseTsvToEntries(text) {
   return entries;
 }
 
-// 특정 셀의 contenteditable div에 값 쓰기
-function setCellValue(secId, entryIdx, field, value) {
-  const el = document.querySelector(`[data-field="${field}"][data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`);
-  if (el) el.textContent = value;
-  const sec = sections.find(s => s.id === secId);
-  if (sec && sec.entries[entryIdx] !== undefined) sec.entries[entryIdx][field] = value;
-}
-
 // 전역 붙여넣기 이벤트 (구글 시트 TSV)
 document.addEventListener('paste', (e) => {
   const text = e.clipboardData.getData('text/plain');
-  if (!text.includes('\t')) return;
+  if (!text.includes('\t')) return; // 탭 없으면 일반 텍스트 — 셀 처리에 맡김
+  if (!pasteTargetSecId) return;   // 붙여넣기 대상 없으면 일반 처리
 
-  // 셀 범위 선택 중이면 그 범위에 붙여넣기
-  if (cellSel) {
-    e.preventDefault();
-    const { secId, minEi, maxEi, minFi, maxFi } = cellSel;
-    const fields = FIELD_ORDER.slice(minFi, maxFi + 1);
-    const sec = sections.find(s => s.id === secId);
-    if (!sec) return;
+  // 붙여넣기 대상이 지정된 상태에서 탭 데이터 → 항상 가로채기
+  e.preventDefault();
 
-    const rawRows = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd().split('\n');
-    const grid = rawRows.map(r => r.split('\t'));
-    const nSlots = maxEi - minEi + 1;
-
-    // 2행씩 쌍(제목+내용)인지 1행씩인지 판단
-    const usePaired = grid.length >= nSlots * 2;
-
-    if (!confirm(`${fields.length}개 열 × ${nSlots}개 행에 붙여넣을까요?`)) return;
-
-    for (let i = 0; i < nSlots; i++) {
-      const ei = minEi + i;
-      // 필요하면 빈 행 추가
-      while (sec.entries.length <= ei) {
-        const empty = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', date:'', link:'' };
-        sec.entries.push(empty);
-        renderEntry(secId, empty, sec.entries.length - 1);
-      }
-      const r1 = usePaired ? grid[i * 2]     : grid[i];
-      const r2 = usePaired ? grid[i * 2 + 1] : null;
-      fields.forEach((f, ci) => {
-        const val = (r1?.[ci] ?? '').trim();
-        setCellValue(secId, ei, f, val);
-        const pf = CONTENT_PAIR[f];
-        if (pf) setCellValue(secId, ei, pf, (r2?.[ci] ?? '').trim());
-      });
-    }
-    clearCellSelection();
-    doCloudSave();
-    showCloudBadge(`✔ ${nSlots}개 행 붙여넣기 완료`, 'ok');
+  if (!pasteTargetSecId) {
+    alert('붙여넣기 위치를 먼저 선택해주세요.\n섹션 헤더(빨간 행)를 클릭하면 선택됩니다.');
     return;
   }
 
-  // 셀 선택 없으면 섹션에 전체 추가
-  if (!pasteTargetSecId) return;
-  e.preventDefault();
   const entries = parseTsvToEntries(text);
   if (!entries.length) { alert('붙여넣을 데이터가 없습니다.'); return; }
+
   const sec = sections.find(s => s.id === pasteTargetSecId);
   if (!sec) return;
-  if (!confirm(`${entries.length}개 행을 "${sec.name}" 섹션에 추가할까요?`)) return;
-  entries.forEach(entry => { sec.entries.push(entry); renderEntry(pasteTargetSecId, entry, sec.entries.length - 1); });
-  doCloudSave();
-  showCloudBadge(`✔ ${entries.length}개 행 추가됨`, 'ok');
-});
 
-function doCloudSave() {
+  if (!confirm(`${entries.length}개 행을 "${sec.name}" 섹션에 추가할까요?`)) return;
+
+  entries.forEach((entry, ei) => {
+    sec.entries.push(entry);
+    renderEntry(pasteTargetSecId, entry, sec.entries.length - 1);
+  });
+
   autoSave();
   if (syncCode) {
     clearTimeout(_cloudTimer);
@@ -542,7 +400,9 @@ function doCloudSave() {
       catch(e) { showCloudBadge('⚠ 클라우드 저장 실패', 'err'); }
     }, 1000);
   }
-}
+
+  showCloudBadge(`✔ ${entries.length}개 행 추가됨`, 'ok');
+});
 
 // ═══════════════════════════════════════════════
 // 기본 섹션 데이터
@@ -648,6 +508,7 @@ function renderTabBar() {
 
 function switchTab(tabId, doCollect = true) {
   if (doCollect && activeTabId) collectCurrentTab();
+  _undoStack = []; _redoStack = [];  // 탭별 이력 초기화
   activeTabId = tabId;
   const tab = tabs.find(t => t.id === tabId);
   if (!tab) return;
@@ -701,6 +562,101 @@ function deleteTab(tabId) {
 // ═══════════════════════════════════════════════
 let sections = [];
 
+// ─── 서식 도구 ────────────────────────────────────────────────────────────────
+let activeDiv = null;
+let activeTd  = null;
+let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
+let _pasteTargetTd = null;     // 붙여넣기 대상 셀
+
+// ── 전역 Undo / Redo ──────────────────────────────────────────────────────────
+const MAX_UNDO = 50;
+let _undoStack = [];
+let _redoStack = [];
+
+function immediateUndoPush() {
+  const snap = JSON.stringify(gatherSections());
+  if (_undoStack.length > 0 && _undoStack[_undoStack.length - 1] === snap) return;
+  _undoStack.push(snap);
+  if (_undoStack.length > MAX_UNDO) _undoStack.shift();
+  _redoStack = [];
+}
+
+function undoAction() {
+  if (_undoStack.length === 0) return;
+  _redoStack.push(JSON.stringify(gatherSections()));
+  loadSections(JSON.parse(_undoStack.pop()));
+  clearSelection(); activeDiv = null; activeTd = null;
+  debouncedSave();
+}
+
+function redoAction() {
+  if (_redoStack.length === 0) return;
+  _undoStack.push(JSON.stringify(gatherSections()));
+  loadSections(JSON.parse(_redoStack.pop()));
+  clearSelection(); activeDiv = null; activeTd = null;
+  debouncedSave();
+}
+
+function holdFocus(e) { e.preventDefault(); }
+
+// 클립보드에 일반 텍스트 복사 (셀 선택 시 자동 복사용)
+function copyToClipboard(text) {
+  if (!text) return;
+  try { if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text); return; } } catch(e) {}
+  // Fallback (iframe 환경)
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
+function applyFontSize(val) {
+  if (!val) return;
+  // 편집 중이면 activeDiv, 선택모드면 selectedCells
+  const targets = document.activeElement?.isContentEditable && activeDiv
+    ? [activeDiv]
+    : [...selectedCells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
+  targets.forEach(d => { d.style.fontSize = val + 'px'; });
+  if (targets.length) debouncedSave();
+}
+function applyFontColor(val) {
+  if (!activeDiv) return;
+  activeDiv.style.color = val;
+  debouncedSave();
+}
+function applyHAlign(align) {
+  const targets = document.activeElement?.isContentEditable && activeDiv
+    ? [activeDiv]
+    : [...selectedCells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
+  targets.forEach(d => { d.style.textAlign = align; });
+  if (targets.length) debouncedSave();
+}
+function applyVAlign(align) {
+  const tds = activeTd ? [activeTd] : [...selectedCells];
+  tds.forEach(td => {
+    td.classList.remove('cell-va-top', 'cell-va-mid', 'cell-va-bot');
+    td.style.verticalAlign = '';
+    if (align === 'top')    td.classList.add('cell-va-top');
+    else if (align === 'middle') td.classList.add('cell-va-mid');
+    else if (align === 'bottom') td.classList.add('cell-va-bot');
+    td.dataset.va = align;
+  });
+  if (tds.length) debouncedSave();
+}
+
+
+function restoreVA(td, va) {
+  if (!va) return;
+  td.classList.remove('cell-va-top','cell-va-mid','cell-va-bot');
+  if (va === 'top')    td.classList.add('cell-va-top');
+  else if (va === 'middle') td.classList.add('cell-va-mid');
+  else if (va === 'bottom') td.classList.add('cell-va-bot');
+  td.dataset.va = va;
+}
+
 function loadSections(data) {
   sections = JSON.parse(JSON.stringify(data));
   const tbody = document.getElementById('sheetBody');
@@ -751,6 +707,7 @@ function renderSection(sec) {
   });
 
   const metaCell = document.createElement('td');
+  metaCell.colSpan = 2;
   metaCell.style.background = '#ff0000';
   const metaDiv = makeEditable('메타/링크');
   metaDiv.style.cssText = 'font-size:9px;color:#fff;';
@@ -782,7 +739,7 @@ function renderSection(sec) {
 
   const addRow = document.createElement('tr');
   addRow.className = 'add-row'; addRow.id = `add-row-${sec.id}`;
-  const addTd = document.createElement('td'); addTd.colSpan = 9;
+  const addTd = document.createElement('td'); addTd.colSpan = 10;
   const ab = document.createElement('button');
   ab.textContent = `+ "${sec.name}" 에 행 추가`;
   ab.onclick = () => addEntry(sec.id);
@@ -815,33 +772,42 @@ function renderEntry(secId, entry, ei) {
 
   const mainTd = document.createElement('td');
   const mainDiv = makeEditable('제목 입력'); mainDiv.className = 'main-text';
-  mainDiv.dataset.field = 'title'; mainDiv.dataset.secId = secId; mainDiv.dataset.entryIdx = ei;
-  mainDiv.textContent = entry.title || ''; mainTd.appendChild(mainDiv);
+  if (entry.title) mainDiv.innerHTML = entry.title;
+  if (entry.ts) mainDiv.setAttribute('style', entry.ts);
+  if (entry.tva) restoreVA(mainTd, entry.tva);
+  mainTd.appendChild(mainDiv);
   trow.appendChild(mainTd);
 
   const rlbl1 = document.createElement('td'); rlbl1.className = 'rlbl'; rlbl1.textContent = '제목:';
   trow.appendChild(rlbl1);
 
   const rtitleTd = document.createElement('td');
-  const rtitleDiv = makeEditable('댓글 제목'); rtitleDiv.className = 'comment-text';
-  rtitleDiv.dataset.field = 'rtitle'; rtitleDiv.dataset.secId = secId; rtitleDiv.dataset.entryIdx = ei;
-  rtitleDiv.textContent = entry.rtitle || ''; rtitleTd.appendChild(rtitleDiv);
+  const rtitleDiv = makeEditable('제목 입력'); rtitleDiv.className = 'comment-text';
+  if (entry.rtitle) rtitleDiv.innerHTML = entry.rtitle;
+  if (entry.rs) rtitleDiv.setAttribute('style', entry.rs);
+  if (entry.rva) restoreVA(rtitleTd, entry.rva);
+  rtitleTd.appendChild(rtitleDiv);
   trow.appendChild(rtitleTd);
 
-  ['c1','c2','c3'].forEach(key => {
+  ['c1','c2','c3'].forEach((key) => {
     const td = document.createElement('td'); td.className = 'comment-cell';
     const d = makeEditable('댓글'); d.className = 'comment-text';
-    d.dataset.field = key; d.dataset.secId = secId; d.dataset.entryIdx = ei;
-    d.textContent = entry[key] || ''; td.appendChild(d); trow.appendChild(td);
+    const sKey = key + 's', vaKey = key + 'va';
+    if (entry[key]) d.innerHTML = entry[key];
+    if (entry[sKey]) d.setAttribute('style', entry[sKey]);
+    if (entry[vaKey]) td.style.verticalAlign = entry[vaKey];
+    td.appendChild(d); trow.appendChild(td);
   });
+
+  const dateTd = document.createElement('td');
+  dateTd.className = 'date-cell'; dateTd.rowSpan = 2;
+  const dateDiv = makeEditable('날짜'); dateDiv.className = 'date-text';
+  dateDiv.textContent = entry.date || ''; dateTd.appendChild(dateDiv);
+  trow.appendChild(dateTd);
 
   const linkTd = document.createElement('td');
   linkTd.className = 'link-cell'; linkTd.rowSpan = 2;
-  const dateDiv = makeEditable('날짜'); dateDiv.className = 'date-text';
-  dateDiv.dataset.field = 'date'; dateDiv.dataset.secId = secId; dateDiv.dataset.entryIdx = ei;
-  dateDiv.textContent = entry.date || ''; linkTd.appendChild(dateDiv);
   const linkDiv = makeEditable('링크'); linkDiv.style.fontSize = '9px';
-  linkDiv.dataset.field = 'link'; linkDiv.dataset.secId = secId; linkDiv.dataset.entryIdx = ei;
   linkDiv.textContent = entry.link || ''; linkTd.appendChild(linkDiv);
   trow.appendChild(linkTd);
 
@@ -853,18 +819,22 @@ function renderEntry(secId, entry, ei) {
   crow.appendChild(lbl2);
 
   const bodyTd = document.createElement('td');
-  const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text';
-  bodyDiv.dataset.field = 'body'; bodyDiv.dataset.secId = secId; bodyDiv.dataset.entryIdx = ei;
-  bodyDiv.textContent = entry.body || ''; bodyTd.appendChild(bodyDiv);
+  const bodyDiv = makeEditable('내용 입력'); bodyDiv.className = 'main-text body-div';
+  if (entry.body) bodyDiv.innerHTML = entry.body;
+  if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
+  if (entry.bva) restoreVA(bodyTd, entry.bva);
+  bodyTd.appendChild(bodyDiv);
   crow.appendChild(bodyTd);
 
   const rlbl2 = document.createElement('td'); rlbl2.className = 'rlbl'; rlbl2.textContent = '내용:';
   crow.appendChild(rlbl2);
 
   const rbodyTd = document.createElement('td');
-  const rbodyDiv = makeEditable('댓글 내용'); rbodyDiv.className = 'main-text';
-  rbodyDiv.dataset.field = 'rbody'; rbodyDiv.dataset.secId = secId; rbodyDiv.dataset.entryIdx = ei;
-  rbodyDiv.textContent = entry.rbody || ''; rbodyTd.appendChild(rbodyDiv);
+  const rbodyDiv = makeEditable('내용 입력'); rbodyDiv.className = 'comment-text body-div';
+  if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
+  if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
+  if (entry.rbva) restoreVA(rbodyTd, entry.rbva);
+  rbodyTd.appendChild(rbodyDiv);
   crow.appendChild(rbodyTd);
 
   for (let i=0;i<3;i++) {
@@ -872,7 +842,7 @@ function renderEntry(secId, entry, ei) {
   }
 
   const srow = document.createElement('tr'); srow.className = 'sep';
-  for (let i=0;i<9;i++) srow.appendChild(document.createElement('td'));
+  for (let i=0;i<10;i++) srow.appendChild(document.createElement('td'));
 
   if (insertBefore) {
     tbody.insertBefore(trow, insertBefore);
@@ -909,7 +879,7 @@ function deleteSection(secId) {
     if (!document.getElementById(`add-row-${sec.id}`)) {
       const addRow = document.createElement('tr');
       addRow.className = 'add-row'; addRow.id = `add-row-${sec.id}`;
-      const td = document.createElement('td'); td.colSpan = 9;
+      const td = document.createElement('td'); td.colSpan = 10;
       const btn = document.createElement('button');
       btn.textContent = `+ "${sec.name}" 에 행 추가`;
       btn.onclick = () => addEntry(sec.id);
@@ -963,17 +933,19 @@ function gatherSections() {
       const ds = [...trow.querySelectorAll('[contenteditable]')];
       const crow = trow.nextSibling;
       const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
+      const gs = d => d?.getAttribute('style')||'';
+      const gva = d => d?.closest('td')?.dataset.va||'';
       entries.push({
         cat:   ds[0]?.textContent||'',
-        title: ds[1]?.textContent||'',
-        rtitle:ds[2]?.textContent||'',
-        c1:    ds[3]?.textContent||'',
-        c2:    ds[4]?.textContent||'',
-        c3:    ds[5]?.textContent||'',
+        title: ds[1]?.innerHTML||'',  ts:  gs(ds[1]),  tva:  gva(ds[1]),
+        rtitle:ds[2]?.innerHTML||'',  rs:  gs(ds[2]),  rva:  gva(ds[2]),
+        c1:    ds[3]?.innerHTML||'',  c1s: gs(ds[3]),  c1va: gva(ds[3]),
+        c2:    ds[4]?.innerHTML||'',  c2s: gs(ds[4]),  c2va: gva(ds[4]),
+        c3:    ds[5]?.innerHTML||'',  c3s: gs(ds[5]),  c3va: gva(ds[5]),
         date:  ds[6]?.textContent||'',
         link:  ds[7]?.textContent||'',
-        body:  cs[0]?.textContent||'',
-        rbody: cs[1]?.textContent||'',
+        body:  cs[0]?.innerHTML||'',  bs:  gs(cs[0]),  bva:  gva(cs[0]),
+        rbody: cs[1]?.innerHTML||'',  rbs: gs(cs[1]),  rbva: gva(cs[1]),
       });
     });
 
@@ -1014,7 +986,7 @@ let _saveTimer = null;
 function autoSave() {
   collectCurrentTab();
   const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
-  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId }));
+  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
   // 저장 인디케이터 살짝 표시
   const badge = document.getElementById('savedBadge');
   badge.textContent = '✔ 자동저장됨';
@@ -1030,6 +1002,502 @@ function debouncedSave() {
 
 // 시트 내 모든 입력에 반응
 document.getElementById('sheetBody').addEventListener('input', debouncedSave);
+
+// ─── 엑셀 스타일 셀 선택 ────────────────────────────────────────────────────
+function clearSelection() {
+  sheetBodyEl.querySelectorAll('.cell-selected').forEach(t => t.classList.remove('cell-selected'));
+  selectedCells.clear();
+}
+
+const sheetBodyEl = document.getElementById('sheetBody');
+
+// 더블클릭 → 편집모드 진입
+sheetBodyEl.addEventListener('dblclick', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (div) { div.focus(); }
+});
+
+// 키보드 이벤트용 포커스 앵커 (contenteditable 아님 → inEdit=false 보장)
+const _kbFocus = document.createElement('div');
+_kbFocus.setAttribute('tabindex', '-1');
+_kbFocus.style.cssText = 'position:fixed;opacity:0;top:0;left:0;width:1px;height:1px;pointer-events:none;';
+document.body.appendChild(_kbFocus);
+
+// 싱글클릭 → 선택모드 (편집 안 함)
+let _dragStartTd = null;
+let _isDragging = false;
+
+// 레이블·카테고리 셀 여부 확인 (선택/Delete 대상에서 제외)
+const isUnselectableTd = td => td.classList.contains('lbl') || td.classList.contains('rlbl') || td.classList.contains('cat-cell');
+
+sheetBodyEl.addEventListener('mousedown', e => {
+  if (e.target.closest('tr.section-header')) return;
+  if (e.target.closest('button')) return;       // 삭제버튼 등 무시
+  const td = e.target.closest('td');
+  if (!td || !td.querySelector('[contenteditable]')) return;
+  if (isUnselectableTd(td)) return; // lbl, rlbl, 분류 셀 제외
+
+  // 더블클릭은 편집모드: 선택 간섭 안 함
+  if (e.detail >= 2) { _dragStartTd = null; _isDragging = false; return; }
+
+  // 현재 편집 중이면 blur 후 선택 전환
+  if (document.activeElement?.isContentEditable) {
+    document.activeElement.blur();
+  }
+
+  _isDragging = true;
+  _dragStartTd = td;
+
+  // 선택 업데이트
+  if (!e.shiftKey) clearSelection();
+  selectedCells.add(td);
+  td.classList.add('cell-selected');
+  activeDiv = td.querySelector('[contenteditable]');
+  activeTd = td;
+
+  // 단일 클릭 시 셀 내용 자동 복사 (네이버카페 등 외부 에디터에 바로 붙여넣기 가능)
+  if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    const div = td.querySelector('[contenteditable]');
+    if (div) {
+      const text = (div.innerText || div.textContent || '').trim();
+      const ph = div.getAttribute('data-ph') || '';
+      if (text && text !== ph) copyToClipboard(text);
+    }
+  }
+
+  // 키보드 이벤트 수신 보장 (Delete/Ctrl+C 등)
+  _kbFocus.focus();
+
+  e.preventDefault();   // contenteditable 자동 포커스 방지
+}, true);
+
+// 드래그로 다중 셀 선택 — 시작/현재 행 사이의 모든 행 전체 선택
+let _lastHoverTd = null;
+sheetBodyEl.addEventListener('mousemove', e => {
+  if (!_isDragging || !_dragStartTd) return;
+  if (e.target.closest('tr.section-header')) return;
+  const td = e.target.closest('td');
+  if (!td) return;
+  if (td === _lastHoverTd) return;  // 같은 셀이면 재계산 생략
+  _lastHoverTd = td;
+
+  const allTrs = Array.from(sheetBodyEl.querySelectorAll('tr:not(.section-header)'));
+  const startTr = _dragStartTd.closest('tr');
+  const endTr   = td.closest('tr');
+  const startIdx = allTrs.indexOf(startTr);
+  const endIdx   = allTrs.indexOf(endTr);
+  if (startIdx === -1 || endIdx === -1) return;
+
+  clearSelection();
+  const lo = Math.min(startIdx, endIdx), hi = Math.max(startIdx, endIdx);
+  for (let i = lo; i <= hi; i++) {
+    const hasCE = allTrs[i].querySelector('[contenteditable]');
+    if (!hasCE) continue; // sep 행 등 편집 셀 없는 행은 건너뜀
+    allTrs[i].querySelectorAll('td').forEach(t => {
+      if (isUnselectableTd(t)) return; // 제목:/내용: 레이블, 분류 셀 제외
+      t.classList.add('cell-selected'); // 빈 TD도 시각적으로 선택 표시
+      const ce = t.querySelector('[contenteditable]');
+      if (ce) { selectedCells.add(t); activeDiv = ce; activeTd = t; }
+    });
+  }
+});
+document.addEventListener('mouseup', () => { _isDragging = false; _lastHoverTd = null; });
+
+// 셀 포커스 추적 — 편집모드 진입 시
+sheetBodyEl.addEventListener('focusin', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (!div) return;
+  clearSelection();
+  if (activeDiv && activeDiv !== div) {
+    const prevTd = activeDiv.closest('td');
+    if (prevTd) prevTd.classList.remove('cell-focused');
+  }
+  activeDiv = div;
+  activeTd = div.closest('td');
+  if (activeTd && !div.closest('tr.section-header')) {
+    activeTd.classList.add('cell-focused');
+  }
+});
+sheetBodyEl.addEventListener('focusout', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (!div) return;
+  const td = div.closest('td');
+  if (td) {
+    td.classList.remove('cell-focused');
+    // 편집 종료 후 해당 셀 선택 상태로 유지
+    if (!div.closest('tr.section-header')) {
+      selectedCells.add(td);
+      td.classList.add('cell-selected');
+    }
+  }
+});
+
+// 키보드 단축키
+document.addEventListener('keydown', e => {
+  const inEdit = document.activeElement?.isContentEditable;
+
+  // Escape → 편집모드 탈출, 선택 유지
+  if (e.key === 'Escape' && inEdit) {
+    document.activeElement.blur();
+    e.preventDefault();
+    return;
+  }
+
+  if (!inEdit) {
+    // Ctrl+C → 선택 셀 내용 복사 (편집모드 아닐 때)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCells.size > 0) {
+      const texts = [];
+      selectedCells.forEach(td => {
+        const div = td.querySelector('[contenteditable]');
+        if (div) texts.push((div.innerText || div.textContent || '').trim());
+      });
+      copyToClipboard(texts.filter(Boolean).join('\n'));
+      e.preventDefault(); return;
+    }
+
+    // Ctrl+Z → 전역 Undo
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+      undoAction(); e.preventDefault(); return;
+    }
+    // Ctrl+Y / Ctrl+Shift+Z → 전역 Redo
+    if (((e.ctrlKey || e.metaKey) && e.key === 'y') ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
+      redoAction(); e.preventDefault(); return;
+    }
+
+    // Delete / Backspace → 선택한 셀 내용 전체 삭제
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedCells.size > 0) {
+        immediateUndoPush();  // 삭제 전 스냅샷
+        selectedCells.forEach(td => {
+          td.querySelectorAll('[contenteditable]').forEach(d => { d.innerHTML = ''; });
+        });
+        debouncedSave();
+        e.preventDefault();
+      }
+      return;
+    }
+    // F2 → 선택한 셀 편집모드
+    if (e.key === 'F2' && selectedCells.size === 1) {
+      const td = [...selectedCells][0];
+      const div = td.querySelector('[contenteditable]');
+      if (div) { div.focus(); const r = document.createRange(); r.selectNodeContents(div); r.collapse(false); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+      e.preventDefault();
+      return;
+    }
+    // Ctrl+V / Ctrl+Shift+V / Cmd+V → 선택셀에 붙여넣기
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && selectedCells.size > 0) {
+      _pasteTargetTd = [...selectedCells][0];
+      const hp = document.getElementById('hiddenPaste');
+      hp.innerHTML = '';
+      hp.focus();
+      // Don't preventDefault — let browser fire paste event on hiddenPaste
+      return;
+    }
+
+    // 일반 문자 입력 → 선택셀 내용 지우고 편집모드
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && selectedCells.size === 1) {
+      const td = [...selectedCells][0];
+      const div = td.querySelector('[contenteditable]');
+      if (div) { div.innerHTML = ''; div.focus(); }
+    }
+  }
+});
+
+// ── 복사 시 스타일 정화 (네이버카페 등 외부 에디터에 붙여넣을 때 배경색·폰트 오염 방지) ──
+document.addEventListener('copy', e => {
+  const active = document.activeElement;
+  if (!active?.isContentEditable || !active.closest('#sheetBody')) return;
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+
+  const plainText = sel.toString();
+  const frag = sel.getRangeAt(0).cloneContents();
+  const tmp = document.createElement('div');
+  tmp.appendChild(frag);
+  // background-color, font-size, font-family, color 제거 (bold/italic 등은 유지)
+  tmp.querySelectorAll('[style]').forEach(el => {
+    const s = el.style;
+    ['background-color','font-size','font-family','color','text-align'].forEach(p => s.removeProperty(p));
+    if (!el.getAttribute('style').trim()) el.removeAttribute('style');
+  });
+
+  e.clipboardData.setData('text/plain', plainText);
+  e.clipboardData.setData('text/html', '<meta charset="utf-8">' + tmp.innerHTML);
+  e.preventDefault();
+});
+
+// RFC 4180 TSV 파서 — 셀 내부의 \n (구글 시트 멀티라인 셀)을 올바르게 처리
+function parseTSV(text) {
+  const rows = [];
+  let row = [], cell = '', inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuote) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }  // "" → 이스케이프된 따옴표
+        else inQuote = false;                             // 따옴표 필드 종료
+      } else {
+        cell += ch;  // 필드 내부의 줄바꿈도 그대로 포함
+      }
+    } else {
+      if (ch === '"' && cell === '') { inQuote = true; }
+      else if (ch === '\t') { row.push(cell); cell = ''; }
+      else if (ch === '\r') { /* CR 무시 */ }
+      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else { cell += ch; }
+    }
+  }
+  row.push(cell);
+  if (row.some(c => c.trim() !== '')) rows.push(row);
+  return rows;
+}
+
+// 일반 텍스트를 innerHTML 안전하게 변환 (줄바꿈 → <br>)
+function textToHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>');
+}
+
+// trow의 contenteditable 셀들에 GS 열 데이터를 구조화해서 채움
+// - startIdx: 채우기 시작할 trowDivs 인덱스 (보통 1 = mainDiv)
+// - contentCols: 채울 내용 배열 [제목, 댓글..., 날짜, 링크]
+// 마지막 열이 https://로 시작하면 linkDiv에, 그 앞이 날짜 형식이면 dateDiv에 고정 배치
+function fillTrowDivs(trowDivs, contentCols, startIdx) {
+  const isRS   = div => div.parentElement?.previousElementSibling?.classList?.contains('rlbl');
+  const isDate = s => /^\d{4}[\.\-\/]\d{1,2}[\.\-\/]\d{1,2}$/.test(s.trim());
+  const isLink = s => /^https?:\/\//.test(s.trim());
+  if (!contentCols.length) return;
+  const fillDivs = [];
+  for (let i = startIdx; i < trowDivs.length; i++) {
+    // 사용자가 명시적으로 선택한 시작 셀은 우측 셀이어도 포함
+    if (i === startIdx || !isRS(trowDivs[i])) fillDivs.push(trowDivs[i]);
+  }
+  if (!fillDivs.length) return;
+  fillDivs[0].innerHTML = textToHtml(contentCols[0]);
+  let linkIdx = -1, dateIdx = -1;
+  if (isLink(contentCols[contentCols.length - 1])) {
+    linkIdx = contentCols.length - 1;
+    if (contentCols.length >= 2 && isDate(contentCols[contentCols.length - 2])) {
+      dateIdx = contentCols.length - 2;
+    }
+  } else if (isDate(contentCols[contentCols.length - 1])) {
+    dateIdx = contentCols.length - 1;
+  }
+  const fixedCount = (dateIdx !== -1 ? 1 : 0) + (linkIdx !== -1 ? 1 : 0);
+  if (linkIdx !== -1 && fillDivs.length >= 2) {
+    fillDivs[fillDivs.length - 1].innerHTML = textToHtml(contentCols[linkIdx]);
+  }
+  if (dateIdx !== -1 && fillDivs.length >= (linkIdx !== -1 ? 3 : 2)) {
+    fillDivs[fillDivs.length - (linkIdx !== -1 ? 2 : 1)].innerHTML = textToHtml(contentCols[dateIdx]);
+  }
+  const commentDivs = fillDivs.slice(1, fillDivs.length - fixedCount);
+  const commentEnd  = dateIdx !== -1 ? dateIdx : (linkIdx !== -1 ? linkIdx : contentCols.length);
+  for (let j = 1; j < commentEnd && (j - 1) < commentDivs.length; j++) {
+    commentDivs[j - 1].innerHTML = textToHtml(contentCols[j]);
+  }
+}
+
+// hiddenPaste → TSV 파싱 후 선택 셀에 분배
+document.addEventListener('DOMContentLoaded', () => {
+  const hp = document.getElementById('hiddenPaste');
+  if (!hp) return;
+  hp.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+    hp.innerHTML = '';
+    hp.blur();
+    try { _kbFocus.focus(); } catch(e) {}
+    if (!text || !_pasteTargetTd) { _pasteTargetTd = null; return; }
+    immediateUndoPush();  // 붙여넣기 전 스냅샷
+
+    const targetTd = _pasteTargetTd;
+    _pasteTargetTd = null;
+
+    const parentRow = targetTd.closest('tr');
+    const secId = parentRow?.dataset?.secId;
+    const entryIdxStr = parentRow?.dataset?.entryIdx;
+
+    const targetDiv = targetTd.querySelector('[contenteditable]');
+    if (!targetDiv) return;
+
+    // 섹션/행 정보가 없으면 단순 붙여넣기
+    if (!secId || entryIdxStr === undefined) {
+      targetDiv.innerHTML = textToHtml(text);
+      debouncedSave(); return;
+    }
+
+    const rows = parseTSV(text);
+    if (rows.length === 0) return;
+
+    const startIdx = parseInt(entryIdxStr, 10);
+    const sec = sections.find(s => s.id === secId);
+    if (!sec) return;
+
+    const rowDivs = Array.from(parentRow.querySelectorAll('[contenteditable]'));
+    const divIdx = rowDivs.indexOf(targetDiv);
+
+    // 레이블 감지
+    const LABEL_RE    = /^(제목|내용)[*:]?\s*[:]\s*$/;
+    const isLabel      = s => LABEL_RE.test(s.trim());
+    const isTitleLabel = s => /^제목[*:]?\s*[:]\s*$/.test(s.trim());
+    const isBodyLabel  = s => /^내용[*:]?\s*[:]\s*$/.test(s.trim());
+
+    // 첫 3열 중 제목:/내용: 레이블 위치 탐색
+    function detectRow(cols) {
+      for (let ci = 0; ci < Math.min(3, cols.length); ci++) {
+        if (isTitleLabel(cols[ci])) return { type: 'title', lci: ci };
+        if (isBodyLabel(cols[ci]))  return { type: 'body',  lci: ci };
+      }
+      return { type: 'none', lci: -1 };
+    }
+
+    // GS 데이터에 제목:/내용: 레이블 구조가 있는지 확인 (첫 3열 탐색)
+    const hasLabels = rows.some(r => detectRow(r).type !== 'none');
+
+    // rlbl(우측 제목:/내용: 레이블) 바로 다음 셀 = 우측 복사 영역 → 항상 건너뜀
+    const isRightSide = div => div.parentElement?.previousElementSibling?.classList?.contains('rlbl');
+
+    const addRowEl = document.getElementById(`add-row-${secId}`);
+
+    if (hasLabels) {
+      // ── 레이블 기반: 제목:/내용: 쌍을 하나의 엔트리로 그루핑 ──────
+      const groups = [];
+      let pi = 0;
+      while (pi < rows.length) {
+        const dr = detectRow(rows[pi]);
+        if (dr.type === 'title') {
+          const titleCols = rows[pi];
+          const titleStart = dr.lci + 1;
+          let bodyCols = null, bodyStart = 0;
+          if (pi + 1 < rows.length) {
+            const nextDr = detectRow(rows[pi+1]);
+            if (nextDr.type === 'body') {
+              bodyCols = rows[pi+1];
+              bodyStart = nextDr.lci + 1;
+              pi += 2;
+            } else { pi += 1; }
+          } else { pi += 1; }
+          groups.push({ titleCols, titleStart, bodyCols, bodyStart });
+        } else if (dr.type === 'body') {
+          // 고아 내용: 행 → 직전 그룹에 병합
+          if (groups.length > 0 && !groups[groups.length-1].bodyCols) {
+            groups[groups.length-1].bodyCols = rows[pi];
+            groups[groups.length-1].bodyStart = dr.lci + 1;
+          }
+          pi++;
+        } else { pi++; } // 빈 구분 행 등 무시
+      }
+
+      // 필요한 엔트리 미리 생성
+      while (sec.entries.length < startIdx + groups.length) {
+        const newE = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' };
+        sec.entries.push(newE);
+        renderEntry(secId, newE, sec.entries.length - 1, addRowEl);
+      }
+
+      groups.forEach(({ titleCols, titleStart, bodyCols, bodyStart }, gi) => {
+        const entryIdx = startIdx + gi;
+        const entryRow = document.querySelector(
+          `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
+        );
+        if (!entryRow) return;
+
+        // trow 채우기 — 기존 내용 초기화(분류 제외) 후 덮어쓰기
+        const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
+        trowDivs.forEach(d => { if (!d.closest('td.cat-cell')) d.innerHTML = ''; });
+        const clearCrow2 = entryRow.nextElementSibling;
+        if (clearCrow2?.classList.contains('content-row')) {
+          clearCrow2.querySelectorAll('[contenteditable]').forEach(d => { d.innerHTML = ''; });
+        }
+        if (titleStart > 1 && titleCols[0] && titleCols[0].trim() && !isLabel(titleCols[0])) {
+          trowDivs[0].innerHTML = textToHtml(titleCols[0]); // 레이블 앞 열 → catDiv
+        }
+        fillTrowDivs(trowDivs, titleCols.slice(titleStart), 1);
+
+        // crow 채우기
+        if (bodyCols) {
+          const crow = entryRow.nextElementSibling;
+          if (crow?.classList.contains('content-row')) {
+            const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
+            let bColI = bodyStart;
+            for (let i = 0; i < crowDivs.length; i++) {
+              if (isRightSide(crowDivs[i])) continue; // rbodyDiv 건너뜀
+              if (bColI >= bodyCols.length) break;
+              crowDivs[i].innerHTML = textToHtml(bodyCols[bColI++]);
+            }
+          }
+        }
+      });
+
+    } else {
+      // ── 레이블 없음: divIdx 기반 rowsPerEntry ──────────────────────────
+      // 내용 행(crow)의 셀을 선택한 경우 → trow의 mainDiv(index 1) 기준으로 취급
+      const isCrowClick = parentRow.classList.contains('content-row');
+      const effectiveDivIdx = isCrowClick ? 1 : divIdx;
+
+      const firstEntryRow = document.querySelector(`tr.title-row[data-sec-id="${secId}"][data-entry-idx="${startIdx}"]`);
+      const firstCrow = firstEntryRow?.nextElementSibling;
+      // crow가 존재하면 항상 2줄 1세트(제목+내용) 구조로 처리
+      // effectiveDivIdx 제한 제거 → catDiv(0) 클릭해도 rowsPerEntry=2 보장
+      const hasCrowTarget = firstCrow?.classList.contains('content-row') &&
+        firstCrow.querySelectorAll('[contenteditable]').length > 0;
+      const rowsPerEntry = hasCrowTarget ? 2 : 1;
+      // 채우기 시작점: 사용자가 선택한 셀(catDiv는 선택 불가이므로 항상 ≥1)
+      const startFillIdx = effectiveDivIdx;
+
+      const totalEntriesNeeded = Math.ceil(rows.length / rowsPerEntry);
+      while (sec.entries.length < startIdx + totalEntriesNeeded) {
+        const newE = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' };
+        sec.entries.push(newE);
+        renderEntry(secId, newE, sec.entries.length - 1, addRowEl);
+      }
+
+      rows.forEach((cols, rowOffset) => {
+        const entryOffset = Math.floor(rowOffset / rowsPerEntry);
+        const intraOffset = rowOffset % rowsPerEntry;
+        const entryIdx = startIdx + entryOffset;
+        if (entryIdx >= sec.entries.length) return;
+
+        const entryRow = document.querySelector(
+          `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
+        );
+        if (!entryRow) return;
+
+        if (intraOffset === 0) {
+          const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
+          // 채우기 범위(startFillIdx 이후)만 초기화, 분류 셀 제외 — 덮어쓰기
+          trowDivs.forEach((d, idx) => {
+            if (idx < startFillIdx || d.closest('td.cat-cell')) return;
+            d.innerHTML = '';
+          });
+          const clearCrow = entryRow.nextElementSibling;
+          if (clearCrow?.classList.contains('content-row')) {
+            clearCrow.querySelectorAll('[contenteditable]').forEach(d => { d.innerHTML = ''; });
+          }
+          let colI = 0;
+          while (colI < cols.length && (cols[colI].trim() === '' || isLabel(cols[colI]))) colI++;
+          fillTrowDivs(trowDivs, cols.slice(colI), startFillIdx);
+        } else {
+          const crow = entryRow.nextElementSibling;
+          if (!crow?.classList.contains('content-row')) return;
+          const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
+          if (!crowDivs.length) return;
+          let colI = 0;
+          // 선두 빈 열과 레이블 스킵
+          while (colI < cols.length && (cols[colI].trim() === '' || isLabel(cols[colI]))) colI++;
+          for (let i = 0; i < crowDivs.length; i++) {
+            if (isRightSide(crowDivs[i])) continue; // rbodyDiv 건너뜀
+            if (colI >= cols.length) break;
+            crowDivs[i].innerHTML = textToHtml(cols[colI++]);
+          }
+        }
+      });
+    }
+
+    debouncedSave();
+  });
+});
 
 // 탭 바 변경에도 반응 (탭 이름 편집 등)
 document.getElementById('tabsList').addEventListener('input', debouncedSave);
@@ -1193,31 +1661,50 @@ document.getElementById('sheetBody').addEventListener('input', () => {
 
 // ─── 초기화 ───
 async function init() {
-  // userId 모드: 항상 클라우드에서 불러오기 시도
   if (USER_ID) {
+    // ① 로컬 캐시 먼저 확인
+    let localData = null, localTime = 0;
     try {
-      const data = await cloudLoad(USER_ID);
-      if (data && data.payload && data.payload.tabs?.length > 0) {
-        tabs = data.payload.tabs;
-        activeTabId = data.payload.activeTabId || tabs[0].id;
-        // 로컬에도 캐시
-        localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId }));
-        renderTabBar();
-        switchTab(activeTabId, false);
-        updateSyncUI();
-        return;
+      const raw = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p?.tabs?.length > 0) { localData = p; localTime = p.savedAt || 0; }
       }
     } catch(e) {}
-    // 클라우드 없으면 유저별 로컬 캐시 확인
-    const local = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
-    if (local) {
-      try {
-        const parsed = JSON.parse(local);
-        if (parsed?.tabs?.length > 0) {
-          tabs = parsed.tabs; activeTabId = parsed.activeTabId || tabs[0].id;
-          renderTabBar(); switchTab(activeTabId, false); updateSyncUI(); return;
-        }
-      } catch(e) {}
+
+    // ② 클라우드 데이터 확인 (로컬이 있어도 반드시 체크해서 더 최신인지 비교)
+    let cloudData = null, cloudTime = 0;
+    try {
+      const data = await cloudLoad(USER_ID);
+      if (data && data.payload?.tabs?.length > 0) {
+        cloudData = data.payload;
+        // 서버 updated_at을 타임스탬프로 변환 (클라우드에 savedAt 없으면 updated_at 사용)
+        cloudTime = data.payload.savedAt || (data.updated_at ? new Date(data.updated_at).getTime() : 0);
+      }
+    } catch(e) {}
+
+    // ③ 더 최신 데이터 사용 (타임스탬프 같으면 로컬 우선)
+    let chosen = null;
+    if (cloudData && cloudTime > localTime) {
+      chosen = { ...cloudData, savedAt: cloudTime };
+      // 클라우드가 더 최신 → 로컬 캐시 갱신
+      localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(chosen));
+    } else if (localData) {
+      chosen = localData;
+      // 로컬이 더 최신 → 클라우드 업데이트
+      if (cloudData && localTime > cloudTime) {
+        try { await cloudSave(USER_ID); } catch(e) {}
+      }
+    } else if (cloudData) {
+      chosen = { ...cloudData, savedAt: cloudTime };
+      localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(chosen));
+    }
+
+    if (chosen) {
+      tabs = chosen.tabs;
+      activeTabId = chosen.activeTabId || tabs[0].id;
+      renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
+      return;
     }
   } else {
     // 일반 모드: 기존 로컬 저장 불러오기
@@ -1253,15 +1740,18 @@ window._autoSaveWithCloud = async function() {
 // beforeunload 시 동기화 저장
 window.addEventListener('beforeunload', () => {
   collectCurrentTab();
+  const ts = Date.now();
   if (USER_ID) {
-    const key = `snsSheet_tabs_${USER_ID}`;
-    localStorage.setItem(key, JSON.stringify({ tabs, activeTabId }));
+    localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId, savedAt: ts }));
   } else {
-    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId, savedAt: ts }));
   }
 });
 
 init();
 </script>
+<!-- 붙여넣기 인터셉터: iframe 내에서 clipboardData 접근용 -->
+<div id="hiddenPaste" contenteditable="true" tabindex="-1"
+  style="position:fixed;opacity:0;pointer-events:none;top:-200px;left:0;width:1px;height:1px;overflow:hidden;"></div>
 </body>
 </html>
