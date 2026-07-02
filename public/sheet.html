@@ -886,7 +886,7 @@ sheetBodyEl.addEventListener('dblclick', e => {
 // 키보드 이벤트용 포커스 앵커 (contenteditable 아님 → inEdit=false 보장)
 const _kbFocus = document.createElement('div');
 _kbFocus.setAttribute('tabindex', '-1');
-_kbFocus.style.cssText = 'position:fixed;opacity:0;top:-200px;left:0;width:1px;height:1px;pointer-events:none;';
+_kbFocus.style.cssText = 'position:fixed;opacity:0;top:0;left:0;width:1px;height:1px;pointer-events:none;';
 document.body.appendChild(_kbFocus);
 
 // 싱글클릭 → 선택모드 (편집 안 함)
@@ -933,36 +933,36 @@ sheetBodyEl.addEventListener('mousedown', e => {
   e.preventDefault();   // contenteditable 자동 포커스 방지
 }, true);
 
-// 드래그로 다중 셀 선택 — 시작/현재 셀 사이의 사각형 영역 전체 선택
+// 드래그로 다중 셀 선택 — 시작/현재 행 사이의 모든 행 전체 선택
+let _lastHoverTd = null;
 sheetBodyEl.addEventListener('mousemove', e => {
   if (!_isDragging || !_dragStartTd) return;
   if (e.target.closest('tr.section-header')) return;
   const td = e.target.closest('td');
-  if (!td || !td.querySelector('[contenteditable]')) return;
+  if (!td) return;
+  if (td === _lastHoverTd) return;  // 같은 셀이면 재계산 생략
+  _lastHoverTd = td;
 
-  // 시작셀과 현재셀의 bounding rect로 선택 사각형 계산
-  const startRect = _dragStartTd.getBoundingClientRect();
-  const curRect   = td.getBoundingClientRect();
-  const selLeft   = Math.min(startRect.left,   curRect.left);
-  const selRight  = Math.max(startRect.right,  curRect.right);
-  const selTop    = Math.min(startRect.top,    curRect.top);
-  const selBottom = Math.max(startRect.bottom, curRect.bottom);
+  const allTrs = Array.from(sheetBodyEl.querySelectorAll('tr:not(.section-header)'));
+  const startTr = _dragStartTd.closest('tr');
+  const endTr   = td.closest('tr');
+  const startIdx = allTrs.indexOf(startTr);
+  const endIdx   = allTrs.indexOf(endTr);
+  if (startIdx === -1 || endIdx === -1) return;
 
   clearSelection();
-  sheetBodyEl.querySelectorAll('td').forEach(t => {
-    if (!t.querySelector('[contenteditable]')) return;
-    const r = t.getBoundingClientRect();
-    // 셀 중심이 선택 사각형 안에 있으면 선택
-    const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
-    if (cx >= selLeft && cx <= selRight && cy >= selTop && cy <= selBottom) {
+  const lo = Math.min(startIdx, endIdx), hi = Math.max(startIdx, endIdx);
+  for (let i = lo; i <= hi; i++) {
+    allTrs[i].querySelectorAll('td').forEach(t => {
+      if (!t.querySelector('[contenteditable]')) return;
       selectedCells.add(t);
       t.classList.add('cell-selected');
       activeDiv = t.querySelector('[contenteditable]');
       activeTd  = t;
-    }
-  });
+    });
+  }
 });
-document.addEventListener('mouseup', () => { _isDragging = false; });
+document.addEventListener('mouseup', () => { _isDragging = false; _lastHoverTd = null; });
 
 // 셀 포커스 추적 — 편집모드 진입 시
 sheetBodyEl.addEventListener('focusin', e => {
@@ -1110,7 +1110,7 @@ function parseTSV(text) {
     }
   }
   row.push(cell);
-  if (row.some(c => c !== '')) rows.push(row);
+  if (row.some(c => c.trim() !== '')) rows.push(row);
   return rows;
 }
 
@@ -1129,6 +1129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
     hp.innerHTML = '';
     hp.blur();
+    try { _kbFocus.focus(); } catch(e) {}
     if (!text || !_pasteTargetTd) { _pasteTargetTd = null; return; }
     immediateUndoPush();  // 붙여넣기 전 스냅샷
 
