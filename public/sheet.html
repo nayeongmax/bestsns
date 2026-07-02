@@ -471,6 +471,20 @@ function redoAction() {
 
 function holdFocus(e) { e.preventDefault(); }
 
+// 클립보드에 일반 텍스트 복사 (셀 선택 시 자동 복사용)
+function copyToClipboard(text) {
+  if (!text) return;
+  try { if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text); return; } } catch(e) {}
+  // Fallback (iframe 환경)
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
 function applyFontSize(val) {
   if (!val) return;
   // 편집 중이면 activeDiv, 선택모드면 selectedCells
@@ -891,6 +905,16 @@ sheetBodyEl.addEventListener('mousedown', e => {
   activeDiv = td.querySelector('[contenteditable]');
   activeTd = td;
 
+  // 단일 클릭 시 셀 내용 자동 복사 (네이버카페 등 외부 에디터에 바로 붙여넣기 가능)
+  if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    const div = td.querySelector('[contenteditable]');
+    if (div) {
+      const text = (div.innerText || div.textContent || '').trim();
+      const ph = div.getAttribute('data-ph') || '';
+      if (text && text !== ph) copyToClipboard(text);
+    }
+  }
+
   e.preventDefault();   // contenteditable 자동 포커스 방지
 }, true);
 
@@ -955,6 +979,17 @@ document.addEventListener('keydown', e => {
   }
 
   if (!inEdit) {
+    // Ctrl+C → 선택 셀 내용 복사 (편집모드 아닐 때)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCells.size > 0) {
+      const texts = [];
+      selectedCells.forEach(td => {
+        const div = td.querySelector('[contenteditable]');
+        if (div) texts.push((div.innerText || div.textContent || '').trim());
+      });
+      copyToClipboard(texts.filter(Boolean).join('\n'));
+      e.preventDefault(); return;
+    }
+
     // Ctrl+Z → 전역 Undo
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
       undoAction(); e.preventDefault(); return;
@@ -1097,67 +1132,130 @@ document.addEventListener('DOMContentLoaded', () => {
     const rowDivs = Array.from(parentRow.querySelectorAll('[contenteditable]'));
     const divIdx = rowDivs.indexOf(targetDiv);
 
-    // crow에 contenteditable이 있는 셀(mainTd, rtitleTd)은 2행 1항목 모드
-    // divIdx 1=mainDiv → crow[0]=bodyDiv, divIdx 2=rtitleDiv → crow[1]=rbodyDiv
-    const firstEntryRow = document.querySelector(`tr.title-row[data-sec-id="${secId}"][data-entry-idx="${startIdx}"]`);
-    const firstCrow = firstEntryRow?.nextElementSibling;
-    const hasCrowTarget = firstCrow?.classList.contains('content-row') &&
-      firstCrow.querySelectorAll('[contenteditable]').length > 0 &&
-      divIdx >= 1 && divIdx <= 2; // mainDiv(1) or rtitleDiv(2)
-    const rowsPerEntry = hasCrowTarget ? 2 : 1;
+    // 레이블 감지
+    const LABEL_RE    = /^(제목|내용)[*:]?\s*[:]\s*$/;
+    const isLabel      = s => LABEL_RE.test(s.trim());
+    const isTitleLabel = s => /^제목[*:]?\s*[:]\s*$/.test(s.trim());
+    const isBodyLabel  = s => /^내용[*:]?\s*[:]\s*$/.test(s.trim());
 
-    // 붙여넣기에 필요한 행 수만큼 미리 생성
-    const totalEntriesNeeded = Math.ceil(rows.length / rowsPerEntry);
+    // GS 데이터에 제목:/내용: 레이블 구조가 있는지 확인
+    const hasLabels = rows.some(r => isTitleLabel(r[0]||'') || isBodyLabel(r[0]||''));
+
     const addRowEl = document.getElementById(`add-row-${secId}`);
-    while (sec.entries.length < startIdx + totalEntriesNeeded) {
-      const newE = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' };
-      sec.entries.push(newE);
-      renderEntry(secId, newE, sec.entries.length - 1, addRowEl);
-    }
 
-    // 구글 시트 라벨 컬럼 (제목:, 내용: 등) 스킵용
-    const LABEL_RE = /^(제목|내용)[*:]?\s*[:]\s*$/;
-    const isLabel = s => LABEL_RE.test(s.trim());
+    if (hasLabels) {
+      // ── 레이블 기반: 제목:/내용: 쌍을 하나의 엔트리로 그루핑 ──────
+      const groups = [];
+      let pi = 0;
+      while (pi < rows.length) {
+        const fc = rows[pi][0] || '';
+        if (isTitleLabel(fc)) {
+          const titleCols = rows[pi];
+          let bodyCols = null;
+          if (pi + 1 < rows.length && isBodyLabel(rows[pi+1][0]||'')) {
+            bodyCols = rows[pi+1]; pi += 2;
+          } else { pi += 1; }
+          groups.push({ titleCols, bodyCols });
+        } else if (isBodyLabel(fc)) {
+          // 고아 내용: 행 → 직전 그룹에 병합
+          if (groups.length > 0 && !groups[groups.length-1].bodyCols) {
+            groups[groups.length-1].bodyCols = rows[pi];
+          }
+          pi++;
+        } else { pi++; } // 빈 구분 행 등 무시
+      }
 
-    rows.forEach((cols, rowOffset) => {
-      const entryOffset = Math.floor(rowOffset / rowsPerEntry);
-      const intraOffset = rowOffset % rowsPerEntry; // 0=제목행, 1=내용행
+      // 필요한 엔트리 미리 생성
+      while (sec.entries.length < startIdx + groups.length) {
+        const newE = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' };
+        sec.entries.push(newE);
+        renderEntry(secId, newE, sec.entries.length - 1, addRowEl);
+      }
 
-      const entryIdx = startIdx + entryOffset;
-      if (entryIdx >= sec.entries.length) return;
+      groups.forEach(({ titleCols, bodyCols }, gi) => {
+        const entryIdx = startIdx + gi;
+        const entryRow = document.querySelector(
+          `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
+        );
+        if (!entryRow) return;
 
-      const entryRow = document.querySelector(
-        `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
-      );
-      if (!entryRow) return;
-
-      if (intraOffset === 0) {
-        // 제목 행 → trow의 divIdx부터 채움 (라벨 건너뜀)
+        // trow 채우기 (레이블 기반: 항상 mainDiv(1)부터)
         const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
         let colI = 0;
-        for (let i = divIdx; i < trowDivs.length; i++) {
-          while (colI < cols.length && isLabel(cols[colI])) colI++;
-          if (colI >= cols.length) break;
-          trowDivs[i].innerHTML = textToHtml(cols[colI++]);
+        for (let i = 1; i < trowDivs.length; i++) {
+          while (colI < titleCols.length && isLabel(titleCols[colI])) colI++;
+          if (colI >= titleCols.length) break;
+          trowDivs[i].innerHTML = textToHtml(titleCols[colI++]);
         }
-      } else {
-        // 내용 행 → crow (선두 공백·라벨 건너뜀)
-        const crow = entryRow.nextElementSibling;
-        if (!crow?.classList.contains('content-row')) return;
-        const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
-        if (!crowDivs.length) return;
 
-        let colI = 0;
-        while (colI < cols.length && cols[colI].trim() === '') colI++; // 선두 빈셀 스킵
-
-        const crowStart = Math.max(0, divIdx - 1); // main(1)→crow[0], rtitle(2)→crow[1]
-        for (let i = crowStart; i < crowDivs.length; i++) {
-          while (colI < cols.length && isLabel(cols[colI])) colI++;
-          if (colI >= cols.length) break;
-          crowDivs[i].innerHTML = textToHtml(cols[colI++]);
+        // crow 채우기
+        if (bodyCols) {
+          const crow = entryRow.nextElementSibling;
+          if (crow?.classList.contains('content-row')) {
+            const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
+            let bColI = 0;
+            // 선두 빈셀 + 라벨 스킵
+            while (bColI < bodyCols.length && (bodyCols[bColI].trim() === '' || isLabel(bodyCols[bColI]))) bColI++;
+            for (let i = 0; i < crowDivs.length; i++) {
+              while (bColI < bodyCols.length && isLabel(bodyCols[bColI])) bColI++;
+              if (bColI >= bodyCols.length) break;
+              crowDivs[i].innerHTML = textToHtml(bodyCols[bColI++]);
+            }
+          }
         }
+      });
+
+    } else {
+      // ── 레이블 없음: divIdx 기반 rowsPerEntry (기존 로직) ──────────
+      const firstEntryRow = document.querySelector(`tr.title-row[data-sec-id="${secId}"][data-entry-idx="${startIdx}"]`);
+      const firstCrow = firstEntryRow?.nextElementSibling;
+      const hasCrowTarget = firstCrow?.classList.contains('content-row') &&
+        firstCrow.querySelectorAll('[contenteditable]').length > 0 &&
+        divIdx >= 1 && divIdx <= 2;
+      const rowsPerEntry = hasCrowTarget ? 2 : 1;
+
+      const totalEntriesNeeded = Math.ceil(rows.length / rowsPerEntry);
+      while (sec.entries.length < startIdx + totalEntriesNeeded) {
+        const newE = { cat:'', title:'', body:'', rtitle:'', rbody:'', c1:'', c2:'', c3:'', link:'', date:'' };
+        sec.entries.push(newE);
+        renderEntry(secId, newE, sec.entries.length - 1, addRowEl);
       }
-    });
+
+      rows.forEach((cols, rowOffset) => {
+        const entryOffset = Math.floor(rowOffset / rowsPerEntry);
+        const intraOffset = rowOffset % rowsPerEntry;
+        const entryIdx = startIdx + entryOffset;
+        if (entryIdx >= sec.entries.length) return;
+
+        const entryRow = document.querySelector(
+          `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
+        );
+        if (!entryRow) return;
+
+        if (intraOffset === 0) {
+          const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
+          let colI = 0;
+          for (let i = divIdx; i < trowDivs.length; i++) {
+            while (colI < cols.length && isLabel(cols[colI])) colI++;
+            if (colI >= cols.length) break;
+            trowDivs[i].innerHTML = textToHtml(cols[colI++]);
+          }
+        } else {
+          const crow = entryRow.nextElementSibling;
+          if (!crow?.classList.contains('content-row')) return;
+          const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
+          if (!crowDivs.length) return;
+          let colI = 0;
+          while (colI < cols.length && cols[colI].trim() === '') colI++;
+          const crowStart = Math.max(0, divIdx - 1);
+          for (let i = crowStart; i < crowDivs.length; i++) {
+            while (colI < cols.length && isLabel(cols[colI])) colI++;
+            if (colI >= cols.length) break;
+            crowDivs[i].innerHTML = textToHtml(cols[colI++]);
+          }
+        }
+      });
+    }
 
     debouncedSave();
   });
