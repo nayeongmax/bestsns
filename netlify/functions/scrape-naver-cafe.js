@@ -1,7 +1,7 @@
 // Netlify Serverless Function: scrape-naver-cafe.js
-// Oracle Cloud VM(도쿄) 릴레이 서버로 요청을 프록시합니다.
+// NCloud Seoul 릴레이 서버로 요청을 프록시합니다.
 
-const RELAY_URL = process.env.RELAY_URL || 'http://150.230.98.74:3333';
+const RELAY_URL = process.env.RELAY_URL || 'http://223.130.163.229:3333';
 
 const RESP_HEADERS = {
   'Access-Control-Allow-Origin': '*',
