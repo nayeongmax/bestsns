@@ -298,15 +298,22 @@ function clearCellSelection() {
   cellSelStart = cellSelEnd = cellSel = null;
 }
 
+let _pendingFocus = null; // { el, x, y }
+
 document.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return; // 우클릭 등 제외
   if (e.target.tagName === 'BUTTON') return;
   const div = getCellDiv(e.target);
   const info = getCellInfo(div);
   _mdEl = div || null;
+  _pendingFocus = null;
   if (!info) {
     if (!e.target.closest('tr.section-header')) clearCellSelection();
+    return;
   }
-  // 클릭은 정상 허용 — 드래그 여부는 mousemove에서 판단
+  // 브라우저 텍스트 선택 완전 차단 — 클릭 시 커서는 mouseup에서 수동 복원
+  e.preventDefault();
+  _pendingFocus = { el: div, x: e.clientX, y: e.clientY };
 });
 
 document.addEventListener('mousemove', (e) => {
@@ -318,20 +325,32 @@ document.addEventListener('mousemove', (e) => {
   if (!startInfo || startInfo.secId !== endInfo.secId) return;
 
   if (!cellDragActive) {
-    // 드래그 시작: 브라우저 텍스트 선택 취소
-    window.getSelection().removeAllRanges();
-    document.documentElement.style.userSelect = 'none';
     cellDragActive = true;
     cellSelStart = startInfo;
     pasteTargetSecId = startInfo.secId;
+    _pendingFocus = null; // 드래그 중이면 클릭 포커스 취소
   }
   cellSelEnd = endInfo;
   applyCellHighlight();
 });
 
-document.addEventListener('mouseup', () => {
-  document.documentElement.style.userSelect = '';
+document.addEventListener('mouseup', (e) => {
   _mdEl = null;
+  if (!cellDragActive && _pendingFocus) {
+    // 클릭(드래그 아님): 셀에 포커스 + 클릭 위치에 커서 배치
+    _pendingFocus.el.focus();
+    try {
+      let range = null;
+      if (document.caretRangeFromPoint) {
+        range = document.caretRangeFromPoint(_pendingFocus.x, _pendingFocus.y);
+      } else if (document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(_pendingFocus.x, _pendingFocus.y);
+        if (pos) { range = document.createRange(); range.setStart(pos.offsetNode, pos.offset); range.collapse(true); }
+      }
+      if (range) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); }
+    } catch(_) {}
+  }
+  _pendingFocus = null;
   if (!cellDragActive) return;
   cellDragActive = false;
   if (cellSel) {
