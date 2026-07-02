@@ -1196,12 +1196,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!entryRow) return;
 
         // trow 채우기 — titleStart 열부터 (레이블 앞 열이 있으면 catDiv(0)에)
+        // rlbl(제목:/내용: 우측 레이블) 다음 셀은 우측 복사 영역이므로 건너뜀
+        const isRightSide = div => div.parentElement?.previousElementSibling?.classList?.contains('rlbl');
         const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
         if (titleStart > 1 && titleCols[0] && titleCols[0].trim() && !isLabel(titleCols[0])) {
           trowDivs[0].innerHTML = textToHtml(titleCols[0]);
         }
         let colI = titleStart;
         for (let i = 1; i < trowDivs.length; i++) {
+          if (isRightSide(trowDivs[i])) continue; // rtitleDiv 건너뜀
           if (colI >= titleCols.length) break;
           trowDivs[i].innerHTML = textToHtml(titleCols[colI++]);
         }
@@ -1213,6 +1216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
             let bColI = bodyStart;
             for (let i = 0; i < crowDivs.length; i++) {
+              if (isRightSide(crowDivs[i])) continue; // rbodyDiv 건너뜀
               if (bColI >= bodyCols.length) break;
               crowDivs[i].innerHTML = textToHtml(bodyCols[bColI++]);
             }
