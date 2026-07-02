@@ -15,7 +15,7 @@ async function getBrowser() {
   if (!_browser || !_browser.isConnected()) {
     _browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-setuid-sandbox', '--single-process'],
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-setuid-sandbox'],
     });
   }
   return _browser;
@@ -445,29 +445,25 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
     }
     const page = await context.newPage();
     try {
-      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      // iframe 안에 있는 경우 처리
+      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'networkidle', timeout: 40000 });
+      // iframe 포함 모든 프레임에서 내용 추출
       let content = '';
-      const frames = page.frames();
-      for (const frame of frames) {
+      let comments = [];
+      const allFrames = page.frames();
+      for (const frame of allFrames) {
         try {
-          const el = await frame.$('.se-main-container, #tbody, .article_body, .contentText');
-          if (el) { content = (await el.innerText()).trim(); break; }
+          await frame.waitForSelector('.se-main-container, #tbody, .article_body, .ContentRenderer', { timeout: 5000 }).catch(() => {});
+          const el = await frame.$('.se-main-container, #tbody, .article_body, .ContentRenderer, .article_viewer');
+          if (el) {
+            content = (await el.innerText()).trim();
+            // 댓글 같은 프레임에서
+            const cEls = await frame.$$('.comment_text_box, ._content, .u_cbox_contents');
+            comments = (await Promise.all(cEls.slice(0, maxComments).map(e => e.innerText().catch(() => '')))).map(t => ({ content: t.trim(), writer: '', date: '' })).filter(c => c.content);
+            break;
+          }
         } catch {}
       }
-      if (!content) {
-        await page.waitForSelector('.se-main-container, #tbody, .article_body', { timeout: 10000 }).catch(() => {});
-        content = await page.evaluate(() => {
-          const el = document.querySelector('.se-main-container') || document.querySelector('#tbody') || document.querySelector('.article_body');
-          return el ? (el.innerText || el.textContent || '').trim() : '';
-        });
-      }
-      // 댓글
-      const comments = await page.evaluate((max) => {
-        const els = Array.from(document.querySelectorAll('.comment_text_box, ._content, .u_cbox_contents')).slice(0, max);
-        return els.map(el => ({ content: (el.innerText || el.textContent || '').trim(), writer: '', date: '' }));
-      }, maxComments);
-      console.log(`  [Playwright] content길이=${content.length} 댓글=${comments.length}`);
+      console.log(`  [Playwright] frames=${allFrames.length} content길이=${content.length} 댓글=${comments.length}`);
       if (content) return { content, comments };
     } finally {
       await page.close();
