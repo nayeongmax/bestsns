@@ -1138,8 +1138,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const isTitleLabel = s => /^제목[*:]?\s*[:]\s*$/.test(s.trim());
     const isBodyLabel  = s => /^내용[*:]?\s*[:]\s*$/.test(s.trim());
 
-    // GS 데이터에 제목:/내용: 레이블 구조가 있는지 확인
-    const hasLabels = rows.some(r => isTitleLabel(r[0]||'') || isBodyLabel(r[0]||''));
+    // 첫 3열 중 제목:/내용: 레이블 위치 탐색
+    function detectRow(cols) {
+      for (let ci = 0; ci < Math.min(3, cols.length); ci++) {
+        if (isTitleLabel(cols[ci])) return { type: 'title', lci: ci };
+        if (isBodyLabel(cols[ci]))  return { type: 'body',  lci: ci };
+      }
+      return { type: 'none', lci: -1 };
+    }
+
+    // GS 데이터에 제목:/내용: 레이블 구조가 있는지 확인 (첫 3열 탐색)
+    const hasLabels = rows.some(r => detectRow(r).type !== 'none');
 
     const addRowEl = document.getElementById(`add-row-${secId}`);
 
@@ -1148,18 +1157,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const groups = [];
       let pi = 0;
       while (pi < rows.length) {
-        const fc = rows[pi][0] || '';
-        if (isTitleLabel(fc)) {
+        const dr = detectRow(rows[pi]);
+        if (dr.type === 'title') {
           const titleCols = rows[pi];
-          let bodyCols = null;
-          if (pi + 1 < rows.length && isBodyLabel(rows[pi+1][0]||'')) {
-            bodyCols = rows[pi+1]; pi += 2;
+          const titleStart = dr.lci + 1;
+          let bodyCols = null, bodyStart = 0;
+          if (pi + 1 < rows.length) {
+            const nextDr = detectRow(rows[pi+1]);
+            if (nextDr.type === 'body') {
+              bodyCols = rows[pi+1];
+              bodyStart = nextDr.lci + 1;
+              pi += 2;
+            } else { pi += 1; }
           } else { pi += 1; }
-          groups.push({ titleCols, bodyCols });
-        } else if (isBodyLabel(fc)) {
+          groups.push({ titleCols, titleStart, bodyCols, bodyStart });
+        } else if (dr.type === 'body') {
           // 고아 내용: 행 → 직전 그룹에 병합
           if (groups.length > 0 && !groups[groups.length-1].bodyCols) {
             groups[groups.length-1].bodyCols = rows[pi];
+            groups[groups.length-1].bodyStart = dr.lci + 1;
           }
           pi++;
         } else { pi++; } // 빈 구분 행 등 무시
@@ -1172,18 +1188,20 @@ document.addEventListener('DOMContentLoaded', () => {
         renderEntry(secId, newE, sec.entries.length - 1, addRowEl);
       }
 
-      groups.forEach(({ titleCols, bodyCols }, gi) => {
+      groups.forEach(({ titleCols, titleStart, bodyCols, bodyStart }, gi) => {
         const entryIdx = startIdx + gi;
         const entryRow = document.querySelector(
           `tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`
         );
         if (!entryRow) return;
 
-        // trow 채우기 (레이블 기반: 항상 mainDiv(1)부터)
+        // trow 채우기 — titleStart 열부터 (레이블 앞 열이 있으면 catDiv(0)에)
         const trowDivs = Array.from(entryRow.querySelectorAll('[contenteditable]'));
-        let colI = 0;
+        if (titleStart > 1 && titleCols[0] && titleCols[0].trim() && !isLabel(titleCols[0])) {
+          trowDivs[0].innerHTML = textToHtml(titleCols[0]);
+        }
+        let colI = titleStart;
         for (let i = 1; i < trowDivs.length; i++) {
-          while (colI < titleCols.length && isLabel(titleCols[colI])) colI++;
           if (colI >= titleCols.length) break;
           trowDivs[i].innerHTML = textToHtml(titleCols[colI++]);
         }
@@ -1193,11 +1211,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const crow = entryRow.nextElementSibling;
           if (crow?.classList.contains('content-row')) {
             const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
-            let bColI = 0;
-            // 선두 빈셀 + 라벨 스킵
-            while (bColI < bodyCols.length && (bodyCols[bColI].trim() === '' || isLabel(bodyCols[bColI]))) bColI++;
+            let bColI = bodyStart;
             for (let i = 0; i < crowDivs.length; i++) {
-              while (bColI < bodyCols.length && isLabel(bodyCols[bColI])) bColI++;
               if (bColI >= bodyCols.length) break;
               crowDivs[i].innerHTML = textToHtml(bodyCols[bColI++]);
             }
