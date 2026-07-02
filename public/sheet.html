@@ -298,15 +298,19 @@ function clearCellSelection() {
   cellSelStart = cellSelEnd = cellSel = null;
 }
 
-let _pendingFocus = null; // { el, x, y }
+let _pendingFocus  = null; // { el, x, y }
+let _dragDir       = null; // 'row' | 'col' — 드래그 확정 방향
+let _dragStartX    = 0;
+let _dragStartY    = 0;
 
 document.addEventListener('mousedown', (e) => {
-  if (e.button !== 0) return; // 우클릭 등 제외
+  if (e.button !== 0) return;
   if (e.target.tagName === 'BUTTON') return;
   const div = getCellDiv(e.target);
   const info = getCellInfo(div);
   _mdEl = div || null;
   _pendingFocus = null;
+  _dragDir = null;
   if (!info) {
     if (!e.target.closest('tr.section-header')) clearCellSelection();
     return;
@@ -314,6 +318,8 @@ document.addEventListener('mousedown', (e) => {
   // 브라우저 텍스트 선택 완전 차단 — 클릭 시 커서는 mouseup에서 수동 복원
   e.preventDefault();
   _pendingFocus = { el: div, x: e.clientX, y: e.clientY };
+  _dragStartX = e.clientX;
+  _dragStartY = e.clientY;
 });
 
 document.addEventListener('mousemove', (e) => {
@@ -328,16 +334,31 @@ document.addEventListener('mousemove', (e) => {
     cellDragActive = true;
     cellSelStart = startInfo;
     pasteTargetSecId = startInfo.secId;
-    _pendingFocus = null; // 드래그 중이면 클릭 포커스 취소
+    _pendingFocus = null;
   }
-  cellSelEnd = endInfo;
+
+  // 드래그 방향 결정 (한 번만): 세로 우세 → 컬럼 고정, 가로 우세 → 행 고정
+  if (!_dragDir) {
+    const dx = Math.abs(e.clientX - _dragStartX);
+    const dy = Math.abs(e.clientY - _dragStartY);
+    if (dx > 12 || dy > 12) _dragDir = dy >= dx ? 'row' : 'col';
+  }
+
+  // 방향에 따라 fi(컬럼) 또는 ei(행) 고정
+  let fi = endInfo.fi;
+  let ei = endInfo.entryIdx;
+  if (_dragDir === 'row') fi = cellSelStart.fi;   // 세로 드래그: 컬럼 고정
+  if (_dragDir === 'col') ei = cellSelStart.entryIdx; // 가로 드래그: 행 고정
+
+  cellSelEnd = { ...endInfo, fi, entryIdx: ei };
   applyCellHighlight();
 });
 
 document.addEventListener('mouseup', (e) => {
+  _dragDir = null;
   _mdEl = null;
   if (!cellDragActive && _pendingFocus) {
-    // 클릭(드래그 아님): 셀에 포커스 + 클릭 위치에 커서 배치
+    // 클릭(드래그 없음): 셀 포커스 + 클릭 위치에 커서 배치
     _pendingFocus.el.focus();
     try {
       let range = null;
