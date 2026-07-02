@@ -92,15 +92,19 @@
   tr.title-row td.cat-cell, tr.content-row td.cat-cell {
     background: #f2dce4; font-size: 10px; font-weight: bold;
     text-align: center; vertical-align: middle; padding: 2px; word-break: keep-all;
+    user-select: none;
   }
   tr.title-row td.lbl, tr.content-row td.lbl {
     background: #f2dce4; font-size: 10px; color: #555;
     padding: 2px 3px; vertical-align: top; white-space: nowrap;
+    user-select: none;
   }
   td.rlbl {
     background: #fff; font-size: 10px; color: #555;
     padding: 2px 3px; vertical-align: top; white-space: nowrap;
+    user-select: none;
   }
+  tr.entry-selected td { background: #dbeafe !important; outline: 2px solid #1a73e8; outline-offset: -1px; }
   td.comment-cell, td.link-cell { background: #fff; vertical-align: top; }
   td.link-cell { font-size: 9px; color: #555; padding: 2px 3px; word-break: break-all; }
 
@@ -233,6 +237,80 @@
 
 <script>
 // ═══════════════════════════════════════════════
+// 드래그 행 선택 (구글 시트 범위 선택처럼)
+// ═══════════════════════════════════════════════
+let dragSelection = null;   // { secId, minIdx, maxIdx } or null
+let _dragActive   = false;
+let _dragSecId    = null;
+let _dragAnchor   = -1;
+let _dragCur      = -1;
+
+function getEntryRow(el) {
+  const row = el.closest('tr.title-row, tr.content-row');
+  if (!row || !row.dataset.secId) return null;
+  return { row, secId: row.dataset.secId, idx: parseInt(row.dataset.entryIdx, 10) };
+}
+
+function clearEntryHighlight() {
+  document.querySelectorAll('tr.entry-selected').forEach(r => r.classList.remove('entry-selected'));
+}
+
+function clearEntrySelection() {
+  clearEntryHighlight();
+  dragSelection = null;
+}
+
+function highlightEntryRange(secId, minIdx, maxIdx) {
+  clearEntryHighlight();
+  document.querySelectorAll(`tr[data-sec-id="${secId}"]`).forEach(row => {
+    const idx = parseInt(row.dataset.entryIdx, 10);
+    if (idx >= minIdx && idx <= maxIdx) row.classList.add('entry-selected');
+  });
+}
+
+// mousedown on non-editable part of an entry row → start range drag
+document.addEventListener('mousedown', (e) => {
+  if (e.target.getAttribute('contenteditable') === 'true') {
+    // Clicking a cell: clear selection but don't start drag
+    clearEntrySelection();
+    return;
+  }
+  if (e.target.tagName === 'BUTTON') return;
+  const info = getEntryRow(e.target);
+  if (!info) { clearEntrySelection(); return; }
+
+  e.preventDefault(); // prevent browser text-selection
+  clearEntrySelection();
+  _dragActive = true;
+  _dragSecId  = info.secId;
+  _dragAnchor = info.idx;
+  _dragCur    = info.idx;
+  highlightEntryRange(info.secId, info.idx, info.idx);
+  pasteTargetSecId = info.secId;
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!_dragActive) return;
+  const info = getEntryRow(e.target);
+  if (!info || info.secId !== _dragSecId) return;
+  if (info.idx === _dragCur) return;
+  _dragCur = info.idx;
+  const min = Math.min(_dragAnchor, _dragCur);
+  const max = Math.max(_dragAnchor, _dragCur);
+  highlightEntryRange(_dragSecId, min, max);
+});
+
+document.addEventListener('mouseup', (e) => {
+  if (!_dragActive) return;
+  _dragActive = false;
+  const min = Math.min(_dragAnchor, _dragCur);
+  const max = Math.max(_dragAnchor, _dragCur);
+  dragSelection = { secId: _dragSecId, minIdx: min, maxIdx: max };
+  const count = max - min + 1;
+  showCloudBadge(`📋 ${count}개 행 선택됨 — Ctrl+V로 붙여넣기`, 'ok');
+});
+
+// ═══════════════════════════════════════════════
 // 구글 시트 붙여넣기 (TSV 파싱)
 // ═══════════════════════════════════════════════
 let pasteTargetSecId = null;
@@ -321,32 +399,67 @@ function parseTsvToEntries(text) {
   return entries;
 }
 
+// DOM의 기존 entry 행을 데이터로 덮어씀
+function updateEntryDom(secId, entryIdx, entry) {
+  const trow = document.querySelector(`tr.title-row[data-sec-id="${secId}"][data-entry-idx="${entryIdx}"]`);
+  if (!trow) return;
+  const crow = trow.nextElementSibling;
+  const ds = [...trow.querySelectorAll('[contenteditable]')];
+  const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
+  // title-row: cat(0), title(1), rtitle(2), c1(3), c2(4), c3(5), date(6), link(7)
+  if (ds[0]) ds[0].textContent = entry.cat   || '';
+  if (ds[1]) ds[1].textContent = entry.title || '';
+  if (ds[2]) ds[2].textContent = entry.rtitle|| '';
+  if (ds[3]) ds[3].textContent = entry.c1    || '';
+  if (ds[4]) ds[4].textContent = entry.c2    || '';
+  if (ds[5]) ds[5].textContent = entry.c3    || '';
+  if (ds[6]) ds[6].textContent = entry.date  || '';
+  if (ds[7]) ds[7].textContent = entry.link  || '';
+  // content-row: body(0), rbody(1)
+  if (cs[0]) cs[0].textContent = entry.body  || '';
+  if (cs[1]) cs[1].textContent = entry.rbody || '';
+}
+
 // 전역 붙여넣기 이벤트 (구글 시트 TSV)
 document.addEventListener('paste', (e) => {
   const text = e.clipboardData.getData('text/plain');
   if (!text.includes('\t')) return; // 탭 없으면 일반 텍스트 — 셀 처리에 맡김
-  if (!pasteTargetSecId) return;   // 붙여넣기 대상 없으면 일반 처리
 
-  // 붙여넣기 대상이 지정된 상태에서 탭 데이터 → 항상 가로채기
+  const targetSecId = dragSelection?.secId || pasteTargetSecId;
+  if (!targetSecId) return; // 대상 없으면 일반 처리
+
   e.preventDefault();
-
-  if (!pasteTargetSecId) {
-    alert('붙여넣기 위치를 먼저 선택해주세요.\n섹션 헤더(빨간 행)를 클릭하면 선택됩니다.');
-    return;
-  }
 
   const entries = parseTsvToEntries(text);
   if (!entries.length) { alert('붙여넣을 데이터가 없습니다.'); return; }
 
-  const sec = sections.find(s => s.id === pasteTargetSecId);
+  const sec = sections.find(s => s.id === targetSecId);
   if (!sec) return;
 
-  if (!confirm(`${entries.length}개 행을 "${sec.name}" 섹션에 추가할까요?`)) return;
-
-  entries.forEach((entry, ei) => {
-    sec.entries.push(entry);
-    renderEntry(pasteTargetSecId, entry, sec.entries.length - 1);
-  });
+  if (dragSelection) {
+    // 선택 범위에 덮어쓰기 (범위 초과분은 뒤에 추가)
+    const { minIdx, maxIdx } = dragSelection;
+    const slotCount = maxIdx - minIdx + 1;
+    if (!confirm(`${entries.length}개 행을 선택한 ${slotCount}개 위치에 붙여넣을까요?`)) return;
+    entries.forEach((entry, i) => {
+      const targetIdx = minIdx + i;
+      if (targetIdx <= maxIdx) {
+        sec.entries[targetIdx] = entry;
+        updateEntryDom(targetSecId, targetIdx, entry);
+      } else {
+        sec.entries.push(entry);
+        renderEntry(targetSecId, entry, sec.entries.length - 1);
+      }
+    });
+    clearEntrySelection();
+  } else {
+    // 섹션 끝에 추가
+    if (!confirm(`${entries.length}개 행을 "${sec.name}" 섹션에 추가할까요?`)) return;
+    entries.forEach(entry => {
+      sec.entries.push(entry);
+      renderEntry(targetSecId, entry, sec.entries.length - 1);
+    });
+  }
 
   autoSave();
   if (syncCode) {
@@ -356,8 +469,7 @@ document.addEventListener('paste', (e) => {
       catch(e) { showCloudBadge('⚠ 클라우드 저장 실패', 'err'); }
     }, 1000);
   }
-
-  showCloudBadge(`✔ ${entries.length}개 행 추가됨`, 'ok');
+  showCloudBadge(`✔ ${entries.length}개 행 붙여넣기 완료`, 'ok');
 });
 
 // ═══════════════════════════════════════════════
