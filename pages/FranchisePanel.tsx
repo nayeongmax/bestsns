@@ -228,7 +228,7 @@ const CollectorTab: React.FC = () => {
 
       // 제목 행
       rows.push(
-        `<Row ss:Height="45">` +
+        `<Row ss:Height="45" ss:AutoFitHeight="0">` +
         C('제목:', 'label') +
         C(title) +
         Array.from({length: maxC}, (_, i) => C(cmts[i]?.content ?? '')).join('') +
@@ -238,7 +238,7 @@ const CollectorTab: React.FC = () => {
       );
       // 내용 행
       rows.push(
-        `<Row ss:Height="240">` +
+        `<Row ss:Height="240" ss:AutoFitHeight="0">` +
         C('내용:', 'label') +
         C(body) +
         Array.from({length: maxC}, () => C('')).join('') +
@@ -259,7 +259,7 @@ const CollectorTab: React.FC = () => {
   <Style ss:ID="cell"><Alignment ss:WrapText="1" ss:Vertical="Top"/></Style>
 </Styles>
 <Worksheet ss:Name="수집결과">
-<Table ss:DefaultRowHeight="60">
+<Table ss:DefaultRowHeight="240">
   <Column ss:Width="40"/>
   <Column ss:Width="300"/>
   <Column ss:Width="200"/>
