@@ -524,7 +524,7 @@ function addTab() {
   let cnt = 2;
   while (tabs.find(t => t.name === name)) { name = `${label}(${cnt++})`; }
   const id = makeTabId();
-  tabs.push({ id, name, sections: JSON.parse(JSON.stringify(defaultSections)) });
+  tabs.push({ id, name, sections: [] });
   activeTabId = id;
   renderTabBar();
   loadSections(tabs.find(t=>t.id===id).sections);
