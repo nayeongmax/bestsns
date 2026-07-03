@@ -1,13 +1,23 @@
--- franchise_plans 기본 데이터 복구
+-- franchise_plans 실제 데이터 복구
 -- Supabase SQL Editor에서 실행하세요.
--- 이미 있는 데이터는 덮어쓰지 않음 (ON CONFLICT DO NOTHING)
+-- ON CONFLICT DO UPDATE로 덮어쓰기 (기존 데이터 있어도 최신으로 갱신)
 
 INSERT INTO franchise_plans (id, name, price, original_price, period, features, is_active, sort_order)
 VALUES
-  ('basic', '기본 플랜', 39000, NULL, '월',
-   '["매출관리","원고시트","원고수집기","마케팅상품 주문","카카오톡 기본 지원"]'::jsonb,
+  ('plan_basic', 'BASIC', 150000, 190000, '월',
+   '["TO-DO LIST","매출/비용 관리","업체관리 시스템","BESTSNS SHEETS","원고수집 프로그램","마케팅 프로그램 주문 (12만 포인트)"]'::jsonb,
    true, 0),
-  ('premium', '프리미엄 플랜', 79000, NULL, '월',
-   '["기본 플랜 전체 포함","우선 지원 (당일 응답)","맞춤 원고 컨설팅 월 2회","월 1회 전략 미팅 (30분)"]'::jsonb,
-   true, 1)
-ON CONFLICT (id) DO NOTHING;
+  ('plan_premium', 'PREMIUM', 250000, 450000, '월',
+   '["TO-DO LIST","매출/비용 관리","업체관리 시스템","BESTSNS SHEETS","원고수집 프로그램","마케팅 프로그램 주문 (18만 포인트)","카카오톡 1:1 상담지원"]'::jsonb,
+   true, 1),
+  ('plan_prestige', 'PRESTIGE', 1000000, 1600000, '월',
+   '["TO-DO LIST","매출/비용 관리","업체관리 시스템","BESTSNS SHEETS","원고수집 프로그램","마케팅 프로그램 주문 (40만 포인트)","카카오톡 1:1 상담지원"]'::jsonb,
+   true, 2)
+ON CONFLICT (id) DO UPDATE
+  SET name           = EXCLUDED.name,
+      price          = EXCLUDED.price,
+      original_price = EXCLUDED.original_price,
+      period         = EXCLUDED.period,
+      features       = EXCLUDED.features,
+      is_active      = EXCLUDED.is_active,
+      sort_order     = EXCLUDED.sort_order;
