@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { strToU8, zipSync } from 'fflate';
 import { UserProfile } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
@@ -212,15 +213,128 @@ const CollectorTab: React.FC = () => {
   };
 
   const exportCsv = (rewritten = false) => {
-    const rows = [['번호', '날짜', '제목', '작성자', '댓글수', '조회수', 'URL']];
+    const esc = (s: string) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    // 공유 문자열 수집
+    const strs: string[] = [];
+    const strIdx = (v: string) => { const i = strs.indexOf(v); if (i >= 0) return i; strs.push(v); return strs.length - 1; };
+
+    // 스타일 ID: 0=헤더, 1=라벨(굵게), 2=일반, 3=제목행(연노랑), 4=댓글(연초록)
+    const styleXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts>
+<font><sz val="11"/><name val="맑은 고딕"/></font>
+<font><b/><sz val="11"/><name val="맑은 고딕"/></font>
+</fonts>
+<fills>
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/></fgColor></patternFill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFFF2CC"/></fgColor></patternFill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFE2EFDA"/></fgColor></patternFill>
+</fills>
+<borders><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
+</cellXfs>
+</styleSheet>`;
+
+    // 셀 생성 헬퍼
+    const cell = (val: string, styleId: number, col: number, row: number) => {
+      const addr = String.fromCharCode(65 + col) + (row + 1);
+      const si = strIdx(val);
+      return `<c r="${addr}" t="s" s="${styleId}"><v>${si}</v></c>`;
+    };
+
+    // 시트 데이터 생성
+    let rowsXml = '';
+    // 헤더행 (ht=20, customHeight=1)
+    const hdr = ['구분','내용','댓글1','댓글2','댓글3','날짜','URL'];
+    rowsXml += `<row r="1" ht="20" customHeight="1">${hdr.map((h,c)=>cell(h,0,c,0)).join('')}</row>`;
+
+    let rowIdx = 1;
     articles.forEach(a => {
       const title = rewritten ? applyKeywords(a.title) : a.title;
-      rows.push([String(a.no), a.date, title, a.writer, String(a.commentCount), String(a.readCount), a.url]);
+      const body  = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
+      const cmts  = a.comments ?? [];
+      // 제목행 ht=37.5 (제목=연노랑 3, 댓글=연초록 4)
+      const titleCells = [
+        cell('제목:',1,0,rowIdx),
+        cell(title,3,1,rowIdx),
+        cell(cmts[0]?.content??'',4,2,rowIdx),
+        cell(cmts[1]?.content??'',4,3,rowIdx),
+        cell(cmts[2]?.content??'',4,4,rowIdx),
+        cell(a.date,2,5,rowIdx),
+        cell(a.url,2,6,rowIdx),
+      ];
+      rowsXml += `<row r="${rowIdx+1}" ht="37.5" customHeight="1">${titleCells.join('')}</row>`;
+      rowIdx++;
+      // 내용행 ht=135
+      rowsXml += `<row r="${rowIdx+1}" ht="135" customHeight="1">${cell('내용:',1,0,rowIdx)}${cell(body,2,1,rowIdx)}</row>`;
+      rowIdx++;
     });
-    const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+
+    const colsXml = `<cols>
+<col min="1" max="1" width="6" customWidth="1"/>
+<col min="2" max="2" width="42" customWidth="1"/>
+<col min="3" max="5" width="28" customWidth="1"/>
+<col min="6" max="6" width="12" customWidth="1"/>
+<col min="7" max="7" width="32" customWidth="1"/>
+</cols>`;
+
+    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+${colsXml}<sheetData>${rowsXml}</sheetData></worksheet>`;
+
+    const sharedStrXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strs.length}" uniqueCount="${strs.length}">
+${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
+</sst>`;
+
+    const wbXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="수집결과" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+
+    const wbRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+    const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+    const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+
+    const zipped = zipSync({
+      '[Content_Types].xml': strToU8(contentTypes),
+      '_rels/.rels': strToU8(rels),
+      'xl/workbook.xml': strToU8(wbXml),
+      'xl/_rels/workbook.xml.rels': strToU8(wbRels),
+      'xl/worksheets/sheet1.xml': strToU8(sheetXml),
+      'xl/sharedStrings.xml': strToU8(sharedStrXml),
+      'xl/styles.xml': strToU8(styleXml),
+    });
+
+    const blob = new Blob([zipped], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const link = document.createElement('a');
-    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.csv`;
+    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xlsx`;
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
@@ -369,6 +483,15 @@ const CollectorTab: React.FC = () => {
                 </p>
               </div>
             )}
+
+            {/* 릴레이 상태 */}
+            <div className="mt-3 pt-2 border-t border-gray-200">
+              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-bold mb-2 bg-green-50 text-green-700">
+                <span>🟢</span>
+                <span>서버 릴레이 연결됨 — 한국(서울) 서버로 수집</span>
+              </div>
+            </div>
+
 
             {/* 버튼들 */}
             <div className="mt-3 pt-2 border-t border-gray-200 space-y-1.5">
