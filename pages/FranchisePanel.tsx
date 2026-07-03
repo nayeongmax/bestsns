@@ -219,17 +219,28 @@ const CollectorTab: React.FC = () => {
     const strs: string[] = [];
     const strIdx = (v: string) => { const i = strs.indexOf(v); if (i >= 0) return i; strs.push(v); return strs.length - 1; };
 
-    // 스타일 ID: 0=헤더, 1=라벨(굵게), 2=일반(줄바꿈), 3=날짜
+    // 스타일 ID: 0=헤더, 1=라벨(굵게), 2=일반, 3=제목행(연노랑), 4=댓글(연초록)
     const styleXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<fonts><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts>
-<fills><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/></fgColor></patternFill></fills>
+<fonts>
+<font><sz val="11"/><name val="맑은 고딕"/></font>
+<font><b/><sz val="11"/><name val="맑은 고딕"/></font>
+</fonts>
+<fills>
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/></fgColor></patternFill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFFF2CC"/></fgColor></patternFill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFE2EFDA"/></fgColor></patternFill>
+</fills>
 <borders><border><left/><right/><top/><bottom/><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
 <cellXfs>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
 </cellXfs>
 </styleSheet>`;
 
@@ -251,13 +262,13 @@ const CollectorTab: React.FC = () => {
       const title = rewritten ? applyKeywords(a.title) : a.title;
       const body  = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
       const cmts  = a.comments ?? [];
-      // 제목행 ht=37.5
+      // 제목행 ht=37.5 (제목=연노랑 3, 댓글=연초록 4)
       const titleCells = [
         cell('제목:',1,0,rowIdx),
-        cell(title,2,1,rowIdx),
-        cell(cmts[0]?.content??'',2,2,rowIdx),
-        cell(cmts[1]?.content??'',2,3,rowIdx),
-        cell(cmts[2]?.content??'',2,4,rowIdx),
+        cell(title,3,1,rowIdx),
+        cell(cmts[0]?.content??'',4,2,rowIdx),
+        cell(cmts[1]?.content??'',4,3,rowIdx),
+        cell(cmts[2]?.content??'',4,4,rowIdx),
         cell(a.date,2,5,rowIdx),
         cell(a.url,2,6,rowIdx),
       ];
