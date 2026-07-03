@@ -238,7 +238,7 @@ const CollectorTab: React.FC = () => {
       );
       // 내용 행
       rows.push(
-        `<Row ss:Height="80">` +
+        `<Row ss:Height="160">` +
         C('내용:', 'label') +
         C(body) +
         Array.from({length: maxC}, () => C('')).join('') +
