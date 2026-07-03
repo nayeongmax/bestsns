@@ -213,12 +213,12 @@ const CollectorTab: React.FC = () => {
 
   const exportCsv = (rewritten = false) => {
     const esc = (s: string) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    const C = (v: string) => `<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>`;
+    const C = (v: string, style = 'cell') => `<Cell ss:StyleID="${style}"><Data ss:Type="String">${esc(v)}</Data></Cell>`;
 
     const maxC = 3;
 
     // 헤더행: 구분 | 내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
-    const header = `<Row>${C('구분')}${C('내용')}${Array.from({length:maxC},(_,i)=>C(`댓글${i+1}`)).join('')}${C('날짜')}${C('URL')}</Row>`;
+    const header = `<Row ss:Height="25">${C('구분','header')}${C('내용','header')}${Array.from({length:maxC},(_,i)=>C(`댓글${i+1}`,'header')).join('')}${C('날짜','header')}${C('URL','header')}</Row>`;
     const rows: string[] = [header];
 
     articles.forEach(a => {
@@ -226,20 +226,20 @@ const CollectorTab: React.FC = () => {
       const body  = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
       const cmts  = a.comments ?? [];
 
-      // 제목 행: 제목: | 제목내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
+      // 제목 행
       rows.push(
-        `<Row>` +
-        C('제목:') +
+        `<Row ss:Height="45">` +
+        C('제목:', 'label') +
         C(title) +
         Array.from({length: maxC}, (_, i) => C(cmts[i]?.content ?? '')).join('') +
         C(a.date) +
         C(a.url) +
         `</Row>`
       );
-      // 내용 행: 내용: | 내용내용 | | | | | |
+      // 내용 행
       rows.push(
-        `<Row>` +
-        C('내용:') +
+        `<Row ss:Height="80">` +
+        C('내용:', 'label') +
         C(body) +
         Array.from({length: maxC}, () => C('')).join('') +
         C('') +
@@ -251,9 +251,23 @@ const CollectorTab: React.FC = () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:x="urn:schemas-microsoft-com:office:excel">
+<Styles>
+  <Style ss:ID="header"><Font ss:Bold="1"/><Alignment ss:WrapText="1" ss:Vertical="Top"/><Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="label"><Font ss:Bold="1"/><Alignment ss:WrapText="1" ss:Vertical="Top"/></Style>
+  <Style ss:ID="cell"><Alignment ss:WrapText="1" ss:Vertical="Top"/></Style>
+</Styles>
 <Worksheet ss:Name="수집결과">
-<Table>${rows.join('')}</Table>
+<Table ss:DefaultRowHeight="60">
+  <Column ss:Width="40"/>
+  <Column ss:Width="300"/>
+  <Column ss:Width="200"/>
+  <Column ss:Width="200"/>
+  <Column ss:Width="200"/>
+  <Column ss:Width="80"/>
+  <Column ss:Width="220"/>
+${rows.join('')}</Table>
 </Worksheet>
 </Workbook>`;
 
