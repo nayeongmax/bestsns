@@ -131,16 +131,25 @@ export async function fetchFranchisePlans(): Promise<FranchisePlan[]> {
     if (!error && data && data.length > 0) {
       return data.map((row) => rowToPlan(row as Record<string, unknown>));
     }
-  } catch {
-    // fall through to localStorage
+    if (error) console.error('[franchise_plans] fetch error:', error.message);
+  } catch (e) {
+    console.error('[franchise_plans] fetch exception:', e);
   }
 
-  // Fallback: localStorage
+  // Fallback: localStorage — and auto-restore to Supabase if it was empty
   try {
     const raw = localStorage.getItem(LS_PLANS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as FranchisePlan[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Supabase was empty → push localStorage data back up
+        supabase
+          .from('franchise_plans')
+          .upsert(parsed.map(planToRow), { onConflict: 'id' })
+          .then(({ error: e }) => { if (e) console.error('[franchise_plans] restore error:', e.message); })
+          .catch((e) => console.error('[franchise_plans] restore exception:', e));
+        return parsed;
+      }
     }
   } catch {
     // fall through to defaults
@@ -159,11 +168,12 @@ export async function upsertFranchisePlans(plans: FranchisePlan[]): Promise<void
 
   // Best-effort Supabase upsert
   try {
-    await supabase
+    const { error } = await supabase
       .from('franchise_plans')
       .upsert(plans.map(planToRow), { onConflict: 'id' });
-  } catch {
-    // ignore silently
+    if (error) console.error('[franchise_plans] upsert error:', error.message);
+  } catch (e) {
+    console.error('[franchise_plans] upsert exception:', e);
   }
 }
 
@@ -210,16 +220,25 @@ export async function fetchFranchiseProductsAdmin(): Promise<FranchiseProduct[]>
     if (!error && data && data.length > 0) {
       return data.map((row) => rowToProduct(row as Record<string, unknown>));
     }
-  } catch {
-    // fall through to localStorage
+    if (error) console.error('[franchise_products] fetch error:', error.message);
+  } catch (e) {
+    console.error('[franchise_products] fetch exception:', e);
   }
 
-  // Fallback: localStorage (all products, including hidden)
+  // Fallback: localStorage (all products, including hidden) — auto-restore to Supabase if it was empty
   try {
     const raw = localStorage.getItem(LS_PRODUCTS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as FranchiseProduct[];
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Supabase was empty → push localStorage data back up
+        supabase
+          .from('franchise_products')
+          .upsert(parsed.map(productToRow), { onConflict: 'id' })
+          .then(({ error: e }) => { if (e) console.error('[franchise_products] restore error:', e.message); })
+          .catch((e) => console.error('[franchise_products] restore exception:', e));
+        return parsed;
+      }
     }
   } catch {
     // fall through
@@ -247,11 +266,12 @@ export async function upsertFranchiseProducts(products: FranchiseProduct[]): Pro
 
   // Best-effort Supabase upsert
   try {
-    await supabase
+    const { error } = await supabase
       .from('franchise_products')
       .upsert(products.map(productToRow), { onConflict: 'id' });
-  } catch {
-    // ignore silently
+    if (error) console.error('[franchise_products] upsert error:', error.message);
+  } catch (e) {
+    console.error('[franchise_products] upsert exception:', e);
   }
 }
 
