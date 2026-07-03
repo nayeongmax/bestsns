@@ -236,11 +236,12 @@ const CollectorTab: React.FC = () => {
         C(a.url) +
         `</Row>`
       );
-      // 내용 행
+      // 내용 행 - 내용 뒤에 빈 줄 패딩으로 행 높이 확보
+      const padded = (body || '') + '\n\n\n\n\n\n\n\n\n\n';
       rows.push(
-        `<Row ss:Height="240" ss:AutoFitHeight="0">` +
+        `<Row ss:AutoFitHeight="1">` +
         C('내용:', 'label') +
-        C(body) +
+        C(padded) +
         Array.from({length: maxC}, () => C('')).join('') +
         C('') +
         C('') +
