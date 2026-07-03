@@ -41,6 +41,11 @@ CREATE TABLE IF NOT EXISTS franchise_products (
 ALTER TABLE franchise_products
   ADD COLUMN IF NOT EXISTS original_price NUMERIC;
 
+-- 4. RLS 비활성화 — 플랜/상품은 개인정보 없으므로 anon key로 읽기/쓰기 허용
+--    (어드민패널이 Supabase Auth 미사용, anon key로만 동작하기 때문)
+ALTER TABLE franchise_plans    DISABLE ROW LEVEL SECURITY;
+ALTER TABLE franchise_products DISABLE ROW LEVEL SECURITY;
+
 -- ──────────────────────────────────────────────────────────────
 -- 스키마 캐시 갱신
 -- ──────────────────────────────────────────────────────────────
