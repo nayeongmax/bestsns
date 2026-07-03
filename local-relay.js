@@ -445,22 +445,24 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
     }
     const page = await context.newPage();
     try {
-      // Playwright 브라우저로 API 직접 호출 (브라우저 TLS 핑거프린트로 9999 우회)
-      const apiUrl = `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${cafeId}/articles/${articleId}`;
-      const res = await page.goto(apiUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      const text = await res.text();
-      console.log(`  [Playwright API] status=${res.status()} 앞100자: ${text.slice(0, 100)}`);
+      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForSelector('iframe#cafe_main', { timeout: 8000 }).catch(() => {});
       let content = '';
       let comments = [];
-      try {
-        const data = JSON.parse(text);
-        const art = data?.result?.article;
-        const rawContent = art?.contentHtml || art?.content || art?.contentText || '';
-        content = stripHtml(rawContent);
-        const rawComments = data?.result?.comments?.items || [];
-        comments = rawComments.slice(0, maxComments).map(c => ({ content: (c.content || c.text || '').trim(), writer: c.writer?.nick || '', date: '' })).filter(c => c.content);
-      } catch(pe) { console.log(`  [Playwright API] JSON 파싱 실패: ${pe.message}`); }
-      console.log(`  [Playwright API] content길이=${content.length} 댓글=${comments.length}`);
+      const allFrames = page.frames();
+      for (const frame of allFrames) {
+        try {
+          await frame.waitForSelector('.se-main-container, #tbody, .article_body, .ContentRenderer', { timeout: 5000 }).catch(() => {});
+          const el = await frame.$('.se-main-container, #tbody, .article_body, .ContentRenderer, .article_viewer');
+          if (el) {
+            content = (await el.innerText()).trim();
+            const cEls = await frame.$$('.comment_text_box, ._content, .u_cbox_contents');
+            comments = (await Promise.all(cEls.slice(0, maxComments).map(e => e.innerText().catch(() => '')))).map(t => ({ content: t.trim(), writer: '', date: '' })).filter(c => c.content);
+            break;
+          }
+        } catch {}
+      }
+      console.log(`  [Playwright] frames=${allFrames.length} content길이=${content.length} 댓글=${comments.length}`);
       if (content) return { content, comments };
     } finally {
       await page.close();
