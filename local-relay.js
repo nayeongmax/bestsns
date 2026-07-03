@@ -579,34 +579,40 @@ async function handleScrape(body) {
     let pageAllFiltered = true;
     console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
     // 페이지 내 아이템은 최신→오래된 순으로 오므로, 역순 처리해서 오래된→최신 순으로 push
+    const filteredItems = [];
     for (const item of [...rawItems].reverse()) {
-      if (articles.length >= maxArticles) { pageAllFiltered = false; break; }
+      if (articles.length + filteredItems.length >= maxArticles) { pageAllFiltered = false; break; }
       const dateObj = parseDateStr(item.dateStr);
-      if (endDateObj && dateObj && dateObj > endDateObj) continue;       // 종료일 이후 → 스킵
-      if (startDateObj && dateObj && dateObj < startDateObj) continue;   // 시작일 이전 → 스킵(페이지 내 혼재 가능)
+      if (endDateObj && dateObj && dateObj > endDateObj) continue;
+      if (startDateObj && dateObj && dateObj < startDateObj) continue;
       pageAllFiltered = false;
-      // 본문 + 댓글 수집
-      let content = '', comments = [];
-      if (item.articleId) {
-        try {
-          const detail = await fetchArticleDetail(cafeId, item.articleId, naverCookie, maxComments);
-          content = detail.content;
-          comments = detail.comments;
-        } catch(e) { console.log(`  [상세] 실패: ${e.message}`); }
-        await new Promise(r => setTimeout(r, 200));
+      filteredItems.push({ item, dateObj });
+    }
+    // 3개씩 병렬로 상세 수집
+    const BATCH = 3;
+    for (let i = 0; i < filteredItems.length; i += BATCH) {
+      const batch = filteredItems.slice(i, i + BATCH);
+      const results = await Promise.all(batch.map(({ item }) =>
+        item.articleId
+          ? fetchArticleDetail(cafeId, item.articleId, naverCookie, maxComments).catch(e => { console.log(`  [상세] 실패: ${e.message}`); return { content: '', comments: [] }; })
+          : Promise.resolve({ content: '', comments: [] })
+      ));
+      for (let j = 0; j < batch.length; j++) {
+        const { item, dateObj } = batch[j];
+        const { content, comments } = results[j];
+        articles.push({
+          no: articles.length + 1,
+          articleId: item.articleId,
+          title: item.title,
+          content,
+          writer: item.writer,
+          date: dateObj ? fmtDate(dateObj) : item.dateStr,
+          commentCount: item.commentCount || 0,
+          readCount: item.readCount || 0,
+          url: `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${item.articleId}`,
+          comments,
+        });
       }
-      articles.push({
-        no: articles.length + 1,
-        articleId: item.articleId,
-        title: item.title,
-        content,
-        writer: item.writer,
-        date: dateObj ? fmtDate(dateObj) : item.dateStr,
-        commentCount: item.commentCount || 0,
-        readCount: item.readCount || 0,
-        url: `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${item.articleId}`,
-        comments,
-      });
     }
 
     if (pageAllFiltered && articles.length === 0) dateFilteredAll = true;
