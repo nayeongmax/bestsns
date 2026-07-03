@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { UserProfile } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
@@ -212,71 +213,44 @@ const CollectorTab: React.FC = () => {
   };
 
   const exportCsv = (rewritten = false) => {
-    const esc = (s: string) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    const C = (v: string, style = 'cell') => `<Cell ss:StyleID="${style}"><Data ss:Type="String">${esc(v)}</Data></Cell>`;
-
-    const maxC = 3;
-
-    // 헤더행: 구분 | 내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
-    const header = `<Row ss:Height="20" ss:AutoFitHeight="0">${C('구분','header')}${C('내용','header')}${Array.from({length:maxC},(_,i)=>C(`댓글${i+1}`,'header')).join('')}${C('날짜','header')}${C('URL','header')}</Row>`;
-    const rows: string[] = [header];
+    const wb = XLSX.utils.book_new();
+    const wsData: string[][] = [['구분', '내용', '댓글1', '댓글2', '댓글3', '날짜', 'URL']];
+    const rowHeights: { hpt: number }[] = [{ hpt: 20 }]; // 헤더
 
     articles.forEach(a => {
       const title = rewritten ? applyKeywords(a.title) : a.title;
       const body  = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
       const cmts  = a.comments ?? [];
-
-      // 제목 행 (37.5pt 고정)
-      rows.push(
-        `<Row ss:Height="37.5" ss:AutoFitHeight="0">` +
-        C('제목:', 'label') +
-        C(title) +
-        Array.from({length: maxC}, (_, i) => C(cmts[i]?.content ?? '')).join('') +
-        C(a.date) +
-        C(a.url) +
-        `</Row>`
-      );
-      // 내용 행 (135pt 고정)
-      rows.push(
-        `<Row ss:Height="135" ss:AutoFitHeight="0">` +
-        C('내용:', 'label') +
-        C(body) +
-        Array.from({length: maxC}, () => C('')).join('') +
-        C('') +
-        C('') +
-        `</Row>`
-      );
+      wsData.push(['제목:', title, cmts[0]?.content ?? '', cmts[1]?.content ?? '', cmts[2]?.content ?? '', a.date, a.url]);
+      rowHeights.push({ hpt: 37.5 });
+      wsData.push(['내용:', body, '', '', '', '', '']);
+      rowHeights.push({ hpt: 135 });
     });
 
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:x="urn:schemas-microsoft-com:office:excel">
-<Styles>
-  <Style ss:ID="header"><Font ss:Bold="1"/><Alignment ss:WrapText="1" ss:Vertical="Top"/><Interior ss:Color="#D9E1F2" ss:Pattern="Solid"/></Style>
-  <Style ss:ID="label"><Font ss:Bold="1"/><Alignment ss:WrapText="1" ss:Vertical="Top"/></Style>
-  <Style ss:ID="cell"><Alignment ss:WrapText="1" ss:Vertical="Top"/></Style>
-</Styles>
-<Worksheet ss:Name="수집결과">
-<Table ss:DefaultRowHeight="20">
-  <Column ss:Width="40"/>
-  <Column ss:Width="300"/>
-  <Column ss:Width="200"/>
-  <Column ss:Width="200"/>
-  <Column ss:Width="200"/>
-  <Column ss:Width="80"/>
-  <Column ss:Width="220"/>
-${rows.join('')}</Table>
-</Worksheet>
-</Workbook>`;
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-    const link = document.createElement('a');
-    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xls`;
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
+    // 열 너비 (문자 단위)
+    ws['!cols'] = [{ wch: 6 }, { wch: 42 }, { wch: 28 }, { wch: 28 }, { wch: 28 }, { wch: 12 }, { wch: 32 }];
+    // 행 높이 고정
+    ws['!rows'] = rowHeights;
+
+    // 텍스트 줄바꿈 + 상단 정렬 스타일 적용
+    const range = XLSX.utils.decode_range(ws['!ref'] ?? 'A1');
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+        ws[addr].s = {
+          alignment: { wrapText: true, vertical: 'top' },
+          ...(R === 0 ? { fill: { fgColor: { rgb: 'D9E1F2' } }, font: { bold: true } } : {}),
+          ...(C === 0 ? { font: { bold: true } } : {}),
+        };
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, '수집결과');
+    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xlsx`;
+    XLSX.writeFile(wb, filename, { cellStyles: true });
     const entry: CrawlHistoryEntry = {
       id: Date.now().toString(),
       collectedAt: new Date().toLocaleString('ko-KR'),
