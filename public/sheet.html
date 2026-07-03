@@ -1676,9 +1676,9 @@ async function init() {
     let cloudData = null, cloudTime = 0;
     try {
       const data = await cloudLoad(USER_ID);
-      if (data && data.payload?.tabs?.length > 0) {
+      // tabs가 배열이면 저장된 상태로 인정 (빈 배열이어도 OK)
+      if (data && Array.isArray(data.payload?.tabs)) {
         cloudData = data.payload;
-        // 서버 updated_at을 타임스탬프로 변환 (클라우드에 savedAt 없으면 updated_at 사용)
         cloudTime = data.payload.savedAt || (data.updated_at ? new Date(data.updated_at).getTime() : 0);
       }
     } catch(e) {}
@@ -1687,11 +1687,9 @@ async function init() {
     let chosen = null;
     if (cloudData && cloudTime > localTime) {
       chosen = { ...cloudData, savedAt: cloudTime };
-      // 클라우드가 더 최신 → 로컬 캐시 갱신
       localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(chosen));
     } else if (localData) {
       chosen = localData;
-      // 로컬이 더 최신 → 클라우드 업데이트
       if (cloudData && localTime > cloudTime) {
         try { await cloudSave(USER_ID); } catch(e) {}
       }
@@ -1701,7 +1699,12 @@ async function init() {
     }
 
     if (chosen) {
-      tabs = chosen.tabs;
+      tabs = chosen.tabs && chosen.tabs.length > 0 ? chosen.tabs : [];
+      if (tabs.length === 0) {
+        // 저장된 빈 상태: 빈 탭 하나 생성
+        const blankId = makeTabId();
+        tabs = [{ id: blankId, name: '탭1', sections: [] }];
+      }
       activeTabId = chosen.activeTabId || tabs[0].id;
       renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
       return;
@@ -1712,8 +1715,13 @@ async function init() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed?.tabs?.length > 0) {
-          tabs = parsed.tabs; activeTabId = parsed.activeTabId || tabs[0].id;
+        if (parsed?.tabs) {
+          tabs = parsed.tabs.length > 0 ? parsed.tabs : [];
+          if (tabs.length === 0) {
+            const blankId = makeTabId();
+            tabs = [{ id: blankId, name: '탭1', sections: [] }];
+          }
+          activeTabId = parsed.activeTabId || tabs[0].id;
           renderTabBar(); switchTab(activeTabId, false); updateSyncUI(); return;
         }
       } catch(e) {}
