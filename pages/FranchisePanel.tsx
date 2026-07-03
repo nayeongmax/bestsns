@@ -218,7 +218,7 @@ const CollectorTab: React.FC = () => {
     const maxC = 3;
 
     // 헤더행: 구분 | 내용 | 댓글1 | 댓글2 | 댓글3 | 날짜 | URL
-    const header = `<Row ss:Height="25">${C('구분','header')}${C('내용','header')}${Array.from({length:maxC},(_,i)=>C(`댓글${i+1}`,'header')).join('')}${C('날짜','header')}${C('URL','header')}</Row>`;
+    const header = `<Row ss:Height="20" ss:AutoFitHeight="0">${C('구분','header')}${C('내용','header')}${Array.from({length:maxC},(_,i)=>C(`댓글${i+1}`,'header')).join('')}${C('날짜','header')}${C('URL','header')}</Row>`;
     const rows: string[] = [header];
 
     articles.forEach(a => {
@@ -226,9 +226,9 @@ const CollectorTab: React.FC = () => {
       const body  = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
       const cmts  = a.comments ?? [];
 
-      // 제목 행
+      // 제목 행 (37.5pt 고정)
       rows.push(
-        `<Row ss:Height="45" ss:AutoFitHeight="0">` +
+        `<Row ss:Height="37.5" ss:AutoFitHeight="0">` +
         C('제목:', 'label') +
         C(title) +
         Array.from({length: maxC}, (_, i) => C(cmts[i]?.content ?? '')).join('') +
@@ -236,12 +236,11 @@ const CollectorTab: React.FC = () => {
         C(a.url) +
         `</Row>`
       );
-      // 내용 행 - 내용 뒤에 빈 줄 패딩으로 행 높이 확보
-      const padded = (body || '') + '\n\n\n\n\n\n\n\n\n\n';
+      // 내용 행 (135pt 고정)
       rows.push(
-        `<Row ss:AutoFitHeight="1">` +
+        `<Row ss:Height="135" ss:AutoFitHeight="0">` +
         C('내용:', 'label') +
-        C(padded) +
+        C(body) +
         Array.from({length: maxC}, () => C('')).join('') +
         C('') +
         C('') +
@@ -260,7 +259,7 @@ const CollectorTab: React.FC = () => {
   <Style ss:ID="cell"><Alignment ss:WrapText="1" ss:Vertical="Top"/></Style>
 </Styles>
 <Worksheet ss:Name="수집결과">
-<Table ss:DefaultRowHeight="240">
+<Table ss:DefaultRowHeight="20">
   <Column ss:Width="40"/>
   <Column ss:Width="300"/>
   <Column ss:Width="200"/>
