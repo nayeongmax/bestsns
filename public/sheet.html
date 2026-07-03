@@ -1719,9 +1719,9 @@ async function init() {
       } catch(e) {}
     }
   }
-  // 기본 샘플
+  // 처음 사용: 빈 탭
   const firstId = makeTabId();
-  tabs = [{ id: firstId, name: '샘플', sections: JSON.parse(JSON.stringify(defaultSections)) }];
+  tabs = [{ id: firstId, name: '탭1', sections: [] }];
   activeTabId = firstId;
   renderTabBar();
   switchTab(activeTabId, false);
