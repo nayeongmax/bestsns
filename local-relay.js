@@ -445,25 +445,30 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
     }
     const page = await context.newPage();
     try {
-      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForSelector('iframe#cafe_main', { timeout: 8000 }).catch(() => {});
-      let content = '';
-      let comments = [];
-      const allFrames = page.frames();
-      for (const frame of allFrames) {
-        try {
-          await frame.waitForSelector('.se-main-container, #tbody, .article_body, .ContentRenderer', { timeout: 5000 }).catch(() => {});
-          const el = await frame.$('.se-main-container, #tbody, .article_body, .ContentRenderer, .article_viewer');
-          if (el) {
-            content = (await el.innerText()).trim();
-            const cEls = await frame.$$('.comment_text_box, ._content, .u_cbox_contents');
-            comments = (await Promise.all(cEls.slice(0, maxComments).map(e => e.innerText().catch(() => '')))).map(t => ({ content: t.trim(), writer: '', date: '' })).filter(c => c.content);
-            break;
-          }
-        } catch {}
+      // SPA가 내부적으로 호출하는 API 응답 가로채기 (빠름)
+      let intercepted = null;
+      page.on('response', async (response) => {
+        if (intercepted) return;
+        const url = response.url();
+        if (url.includes('cafe-articleapi') && url.includes(`/articles/${articleId}`) && !url.includes('comment')) {
+          try { intercepted = await response.json(); } catch {}
+        }
+      });
+      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      // API 호출 대기 (최대 8초)
+      const deadline = Date.now() + 8000;
+      while (!intercepted && Date.now() < deadline) await new Promise(r => setTimeout(r, 200));
+      let content = '', comments = [];
+      if (intercepted) {
+        const art = intercepted?.result?.article;
+        const raw = art?.contentHtml || art?.content || art?.contentText || '';
+        content = stripHtml(raw);
+        const rawC = intercepted?.result?.comments?.items || [];
+        comments = rawC.slice(0, maxComments).map(c => ({ content: (c.content || '').trim(), writer: c.writer?.nick || '', date: '' })).filter(c => c.content);
+        console.log(`  [Playwright 인터셉트] content길이=${content.length} 댓글=${comments.length}`);
+        if (content) return { content, comments };
       }
-      console.log(`  [Playwright] frames=${allFrames.length} content길이=${content.length} 댓글=${comments.length}`);
-      if (content) return { content, comments };
+      console.log(`  [Playwright] 인터셉트 실패, 결과 없음`);
     } finally {
       await page.close();
       await context.close();
