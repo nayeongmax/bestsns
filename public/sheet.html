@@ -1000,8 +1000,12 @@ function exportCSV() {
 // ─── 로컬 자동저장 + 미저장 표시 ────────────────────────────────────────────
 let _hasUnsaved = false;
 let _localSaveTimer = null;
+let _initComplete = false; // init() 완료 전에는 로컬 저장 차단
 
 function markUnsaved() {
+  // init() 렌더링 중 호출되는 markUnsaved는 무시
+  if (!_initComplete) return;
+
   if (!_hasUnsaved) {
     _hasUnsaved = true;
     const badge = document.getElementById('savedBadge');
@@ -1720,6 +1724,7 @@ async function init() {
       if (tabs.length === 0) { const bid = makeTabId(); tabs = [{ id: bid, name: '탭1', sections: [] }]; }
       activeTabId = chosen.activeTabId || tabs[0].id;
       renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
+      _initComplete = true;
       return;
     }
   } else {
@@ -1735,7 +1740,9 @@ async function init() {
             tabs = [{ id: blankId, name: '탭1', sections: [] }];
           }
           activeTabId = parsed.activeTabId || tabs[0].id;
-          renderTabBar(); switchTab(activeTabId, false); updateSyncUI(); return;
+          renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
+          _initComplete = true;
+          return;
         }
       } catch(e) {}
     }
@@ -1747,6 +1754,7 @@ async function init() {
   renderTabBar();
   switchTab(activeTabId, false);
   updateSyncUI();
+  _initComplete = true;
 }
 
 // 창 닫기 전 미저장 변경사항 경고
