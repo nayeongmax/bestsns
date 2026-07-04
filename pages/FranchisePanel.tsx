@@ -1256,12 +1256,23 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
   const [showSubModal, setShowSubModal] = useState(false);
 
   // 창 닫힐 때 원고시트 localStorage + Supabase 즉시 저장
+  // sendBeacon은 iframe이 아닌 최상위 페이지(부모)에서 호출해야 브라우저 종료 시 전달 보장
   useEffect(() => {
     const handleBeforeUnload = () => {
       const iframe = document.querySelector('iframe[title="원고시트"]') as HTMLIFrameElement | null;
       const iWin = iframe?.contentWindow as any;
       (iWin?.flushLocalSave as (() => void) | undefined)?.();
-      (iWin?.flushCloudSave as (() => void) | undefined)?.();
+      // 부모 창에서 sendBeacon 호출 (iframe 내부보다 훨씬 안정적)
+      const beaconData = (iWin?.getBeaconData as (() => string | null) | undefined)?.();
+      const userId = iWin?.USER_ID as string | undefined;
+      if (beaconData && userId) {
+        try {
+          navigator.sendBeacon(
+            `/api/sheet-sync?userId=${encodeURIComponent(userId)}`,
+            new Blob([beaconData], { type: 'application/json' })
+          );
+        } catch(e) {}
+      }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);

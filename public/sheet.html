@@ -1028,16 +1028,21 @@ function flushLocalSave() {
   localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
 }
 
-// 창 닫힐 때 Supabase에도 즉시 저장 (sendBeacon: 브라우저가 보장)
-// localStorage만 저장하면 브라우저가 지웠을 때 데이터 소실 → Supabase에도 백업
-function flushCloudSave() {
-  if (!_initComplete || !USER_ID || !tabs || tabs.length === 0) return;
+// 부모 창(FranchisePanel)이 sendBeacon을 호출할 수 있도록 데이터 직렬화 반환
+// iframe 내부 sendBeacon은 브라우저 종료 시 캔슬될 수 있어 부모에서 호출하는 게 더 안전
+function getBeaconData() {
+  if (!_initComplete || !USER_ID || !tabs || tabs.length === 0) return null;
   collectCurrentTab();
-  const body = JSON.stringify({ payload: { tabs, activeTabId, savedAt: Date.now() } });
+  return JSON.stringify({ payload: { tabs, activeTabId, savedAt: Date.now() } });
+}
+
+// 폴백: 부모가 없거나 직접 호출할 때 사용
+function flushCloudSave() {
+  const body = getBeaconData();
+  if (!body) return;
   const url = `${SYNC_API}?userId=${encodeURIComponent(USER_ID)}`;
   try {
     if (navigator.sendBeacon) {
-      // sendBeacon: 페이지 종료 후에도 브라우저가 전송을 보장하는 API
       navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
     } else {
       fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
@@ -1706,8 +1711,8 @@ function bgCloudSave() {
   }).catch(() => {}); // 실패해도 무시 — 다음 주기에 재시도
 }
 
-// 3분마다 백그라운드 동기화 (localStorage 소실 대비)
-setInterval(bgCloudSave, 180000);
+// 1분마다 백그라운드 동기화 (localStorage 소실 대비)
+setInterval(bgCloudSave, 60000);
 
 // ─── 초기화 ───
 // 과거 하드코딩 샘플 섹션(witwork, casino) 자동 제거
