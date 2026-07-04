@@ -1247,6 +1247,8 @@ document.addEventListener('mouseup', () => { _isDragging = false; _lastHoverTd =
 sheetBodyEl.addEventListener('focusin', e => {
   const div = e.target.closest('[contenteditable]');
   if (!div) return;
+  // 편집 시작 전 스냅샷 — 이 시점의 내용을 Ctrl+Z로 복원 가능
+  if (!div.closest('tr.section-header')) immediateUndoPush();
   clearSelection();
   if (activeDiv && activeDiv !== div) {
     const prevTd = activeDiv.closest('td');
@@ -1296,24 +1298,14 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // Ctrl+V (편집 모드 포함) → hiddenPaste로 리다이렉트
-  // 편집 모드에서 브라우저가 text/html을 삽입하면 엉뚱한 내용이 들어가는 문제 방지
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
-    let targetTd = null;
-    if (inEdit) {
-      // 편집 중인 셀의 td
-      targetTd = document.activeElement?.closest('td');
-    } else if (selectedCells.size > 0) {
-      targetTd = [...selectedCells][0];
-    }
-    if (targetTd && targetTd.closest('#sheetBody')) {
-      _pasteTargetTd = targetTd;
-      const hp = document.getElementById('hiddenPaste');
-      hp.innerHTML = '';
-      hp.focus();
-      // preventDefault 안 함 — hp로 포커스 이동 후 브라우저가 paste 이벤트 발생
-      return;
-    }
+  // Ctrl+V (비편집 모드) → hiddenPaste로 리다이렉트 (TSV 다중 행 처리)
+  // 편집 모드 Ctrl+V는 sheetBodyEl paste 이벤트가 text/plain으로 처리
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && !inEdit && selectedCells.size > 0) {
+    _pasteTargetTd = [...selectedCells][0];
+    const hp = document.getElementById('hiddenPaste');
+    hp.innerHTML = '';
+    hp.focus();
+    return;
   }
 
   if (!inEdit) {
@@ -1349,13 +1341,26 @@ document.addEventListener('keydown', e => {
       return;
     }
 
-    // 일반 문자 입력 → 선택셀 내용 지우고 편집모드
+    // 일반 문자 입력 → 선택셀 내용 지우고 편집모드 (지우기 전 undo 스냅샷)
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && selectedCells.size === 1) {
       const td = [...selectedCells][0];
       const div = td.querySelector('[contenteditable]');
-      if (div) { div.innerHTML = ''; div.focus(); }
+      if (div) { immediateUndoPush(); div.innerHTML = ''; div.focus(); }
     }
   }
+});
+
+// ── 편집 모드 붙여넣기 — text/plain만 사용해 셀 전체 내용 교체 ──────────────
+// 브라우저가 text/html을 직접 삽입하면 태그 구조로 인해 엉뚱한 내용이 들어가는 문제 방지
+sheetBodyEl.addEventListener('paste', e => {
+  const div = e.target.closest('[contenteditable]');
+  if (!div || div.closest('tr.section-header')) return;
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+  if (!text) return;
+  immediateUndoPush();
+  div.innerHTML = textToHtml(text);
+  markUnsaved();
 });
 
 // ── 복사 시 스타일 정화 (네이버카페 등 외부 에디터에 붙여넣을 때 배경색·폰트 오염 방지) ──
