@@ -156,7 +156,7 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
-  const BATCH_SIZE = 20; // 한 번 요청당 최대 개수 (타임아웃 방지)
+  const BATCH_SIZE = 10; // 한 번 요청당 최대 개수 (타임아웃 방지, 10개가 안전)
 
   const doCollect = async (resume: boolean) => {
     if (!resolvedCafeId) { setStatus('카페 ID를 입력해주세요.'); return; }
@@ -545,8 +545,18 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             </div>
 
 
+            {/* 수집 상태 표시 */}
+            <div className={`mt-2 px-2 py-1.5 rounded text-xs font-bold leading-snug ${
+              status.startsWith('오류') ? 'bg-red-50 text-red-700' :
+              status.startsWith('수집 완료') ? 'bg-green-50 text-green-700' :
+              status.startsWith('수집 중') ? 'bg-blue-50 text-blue-700' :
+              'bg-gray-50 text-gray-400'
+            }`}>
+              {status}
+            </div>
+
             {/* 버튼들 */}
-            <div className="mt-3 pt-2 border-t border-gray-200 space-y-1.5">
+            <div className="mt-2 pt-2 border-t border-gray-200 space-y-1.5">
               <button type="button" onClick={() => doCollect(false)} disabled={loading}
                 className="w-full py-2 rounded font-black text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 {loading ? '수집 중...' : '▶ 수집 시작'}

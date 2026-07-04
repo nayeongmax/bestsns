@@ -36,6 +36,9 @@
   status = 200
   force = true
 
+[functions."scrape-naver-cafe"]
+  timeout = 26
+
 [functions."smm-sync-initial-count"]
   schedule = "*/5 * * * *"
 
