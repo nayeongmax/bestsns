@@ -66,8 +66,19 @@ const MarketingVoucherPage: React.FC<Props> = ({ user, onUpdateUser, addNotif })
         },
       });
 
-      if (!response || 'code' in response) {
+      if (!response) {
+        // 창이 닫혔거나 응답 없음 — 조용히 크레딧 선택 페이지로 복귀
         navigate('/credit/apply');
+        return;
+      }
+      if ('code' in response) {
+        const code = String((response as any).code ?? '');
+        const msg = String((response as any).message ?? '결제에 실패했습니다.');
+        if (code === 'PAY_PROCESS_CANCELED' || code === 'USER_CANCEL') {
+          navigate('/credit/apply');
+        } else {
+          alert(`결제 오류: ${msg}`);
+        }
         return;
       }
 
@@ -101,7 +112,7 @@ const MarketingVoucherPage: React.FC<Props> = ({ user, onUpdateUser, addNotif })
       navigate('/sns');
     } catch (e: any) {
       console.warn('[MarketingVoucherPage] 결제 오류:', e);
-      navigate('/credit/apply');
+      alert(`결제 오류: ${e?.message || '알 수 없는 오류가 발생했습니다.'}`);
     } finally {
       setIsProcessing(false);
     }

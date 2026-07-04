@@ -66,7 +66,9 @@ function rowToPlan(row: Record<string, unknown>): FranchisePlan {
     price: Number(row.price ?? 0),
     ...(originalPrice ? { originalPrice } : {}),
     period: String(row.period ?? '월'),
-    features: Array.isArray(row.features) ? (row.features as string[]) : [],
+    features: Array.isArray(row.features)
+      ? row.features.map((f: unknown) => (typeof f === 'string' ? f : String(f ?? '')))
+      : [],
     isActive: Boolean(row.is_active),
     sortOrder: Number(row.sort_order ?? 0),
     ...(row.payment_url ? { paymentUrl: String(row.payment_url) } : {}),
