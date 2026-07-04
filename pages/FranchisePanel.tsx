@@ -156,41 +156,61 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
+  const BATCH_SIZE = 20; // 한 번 요청당 최대 개수 (타임아웃 방지)
+
   const doCollect = async (resume: boolean) => {
     if (!resolvedCafeId) { setStatus('카페 ID를 입력해주세요.'); return; }
     stopRef.current = false;
     setLoading(true);
-    const page = resume && nextPage ? nextPage : parseInt(startPage) || 1;
-    setStatus(`수집 중... (페이지 ${page})`);
+
+    const total = parseInt(maxArticles) || 10;
+    let currentPage = resume && nextPage ? nextPage : parseInt(startPage) || 1;
+    let accumulated: CafeArticle[] = resume ? [...articles] : [];
+    let remaining = resume ? Math.max(0, total - articles.length) : total;
+
     try {
-      const res = await fetch('/.netlify/functions/scrape-naver-cafe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cafeId: resolvedCafeId,
-          menuId: menuId.trim(),
-          startPage: page,
-          startDate: startDate.trim() || undefined,
-          endDate: endDate.trim() || todayStr(),
-          maxArticles: parseInt(maxArticles) || 10,
-          maxComments: parseInt(maxComments) || 0,
-          fetchComments: parseInt(maxComments) > 0,
-          naverCookie: naverCookie.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
-      const newList: CafeArticle[] = data.articles || [];
-      const merged = resume
-        ? [...articles, ...newList.map((a, i) => ({ ...a, no: articles.length + i + 1 }))]
-        : newList;
-      saveArticles(merged);
-      setNextPage(data.nextPage || null);
-      if (newList.length > 0) {
-        const last = newList[newList.length - 1];
-        saveLastInfo({ writer: last.writer, date: last.date, page: data.nextPage || page, savedAt: new Date().toLocaleString('ko-KR') });
+      while (remaining > 0 && !stopRef.current) {
+        const batchSize = Math.min(remaining, BATCH_SIZE);
+        setStatus(`수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`);
+
+        const res = await fetch('/.netlify/functions/scrape-naver-cafe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cafeId: resolvedCafeId,
+            menuId: menuId.trim(),
+            startPage: currentPage,
+            startDate: startDate.trim() || undefined,
+            endDate: endDate.trim() || todayStr(),
+            maxArticles: batchSize,
+            maxComments: parseInt(maxComments) || 0,
+            fetchComments: parseInt(maxComments) > 0,
+            naverCookie: naverCookie.trim() || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
+
+        const newList: CafeArticle[] = data.articles || [];
+        accumulated = [...accumulated, ...newList.map((a, i) => ({ ...a, no: accumulated.length + i + 1 }))];
+        saveArticles(accumulated);
+
+        if (newList.length > 0) {
+          const last = newList[newList.length - 1];
+          saveLastInfo({ writer: last.writer, date: last.date, page: data.nextPage || currentPage, savedAt: new Date().toLocaleString('ko-KR') });
+        }
+
+        remaining -= newList.length;
+        if (!data.nextPage || newList.length < batchSize) {
+          // 더 이상 글이 없으면 종료
+          setNextPage(null);
+          break;
+        }
+        currentPage = data.nextPage;
+        setNextPage(data.nextPage);
       }
-      setStatus(`수집 완료 — ${merged.length}개 글`);
+
+      setStatus(`수집 완료 — ${accumulated.length}개 글`);
     } catch (e: unknown) {
       setStatus(`오류: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
     } finally {
