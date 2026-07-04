@@ -1704,29 +1704,26 @@ async function init() {
     } catch(e) {}
 
     // ③ 더 최신 데이터 선택
-    //    - 로컬 > 클라우드: 💾 이후 추가 작업이 있었던 경우 → 로컬 우선
-    //    - 클라우드 >= 로컬: 다른 기기에서 저장하거나 동일 시점 → 클라우드 우선
+    //    - 로컬 > 클라우드: 같은 기기에서 💾 후 추가 작업이 있었던 경우 → 로컬 우선
+    //    - 클라우드 >= 로컬: 다른 기기에서 저장했거나 동일 시점 → 클라우드 우선
+    //    ※ init()에서는 절대 cloudSave 호출 안 함 — 열 때마다 Supabase 데이터가
+    //      오염되는 버그 방지. Supabase는 💾 버튼으로만 업데이트.
     let chosen = null;
-    let needsCloudSync = false;
     if (localData && localTime > cloudTime) {
       chosen = localData;
-      needsCloudSync = true;
     } else if (cloudData) {
       chosen = cloudData;
       localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ ...cloudData, savedAt: cloudTime }));
     } else if (localData) {
       chosen = localData;
-      needsCloudSync = true;
     }
 
     if (chosen) {
-      // tabs 먼저 설정한 뒤 렌더링 — cloudSave는 tabs 설정 후 호출해야 빈 데이터 업로드 방지
       tabs = chosen.tabs.length > 0 ? purgeOldSampleSections(chosen.tabs) : [];
       if (tabs.length === 0) { const bid = makeTabId(); tabs = [{ id: bid, name: '탭1', sections: [] }]; }
       activeTabId = chosen.activeTabId || tabs[0].id;
       renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
       _initComplete = true;
-      if (needsCloudSync) cloudSave(USER_ID).catch(() => {});
       return;
     }
   } else {
