@@ -1635,6 +1635,16 @@ document.getElementById('sheetBody').addEventListener('input', () => {
 });
 
 // ─── 초기화 ───
+// 과거 하드코딩 샘플 섹션(witwork, casino) 자동 제거
+const LEGACY_SAMPLE_IDS = new Set(['witwork', 'casino']);
+function purgeOldSampleSections(tabsArr) {
+  tabsArr.forEach(tab => {
+    if (!Array.isArray(tab.sections)) return;
+    tab.sections = tab.sections.filter(s => !LEGACY_SAMPLE_IDS.has(s.id));
+  });
+  return tabsArr;
+}
+
 async function init() {
   if (USER_ID) {
     // ① 로컬 캐시 먼저 확인
@@ -1674,7 +1684,7 @@ async function init() {
     }
 
     if (chosen) {
-      tabs = chosen.tabs && chosen.tabs.length > 0 ? chosen.tabs : [];
+      tabs = chosen.tabs && chosen.tabs.length > 0 ? purgeOldSampleSections(chosen.tabs) : [];
       if (tabs.length === 0) {
         // 저장된 빈 상태: 빈 탭 하나 생성
         const blankId = makeTabId();
@@ -1691,7 +1701,7 @@ async function init() {
       try {
         const parsed = JSON.parse(saved);
         if (parsed?.tabs) {
-          tabs = parsed.tabs.length > 0 ? parsed.tabs : [];
+          tabs = parsed.tabs.length > 0 ? purgeOldSampleSections(parsed.tabs) : [];
           if (tabs.length === 0) {
             const blankId = makeTabId();
             tabs = [{ id: blankId, name: '탭1', sections: [] }];
