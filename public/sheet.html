@@ -1566,7 +1566,7 @@ async function cloudSave(key) {
   const res = await fetch(`${SYNC_API}?${USER_ID ? 'userId' : 'code'}=${encodeURIComponent(key)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payload: { tabs, activeTabId } })
+    body: JSON.stringify({ payload: { tabs, activeTabId, savedAt: Date.now() } })
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
