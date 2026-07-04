@@ -426,8 +426,28 @@ function makeTabId() { return 'tab_' + Date.now() + '_' + Math.random().toString
 
 function initTabs() { /* init()으로 대체됨 */ }
 
-function saveAll() {
-  autoSave();
+async function saveAll() {
+  // 로컬 저장 즉시 + 클라우드 타이머 취소
+  collectCurrentTab();
+  const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
+  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
+  clearTimeout(_cloudTimer);
+
+  if (syncCode) {
+    showCloudBadge('☁ 저장 중...', 'ok');
+    try {
+      await cloudSave(syncCode);
+      showCloudBadge('☁ 수파베이스 저장 완료!', 'ok');
+    } catch(e) {
+      showCloudBadge('⚠ 수파베이스 저장 실패 — 다시 눌러주세요', 'err');
+    }
+  } else {
+    const badge = document.getElementById('savedBadge');
+    badge.textContent = '✔ 로컬 저장됨';
+    badge.style.display = 'inline';
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => { badge.style.display = 'none'; }, 2000);
+  }
 }
 
 // 현재 DOM → 현재 탭 데이터 동기화
@@ -1615,7 +1635,7 @@ function showCloudBadge(msg, type) {
   const el = document.getElementById('cloudBadge');
   el.textContent = msg; el.className = 'cloud-badge ' + type; el.style.display = 'inline';
   clearTimeout(_cloudBadgeTimer);
-  _cloudBadgeTimer = setTimeout(() => { el.style.display = 'none'; }, type === 'ok' ? 2000 : 5000);
+  _cloudBadgeTimer = setTimeout(() => { el.style.display = 'none'; }, type === 'ok' ? 3000 : 6000);
 }
 
 // 클라우드에 저장
