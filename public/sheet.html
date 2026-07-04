@@ -461,15 +461,21 @@ function renderTabBar() {
     const nameSpan = document.createElement('span');
     nameSpan.className = 'tab-name';
     nameSpan.textContent = tab.name;
-    // 더블클릭으로 이름 편집
-    nameSpan.addEventListener('dblclick', e => {
-      e.stopPropagation();
+
+    // 탭 이름 편집 모드 진입 함수 (addTab에서도 재사용)
+    nameSpan._startEdit = () => {
       nameSpan.contentEditable = 'true';
       nameSpan.focus();
       const range = document.createRange();
       range.selectNodeContents(nameSpan);
       window.getSelection().removeAllRanges();
       window.getSelection().addRange(range);
+    };
+
+    // 더블클릭으로 이름 편집 (클릭 횟수로 판단해 switchTab 재호출 방지)
+    nameSpan.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      nameSpan._startEdit();
     });
     nameSpan.addEventListener('blur', () => {
       nameSpan.contentEditable = 'false';
@@ -478,6 +484,7 @@ function renderTabBar() {
     });
     nameSpan.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); nameSpan.blur(); }
+      if (e.key === 'Escape') { nameSpan.textContent = tab.name; nameSpan.blur(); }
     });
 
     const delBtn = document.createElement('button');
@@ -488,7 +495,8 @@ function renderTabBar() {
 
     el.appendChild(nameSpan);
     el.appendChild(delBtn);
-    el.addEventListener('click', () => switchTab(tab.id));
+    // 더블클릭 시 switchTab 재호출 방지 (e.detail >= 2 이면 dblclick 처리 중)
+    el.addEventListener('click', e => { if (e.detail < 2) switchTab(tab.id); });
     list.appendChild(el);
   });
 }
@@ -505,17 +513,18 @@ function switchTab(tabId, doCollect = true) {
 
 function addTab() {
   collectCurrentTab();
-  const label = todayLabel();
-  // 이미 같은 이름 있으면 번호 붙이기
-  let name = label;
+  let name = 'NEW';
   let cnt = 2;
-  while (tabs.find(t => t.name === name)) { name = `${label}(${cnt++})`; }
+  while (tabs.find(t => t.name === name)) { name = `NEW(${cnt++})`; }
   const id = makeTabId();
   tabs.push({ id, name, sections: [] });
   activeTabId = id;
   renderTabBar();
   loadSections(tabs.find(t=>t.id===id).sections);
   saveAll();
+  // 탭 추가 즉시 이름 편집 모드 진입 (엑셀처럼)
+  const nameSpan = document.querySelector(`.tab[data-tab-id="${id}"] .tab-name`);
+  if (nameSpan?._startEdit) setTimeout(() => nameSpan._startEdit(), 50);
 }
 
 function copyTab() {
