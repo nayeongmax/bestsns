@@ -95,6 +95,97 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
     return { total, avg, sum };
   }, [filteredReviews]);
 
+  // tiers / currentStoreType — autoTrigger useEffect가 early return 아래에 있으면
+  // ebook이 undefined → defined 로 바뀔 때 hook 수가 달라져 React #310 에러가 발생.
+  // 그래서 이 두 값을 early return 위에서 미리 계산해 두고 useEffect도 early return 전에 선언한다.
+  const currentStoreType: StoreType = (ebook?.storeType as StoreType) || 'ebook';
+  const tiers = ebook
+    ? (ebook.tiers?.length ? ebook.tiers : [{ name: 'LITE', price: ebook.price, description: '기본 서비스 제공', pageCount: 1 }])
+    : [];
+
+  // 크레딧 충전페이지에서 넘어온 경우 PG창 자동 오픈 — 반드시 early return 위에 선언해야 hook 순서 일정
+  useEffect(() => {
+    if (!location.state?.autoTrigger) return;
+    if (autoTriggered.current) return;
+    if (!ebook) return;
+    const selectedTier = tiers[activeTierIdx];
+    if (!selectedTier) return;
+    const timer = setTimeout(async () => {
+      if (autoTriggered.current) return;
+      autoTriggered.current = true;
+      setIsProcessing(true);
+      try {
+        const result = await requestPayment({
+          orderName: `${ebook.title} [${selectedTier.name}]`,
+          totalAmount: selectedTier.price,
+          productId: ebook.id,
+          productName: `${ebook.title} [${selectedTier.name}]`,
+          userId: user.id,
+          userNickname: user.nickname,
+          userEmail: user.email,
+          sellerNickname: ebook.author,
+          tierName: selectedTier.name,
+          storeType: currentStoreType,
+        });
+        if (result.success) {
+          const newOrder: StoreOrder = {
+            id: result.orderId || `SO_${Date.now()}_${user.id.slice(0, 6)}`,
+            userId: user.id,
+            userNickname: user.nickname,
+            sellerNickname: ebook.author,
+            orderTime: new Date().toISOString(),
+            productId: ebook.id,
+            productName: `${ebook.title} [${selectedTier.name}]`,
+            tierName: selectedTier.name,
+            price: selectedTier.price,
+            storeType: currentStoreType,
+            status: '결제완료',
+            paymentId: result.paymentId,
+            paymentMethod: result.paymentMethod,
+            paymentLog: result.paymentLog,
+            receiptUrl: result.receiptUrl,
+          };
+          if (location.state?.fromCreditPurchase) {
+            const paymentId = result.paymentId || `PAY_${Date.now()}_${user.id.slice(0, 4)}`;
+            const nextPoints = (user.points || 0) + selectedTier.price;
+            updateProfile(user.id, { points: nextPoints }).catch(e => console.warn('[EbookDetail] 크레딧 충전 실패:', e));
+            insertPointTransaction({
+              id: paymentId,
+              user_id: user.id,
+              type: 'charge',
+              description: `마케팅 이용권 구매 (${ebook.title} [${selectedTier.name}])`,
+              amount: selectedTier.price,
+              created_at: new Date().toISOString(),
+              payment_method: result.paymentMethod || 'CARD',
+              payment_log: result.paymentLog || '',
+            }).catch(e => console.warn('[EbookDetail] 충전 내역 저장 실패:', e));
+            addNotif?.(user.id, 'payment', '💳 크레딧 구매 완료', `${selectedTier.price.toLocaleString()}C 크레딧이 구매되었습니다.`);
+            alert('크레딧 구매가 완료되었습니다!');
+            navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'sns', snsSubTab: 'charge' } });
+          } else {
+            onStoreOrderCreated?.(newOrder);
+            upsertStoreOrder(newOrder).catch(e => console.warn('[EbookDetail] 주문 저장 실패:', e));
+            addNotif?.(ebook.authorId, 'ebook', '💰 상품 판매 알림', `[${ebook.title}] 상품이 판매되었습니다.`);
+            addNotif?.(user.id, 'payment', '💳 결제 완료', `[${ebook.title}] 구매가 완료되었습니다. 마이페이지에서 확인하세요.`);
+            alert('결제가 완료되었습니다!');
+            navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'store' } });
+          }
+        } else if (result.error) {
+          alert(`결제 오류: ${result.error}`);
+          if (location.state?.fromCreditPurchase) {
+            navigate('/credit/apply');
+          }
+        } else if (location.state?.fromCreditPurchase) {
+          navigate('/credit/apply');
+        }
+      } finally {
+        setIsProcessing(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ebook]);
+
   if (!ebook) {
     return <div className="text-center py-20 font-black">상품을 찾을 수 없습니다.</div>;
   }
@@ -109,13 +200,10 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
     'marketing': { label: '마케팅', color: 'bg-rose-500' },
   };
 
-  const currentStoreType = ebook.storeType || 'ebook';
-  const { label: typeLabel, color: typeColor } = typeInfo[currentStoreType];
+  const { label: typeLabel, color: typeColor } = typeInfo[currentStoreType] || typeInfo['ebook'];
 
   const displayAuthor = isMine ? user.nickname : ebook.author;
   const displayProfileImg = isMine ? user.profileImage : `https://api.dicebear.com/7.x/avataaars/svg?seed=${ebook.author}`;
-
-  const tiers = ebook.tiers || [{ name: 'LITE', price: ebook.price, description: "기본 서비스 제공", pageCount: 1 }];
 
   const faqs = ebook.faqs || [
     { question: "구매 후 언제 받아볼 수 있나요?", answer: "결제 완료 즉시 시스템을 통해 안내 받으실 수 있습니다." },
@@ -219,93 +307,6 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
       },
     });
   };
-
-  // 크레딧 충전페이지에서 넘어온 경우 PG창 자동 오픈
-  useEffect(() => {
-    if (!location.state?.autoTrigger) return;
-    if (autoTriggered.current) return;
-    if (!ebook) return;
-    // autoTriggered.current는 타이머 실행 직전에 set — 타이머 취소 후 재시도가 가능하도록
-    const selectedTier = tiers[activeTierIdx];
-    const timer = setTimeout(async () => {
-      if (autoTriggered.current) return; // 이중 실행 방지
-      autoTriggered.current = true;
-      setIsProcessing(true);
-      try {
-        const result = await requestPayment({
-          orderName: `${ebook.title} [${selectedTier.name}]`,
-          totalAmount: selectedTier.price,
-          productId: ebook.id,
-          productName: `${ebook.title} [${selectedTier.name}]`,
-          userId: user.id,
-          userNickname: user.nickname,
-          userEmail: user.email,
-          sellerNickname: ebook.author,
-          tierName: selectedTier.name,
-          storeType: currentStoreType,
-        });
-        if (result.success) {
-          const newOrder: StoreOrder = {
-            id: result.orderId || `SO_${Date.now()}_${user.id.slice(0, 6)}`,
-            userId: user.id,
-            userNickname: user.nickname,
-            sellerNickname: ebook.author,
-            orderTime: new Date().toISOString(),
-            productId: ebook.id,
-            productName: `${ebook.title} [${selectedTier.name}]`,
-            tierName: selectedTier.name,
-            price: selectedTier.price,
-            storeType: currentStoreType,
-            status: '결제완료',
-            paymentId: result.paymentId,
-            paymentMethod: result.paymentMethod,
-            paymentLog: result.paymentLog,
-            receiptUrl: result.receiptUrl,
-          };
-
-          if (location.state?.fromCreditPurchase) {
-            // 크레딧 구매는 store_order 미생성 — 충전리스트에만 기록
-            // 크레딧 구매 버튼에서 진입한 경우: 포인트 충전 처리 후 SNS 충전리스트로 이동
-            const paymentId = result.paymentId || `PAY_${Date.now()}_${user.id.slice(0, 4)}`;
-            const nextPoints = (user.points || 0) + selectedTier.price;
-            updateProfile(user.id, { points: nextPoints }).catch(e => console.warn('[EbookDetail] 크레딧 충전 실패:', e));
-            insertPointTransaction({
-              id: paymentId,
-              user_id: user.id,
-              type: 'charge',
-              description: `마케팅 이용권 구매 (${ebook.title} [${selectedTier.name}])`,
-              amount: selectedTier.price,
-              created_at: new Date().toISOString(),
-              payment_method: result.paymentMethod || 'CARD',
-              payment_log: result.paymentLog || '',
-            }).catch(e => console.warn('[EbookDetail] 충전 내역 저장 실패:', e));
-            addNotif?.(user.id, 'payment', '💳 크레딧 구매 완료', `${selectedTier.price.toLocaleString()}C 크레딧이 구매되었습니다.`);
-            alert('크레딧 구매가 완료되었습니다!');
-            navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'sns', snsSubTab: 'charge' } });
-          } else {
-            onStoreOrderCreated?.(newOrder);
-            upsertStoreOrder(newOrder).catch(e => console.warn('[EbookDetail] 주문 저장 실패:', e));
-            addNotif?.(ebook.authorId, 'ebook', '💰 상품 판매 알림', `[${ebook.title}] 상품이 판매되었습니다.`);
-            addNotif?.(user.id, 'payment', '💳 결제 완료', `[${ebook.title}] 구매가 완료되었습니다. 마이페이지에서 확인하세요.`);
-            alert('결제가 완료되었습니다!');
-            navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'store' } });
-          }
-        } else if (result.error) {
-          alert(`결제 오류: ${result.error}`);
-          if (location.state?.fromCreditPurchase) {
-            navigate('/credit/apply');
-          }
-        } else if (location.state?.fromCreditPurchase) {
-          // success도 error도 아닌 경우(창 닫기 등)도 크레딧 구매 페이지로
-          navigate('/credit/apply');
-        }
-      } finally {
-        setIsProcessing(false);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ebook]);
 
   const openInquiry = () => {
     navigate('/chat', { state: { productRef: ebook, targetUser: { id: ebook.authorId, nickname: ebook.author, profileImage: expertProfile?.profileImage || '' } } });
