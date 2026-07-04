@@ -1155,14 +1155,17 @@ sheetBodyEl.addEventListener('dblclick', e => {
   const div = e.target.closest('[contenteditable]')
     || e.target.closest('td')?.querySelector('[contenteditable]');
   if (!div) return;
-  div.focus();
-  // 커서를 끝으로 이동
-  const range = document.createRange();
-  range.selectNodeContents(div);
-  range.collapse(false);
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
+  e.preventDefault(); // 더블클릭 기본 단어선택 방지
+  // setTimeout(0): 모든 마우스 이벤트 처리 완료 후 포커스 → _kbFocus 등 다른 포커스 간섭 방지
+  setTimeout(() => {
+    div.focus();
+    const range = document.createRange();
+    range.selectNodeContents(div);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }, 0);
 });
 
 // 키보드 이벤트용 포커스 앵커 (contenteditable 아님 → inEdit=false 보장)
@@ -1186,12 +1189,7 @@ sheetBodyEl.addEventListener('mousedown', e => {
   if (isUnselectableTd(td)) return; // lbl, rlbl, 분류 셀 제외
 
   // 더블클릭은 편집모드: 선택 간섭 안 함
-  if (e.detail >= 2) {
-    _dragStartTd = null; _isDragging = false;
-    const editDiv = td.querySelector('[contenteditable]');
-    if (editDiv) { e.preventDefault(); editDiv.focus(); }
-    return;
-  }
+  if (e.detail >= 2) { _dragStartTd = null; _isDragging = false; return; }
 
   // 현재 편집 중이면 blur 후 선택 전환
   if (document.activeElement?.isContentEditable) {
