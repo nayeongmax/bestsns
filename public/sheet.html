@@ -999,6 +999,7 @@ function exportCSV() {
 
 // ─── 로컬 자동저장 + 미저장 표시 ────────────────────────────────────────────
 let _hasUnsaved = false;
+let _savedOnce  = false;  // 이 세션에서 💾를 한 번이라도 눌렀는지
 let _localSaveTimer = null;
 let _initComplete = false; // init() 완료 전에는 로컬 저장 차단
 
@@ -1029,6 +1030,7 @@ function flushLocalSave() {
 
 function markSaved() {
   _hasUnsaved = false;
+  _savedOnce  = true;
   const badge = document.getElementById('savedBadge');
   badge.style.display = 'none';
 }
@@ -1769,11 +1771,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushLocalSave();
 });
 
-// beforeunload: 항상 저장 확인 유도 + 추가 안전장치
+// beforeunload: 💾 후 변경없으면 경고 생략, 나머지는 항상 경고
 window.addEventListener('beforeunload', e => {
   flushLocalSave();
-  e.preventDefault();
-  e.returnValue = '';
+  if (_hasUnsaved || !_savedOnce) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
 });
 
 init();

@@ -1263,8 +1263,11 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
       const iWin = iframe?.contentWindow as any;
       if (iframe) {
         (iWin?.flushLocalSave as (() => void) | undefined)?.();
-        e.preventDefault();
-        e.returnValue = '원고시트를 저장하셨나요?\n💾 버튼을 눌러 저장 후 닫아주세요.';
+        // 💾 누른 후 변경사항 없으면 경고 생략
+        if (iWin?._hasUnsaved || !iWin?._savedOnce) {
+          e.preventDefault();
+          e.returnValue = '원고시트를 저장하셨나요?\n💾 버튼을 눌러 저장 후 닫아주세요.';
+        }
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
