@@ -962,6 +962,18 @@ function autoSave() {
   collectCurrentTab();
   const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
   localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
+  // Supabase에도 저장 (2초 debounce — 로컬 저장 후 짧게 대기해서 연속 입력 시 묶어서 전송)
+  if (syncCode) {
+    clearTimeout(_cloudTimer);
+    _cloudTimer = setTimeout(async () => {
+      try {
+        await cloudSave(syncCode);
+        showCloudBadge('☁ 수파베이스 저장됨', 'ok');
+      } catch(e) {
+        showCloudBadge('⚠ 수파베이스 저장 실패', 'err');
+      }
+    }, 2000);
+  }
   // 저장 인디케이터 살짝 표시
   const badge = document.getElementById('savedBadge');
   badge.textContent = '✔ 자동저장됨';
@@ -1619,20 +1631,8 @@ async function syncDownload() {
   } catch(e) { setStatus('오류: ' + e.message, 'err'); }
 }
 
-// 입력 시 클라우드 자동저장 (3초 debounce)
+// 클라우드 저장 타이머 (autoSave 내부에서 관리)
 let _cloudTimer = null;
-document.getElementById('sheetBody').addEventListener('input', () => {
-  if (!syncCode) return;
-  clearTimeout(_cloudTimer);
-  _cloudTimer = setTimeout(async () => {
-    try {
-      await cloudSave(syncCode);
-      showCloudBadge('☁ 클라우드 저장됨', 'ok');
-    } catch(e) {
-      showCloudBadge('⚠ 클라우드 저장 실패: ' + e.message, 'err');
-    }
-  }, 3000);
-});
 
 // ─── 초기화 ───
 // 과거 하드코딩 샘플 섹션(witwork, casino) 자동 제거
@@ -1647,55 +1647,50 @@ function purgeOldSampleSections(tabsArr) {
 
 async function init() {
   if (USER_ID) {
-    // ① 로컬 캐시 먼저 확인
-    let localData = null, localTime = 0;
-    try {
-      const raw = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
-      if (raw) {
-        const p = JSON.parse(raw);
-        if (p?.tabs?.length > 0) { localData = p; localTime = p.savedAt || 0; }
-      }
-    } catch(e) {}
-
-    // ② 클라우드 데이터 확인 (로컬이 있어도 반드시 체크해서 더 최신인지 비교)
-    let cloudData = null, cloudTime = 0;
+    // ① 수파베이스가 단일 진실 소스 — 항상 수파베이스 먼저 로드
+    let cloudLoaded = false;
     try {
       const data = await cloudLoad(USER_ID);
-      // tabs가 배열이면 저장된 상태로 인정 (빈 배열이어도 OK)
-      if (data && Array.isArray(data.payload?.tabs)) {
-        cloudData = data.payload;
-        cloudTime = data.payload.savedAt || (data.updated_at ? new Date(data.updated_at).getTime() : 0);
+      if (data && Array.isArray(data.payload?.tabs) && data.payload.tabs.length > 0) {
+        tabs = purgeOldSampleSections(data.payload.tabs);
+        if (tabs.length === 0) {
+          const blankId = makeTabId();
+          tabs = [{ id: blankId, name: '탭1', sections: [] }];
+        }
+        activeTabId = data.payload.activeTabId || tabs[0].id;
+        // 로컬 캐시도 동기화
+        localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
+        cloudLoaded = true;
       }
     } catch(e) {}
 
-    // ③ 더 최신 데이터 사용 (타임스탬프 같으면 로컬 우선)
-    let chosen = null;
-    if (cloudData && cloudTime > localTime) {
-      chosen = { ...cloudData, savedAt: cloudTime };
-      localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(chosen));
-    } else if (localData) {
-      chosen = localData;
-      if (cloudData && localTime > cloudTime) {
-        try { await cloudSave(USER_ID); } catch(e) {}
-      }
-    } else if (cloudData) {
-      chosen = { ...cloudData, savedAt: cloudTime };
-      localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(chosen));
+    // ② 수파베이스 로드 실패 또는 데이터 없음 → 로컬 캐시로 복구
+    if (!cloudLoaded) {
+      try {
+        const raw = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
+        if (raw) {
+          const p = JSON.parse(raw);
+          if (p?.tabs?.length > 0) {
+            tabs = purgeOldSampleSections(p.tabs);
+            if (tabs.length === 0) {
+              const blankId = makeTabId();
+              tabs = [{ id: blankId, name: '탭1', sections: [] }];
+            }
+            activeTabId = p.activeTabId || tabs[0].id;
+            // 로컬 데이터를 수파베이스에 업로드 (복구)
+            cloudSave(USER_ID).catch(() => {});
+            cloudLoaded = true;
+          }
+        }
+      } catch(e) {}
     }
 
-    if (chosen) {
-      tabs = chosen.tabs && chosen.tabs.length > 0 ? purgeOldSampleSections(chosen.tabs) : [];
-      if (tabs.length === 0) {
-        // 저장된 빈 상태: 빈 탭 하나 생성
-        const blankId = makeTabId();
-        tabs = [{ id: blankId, name: '탭1', sections: [] }];
-      }
-      activeTabId = chosen.activeTabId || tabs[0].id;
+    if (cloudLoaded) {
       renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
       return;
     }
   } else {
-    // 일반 모드: 기존 로컬 저장 불러오기
+    // 일반 모드: 로컬 저장 불러오기
     const saved = localStorage.getItem('snsSheet_tabs_v2');
     if (saved) {
       try {
