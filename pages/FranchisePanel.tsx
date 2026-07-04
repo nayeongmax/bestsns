@@ -237,8 +237,8 @@ const CollectorTab: React.FC = () => {
         currentPage = data.nextPage;
         setNextPage(data.nextPage);
 
-        // 릴레이 과부하 방지: 배치 사이 2초 대기
-        await new Promise(r => setTimeout(r, 2000));
+        // 릴레이/네이버 요청 간격 (너무 빠르면 차단됨)
+        await new Promise(r => setTimeout(r, 3000));
       }
 
       if (!stopRef.current) setStatus(`수집 완료 — ${accumulated.length}개 글`);
