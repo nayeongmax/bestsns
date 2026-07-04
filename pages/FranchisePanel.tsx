@@ -201,8 +201,8 @@ const CollectorTab: React.FC = () => {
         }
 
         remaining -= newList.length;
-        if (!data.nextPage || newList.length < batchSize) {
-          // 더 이상 글이 없으면 종료
+        if (!data.nextPage || newList.length === 0) {
+          // 다음 페이지 없거나 빈 결과 → 종료
           setNextPage(null);
           break;
         }
