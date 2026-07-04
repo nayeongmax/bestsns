@@ -156,7 +156,7 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
-  const BATCH_SIZE = 10; // 릴레이 서버가 10개 단위로 안정적으로 처리함
+  const BATCH_SIZE = 15; // 네이버 카페 1페이지 = 15개, 정확히 맞춰야 중간 누락 없음
 
   const doCollect = async (resume: boolean) => {
     if (!resolvedCafeId) { setStatus('카페 ID를 입력해주세요.'); return; }
