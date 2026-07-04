@@ -60,7 +60,8 @@ const CreditApplication: React.FC<Props> = ({ user, ebooks }) => {
     if (matchedEbook) {
       navigate(`/ebooks/${matchedEbook.id}`, { state: { autoTrigger: true, fromCreditPurchase: true } });
     } else {
-      alert('해당 금액의 이용 가능한 상품이 없습니다. 잠시 후 다시 시도해주세요.');
+      // N잡스토어에 해당 금액의 이용권이 없으면 직접 결제 페이지로 이동
+      navigate('/store/marketing-voucher', { state: { amount: selectedAmount } });
     }
   };
 
