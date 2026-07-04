@@ -217,7 +217,7 @@
   </select>
   <button onclick="moveSectionUp()" title="선택 섹션 위로" style="padding:3px 7px;">▲</button>
   <button onclick="moveSectionDown()" title="선택 섹션 아래로" style="padding:3px 7px;">▼</button>
-  <span class="saved-badge" id="savedBadge">✔ 자동저장됨</span>
+  <span class="saved-badge" id="savedBadge" style="display:none;"></span>
   <span class="cloud-badge" id="cloudBadge"></span>
 </div>
 
@@ -394,16 +394,7 @@ document.addEventListener('paste', (e) => {
     renderEntry(pasteTargetSecId, entry, sec.entries.length - 1);
   });
 
-  autoSave();
-  if (syncCode) {
-    clearTimeout(_cloudTimer);
-    _cloudTimer = setTimeout(async () => {
-      try { await cloudSave(syncCode); showCloudBadge('☁ 클라우드 저장됨', 'ok'); }
-      catch(e) { showCloudBadge('⚠ 클라우드 저장 실패', 'err'); }
-    }, 1000);
-  }
-
-  showCloudBadge(`✔ ${entries.length}개 행 추가됨`, 'ok');
+  showCloudBadge(`✔ ${entries.length}개 행 추가됨 (💾 눌러서 저장하세요)`, 'ok');
 });
 
 // ═══════════════════════════════════════════════
@@ -426,8 +417,24 @@ function makeTabId() { return 'tab_' + Date.now() + '_' + Math.random().toString
 
 function initTabs() { /* init()으로 대체됨 */ }
 
-function saveAll() {
-  autoSave();
+async function saveAll() {
+  collectCurrentTab();
+  const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
+  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
+
+  if (syncCode) {
+    showCloudBadge('☁ 저장 중...', 'ok');
+    try {
+      await cloudSave(syncCode);
+      markSaved();
+      showCloudBadge('☁ 저장 완료!', 'ok');
+    } catch(e) {
+      showCloudBadge('⚠ 저장 실패 — 다시 눌러주세요', 'err');
+    }
+  } else {
+    markSaved();
+    showCloudBadge('✔ 로컬 저장됨', 'ok');
+  }
 }
 
 // 현재 DOM → 현재 탭 데이터 동기화
@@ -563,7 +570,7 @@ function undoAction() {
   _redoStack.push(JSON.stringify(gatherSections()));
   loadSections(JSON.parse(_undoStack.pop()));
   clearSelection(); activeDiv = null; activeTd = null;
-  debouncedSave();
+  markUnsaved();
 }
 
 function redoAction() {
@@ -571,7 +578,7 @@ function redoAction() {
   _undoStack.push(JSON.stringify(gatherSections()));
   loadSections(JSON.parse(_redoStack.pop()));
   clearSelection(); activeDiv = null; activeTd = null;
-  debouncedSave();
+  markUnsaved();
 }
 
 function holdFocus(e) { e.preventDefault(); }
@@ -597,19 +604,19 @@ function applyFontSize(val) {
     ? [activeDiv]
     : [...selectedCells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
   targets.forEach(d => { d.style.fontSize = val + 'px'; });
-  if (targets.length) debouncedSave();
+  if (targets.length) markUnsaved();
 }
 function applyFontColor(val) {
   if (!activeDiv) return;
   activeDiv.style.color = val;
-  debouncedSave();
+  markUnsaved();
 }
 function applyHAlign(align) {
   const targets = document.activeElement?.isContentEditable && activeDiv
     ? [activeDiv]
     : [...selectedCells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
   targets.forEach(d => { d.style.textAlign = align; });
-  if (targets.length) debouncedSave();
+  if (targets.length) markUnsaved();
 }
 function applyVAlign(align) {
   const tds = activeTd ? [activeTd] : [...selectedCells];
@@ -621,7 +628,7 @@ function applyVAlign(align) {
     else if (align === 'bottom') td.classList.add('cell-va-bot');
     td.dataset.va = align;
   });
-  if (tds.length) debouncedSave();
+  if (tds.length) markUnsaved();
 }
 
 
@@ -910,7 +917,7 @@ function moveSectionUp() {
   if (tab) tab.sections = current;
   updateJumpSelect();
   document.getElementById('jumpSelect').value = `section-${secId}`;
-  autoSave();
+  markUnsaved();
 }
 
 function moveSectionDown() {
@@ -925,7 +932,7 @@ function moveSectionDown() {
   if (tab) tab.sections = current;
   updateJumpSelect();
   document.getElementById('jumpSelect').value = `section-${secId}`;
-  autoSave();
+  markUnsaved();
 }
 
 // ═══════════════════════════════════════════════
@@ -990,42 +997,26 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-// ═══════════════════════════════════════════════
-// 자동저장 (입력 즉시 + 주기적 백업)
-// ═══════════════════════════════════════════════
-let _saveTimer = null;
+// ─── 미저장 변경 표시 ────────────────────────────────────────────────────────
+let _hasUnsaved = false;
 
-function autoSave() {
-  collectCurrentTab();
-  const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
-  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
-  // Supabase에도 저장 (2초 debounce — 로컬 저장 후 짧게 대기해서 연속 입력 시 묶어서 전송)
-  if (syncCode) {
-    clearTimeout(_cloudTimer);
-    _cloudTimer = setTimeout(async () => {
-      try {
-        await cloudSave(syncCode);
-        showCloudBadge('☁ 수파베이스 저장됨', 'ok');
-      } catch(e) {
-        showCloudBadge('⚠ 수파베이스 저장 실패', 'err');
-      }
-    }, 2000);
-  }
-  // 저장 인디케이터 살짝 표시
+function markUnsaved() {
+  if (_hasUnsaved) return;
+  _hasUnsaved = true;
   const badge = document.getElementById('savedBadge');
-  badge.textContent = '✔ 자동저장됨';
+  badge.textContent = '● 저장되지 않은 변경사항';
   badge.style.display = 'inline';
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => { badge.style.display = 'none'; }, 1500);
+  badge.style.color = '#e08030';
 }
 
-function debouncedSave() {
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(autoSave, 800); // 입력 멈춘 뒤 0.8초 후 저장
+function markSaved() {
+  _hasUnsaved = false;
+  const badge = document.getElementById('savedBadge');
+  badge.style.display = 'none';
 }
 
-// 시트 내 모든 입력에 반응
-document.getElementById('sheetBody').addEventListener('input', debouncedSave);
+// 시트 내 모든 입력 → 미저장 표시
+document.getElementById('sheetBody').addEventListener('input', markUnsaved);
 
 // ─── 엑셀 스타일 셀 선택 ────────────────────────────────────────────────────
 function clearSelection() {
@@ -1208,7 +1199,7 @@ document.addEventListener('keydown', e => {
         selectedCells.forEach(td => {
           td.querySelectorAll('[contenteditable]').forEach(d => { d.innerHTML = ''; });
         });
-        debouncedSave();
+        markUnsaved();
         e.preventDefault();
       }
       return;
@@ -1360,7 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 섹션/행 정보가 없으면 단순 붙여넣기
     if (!secId || entryIdxStr === undefined) {
       targetDiv.innerHTML = textToHtml(text);
-      debouncedSave(); return;
+      markUnsaved(); return;
     }
 
     const rows = parseTSV(text);
@@ -1531,25 +1522,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    debouncedSave();
+    markUnsaved();
   });
 });
 
-// 탭 바 변경에도 반응 (탭 이름 편집 등)
-document.getElementById('tabsList').addEventListener('input', debouncedSave);
-
-// 30초마다 강제 백업 (혹시 input 이벤트가 누락되는 경우 대비)
-setInterval(async () => {
-  autoSave();
-  if (syncCode) {
-    try {
-      await cloudSave(syncCode);
-      showCloudBadge('☁ 클라우드 저장됨', 'ok');
-    } catch(e) {
-      showCloudBadge('⚠ 클라우드 저장 실패: ' + e.message, 'err');
-    }
-  }
-}, 30000);
+// 탭 이름 편집 → 미저장 표시
+document.getElementById('tabsList').addEventListener('input', markUnsaved);
 
 // 페이지 닫힐 때 즉시 저장 (로컬 + Supabase sendBeacon)
 // ※ 이 핸들러는 아래 두 번째 핸들러로 통합 — 빈 자리 유지
@@ -1615,7 +1593,7 @@ function showCloudBadge(msg, type) {
   const el = document.getElementById('cloudBadge');
   el.textContent = msg; el.className = 'cloud-badge ' + type; el.style.display = 'inline';
   clearTimeout(_cloudBadgeTimer);
-  _cloudBadgeTimer = setTimeout(() => { el.style.display = 'none'; }, type === 'ok' ? 2000 : 5000);
+  _cloudBadgeTimer = setTimeout(() => { el.style.display = 'none'; }, type === 'ok' ? 3000 : 6000);
 }
 
 // 클라우드에 저장
@@ -1677,7 +1655,6 @@ async function syncDownload() {
   } catch(e) { setStatus('오류: ' + e.message, 'err'); }
 }
 
-// 클라우드 저장 타이머 (autoSave 내부에서 관리)
 let _cloudTimer = null;
 
 // ─── 초기화 ───
@@ -1769,31 +1746,11 @@ async function init() {
   updateSyncUI();
 }
 
-// autoSave도 userId 모드에선 클라우드에 함께 저장
-const _baseAutoSave = autoSave;
-window._autoSaveWithCloud = async function() {
-  _baseAutoSave();
-  if (syncCode) {
-    try { await cloudSave(syncCode); } catch(e) {}
-  }
-};
-
-// beforeunload: 로컬 저장 + sendBeacon으로 Supabase 즉시 전송
-window.addEventListener('beforeunload', () => {
-  collectCurrentTab();
-  const ts = Date.now();
-  if (USER_ID) {
-    const payload = { tabs, activeTabId, savedAt: ts };
-    localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(payload));
-    // sendBeacon은 페이지 종료 중에도 안정적으로 전송됨 (fetch보다 신뢰성 높음)
-    try {
-      navigator.sendBeacon(
-        `/api/sheet-sync?userId=${encodeURIComponent(USER_ID)}`,
-        new Blob([JSON.stringify({ payload })], { type: 'application/json' })
-      );
-    } catch(e) {}
-  } else {
-    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId, savedAt: ts }));
+// 창 닫기 전 미저장 변경사항 경고
+window.addEventListener('beforeunload', e => {
+  if (_hasUnsaved) {
+    e.preventDefault();
+    e.returnValue = '';
   }
 });
 
