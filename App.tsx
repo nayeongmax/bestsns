@@ -107,6 +107,7 @@ function ContainerRoutes(props: {
   onRefetchProfile?: () => void;
   onDeleteSmmProducts?: (ids: string[]) => void;
   onlineUserIds?: Set<string>;
+  ebooksLoaded?: boolean;
 }) {
   const location = useLocation();
   const pathname = location.pathname || '';
@@ -129,7 +130,7 @@ function ContainerRoutes(props: {
       <Route path="/sns" element={<SNSActivation smmProducts={props.smmProducts} providers={props.smmProviders} user={props.user || { id: '', nickname: 'Guest', profileImage: '', role: 'user', points: 12500 }} notices={props.notices} onOrderComplete={(o) => { props.setSmmOrders(prev => [o, ...prev]); if (props.user) props.addNotif(props.user.id, 'sns_activation', '📈 SNS 활성화 주문 접수', `[${o.productName}] 주문이 접수되었습니다.`); }} onLogout={props.handleLogout} />} />
       <Route path="/channels" element={<ChannelSales channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} channelReviews={props.channelReviews} />} />
       <Route path="/channels/:id" element={<ChannelDetail channels={props.channels} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} reviews={props.reviews} members={props.members} user={props.user ?? undefined} addNotif={props.user ? props.addNotif : undefined} onChannelOrderCreated={props.user ? (o) => props.setChannelOrders(prev => [o, ...prev]) : undefined} />} />
-      <Route path="/ebooks/:id" element={props.user ? <EbookDetail ebooks={props.ebooks} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} user={props.user} reviews={props.reviews} storeOrders={props.storeOrders} members={props.members} gradeConfigs={props.gradeConfigs} addNotif={props.addNotif} onStoreOrderCreated={(o) => props.setStoreOrders(prev => [o, ...prev])} /> : <Navigate to="/login" />} />
+      <Route path="/ebooks/:id" element={props.user ? <EbookDetail ebooks={props.ebooks} ebooksLoaded={props.ebooksLoaded} wishlist={props.wishlist} onToggleWishlist={props.wishlistToggle} user={props.user} reviews={props.reviews} storeOrders={props.storeOrders} members={props.members} gradeConfigs={props.gradeConfigs} addNotif={props.addNotif} onStoreOrderCreated={(o) => props.setStoreOrders(prev => [o, ...prev])} /> : <Navigate to="/login" />} />
       <Route path="/ebooks/register" element={props.user ? <EbookRegistration user={props.user} setEbooks={props.setEbooks} /> : <Navigate to="/login" />} />
       <Route path="/part-time" element={<PartTimePage user={props.user} onUpdateUser={props.handleGlobalUserUpdate} notices={props.notices} />} />
       <Route path="/part-time/register" element={<PartTimeTaskRegister user={props.user} members={props.members} />} />
@@ -184,6 +185,7 @@ const App: React.FC = () => {
   const [storeOrders, setStoreOrders] = useState<StoreOrder[]>(() => safeStorage('store_orders_v2', []));
   const [channelOrders, setChannelOrders] = useState<ChannelOrder[]>(() => safeStorage('channel_orders_v2', []));
   const [ebooks, setEbooks] = useState<EbookProduct[]>([]);
+  const [ebooksLoaded, setEbooksLoaded] = useState(false);
   const [channels, setChannels] = useState<ChannelProduct[]>(() => safeStorage('site_channels_v2', []));
   const [posts, setPosts] = useState<Post[]>(() => safeStorage('site_posts_v2', []));
   const [reviews, setReviews] = useState<Review[]>(() => safeStorage('site_reviews_v2', []));
@@ -244,6 +246,7 @@ const App: React.FC = () => {
           // Supabase에 thumbnail이 없는 경우 localStorage 데이터로 보완 (upsert 실패로 누락된 경우 복구)
           // ebooks는 Supabase 단일 소스 — localStorage 의존 없음
           setEbooks(products);
+          setEbooksLoaded(true);
           setStoreOrders(orders);
           setReviews(reviewList);
           setChannels(channelProducts);
@@ -265,6 +268,7 @@ const App: React.FC = () => {
           console.warn(
             '[Supabase] 배포 환경(Netlify 등)에 VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY 가 설정되어 있는지 확인하세요. 설정 없으면 상품 목록이 비어 보입니다.'
           );
+          setEbooksLoaded(true);
           storeDbLoaded.current = true;
           channelDbLoaded.current = true;
         }
@@ -1000,6 +1004,7 @@ const App: React.FC = () => {
             onRefreshMembers={refreshMembers}
             onRefetchProfile={refetchCurrentUserProfile}
             onlineUserIds={onlineUserIds}
+            ebooksLoaded={ebooksLoaded}
           />
       </div>
       <div className="hidden xl:block"><Footer /></div>

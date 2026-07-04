@@ -10,6 +10,7 @@ import { insertPointTransaction } from '../pointDb';
 
 interface Props {
   ebooks: EbookProduct[];
+  ebooksLoaded?: boolean;
   wishlist: WishlistItem[];
   onToggleWishlist: (item: WishlistItem) => void;
   user: UserProfile;
@@ -21,7 +22,7 @@ interface Props {
   onStoreOrderCreated?: (order: StoreOrder) => void;
 }
 
-const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user, reviews, storeOrders, members, gradeConfigs = [], addNotif, onStoreOrderCreated }) => {
+const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, onToggleWishlist, user, reviews, storeOrders, members, gradeConfigs = [], addNotif, onStoreOrderCreated }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -187,6 +188,14 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
   }, [ebook]);
 
   if (!ebook) {
+    if (!ebooksLoaded) {
+      return (
+        <div className="flex flex-col items-center justify-center py-32 gap-4">
+          <div className="w-10 h-10 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+          <p className="text-gray-400 font-semibold text-sm">상품 정보를 불러오는 중...</p>
+        </div>
+      );
+    }
     return <div className="text-center py-20 font-black">상품을 찾을 수 없습니다.</div>;
   }
 
