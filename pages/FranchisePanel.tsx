@@ -1255,20 +1255,12 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
   const [activeTab, setActiveTab] = useState<FranchiseTab>(defaultTab);
   const [showSubModal, setShowSubModal] = useState(false);
 
-  // 원고시트 미저장 경고: iframe 내 _hasUnsaved를 부모 창에서 beforeunload로 처리
-  // (iframe 자체의 beforeunload는 브라우저가 다이얼로그를 억제하는 경우 있음)
+  // 창 닫힐 때 원고시트 로컬 저장 플러시
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       const iframe = document.querySelector('iframe[title="원고시트"]') as HTMLIFrameElement | null;
       const iWin = iframe?.contentWindow as any;
-      if (iframe) {
-        (iWin?.flushLocalSave as (() => void) | undefined)?.();
-        // 💾 누른 후 변경사항 없으면 경고 생략
-        if (iWin?._hasUnsaved || !iWin?._savedOnce) {
-          e.preventDefault();
-          e.returnValue = '원고시트를 저장하셨나요?\n💾 버튼을 눌러 저장 후 닫아주세요.';
-        }
-      }
+      (iWin?.flushLocalSave as (() => void) | undefined)?.();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);

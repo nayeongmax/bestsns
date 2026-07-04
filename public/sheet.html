@@ -1771,13 +1771,9 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushLocalSave();
 });
 
-// beforeunload: 💾 후 변경없으면 경고 생략, 나머지는 항상 경고
-window.addEventListener('beforeunload', e => {
+// beforeunload: 경고 없이 로컬 저장만 수행
+window.addEventListener('beforeunload', () => {
   flushLocalSave();
-  if (_hasUnsaved || !_savedOnce) {
-    e.preventDefault();
-    e.returnValue = '';
-  }
 });
 
 init();
