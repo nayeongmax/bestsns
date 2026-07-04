@@ -104,9 +104,14 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
     ? (ebook.tiers?.length ? ebook.tiers : [{ name: 'LITE', price: ebook.price, description: '기본 서비스 제공', pageCount: 1 }])
     : [];
 
-  // 크레딧 충전페이지에서 넘어온 경우 PG창 자동 오픈 — 반드시 early return 위에 선언해야 hook 순서 일정
+  // window.open()으로 열면 location.state가 null이므로 URL 쿼리 파라미터도 함께 확인
+  const searchParams = new URLSearchParams(location.search);
+  const isAutoTrigger = !!location.state?.autoTrigger || searchParams.get('autoTrigger') === '1';
+  const isFromCreditPurchase = !!location.state?.fromCreditPurchase;
+
+  // PG창 자동 오픈 — 반드시 early return 위에 선언해야 hook 순서 일정
   useEffect(() => {
-    if (!location.state?.autoTrigger) return;
+    if (!isAutoTrigger) return;
     if (autoTriggered.current) return;
     if (!ebook) return;
     const selectedTier = tiers[activeTierIdx];
@@ -146,7 +151,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
             paymentLog: result.paymentLog,
             receiptUrl: result.receiptUrl,
           };
-          if (location.state?.fromCreditPurchase) {
+          if (isFromCreditPurchase) {
             const paymentId = result.paymentId || `PAY_${Date.now()}_${user.id.slice(0, 4)}`;
             const nextPoints = (user.points || 0) + selectedTier.price;
             updateProfile(user.id, { points: nextPoints }).catch(e => console.warn('[EbookDetail] 크레딧 충전 실패:', e));
@@ -173,10 +178,8 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
           }
         } else if (result.error) {
           alert(`결제 오류: ${result.error}`);
-          if (location.state?.fromCreditPurchase) {
-            navigate('/credit/apply');
-          }
-        } else if (location.state?.fromCreditPurchase) {
+          if (isFromCreditPurchase) navigate('/credit/apply');
+        } else if (isFromCreditPurchase) {
           navigate('/credit/apply');
         }
       } finally {
