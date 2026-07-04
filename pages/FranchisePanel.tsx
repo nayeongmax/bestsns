@@ -711,18 +711,17 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
 const PLAN_COLORS = ['blue', 'purple', 'emerald', 'orange', 'pink'];
 
 const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
-  const STORAGE_KEY = `franchise_sub_${user.id}`;
   const [plans, setPlans]           = useState<FranchisePlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [activePlan, setActivePlan]   = useState<string | null>(null);
   const [activeUntil, setActiveUntil] = useState<string | null>(null);
-  const [showContact, setShowContact] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetchFranchisePlans().then(data => { if (!cancelled) setPlans(data); });
+    const storageKey = `franchise_sub_${user.id}`;
     try {
-      const s = localStorage.getItem(STORAGE_KEY);
+      const s = localStorage.getItem(storageKey);
       if (s) {
         const d = JSON.parse(s);
         setActivePlan(d.plan ?? null);
@@ -730,7 +729,7 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
       }
     } catch {}
     return () => { cancelled = true; };
-  }, [STORAGE_KEY]);
+  }, [user.id]);
 
   const activePlans = plans.filter(p => p.isActive);
   const isActive    = activePlan && activeUntil && new Date(activeUntil) > new Date();
@@ -742,7 +741,7 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
     if (plan?.paymentUrl) {
       window.open(plan.paymentUrl, '_blank', 'noopener,noreferrer');
     } else {
-      setShowContact(true);
+      alert(`결제 신청 안내\n\n카카오톡 채널 @bestsns 으로 문의해 주세요.\n아이디(${user.nickname})와 선택 플랜(${plan?.name ?? ''})을 함께 알려주세요.`);
     }
   };
 
@@ -851,39 +850,6 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
           : '플랜을 선택하세요'}
       </button>
 
-      {/* 결제 안내 모달 */}
-      {showContact && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
-            <div className="text-center mb-4">
-              <div className="text-4xl mb-2">💳</div>
-              <h3 className="font-black text-gray-900 text-lg">결제 신청 안내</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                아래 채널로 문의 주시면<br />결제 링크를 보내드립니다
-              </p>
-            </div>
-            <div className="space-y-3 mb-5">
-              <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                <span className="text-2xl shrink-0">💬</span>
-                <div>
-                  <p className="text-xs font-black text-gray-500 uppercase">카카오톡 채널</p>
-                  <p className="font-black text-gray-900">@bestsns</p>
-                </div>
-              </div>
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                <p className="text-xs font-bold text-blue-700">
-                  신청 시 아이디 <span className="font-black">{user.nickname}</span> 와{' '}
-                  선택 플랜 <span className="font-black">{activePlans.find(p => p.id === selectedPlan)?.name}</span> 을 함께 알려주세요
-                </p>
-              </div>
-            </div>
-            <button type="button" onClick={() => setShowContact(false)}
-              className="w-full py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200 transition-colors">
-              닫기
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -1278,12 +1244,15 @@ const MembersTab: React.FC<{ members: UserProfile[]; onUpdateUser?: (u: UserProf
 /* ══════════════════════════════════════════════
    메인 컴포넌트
 ══════════════════════════════════════════════ */
+const PROTECTED_TABS: FranchiseTab[] = ['revenue', 'manuscripts', 'collector', 'marketing'];
+
 const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
   const isAdmin   = user.role === 'admin' || user.role === 'manager';
   const canAccess = isAdmin || !!user.isFranchise;
 
   const defaultTab: FranchiseTab = isAdmin ? 'members' : 'subscription';
   const [activeTab, setActiveTab] = useState<FranchiseTab>(defaultTab);
+  const [showSubModal, setShowSubModal] = useState(false);
 
   if (!canAccess) {
     return (
@@ -1294,6 +1263,27 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
       </div>
     );
   }
+
+  const checkHasActiveSub = () => {
+    if (isAdmin) return true;
+    try {
+      const s = localStorage.getItem(`franchise_sub_${user.id}`);
+      if (s) {
+        const d = JSON.parse(s);
+        return !!(d.plan && d.until && new Date(d.until) > new Date());
+      }
+    } catch {}
+    return false;
+  };
+
+  const handleTabClick = (tabId: FranchiseTab) => {
+    if (!isAdmin && PROTECTED_TABS.includes(tabId) && !checkHasActiveSub()) {
+      setShowSubModal(true);
+      setActiveTab('subscription');
+      return;
+    }
+    setActiveTab(tabId);
+  };
 
   const tabs: { id: FranchiseTab; label: string; icon: string; adminOnly?: boolean }[] = [
     ...(isAdmin ? [{ id: 'members' as FranchiseTab, label: '가맹점 현황', icon: '🏢', adminOnly: true }] : []),
@@ -1308,7 +1298,7 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
     <div className="max-w-7xl mx-auto py-0 md:py-6">
       <div className="flex overflow-x-auto no-scrollbar border-b border-gray-200 bg-white sticky top-14 xl:top-20 z-10">
         {tabs.map(tab => (
-          <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+          <button key={tab.id} type="button" onClick={() => handleTabClick(tab.id)}
             className={`flex items-center gap-1.5 px-4 md:px-6 py-3.5 font-black text-sm whitespace-nowrap border-b-2 transition-all ${activeTab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
             <span>{tab.icon}</span>
             <span>{tab.label}</span>
@@ -1324,6 +1314,27 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         {activeTab === 'collector'                 && <CollectorTab />}
         {activeTab === 'marketing'                 && <MarketingTab user={user} />}
       </div>
+
+      {showSubModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl p-7 w-full max-w-xs shadow-2xl text-center space-y-4">
+            <div className="text-4xl">🔐</div>
+            <div>
+              <h3 className="font-black text-gray-900 text-lg">구독이 필요합니다</h3>
+              <p className="text-sm text-gray-500 font-bold mt-1">
+                구독 후 이용해주시기 바랍니다.<br />구독관리 페이지에서 플랜을 선택하세요.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSubModal(false)}
+              className="w-full py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-colors"
+            >
+              구독관리로 이동
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
