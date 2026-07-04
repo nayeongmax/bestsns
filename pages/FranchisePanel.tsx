@@ -452,12 +452,19 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
 
   /* ── 원문 CSV 저장 (치환 키워드 적용, 리라이팅 컬럼 비움) ── */
   const exportPlain = () => {
+    let kws: ReplaceKw[] = keywords;
+    try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
+    const apply = (text: string) => {
+      let result = text ?? '';
+      kws.forEach(kw => { const from = kw.from.trim(); if (from) result = result.split(from).join(kw.to); });
+      return result;
+    };
     const rows: ProcessedRow[] = articles.map(a => ({
-      title: applyKeywords(a.title),
+      title: apply(a.title),
       rewrittenTitle: '',
-      body: applyKeywords(a.content ?? ''),
+      body: apply(a.content ?? ''),
       rewrittenBody: '',
-      comments: (a.comments ?? []).slice(0, 3).map(c => applyKeywords(c.content)),
+      comments: (a.comments ?? []).slice(0, 3).map(c => apply(c.content)),
       date: a.date,
       url: a.url,
     }));
@@ -470,13 +477,21 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
     setAiExporting(true);
     setAiExportStatus(`AI 처리 준비 중... (0/${articles.length})`);
 
+    let kws: ReplaceKw[] = keywords;
+    try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
+    const applyFresh = (text: string) => {
+      let result = text ?? '';
+      kws.forEach(kw => { const from = kw.from.trim(); if (from) result = result.split(from).join(kw.to); });
+      return result;
+    };
+
     let done = 0;
     const processArticle = async (a: CafeArticle): Promise<ProcessedRow> => {
-      const origTitle = applyKeywords(a.title);
-      const origBody  = applyKeywords(a.content ?? '');
+      const origTitle = applyFresh(a.title);
+      const origBody  = applyFresh(a.content ?? '');
       let rewrittenTitle = '';
       let rewrittenBody  = '';
-      const existing = (a.comments ?? []).slice(0, 3).map(c => applyKeywords(c.content));
+      const existing = (a.comments ?? []).slice(0, 3).map(c => applyFresh(c.content));
       const finalComments = [...existing];
 
       if (aiRewrite) {
