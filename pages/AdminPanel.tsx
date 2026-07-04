@@ -209,7 +209,7 @@ const FranchiseAdmin: React.FC = () => {
   // ── 구독플랜 ──
   const [plans, setPlans]         = useState<FranchisePlan[]>([]);
   const [editPlan, setEditPlan]   = useState<FranchisePlan | null>(null);
-  const [planForm, setPlanForm]   = useState({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true });
+  const [planForm, setPlanForm]   = useState({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '' });
   const [planSaving, setPlanSaving] = useState(false);
   const [showPlanForm, setShowPlanForm] = useState(false);
 
@@ -228,17 +228,17 @@ const FranchiseAdmin: React.FC = () => {
   // ── 플랜 저장 ──
   const openNewPlan = () => {
     setEditPlan(null);
-    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true });
+    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '' });
     setShowPlanForm(true);
   };
   const openEditPlan = (p: FranchisePlan) => {
     setEditPlan(p);
-    setPlanForm({ name: p.name, price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : '', period: p.period, features: p.features.join('\n'), isActive: p.isActive });
+    setPlanForm({ name: p.name, price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : '', period: p.period, features: p.features.join('\n'), isActive: p.isActive, paymentUrl: p.paymentUrl ?? '' });
     setShowPlanForm(true);
   };
   const closePlanForm = () => {
     setEditPlan(null);
-    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true });
+    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '' });
     setShowPlanForm(false);
   };
   const savePlan = async () => {
@@ -254,6 +254,7 @@ const FranchiseAdmin: React.FC = () => {
       features: planForm.features.split('\n').map(s => s.trim()).filter(Boolean),
       isActive: planForm.isActive,
       sortOrder: editPlan?.sortOrder ?? plans.length,
+      ...(planForm.paymentUrl.trim() ? { paymentUrl: planForm.paymentUrl.trim() } : {}),
     };
     const next = editPlan ? plans.map(p => p.id === editPlan.id ? plan : p) : [...plans, plan];
     await upsertFranchisePlans(next).catch(() => {});
@@ -360,6 +361,7 @@ const FranchiseAdmin: React.FC = () => {
                 <input className={inputCls} placeholder="판매가 (원) *" type="number" value={planForm.price} onChange={e => setPlanForm(f => ({ ...f, price: e.target.value }))} />
               </div>
               <textarea className={`${inputCls} resize-none`} rows={4} placeholder="기능 목록 (한 줄에 하나씩)" value={planForm.features} onChange={e => setPlanForm(f => ({ ...f, features: e.target.value }))} />
+              <input className={inputCls} placeholder="결제 URL (N잡스토어 상품 링크)" value={planForm.paymentUrl} onChange={e => setPlanForm(f => ({ ...f, paymentUrl: e.target.value }))} />
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={planForm.isActive} onChange={e => setPlanForm(f => ({ ...f, isActive: e.target.checked }))} className="rounded" />
@@ -401,6 +403,9 @@ const FranchiseAdmin: React.FC = () => {
                 <ul className="space-y-1">
                   {plan.features.map((f, i) => <li key={i} className="text-xs text-gray-600 font-bold flex gap-1.5"><span className="text-emerald-500">✓</span>{f}</li>)}
                 </ul>
+                {plan.paymentUrl && (
+                  <p className="text-[10px] text-blue-500 font-bold truncate">🔗 {plan.paymentUrl}</p>
+                )}
               </div>
             ))}
           </div>

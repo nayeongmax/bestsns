@@ -11,6 +11,7 @@ export interface FranchisePlan {
   features: string[];
   isActive: boolean;
   sortOrder: number;
+  paymentUrl?: string;
 }
 
 export interface FranchiseProduct {
@@ -67,6 +68,7 @@ function rowToPlan(row: Record<string, unknown>): FranchisePlan {
     features: Array.isArray(row.features) ? (row.features as string[]) : [],
     isActive: Boolean(row.is_active),
     sortOrder: Number(row.sort_order ?? 0),
+    ...(row.payment_url ? { paymentUrl: String(row.payment_url) } : {}),
   };
 }
 
@@ -80,6 +82,7 @@ function planToRow(plan: FranchisePlan): Record<string, unknown> {
     features: plan.features,
     is_active: plan.isActive,
     sort_order: plan.sortOrder,
+    payment_url: plan.paymentUrl ?? null,
   };
 }
 
