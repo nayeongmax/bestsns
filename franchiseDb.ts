@@ -12,6 +12,7 @@ export interface FranchisePlan {
   isActive: boolean;
   sortOrder: number;
   paymentUrl?: string;
+  points?: number | null; // null = unlimited
 }
 
 export interface FranchiseProduct {
@@ -69,6 +70,7 @@ function rowToPlan(row: Record<string, unknown>): FranchisePlan {
     isActive: Boolean(row.is_active),
     sortOrder: Number(row.sort_order ?? 0),
     ...(row.payment_url ? { paymentUrl: String(row.payment_url) } : {}),
+    points: row.points != null ? Number(row.points) : null,
   };
 }
 
@@ -83,6 +85,7 @@ function planToRow(plan: FranchisePlan): Record<string, unknown> {
     is_active: plan.isActive,
     sort_order: plan.sortOrder,
     payment_url: plan.paymentUrl ?? null,
+    points: plan.points ?? null,
   };
 }
 
@@ -300,5 +303,23 @@ export async function deleteFranchiseProduct(id: string): Promise<void> {
     await supabase.from('franchise_products').delete().eq('id', id);
   } catch {
     // ignore silently
+  }
+}
+
+// ─── 포인트 사용량 ────────────────────────────────────────────────────────────
+
+// 가맹점 마케팅 주문으로 차감된 총 포인트 (취소 제외)
+export async function fetchFranchisePointsUsed(userId: string): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from('smm_orders')
+      .select('selling_price')
+      .eq('user_id', userId)
+      .eq('provider_name', '가맹점주문')
+      .neq('status', 'cancelled');
+    if (error) return 0;
+    return (data ?? []).reduce((sum, row) => sum + Number(row.selling_price ?? 0), 0);
+  } catch {
+    return 0;
   }
 }
