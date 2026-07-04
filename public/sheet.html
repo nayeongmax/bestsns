@@ -215,6 +215,8 @@
   <select id="jumpSelect" onchange="jumpToSection(this.value)">
     <option value="">-- 섹션 이동 --</option>
   </select>
+  <button onclick="moveSectionUp()" title="선택 섹션 위로" style="padding:3px 7px;">▲</button>
+  <button onclick="moveSectionDown()" title="선택 섹션 아래로" style="padding:3px 7px;">▼</button>
   <span class="saved-badge" id="savedBadge">✔ 자동저장됨</span>
   <span class="cloud-badge" id="cloudBadge"></span>
 </div>
@@ -891,6 +893,41 @@ function jumpToSection(id) {
   document.getElementById(id)?.scrollIntoView({behavior:'smooth'});
 }
 
+function _getJumpSelectedSecId() {
+  const val = document.getElementById('jumpSelect').value;
+  return val ? val.replace('section-', '') : null;
+}
+
+function moveSectionUp() {
+  const secId = _getJumpSelectedSecId();
+  if (!secId) { alert('드롭다운에서 이동할 섹션을 먼저 선택하세요.'); return; }
+  const current = gatherSections();
+  const idx = current.findIndex(s => s.id === secId);
+  if (idx <= 0) return;
+  [current[idx - 1], current[idx]] = [current[idx], current[idx - 1]];
+  loadSections(current);
+  const tab = tabs.find(t => t.id === activeTabId);
+  if (tab) tab.sections = current;
+  updateJumpSelect();
+  document.getElementById('jumpSelect').value = `section-${secId}`;
+  autoSave();
+}
+
+function moveSectionDown() {
+  const secId = _getJumpSelectedSecId();
+  if (!secId) { alert('드롭다운에서 이동할 섹션을 먼저 선택하세요.'); return; }
+  const current = gatherSections();
+  const idx = current.findIndex(s => s.id === secId);
+  if (idx < 0 || idx >= current.length - 1) return;
+  [current[idx], current[idx + 1]] = [current[idx + 1], current[idx]];
+  loadSections(current);
+  const tab = tabs.find(t => t.id === activeTabId);
+  if (tab) tab.sections = current;
+  updateJumpSelect();
+  document.getElementById('jumpSelect').value = `section-${secId}`;
+  autoSave();
+}
+
 // ═══════════════════════════════════════════════
 // DOM → 데이터 수집
 // ═══════════════════════════════════════════════
@@ -998,10 +1035,22 @@ function clearSelection() {
 
 const sheetBodyEl = document.getElementById('sheetBody');
 
-// 더블클릭 → 편집모드 진입
+// 더블클릭 → 편집모드 진입 (빈 셀 포함 모든 셀)
 sheetBodyEl.addEventListener('dblclick', e => {
-  const div = e.target.closest('[contenteditable]');
-  if (div) { div.focus(); }
+  if (e.target.closest('tr.section-header')) return;
+  if (e.target.closest('button')) return;
+  // 클릭 대상이 contenteditable이면 바로, 아니면 td 내부에서 찾기
+  const div = e.target.closest('[contenteditable]')
+    || e.target.closest('td')?.querySelector('[contenteditable]');
+  if (!div) return;
+  div.focus();
+  // 커서를 끝으로 이동
+  const range = document.createRange();
+  range.selectNodeContents(div);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
 });
 
 // 키보드 이벤트용 포커스 앵커 (contenteditable 아님 → inEdit=false 보장)
