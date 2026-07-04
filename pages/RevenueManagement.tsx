@@ -456,9 +456,9 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                   <>
                     <span className={`text-[9px] sm:text-[12px] font-black ${i % 7 === 0 ? 'text-red-400' : i % 7 === 6 ? 'text-blue-400' : 'text-gray-900'}`}>{date}</span>
                     <div className="mt-0.5 sm:mt-3 space-y-0.5 sm:space-y-1.5">
-                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsStart.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-blue-600 text-white p-0.5 sm:p-1 rounded truncate italic">🚀 {p.cafeName || p.clientName}</div>)}
-                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsEnd.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-red-600 text-white p-0.5 sm:p-1 rounded truncate italic">🏁 {p.cafeName || p.clientName}</div>)}
-                       {(calendarFilter === 'all' || calendarFilter === 'todo') && dayTodos.map(t => <div key={t.id} className={`text-[8px] sm:text-[9px] font-black p-0.5 sm:p-1 rounded truncate italic border ${t.completed ? 'bg-gray-100 text-gray-300 border-gray-200 line-through' : 'bg-green-50 text-green-600 border-green-100'}`}>✓ {t.text}</div>)}
+                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsStart.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-blue-600 text-white p-0.5 sm:p-1 rounded break-words italic leading-tight">🚀 {p.cafeName || p.clientName}</div>)}
+                       {(calendarFilter === 'all' || calendarFilter === 'work') && dayProjectsEnd.map(p => <div key={p.id} className="text-[8px] sm:text-[9px] font-black bg-red-600 text-white p-0.5 sm:p-1 rounded break-words italic leading-tight">🏁 {p.cafeName || p.clientName}</div>)}
+                       {(calendarFilter === 'all' || calendarFilter === 'todo') && dayTodos.map(t => <div key={t.id} className={`text-[8px] sm:text-[9px] font-black p-0.5 sm:p-1 rounded break-words italic leading-tight border ${t.completed ? 'bg-gray-100 text-gray-300 border-gray-200 line-through' : 'bg-green-50 text-green-600 border-green-100'}`}>✓ {t.text}</div>)}
                     </div>
                   </>
                 )}
@@ -509,14 +509,14 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
            <table className="w-full text-left min-w-[640px]">
               <thead className="bg-gray-50/50 text-[9px] sm:text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
                 <tr>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8">차수</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8">작업 종류</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8">업체명</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">운영사</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">마감일</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right">결제금 / 정산금</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">링크</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">관리</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 whitespace-nowrap">차수</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 whitespace-nowrap">작업 종류</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 whitespace-nowrap">업체명</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">운영사</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">마감일</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right whitespace-nowrap">결제금 / 정산금</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">링크</th>
+                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -524,26 +524,26 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                   const com = companies.find(c => c.id === p.operatingCompanyId);
                   return (
                     <tr key={p.id} className="hover:bg-blue-50/30 transition-all group">
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8"><span className="bg-gray-900 text-white px-2 py-1 sm:px-4 sm:py-1.5 rounded-full font-black text-[10px] sm:text-[11px] italic">{p.round}차</span></td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-[10px] sm:text-[11px] font-black text-orange-500 uppercase italic">{p.type}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 font-black text-gray-900 text-sm sm:text-[16px] italic truncate max-w-[120px] sm:max-w-none">{p.clientName}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-bold text-gray-400 text-[10px] sm:text-xs italic">{com?.name || '-'}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-black text-red-400 text-[11px] sm:text-[13px] italic">{p.endDate}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right">
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 whitespace-nowrap"><span className="bg-gray-900 text-white px-2 py-1 sm:px-4 sm:py-1.5 rounded-full font-black text-[10px] sm:text-[11px] italic">{p.round}차</span></td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-[10px] sm:text-[11px] font-black text-orange-500 uppercase italic whitespace-nowrap">{p.type}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 font-black text-gray-900 text-sm sm:text-[16px] italic whitespace-nowrap">{p.clientName}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-bold text-gray-400 text-[10px] sm:text-xs italic whitespace-nowrap">{com?.name || '-'}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-black text-red-400 text-[11px] sm:text-[13px] italic whitespace-nowrap">{p.endDate}</td>
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right whitespace-nowrap">
                         <p className="font-black text-gray-900 text-sm sm:text-lg italic">₩{p.paymentAmount.toLocaleString()}</p>
                         <p className="font-bold text-green-600 text-[10px] sm:text-xs italic mt-0.5">정산 ₩{p.settlementAmount.toLocaleString()}</p>
                       </td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">
                         {p.workLink?.trim() ? (
-                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] sm:text-xs hover:underline break-all">
+                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] sm:text-xs hover:underline">
                             링크
                           </a>
                         ) : (
                           <span className="text-gray-300 text-[10px] sm:text-xs">-</span>
                         )}
                       </td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center">
-                         <div className="flex justify-center gap-2 sm:gap-4 flex-wrap">
+                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">
+                         <div className="flex justify-center gap-2 sm:gap-4">
                             <button onClick={() => handleExtendProject(p)} className="text-[9px] sm:text-[11px] font-black text-green-500 hover:text-green-700 italic uppercase">재연장</button>
                             <button onClick={() => startEditProject(p)} className="text-[9px] sm:text-[11px] font-black text-blue-400 hover:text-blue-600 italic uppercase">수정</button>
                             <button onClick={() => setDeleteConfirmProjectId(p.id)} className="text-[9px] sm:text-[11px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>

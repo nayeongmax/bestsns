@@ -137,6 +137,10 @@ const CollectorTab: React.FC = () => {
   const [aiExporting,     setAiExporting]     = useState(false);
   const [aiExportStatus,  setAiExportStatus]  = useState('');
 
+  // keywords를 항상 최신값으로 유지하는 ref (stale closure 완전 방지)
+  const keywordsRef = useRef<ReplaceKw[]>(keywords);
+  keywordsRef.current = keywords;
+
   const hasAiKey = openaiKey.trim().length > 0;
 
   /* ── 수집 이력 ── */
@@ -289,14 +293,22 @@ const CollectorTab: React.FC = () => {
     setSelected(new Set());
   };
 
-  const applyKeywords = (text: string) => {
+  const makeApply = (kws: ReplaceKw[]) => (text: string): string => {
     let result = (text ?? '').normalize('NFC');
-    keywords.forEach(kw => {
+    kws.forEach(kw => {
       const from = kw.from.trim().normalize('NFC');
-      if (from) result = result.split(from).join(kw.to);
+      if (!from) return;
+      try {
+        const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        result = result.replace(new RegExp(escaped, 'g'), kw.to);
+      } catch {
+        result = result.split(from).join(kw.to);
+      }
     });
     return result;
   };
+
+  const applyKeywords = (text: string) => makeApply(keywordsRef.current)(text);
 
   /* ── GPT API 호출 헬퍼 ── */
   const callGpt = async (prompt: string, content: string): Promise<string> => {
@@ -452,13 +464,11 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
 
   /* ── 원문 CSV 저장 (치환 키워드 적용, 리라이팅 컬럼 비움) ── */
   const exportPlain = () => {
-    let kws: ReplaceKw[] = keywords;
+    // keywordsRef.current = 현재 렌더의 keywords (stale closure 없음)
+    // localStorage = 탭 전환 후 재마운트 시에도 최신값 보장
+    let kws: ReplaceKw[] = keywordsRef.current;
     try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
-    const apply = (text: string) => {
-      let result = (text ?? '').normalize('NFC');
-      kws.forEach(kw => { const from = kw.from.trim().normalize('NFC'); if (from) result = result.split(from).join(kw.to); });
-      return result;
-    };
+    const apply = makeApply(kws);
     const rows: ProcessedRow[] = articles.map(a => ({
       title: apply(a.title),
       rewrittenTitle: '',
@@ -477,13 +487,9 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
     setAiExporting(true);
     setAiExportStatus(`AI 처리 준비 중... (0/${articles.length})`);
 
-    let kws: ReplaceKw[] = keywords;
+    let kws: ReplaceKw[] = keywordsRef.current;
     try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
-    const applyFresh = (text: string) => {
-      let result = (text ?? '').normalize('NFC');
-      kws.forEach(kw => { const from = kw.from.trim().normalize('NFC'); if (from) result = result.split(from).join(kw.to); });
-      return result;
-    };
+    const applyFresh = makeApply(kws);
 
     let done = 0;
     const processArticle = async (a: CafeArticle): Promise<ProcessedRow> => {
@@ -717,6 +723,18 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             }`}>
               {status}
             </div>
+
+            {/* 치환 미리보기 */}
+            {articles.length > 0 && keywords.some(k => k.from.trim()) && (() => {
+              const preview = applyKeywords(articles[0].title);
+              const changed = preview !== articles[0].title;
+              return (
+                <div className={`mt-2 px-2 py-1.5 rounded text-[10px] font-bold leading-snug border ${changed ? 'bg-green-50 border-green-200 text-green-700' : 'bg-orange-50 border-orange-200 text-orange-600'}`}>
+                  {changed ? '✅ 치환 적용 됨:' : '⚠ 치환 미적용 (원문 단어 없음):'}
+                  <span className="block mt-0.5 font-normal break-all">{preview}</span>
+                </div>
+              );
+            })()}
 
             {/* 버튼들 */}
             <div className="mt-2 pt-2 border-t border-gray-200 space-y-1.5">
