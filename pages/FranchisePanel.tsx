@@ -719,7 +719,8 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
   const [showContact, setShowContact] = useState(false);
 
   useEffect(() => {
-    fetchFranchisePlans().then(setPlans);
+    let cancelled = false;
+    fetchFranchisePlans().then(data => { if (!cancelled) setPlans(data); });
     try {
       const s = localStorage.getItem(STORAGE_KEY);
       if (s) {
@@ -728,6 +729,7 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
         setActiveUntil(d.until ?? null);
       }
     } catch {}
+    return () => { cancelled = true; };
   }, [STORAGE_KEY]);
 
   const activePlans = plans.filter(p => p.isActive);
@@ -913,6 +915,7 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
 
   // 구독 플랜 → 포인트 총량 + 사용량
   useEffect(() => {
+    let cancelled = false;
     const sub = (() => {
       try { return JSON.parse(localStorage.getItem(`franchise_sub_${user.id}`) ?? '{}'); } catch { return {}; }
     })();
@@ -923,10 +926,12 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
       fetchFranchisePlans(),
       fetchFranchisePointsUsed(user.id),
     ]).then(([plans, used]) => {
+      if (cancelled) return;
       const plan = plans.find(p => p.id === planId);
       setTotalPoints(plan ? (plan.points ?? null) : 0);
       setUsedPoints(used);
-    }).catch(() => {}).finally(() => setPointsLoading(false));
+    }).catch(() => {}).finally(() => { if (!cancelled) setPointsLoading(false); });
+    return () => { cancelled = true; };
   }, [user.id]);
 
   const remaining = totalPoints === null ? null : Math.max(0, totalPoints - usedPoints);

@@ -291,10 +291,9 @@ const EbookDetail: React.FC<Props> = ({ ebooks, wishlist, onToggleWishlist, user
             navigate('/mypage', { state: { activeTab: 'buyer', buyerSubTab: 'store' } });
           }
         } else if (result.error) {
+          alert(`결제 오류: ${result.error}`);
           if (location.state?.fromCreditPurchase) {
             navigate('/credit/apply');
-          } else {
-            alert(`결제가 취소되었습니다: ${result.error}`);
           }
         } else if (location.state?.fromCreditPurchase) {
           // success도 error도 아닌 경우(창 닫기 등)도 크레딧 구매 페이지로
