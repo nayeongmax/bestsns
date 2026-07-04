@@ -736,7 +736,12 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
 
   const handleRequestPayment = () => {
     if (!selectedPlan) { alert('플랜을 선택해주세요.'); return; }
-    setShowContact(true);
+    const plan = activePlans.find(p => p.id === selectedPlan);
+    if (plan?.paymentUrl) {
+      window.open(plan.paymentUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      setShowContact(true);
+    }
   };
 
   return (
