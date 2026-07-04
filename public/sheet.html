@@ -1551,11 +1551,8 @@ setInterval(async () => {
   }
 }, 30000);
 
-// 페이지 닫힐 때 즉시 저장
-window.addEventListener('beforeunload', () => {
-  collectCurrentTab();
-  localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
-});
+// 페이지 닫힐 때 즉시 저장 (로컬 + Supabase sendBeacon)
+// ※ 이 핸들러는 아래 두 번째 핸들러로 통합 — 빈 자리 유지
 
 // ═══════════════════════════════════════════════
 // 기기 간 동기화 (Supabase via Netlify Function)
@@ -1696,45 +1693,52 @@ function purgeOldSampleSections(tabsArr) {
 
 async function init() {
   if (USER_ID) {
-    // ① 수파베이스가 단일 진실 소스 — 항상 수파베이스 먼저 로드
-    let cloudLoaded = false;
+    // ① 로컬 캐시 읽기 (빠름)
+    let localData = null, localTime = 0;
     try {
-      const data = await cloudLoad(USER_ID);
-      if (data && Array.isArray(data.payload?.tabs) && data.payload.tabs.length > 0) {
-        tabs = purgeOldSampleSections(data.payload.tabs);
-        if (tabs.length === 0) {
-          const blankId = makeTabId();
-          tabs = [{ id: blankId, name: '탭1', sections: [] }];
-        }
-        activeTabId = data.payload.activeTabId || tabs[0].id;
-        // 로컬 캐시도 동기화
-        localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
-        cloudLoaded = true;
+      const raw = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p?.tabs?.length > 0) { localData = p; localTime = p.savedAt || 0; }
       }
     } catch(e) {}
 
-    // ② 수파베이스 로드 실패 또는 데이터 없음 → 로컬 캐시로 복구
-    if (!cloudLoaded) {
-      try {
-        const raw = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
-        if (raw) {
-          const p = JSON.parse(raw);
-          if (p?.tabs?.length > 0) {
-            tabs = purgeOldSampleSections(p.tabs);
-            if (tabs.length === 0) {
-              const blankId = makeTabId();
-              tabs = [{ id: blankId, name: '탭1', sections: [] }];
-            }
-            activeTabId = p.activeTabId || tabs[0].id;
-            // 로컬 데이터를 수파베이스에 업로드 (복구)
-            cloudSave(USER_ID).catch(() => {});
-            cloudLoaded = true;
-          }
-        }
-      } catch(e) {}
+    // ② Supabase 로드
+    let cloudData = null, cloudTime = 0;
+    try {
+      const data = await cloudLoad(USER_ID);
+      if (data && Array.isArray(data.payload?.tabs) && data.payload.tabs.length > 0) {
+        cloudData = data.payload;
+        // cloudSave가 이제 savedAt을 payload에 포함 → localTime과 동일 기준으로 비교 가능
+        cloudTime = data.payload.savedAt || (data.updated_at ? new Date(data.updated_at).getTime() : 0);
+      }
+    } catch(e) {}
+
+    // ③ 더 최신 데이터 사용
+    //    - 로컬이 더 최신: 닫기 직전 sendBeacon 저장 후 클라우드 반영 전 케이스
+    //    - 클라우드가 더 최신 또는 동일: 다른 기기 / 정상 동기화 케이스
+    let chosen = null;
+    if (localData && localTime > cloudTime) {
+      // 로컬이 더 최신 → 로컬 사용 + Supabase에 즉시 동기화
+      chosen = localData;
+      cloudSave(USER_ID).catch(() => {});
+    } else if (cloudData) {
+      // Supabase가 더 최신이거나 동일 → Supabase 사용
+      chosen = cloudData;
+      localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ ...cloudData, savedAt: cloudTime }));
+    } else if (localData) {
+      // Supabase 없음(첫 사용 등) → 로컬 사용 + Supabase 업로드
+      chosen = localData;
+      cloudSave(USER_ID).catch(() => {});
     }
 
-    if (cloudLoaded) {
+    if (chosen) {
+      tabs = chosen.tabs.length > 0 ? purgeOldSampleSections(chosen.tabs) : [];
+      if (tabs.length === 0) {
+        const blankId = makeTabId();
+        tabs = [{ id: blankId, name: '탭1', sections: [] }];
+      }
+      activeTabId = chosen.activeTabId || tabs[0].id;
       renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
       return;
     }
@@ -1774,12 +1778,20 @@ window._autoSaveWithCloud = async function() {
   }
 };
 
-// beforeunload 시 동기화 저장
+// beforeunload: 로컬 저장 + sendBeacon으로 Supabase 즉시 전송
 window.addEventListener('beforeunload', () => {
   collectCurrentTab();
   const ts = Date.now();
   if (USER_ID) {
-    localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ tabs, activeTabId, savedAt: ts }));
+    const payload = { tabs, activeTabId, savedAt: ts };
+    localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify(payload));
+    // sendBeacon은 페이지 종료 중에도 안정적으로 전송됨 (fetch보다 신뢰성 높음)
+    try {
+      navigator.sendBeacon(
+        `/api/sheet-sync?userId=${encodeURIComponent(USER_ID)}`,
+        new Blob([JSON.stringify({ payload })], { type: 'application/json' })
+      );
+    } catch(e) {}
   } else {
     localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId, savedAt: ts }));
   }
