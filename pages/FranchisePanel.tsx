@@ -169,26 +169,37 @@ const CollectorTab: React.FC = () => {
     let remaining = resume ? Math.max(0, total - articles.length) : total;
 
     const fetchBatch = async (page: number, batchSize: number) => {
-      const res = await fetch('/.netlify/functions/scrape-naver-cafe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cafeId: resolvedCafeId,
-          menuId: menuId.trim(),
-          startPage: page,
-          startDate: startDate.trim() || undefined,
-          endDate: endDate.trim() || todayStr(),
-          maxArticles: batchSize,
-          maxComments: parseInt(maxComments) || 0,
-          fetchComments: parseInt(maxComments) > 0,
-          naverCookie: naverCookie.trim() || undefined,
-        }),
-      });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 24000); // 24초: Netlify 26초 제한 전 선제 중단
+      let res: Response;
+      try {
+        res = await fetch('/.netlify/functions/scrape-naver-cafe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cafeId: resolvedCafeId,
+            menuId: menuId.trim(),
+            startPage: page,
+            startDate: startDate.trim() || undefined,
+            endDate: endDate.trim() || todayStr(),
+            maxArticles: batchSize,
+            maxComments: parseInt(maxComments) || 0,
+            fetchComments: parseInt(maxComments) > 0,
+            naverCookie: naverCookie.trim() || undefined,
+          }),
+          signal: ctrl.signal,
+        });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : '';
+        throw new Error(msg.includes('abort') ? '릴레이 응답 대기 중 타임아웃' : `네트워크 오류: ${msg}`);
+      } finally {
+        clearTimeout(timer);
+      }
       // HTML 에러 응답 처리 (릴레이 과부하/타임아웃 시 HTML 반환)
       const text = await res.text();
       let data: any;
       try { data = JSON.parse(text); }
-      catch { throw new Error(`서버 응답 오류 (HTTP ${res.status}) — 잠시 후 재시도`); }
+      catch { throw new Error(`서버 응답 오류 (HTTP ${res.status})`); }
       if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
       return data;
     };
