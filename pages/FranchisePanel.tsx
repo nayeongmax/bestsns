@@ -156,7 +156,7 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
-  const BATCH_SIZE = 30; // 네이버 카페 한 페이지(15개)를 완전히 커버하는 크기
+  const BATCH_SIZE = 10; // 릴레이 서버가 10개 단위로 안정적으로 처리함
 
   const doCollect = async (resume: boolean) => {
     if (!resolvedCafeId) { setStatus('카페 ID를 입력해주세요.'); return; }
@@ -212,7 +212,8 @@ const CollectorTab: React.FC = () => {
         if (!data) {
           // 재시도 모두 실패 → 지금까지 수집한 내용은 보존하고 종료
           setStatus(`수집 중단 — ${accumulated.length}개 수집됨 (오류: ${lastErr})`);
-          break;
+          setLoading(false);
+          return; // break 대신 return으로 "수집 완료" 덮어쓰기 방지
         }
 
         const newList: CafeArticle[] = data.articles || [];
