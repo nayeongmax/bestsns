@@ -1255,6 +1255,22 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
   const [activeTab, setActiveTab] = useState<FranchiseTab>(defaultTab);
   const [showSubModal, setShowSubModal] = useState(false);
 
+  // 원고시트 미저장 경고: iframe 내 _hasUnsaved를 부모 창에서 beforeunload로 처리
+  // (iframe 자체의 beforeunload는 브라우저가 다이얼로그를 억제하는 경우 있음)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const iframe = document.querySelector('iframe[title="원고시트"]') as HTMLIFrameElement | null;
+      const iWin = iframe?.contentWindow as any;
+      if (iWin?._hasUnsaved) {
+        (iWin.flushLocalSave as (() => void) | undefined)?.();
+        e.preventDefault();
+        e.returnValue = '원고시트에 저장되지 않은 내용이 있습니다.\n💾 버튼을 눌러 저장 후 닫아주세요.';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   if (!canAccess) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center px-4">
