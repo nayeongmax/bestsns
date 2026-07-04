@@ -1015,11 +1015,16 @@ function markUnsaved() {
   }
   // 로컬에는 조용히 자동저장 (배지 없음, Supabase 제외)
   clearTimeout(_localSaveTimer);
-  _localSaveTimer = setTimeout(() => {
-    collectCurrentTab();
-    const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
-    localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
-  }, 1000);
+  _localSaveTimer = setTimeout(flushLocalSave, 500);
+}
+
+// 로컬 저장 즉시 실행 (타이머 취소 후 동기 저장)
+function flushLocalSave() {
+  if (!_initComplete) return;
+  clearTimeout(_localSaveTimer);
+  collectCurrentTab();
+  const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
+  localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
 }
 
 function markSaved() {
@@ -1756,14 +1761,18 @@ async function init() {
   _initComplete = true;
 }
 
-// 창 닫기 전: 대기 중인 로컬 저장 타이머를 즉시 플러시 후 경고
-// (마지막 타이핑 후 1초 이내에 창을 닫으면 타이머가 취소되므로 여기서 동기 저장)
+// pagehide: 창/탭 닫힐 때 발화 — iframe에서 beforeunload보다 신뢰성 높음
+window.addEventListener('pagehide', flushLocalSave);
+
+// visibilitychange: 탭 전환·브라우저 최소화 시 추가 저장
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushLocalSave();
+});
+
+// beforeunload: 미저장 경고 다이얼로그 + 추가 안전장치
 window.addEventListener('beforeunload', e => {
+  flushLocalSave();
   if (_hasUnsaved) {
-    clearTimeout(_localSaveTimer);
-    collectCurrentTab();
-    const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
-    localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
     e.preventDefault();
     e.returnValue = '';
   }
