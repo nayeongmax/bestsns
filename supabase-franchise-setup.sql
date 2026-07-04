@@ -41,9 +41,12 @@ CREATE TABLE IF NOT EXISTS franchise_products (
 ALTER TABLE franchise_products
   ADD COLUMN IF NOT EXISTS original_price NUMERIC;
 
--- 4. franchise_plans에 결제 URL 컬럼 추가 (N잡스토어 연동)
+-- 4. franchise_plans에 결제 URL 및 포인트 컬럼 추가
 ALTER TABLE franchise_plans
   ADD COLUMN IF NOT EXISTS payment_url TEXT;
+
+ALTER TABLE franchise_plans
+  ADD COLUMN IF NOT EXISTS points BIGINT; -- NULL = 포인트 무제한
 
 -- 5. RLS 비활성화 — 플랜/상품은 개인정보 없으므로 anon key로 읽기/쓰기 허용
 --    (어드민패널이 Supabase Auth 미사용, anon key로만 동작하기 때문)

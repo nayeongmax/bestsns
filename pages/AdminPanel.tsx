@@ -209,7 +209,7 @@ const FranchiseAdmin: React.FC = () => {
   // ── 구독플랜 ──
   const [plans, setPlans]         = useState<FranchisePlan[]>([]);
   const [editPlan, setEditPlan]   = useState<FranchisePlan | null>(null);
-  const [planForm, setPlanForm]   = useState({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '' });
+  const [planForm, setPlanForm]   = useState({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '', points: '' });
   const [planSaving, setPlanSaving] = useState(false);
   const [showPlanForm, setShowPlanForm] = useState(false);
 
@@ -228,23 +228,24 @@ const FranchiseAdmin: React.FC = () => {
   // ── 플랜 저장 ──
   const openNewPlan = () => {
     setEditPlan(null);
-    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '' });
+    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '', points: '' });
     setShowPlanForm(true);
   };
   const openEditPlan = (p: FranchisePlan) => {
     setEditPlan(p);
-    setPlanForm({ name: p.name, price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : '', period: p.period, features: p.features.join('\n'), isActive: p.isActive, paymentUrl: p.paymentUrl ?? '' });
+    setPlanForm({ name: p.name, price: String(p.price), originalPrice: p.originalPrice ? String(p.originalPrice) : '', period: p.period, features: p.features.join('\n'), isActive: p.isActive, paymentUrl: p.paymentUrl ?? '', points: p.points != null ? String(p.points) : '' });
     setShowPlanForm(true);
   };
   const closePlanForm = () => {
     setEditPlan(null);
-    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '' });
+    setPlanForm({ name: '', price: '', originalPrice: '', period: '월', features: '', isActive: true, paymentUrl: '', points: '' });
     setShowPlanForm(false);
   };
   const savePlan = async () => {
     if (!planForm.name.trim() || !planForm.price) return;
     setPlanSaving(true);
     const originalPrice = Number(planForm.originalPrice) || 0;
+    const parsedPoints = planForm.points.trim() ? Number(planForm.points) : null;
     const plan: FranchisePlan = {
       id: editPlan?.id ?? `plan_${Date.now()}`,
       name: planForm.name.trim(),
@@ -255,6 +256,7 @@ const FranchiseAdmin: React.FC = () => {
       isActive: planForm.isActive,
       sortOrder: editPlan?.sortOrder ?? plans.length,
       ...(planForm.paymentUrl.trim() ? { paymentUrl: planForm.paymentUrl.trim() } : {}),
+      points: parsedPoints,
     };
     const next = editPlan ? plans.map(p => p.id === editPlan.id ? plan : p) : [...plans, plan];
     await upsertFranchisePlans(next).catch(() => {});
@@ -362,6 +364,7 @@ const FranchiseAdmin: React.FC = () => {
               </div>
               <textarea className={`${inputCls} resize-none`} rows={4} placeholder="기능 목록 (한 줄에 하나씩)" value={planForm.features} onChange={e => setPlanForm(f => ({ ...f, features: e.target.value }))} />
               <input className={inputCls} placeholder="결제 URL (N잡스토어 상품 링크)" value={planForm.paymentUrl} onChange={e => setPlanForm(f => ({ ...f, paymentUrl: e.target.value }))} />
+              <input className={inputCls} placeholder="포인트 (빈칸=무제한, 예: 600000)" type="number" value={planForm.points} onChange={e => setPlanForm(f => ({ ...f, points: e.target.value }))} />
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={planForm.isActive} onChange={e => setPlanForm(f => ({ ...f, isActive: e.target.checked }))} className="rounded" />
@@ -403,6 +406,9 @@ const FranchiseAdmin: React.FC = () => {
                 <ul className="space-y-1">
                   {plan.features.map((f, i) => <li key={i} className="text-xs text-gray-600 font-bold flex gap-1.5"><span className="text-emerald-500">✓</span>{f}</li>)}
                 </ul>
+                {plan.points != null
+                  ? <p className="text-[10px] text-indigo-500 font-bold">포인트: {plan.points.toLocaleString()}P</p>
+                  : <p className="text-[10px] text-emerald-500 font-bold">포인트: 무제한</p>}
                 {plan.paymentUrl && (
                   <p className="text-[10px] text-blue-500 font-bold truncate">🔗 {plan.paymentUrl}</p>
                 )}

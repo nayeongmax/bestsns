@@ -4,7 +4,7 @@ import { UserProfile } from '@/types';
 import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
 import { upsertSmmOrders } from '../smmDb';
-import { FranchisePlan, FranchiseProduct, fetchFranchisePlans, fetchFranchiseProducts } from '../franchiseDb';
+import { FranchisePlan, FranchiseProduct, fetchFranchisePlans, fetchFranchiseProducts, fetchFranchisePointsUsed } from '../franchiseDb';
 
 type FranchiseTab = 'members' | 'subscription' | 'revenue' | 'manuscripts' | 'collector' | 'marketing';
 
@@ -899,12 +899,37 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState('전체');
 
+  // 포인트
+  const [totalPoints, setTotalPoints]   = useState<number | null>(null); // null = 무제한
+  const [usedPoints, setUsedPoints]     = useState(0);
+  const [pointsLoading, setPointsLoading] = useState(true);
+
   useEffect(() => {
     fetchFranchiseProducts()
       .then(setProducts)
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
   }, []);
+
+  // 구독 플랜 → 포인트 총량 + 사용량
+  useEffect(() => {
+    const sub = (() => {
+      try { return JSON.parse(localStorage.getItem(`franchise_sub_${user.id}`) ?? '{}'); } catch { return {}; }
+    })();
+    const planId = sub?.plan as string | undefined;
+    if (!planId) { setPointsLoading(false); return; }
+
+    Promise.all([
+      fetchFranchisePlans(),
+      fetchFranchisePointsUsed(user.id),
+    ]).then(([plans, used]) => {
+      const plan = plans.find(p => p.id === planId);
+      setTotalPoints(plan ? (plan.points ?? null) : 0);
+      setUsedPoints(used);
+    }).catch(() => {}).finally(() => setPointsLoading(false));
+  }, [user.id]);
+
+  const remaining = totalPoints === null ? null : Math.max(0, totalPoints - usedPoints);
 
   const categories = ['전체', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
   const visible    = filterCategory === '전체' ? products : products.filter(p => p.category === filterCategory);
@@ -914,6 +939,11 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
     const qty = Number(quantity);
     if (isNaN(qty) || qty < selected.minQuantity || qty > selected.maxQuantity) {
       alert(`수량은 ${selected.minQuantity.toLocaleString()} ~ ${selected.maxQuantity.toLocaleString()} 사이여야 합니다.`);
+      return;
+    }
+    const cost = selected.price * qty;
+    if (cost > 0 && remaining !== null && cost > remaining) {
+      alert(`포인트가 부족합니다.\n필요: ${cost.toLocaleString()}P / 잔여: ${remaining.toLocaleString()}P`);
       return;
     }
     setSubmitting(true);
@@ -932,11 +962,12 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
         remains: qty,
         providerName: '가맹점주문',
         costPrice: 0,
-        sellingPrice: selected.price * qty,
+        sellingPrice: cost,
         profit: 0,
         status: 'pending',
         externalOrderId: '',
       }]);
+      setUsedPoints(prev => prev + cost);
       setSuccessMsg(`[${selected.name}] 주문이 접수되었습니다. 관리자 확인 후 진행됩니다.`);
       setSelected(null);
       setLink('');
@@ -952,9 +983,25 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
 
   return (
     <div className="space-y-4 max-w-4xl">
-      <div>
-        <h2 className="text-lg font-black text-gray-900">마케팅상품 주문</h2>
-        <p className="text-xs text-gray-400 font-bold mt-0.5">운영자가 등록한 마케팅 프로그램 상품을 주문하세요. 접수 후 관리자 확인을 거쳐 진행됩니다.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-lg font-black text-gray-900">마케팅상품 주문</h2>
+          <p className="text-xs text-gray-400 font-bold mt-0.5">운영자가 등록한 마케팅 프로그램 상품을 주문하세요. 접수 후 관리자 확인을 거쳐 진행됩니다.</p>
+        </div>
+        {/* 포인트 잔액 */}
+        {!pointsLoading && (
+          <div className="rounded-2xl border-2 border-indigo-100 bg-indigo-50 px-5 py-3 min-w-[180px] text-right shrink-0">
+            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-wide">잔여 포인트</p>
+            <p className="text-xl font-black text-indigo-700 mt-0.5">
+              {remaining === null ? '무제한' : `${remaining.toLocaleString()}P`}
+            </p>
+            {totalPoints !== null && (
+              <p className="text-[10px] text-indigo-300 font-bold mt-0.5">
+                사용 {usedPoints.toLocaleString()}P / 총 {totalPoints.toLocaleString()}P
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {successMsg && (
@@ -1000,11 +1047,14 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
                 <div className="ml-auto shrink-0 text-right">
                   {product.originalPrice && product.originalPrice > product.price ? (
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-gray-400 font-bold line-through">{product.originalPrice.toLocaleString()}원</span>
+                      <span className="text-[10px] text-gray-400 font-bold line-through">{product.originalPrice.toLocaleString()}P</span>
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-black">{Math.round((1 - product.price / product.originalPrice) * 100)}%</span>
                     </div>
                   ) : null}
-                  <p className="text-xs font-black text-blue-600">{product.price.toLocaleString()}원</p>
+                  <p className="text-xs font-black text-indigo-600">{product.price.toLocaleString()}P</p>
+                  {product.price > 0 && remaining !== null && product.price > remaining && (
+                    <p className="text-[9px] text-red-400 font-bold mt-0.5">포인트 부족</p>
+                  )}
                 </div>
               </div>
               <p className="font-black text-gray-900 text-sm leading-snug">{product.name}</p>
@@ -1058,9 +1108,23 @@ const MarketingTab: React.FC<{ user: UserProfile }> = ({ user }) => {
             </div>
 
             {quantity && !isNaN(Number(quantity)) && Number(quantity) > 0 && (
-              <div className="bg-blue-50 rounded-xl px-4 py-3 flex items-center justify-between">
-                <span className="text-xs font-black text-blue-600">예상 금액</span>
-                <span className="font-black text-blue-800">{(selected.price * Number(quantity)).toLocaleString()}원</span>
+              <div className={`rounded-xl px-4 py-3 flex items-center justify-between ${
+                remaining !== null && selected.price * Number(quantity) > remaining
+                  ? 'bg-red-50 border border-red-200'
+                  : 'bg-indigo-50'
+              }`}>
+                <span className="text-xs font-black text-indigo-600">차감 포인트</span>
+                <div className="text-right">
+                  <span className="font-black text-indigo-800">{(selected.price * Number(quantity)).toLocaleString()}P</span>
+                  {remaining !== null && (
+                    <p className="text-[10px] text-indigo-400 font-bold">
+                      주문 후 잔여: {Math.max(0, remaining - selected.price * Number(quantity)).toLocaleString()}P
+                    </p>
+                  )}
+                  {remaining !== null && selected.price * Number(quantity) > remaining && (
+                    <p className="text-[10px] text-red-500 font-black">포인트 부족</p>
+                  )}
+                </div>
               </div>
             )}
 
