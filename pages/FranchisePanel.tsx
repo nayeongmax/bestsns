@@ -290,9 +290,9 @@ const CollectorTab: React.FC = () => {
   };
 
   const applyKeywords = (text: string) => {
-    let result = text ?? '';
+    let result = (text ?? '').normalize('NFC');
     keywords.forEach(kw => {
-      const from = kw.from.trim();
+      const from = kw.from.trim().normalize('NFC');
       if (from) result = result.split(from).join(kw.to);
     });
     return result;
@@ -455,8 +455,8 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
     let kws: ReplaceKw[] = keywords;
     try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
     const apply = (text: string) => {
-      let result = text ?? '';
-      kws.forEach(kw => { const from = kw.from.trim(); if (from) result = result.split(from).join(kw.to); });
+      let result = (text ?? '').normalize('NFC');
+      kws.forEach(kw => { const from = kw.from.trim().normalize('NFC'); if (from) result = result.split(from).join(kw.to); });
       return result;
     };
     const rows: ProcessedRow[] = articles.map(a => ({
@@ -480,8 +480,8 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
     let kws: ReplaceKw[] = keywords;
     try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
     const applyFresh = (text: string) => {
-      let result = text ?? '';
-      kws.forEach(kw => { const from = kw.from.trim(); if (from) result = result.split(from).join(kw.to); });
+      let result = (text ?? '').normalize('NFC');
+      kws.forEach(kw => { const from = kw.from.trim().normalize('NFC'); if (from) result = result.split(from).join(kw.to); });
       return result;
     };
 
