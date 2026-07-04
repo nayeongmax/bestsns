@@ -1677,6 +1677,21 @@ async function syncDownload() {
 
 let _cloudTimer = null;
 
+// 백그라운드 클라우드 저장 — 배지/알림 없이 Supabase에 조용히 동기화
+// localStorage가 브라우저에 의해 지워지더라도 Supabase에 최근 데이터가 남도록 보장
+function bgCloudSave() {
+  if (!_initComplete || !USER_ID || !tabs || tabs.length === 0) return;
+  collectCurrentTab();
+  fetch(`${SYNC_API}?userId=${encodeURIComponent(USER_ID)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ payload: { tabs, activeTabId, savedAt: Date.now() } })
+  }).catch(() => {}); // 실패해도 무시 — 다음 주기에 재시도
+}
+
+// 3분마다 백그라운드 동기화 (localStorage 소실 대비)
+setInterval(bgCloudSave, 180000);
+
 // ─── 초기화 ───
 // 과거 하드코딩 샘플 섹션(witwork, casino) 자동 제거
 const LEGACY_SAMPLE_IDS = new Set(['witwork', 'casino']);
@@ -1711,18 +1726,21 @@ async function init() {
     } catch(e) {}
 
     // ③ 더 최신 데이터 선택
-    //    - 로컬 > 클라우드: 같은 기기에서 💾 후 추가 작업이 있었던 경우 → 로컬 우선
+    //    - 로컬 > 클라우드: 같은 기기에서 추가 작업이 있었던 경우 → 로컬 우선
+    //      로컬이 더 최신이면 bgCloudSave로 Supabase도 업데이트
+    //      (localStorage가 브라우저에 의해 지워지더라도 복구 가능하도록)
     //    - 클라우드 >= 로컬: 다른 기기에서 저장했거나 동일 시점 → 클라우드 우선
-    //    ※ init()에서는 절대 cloudSave 호출 안 함 — 열 때마다 Supabase 데이터가
-    //      오염되는 버그 방지. Supabase는 💾 버튼으로만 업데이트.
     let chosen = null;
+    let localWasNewer = false;
     if (localData && localTime > cloudTime) {
       chosen = localData;
+      localWasNewer = true;
     } else if (cloudData) {
       chosen = cloudData;
       localStorage.setItem(`snsSheet_tabs_${USER_ID}`, JSON.stringify({ ...cloudData, savedAt: cloudTime }));
     } else if (localData) {
       chosen = localData;
+      localWasNewer = true; // 클라우드 없음 → 로컬을 Supabase에 올려둠
     }
 
     if (chosen) {
@@ -1731,6 +1749,9 @@ async function init() {
       activeTabId = chosen.activeTabId || tabs[0].id;
       renderTabBar(); switchTab(activeTabId, false); updateSyncUI();
       _initComplete = true;
+      // 로컬이 더 최신이면 → Supabase를 로컬 기준으로 조용히 업데이트
+      // (localStorage가 브라우저에 의해 지워지더라도 클라우드에서 복구 가능)
+      if (localWasNewer) setTimeout(bgCloudSave, 2000);
       return;
     }
   } else {
