@@ -94,8 +94,8 @@ const CollectorTab: React.FC = () => {
   const [maxComments,   setMaxComments]   = useState('3');
   const [aiRewrite,     setAiRewrite]     = useState(false);
   const [aiFillComment, setAiFillComment] = useState(false);
-  const [naverCookie,   setNaverCookie]   = useState('');
-  const [showCookie,    setShowCookie]    = useState(false);
+  const [naverCookie,   setNaverCookie]   = useState(() => localStorage.getItem('crawl_naver_cookie') || '');
+  const [showCookie,    setShowCookie]    = useState(() => !!localStorage.getItem('crawl_naver_cookie'));
 
   /* ── 수집 상태 ── */
   const [loading,  setLoading]  = useState(false);
@@ -145,6 +145,12 @@ const CollectorTab: React.FC = () => {
   const saveKeywords = (kws: ReplaceKw[]) => {
     setKeywords(kws);
     try { localStorage.setItem('crawl_keywords', JSON.stringify(kws)); } catch {}
+  };
+
+  const handleCookieChange = (v: string) => {
+    setNaverCookie(v);
+    if (v.trim()) localStorage.setItem('crawl_naver_cookie', v.trim());
+    else localStorage.removeItem('crawl_naver_cookie');
   };
 
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
@@ -460,14 +466,40 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 className="w-full py-1.5 rounded text-xs font-black text-white bg-green-600 hover:bg-green-700 mb-1.5">
                 🔐 네이버 로그인 팝업
               </button>
+
+              {/* 쿠키 상태 표시 */}
+              <div className={`text-[10px] font-bold px-2 py-1 rounded mb-1 ${naverCookie.trim() ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-400'}`}>
+                {naverCookie.trim()
+                  ? '✅ 내 쿠키 사용 중 (서버 기본 쿠키 무시됨)'
+                  : '⚪ 서버 기본 쿠키 사용 중'}
+              </div>
+
               <button type="button" onClick={() => setShowCookie(v => !v)}
                 className="text-[10px] text-blue-500 hover:underline font-bold">
                 {showCookie ? '▲ 세션쿠키 숨기기' : '▼ 세션쿠키 직접 입력'}
               </button>
               {showCookie && (
-                <div className="mt-1">
-                  <p className="text-[10px] text-gray-400 mb-0.5">NID_AUT 쿠키값 (브라우저 개발자도구 → Application → Cookies)</p>
-                  <input className={inputCls} value={naverCookie} onChange={e => setNaverCookie(e.target.value)} placeholder="NID_AUT=..." autoComplete="off" />
+                <div className="mt-1 space-y-1">
+                  <p className="text-[10px] text-gray-400">
+                    브라우저 개발자도구(F12) → Application → Cookies → cafe.naver.com<br/>
+                    NID_AUT 와 NID_SES 값을 복사해서 붙여넣으세요
+                  </p>
+                  <textarea
+                    className={`${inputCls} resize-none h-16 font-mono text-[10px]`}
+                    value={naverCookie}
+                    onChange={e => handleCookieChange(e.target.value)}
+                    placeholder="NID_AUT=xxxxx; NID_SES=xxxxx"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <div className="flex gap-1">
+                    <button type="button"
+                      onClick={() => { handleCookieChange(''); }}
+                      className="flex-1 py-1 rounded text-[10px] font-bold text-white bg-red-400 hover:bg-red-500">
+                      🗑 쿠키 삭제 (서버 기본으로 복귀)
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-gray-400">입력한 쿠키는 이 기기에 자동 저장됩니다</p>
                 </div>
               )}
             </div>
