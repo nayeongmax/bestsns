@@ -184,7 +184,11 @@ const CollectorTab: React.FC = () => {
           naverCookie: naverCookie.trim() || undefined,
         }),
       });
-      const data = await res.json();
+      // HTML 에러 응답 처리 (릴레이 과부하/타임아웃 시 HTML 반환)
+      const text = await res.text();
+      let data: any;
+      try { data = JSON.parse(text); }
+      catch { throw new Error(`서버 응답 오류 (HTTP ${res.status}) — 잠시 후 재시도`); }
       if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
       return data;
     };
@@ -232,6 +236,9 @@ const CollectorTab: React.FC = () => {
         }
         currentPage = data.nextPage;
         setNextPage(data.nextPage);
+
+        // 릴레이 과부하 방지: 배치 사이 2초 대기
+        await new Promise(r => setTimeout(r, 2000));
       }
 
       if (!stopRef.current) setStatus(`수집 완료 — ${accumulated.length}개 글`);
