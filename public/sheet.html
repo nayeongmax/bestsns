@@ -208,6 +208,9 @@
   <span class="title">📋 SNS 수집 시트</span>
   <button onclick="addSection()">+ 섹션 추가</button>
   <button onclick="saveAll()">💾 저장</button>
+  <button onclick="exportSheet()" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;" title="현재 시트 전체를 JSON 파일로 저장">📥 파일 저장</button>
+  <button onclick="importSheet()" style="background:#fff3e0;border-color:#ffcc80;color:#e65100;" title="저장된 JSON 파일을 불러와 이어서 작업">📂 불러오기</button>
+  <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="handleImportFile(this)">
   <button onclick="exportCSV()">📤 CSV</button>
   <button onclick="window.print()">🖨️ 인쇄</button>
   <button onclick="openSyncPanel()" style="background:#e8f0fe;border-color:#c5d8fb;color:#1a73e8;">☁ 기기 동기화</button>
@@ -980,6 +983,64 @@ function gatherSections() {
 }
 
 // CSV
+// ─── 파일 저장 / 불러오기 ─────────────────────────────────────────────────────
+
+// 모든 탭 데이터를 JSON 파일로 다운로드
+function exportSheet() {
+  collectCurrentTab();
+  const date = new Date().toISOString().slice(0, 10);
+  const data = { version: 1, exportedAt: new Date().toISOString(), tabs, activeTabId };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sns-sheet-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showCloudBadge('✔ 파일 저장 완료', 'ok');
+}
+
+// 파일 선택 창 열기
+function importSheet() {
+  document.getElementById('importFileInput').click();
+}
+
+// 파일 선택 후 처리
+function handleImportFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data.tabs) || data.tabs.length === 0) {
+        alert('올바른 시트 파일이 아닙니다. (.json 파일 저장 버튼으로 내보낸 파일을 선택해주세요)');
+        input.value = '';
+        return;
+      }
+      const dateStr = data.exportedAt ? new Date(data.exportedAt).toLocaleString('ko-KR') : '';
+      if (!confirm(`"${file.name}"을 불러옵니다.${dateStr ? '\n저장 시각: ' + dateStr : ''}\n\n현재 시트가 이 파일로 교체됩니다. 계속할까요?`)) {
+        input.value = '';
+        return;
+      }
+      tabs = data.tabs;
+      activeTabId = data.activeTabId || tabs[0].id;
+      renderTabBar();
+      switchTab(activeTabId, false);
+      // 불러온 데이터를 localStorage + Supabase에 즉시 반영
+      const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
+      localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
+      if (USER_ID) setTimeout(bgCloudSave, 500);
+      markSaved();
+      showCloudBadge('✔ 불러오기 완료!', 'ok');
+    } catch(e) {
+      alert('파일을 읽는 중 오류가 발생했습니다: ' + e.message);
+    }
+    input.value = ''; // 같은 파일 재선택 허용
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
 function exportCSV() {
   collectCurrentTab();
   const tab = tabs.find(t=>t.id===activeTabId);
