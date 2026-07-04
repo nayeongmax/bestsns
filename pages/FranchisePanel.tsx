@@ -1261,10 +1261,10 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       const iframe = document.querySelector('iframe[title="원고시트"]') as HTMLIFrameElement | null;
       const iWin = iframe?.contentWindow as any;
-      if (iWin?._hasUnsaved) {
-        (iWin.flushLocalSave as (() => void) | undefined)?.();
+      if (iframe) {
+        (iWin?.flushLocalSave as (() => void) | undefined)?.();
         e.preventDefault();
-        e.returnValue = '원고시트에 저장되지 않은 내용이 있습니다.\n💾 버튼을 눌러 저장 후 닫아주세요.';
+        e.returnValue = '원고시트를 저장하셨나요?\n💾 버튼을 눌러 저장 후 닫아주세요.';
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);

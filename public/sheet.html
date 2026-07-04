@@ -1769,13 +1769,11 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushLocalSave();
 });
 
-// beforeunload: 미저장 경고 다이얼로그 + 추가 안전장치
+// beforeunload: 항상 저장 확인 유도 + 추가 안전장치
 window.addEventListener('beforeunload', e => {
   flushLocalSave();
-  if (_hasUnsaved) {
-    e.preventDefault();
-    e.returnValue = '';
-  }
+  e.preventDefault();
+  e.returnValue = '';
 });
 
 init();
