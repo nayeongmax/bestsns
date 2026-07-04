@@ -1255,12 +1255,13 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
   const [activeTab, setActiveTab] = useState<FranchiseTab>(defaultTab);
   const [showSubModal, setShowSubModal] = useState(false);
 
-  // 창 닫힐 때 원고시트 로컬 저장 플러시
+  // 창 닫힐 때 원고시트 localStorage + Supabase 즉시 저장
   useEffect(() => {
     const handleBeforeUnload = () => {
       const iframe = document.querySelector('iframe[title="원고시트"]') as HTMLIFrameElement | null;
       const iWin = iframe?.contentWindow as any;
       (iWin?.flushLocalSave as (() => void) | undefined)?.();
+      (iWin?.flushCloudSave as (() => void) | undefined)?.();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);

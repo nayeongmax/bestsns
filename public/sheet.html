@@ -1028,6 +1028,23 @@ function flushLocalSave() {
   localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
 }
 
+// 창 닫힐 때 Supabase에도 즉시 저장 (sendBeacon: 브라우저가 보장)
+// localStorage만 저장하면 브라우저가 지웠을 때 데이터 소실 → Supabase에도 백업
+function flushCloudSave() {
+  if (!_initComplete || !USER_ID || !tabs || tabs.length === 0) return;
+  collectCurrentTab();
+  const body = JSON.stringify({ payload: { tabs, activeTabId, savedAt: Date.now() } });
+  const url = `${SYNC_API}?userId=${encodeURIComponent(USER_ID)}`;
+  try {
+    if (navigator.sendBeacon) {
+      // sendBeacon: 페이지 종료 후에도 브라우저가 전송을 보장하는 API
+      navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+    } else {
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    }
+  } catch(e) {}
+}
+
 function markSaved() {
   _hasUnsaved = false;
   _savedOnce  = true;
@@ -1784,17 +1801,24 @@ async function init() {
   _initComplete = true;
 }
 
-// pagehide: 창/탭 닫힐 때 발화 — iframe에서 beforeunload보다 신뢰성 높음
-window.addEventListener('pagehide', flushLocalSave);
+// pagehide: 창/탭 닫힐 때 발화 — localStorage + Supabase 모두 저장
+window.addEventListener('pagehide', () => {
+  flushLocalSave();
+  flushCloudSave(); // localStorage 소실 대비 Supabase에도 즉시 백업
+});
 
 // visibilitychange: 탭 전환·브라우저 최소화 시 추가 저장
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flushLocalSave();
+  if (document.visibilityState === 'hidden') {
+    flushLocalSave();
+    flushCloudSave();
+  }
 });
 
-// beforeunload: 경고 없이 로컬 저장만 수행
+// beforeunload: 경고 없이 로컬 + 클라우드 저장
 window.addEventListener('beforeunload', () => {
   flushLocalSave();
+  flushCloudSave();
 });
 
 init();
