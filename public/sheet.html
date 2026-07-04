@@ -1119,7 +1119,17 @@ function markSaved() {
 }
 
 // 시트 내 모든 입력 → 미저장 표시 + 로컬 자동저장
-document.getElementById('sheetBody').addEventListener('input', markUnsaved);
+// 입력 후 1초간 추가 입력이 없으면 undo 스냅샷 — 타이핑도 Ctrl+Z로 되돌릴 수 있게
+let _undoPushTimer = null;
+function debouncedUndoPush() {
+  if (!_initComplete) return;
+  clearTimeout(_undoPushTimer);
+  _undoPushTimer = setTimeout(immediateUndoPush, 1000);
+}
+document.getElementById('sheetBody').addEventListener('input', () => {
+  markUnsaved();
+  debouncedUndoPush();
+});
 
 // ─── 엑셀 스타일 셀 선택 ────────────────────────────────────────────────────
 function clearSelection() {
@@ -1273,6 +1283,39 @@ document.addEventListener('keydown', e => {
     return;
   }
 
+  // Ctrl+Z → 전역 Undo (편집 모드 여부 무관)
+  // 스택이 있으면 구조적 undo, 없으면 브라우저 기본 undo에 위임
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+    if (_undoStack.length > 0) { undoAction(); e.preventDefault(); }
+    return;
+  }
+  // Ctrl+Y / Ctrl+Shift+Z → 전역 Redo (편집 모드 여부 무관)
+  if (((e.ctrlKey || e.metaKey) && e.key === 'y') ||
+      ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
+    if (_redoStack.length > 0) { redoAction(); e.preventDefault(); }
+    return;
+  }
+
+  // Ctrl+V (편집 모드 포함) → hiddenPaste로 리다이렉트
+  // 편집 모드에서 브라우저가 text/html을 삽입하면 엉뚱한 내용이 들어가는 문제 방지
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+    let targetTd = null;
+    if (inEdit) {
+      // 편집 중인 셀의 td
+      targetTd = document.activeElement?.closest('td');
+    } else if (selectedCells.size > 0) {
+      targetTd = [...selectedCells][0];
+    }
+    if (targetTd && targetTd.closest('#sheetBody')) {
+      _pasteTargetTd = targetTd;
+      const hp = document.getElementById('hiddenPaste');
+      hp.innerHTML = '';
+      hp.focus();
+      // preventDefault 안 함 — hp로 포커스 이동 후 브라우저가 paste 이벤트 발생
+      return;
+    }
+  }
+
   if (!inEdit) {
     // Ctrl+C → 선택 셀 내용 복사 (편집모드 아닐 때)
     if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCells.size > 0) {
@@ -1283,16 +1326,6 @@ document.addEventListener('keydown', e => {
       });
       copyToClipboard(texts.filter(Boolean).join('\n'));
       e.preventDefault(); return;
-    }
-
-    // Ctrl+Z → 전역 Undo
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
-      undoAction(); e.preventDefault(); return;
-    }
-    // Ctrl+Y / Ctrl+Shift+Z → 전역 Redo
-    if (((e.ctrlKey || e.metaKey) && e.key === 'y') ||
-        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
-      redoAction(); e.preventDefault(); return;
     }
 
     // Delete / Backspace → 선택한 셀 내용 전체 삭제
@@ -1313,15 +1346,6 @@ document.addEventListener('keydown', e => {
       const div = td.querySelector('[contenteditable]');
       if (div) { div.focus(); const r = document.createRange(); r.selectNodeContents(div); r.collapse(false); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
       e.preventDefault();
-      return;
-    }
-    // Ctrl+V / Ctrl+Shift+V / Cmd+V → 선택셀에 붙여넣기
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && selectedCells.size > 0) {
-      _pasteTargetTd = [...selectedCells][0];
-      const hp = document.getElementById('hiddenPaste');
-      hp.innerHTML = '';
-      hp.focus();
-      // Don't preventDefault — let browser fire paste event on hiddenPaste
       return;
     }
 
