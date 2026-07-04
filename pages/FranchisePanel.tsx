@@ -739,7 +739,8 @@ const SubscriptionTab: React.FC<{ user: UserProfile }> = ({ user }) => {
     if (!selectedPlan) { alert('플랜을 선택해주세요.'); return; }
     const plan = activePlans.find(p => p.id === selectedPlan);
     if (plan?.paymentUrl) {
-      window.open(plan.paymentUrl, '_blank', 'noopener,noreferrer');
+      const sep = plan.paymentUrl.includes('?') ? '&' : '?';
+      window.open(plan.paymentUrl + sep + 'autoTrigger=1', '_blank', 'noopener,noreferrer');
     } else {
       alert(`결제 신청 안내\n\n카카오톡 채널 @bestsns 으로 문의해 주세요.\n아이디(${user.nickname})와 선택 플랜(${plan?.name ?? ''})을 함께 알려주세요.`);
     }
