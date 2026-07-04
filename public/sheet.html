@@ -106,7 +106,7 @@
 
   tr.section-header td {
     background: #ff0000; color: #fff; font-weight: bold;
-    font-size: 11px; padding: 3px 5px; vertical-align: middle;
+    font-size: 14px; padding: 3px 5px; vertical-align: middle;
   }
   tr.sep td { height: 6px; background: #f5deb3; border-color: #ccc; }
 
@@ -128,7 +128,7 @@
 
   [contenteditable="true"] {
     outline: none; min-height: 18px; width: 100%; display: block;
-    padding: 3px 4px; font-size: 11px; line-height: 1.5;
+    padding: 3px 4px; font-size: 14px; line-height: 1.5;
     white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
     overflow: visible; height: auto;
   }
@@ -1150,7 +1150,6 @@ const sheetBodyEl = document.getElementById('sheetBody');
 
 // 더블클릭 → 편집모드 진입 (빈 셀 포함 모든 셀)
 sheetBodyEl.addEventListener('dblclick', e => {
-  if (e.target.closest('tr.section-header')) return;
   if (e.target.closest('button')) return;
   // 클릭 대상이 contenteditable이면 바로, 아니면 td 내부에서 찾기
   const div = e.target.closest('[contenteditable]')
@@ -1187,7 +1186,12 @@ sheetBodyEl.addEventListener('mousedown', e => {
   if (isUnselectableTd(td)) return; // lbl, rlbl, 분류 셀 제외
 
   // 더블클릭은 편집모드: 선택 간섭 안 함
-  if (e.detail >= 2) { _dragStartTd = null; _isDragging = false; return; }
+  if (e.detail >= 2) {
+    _dragStartTd = null; _isDragging = false;
+    const editDiv = td.querySelector('[contenteditable]');
+    if (editDiv) { e.preventDefault(); editDiv.focus(); }
+    return;
+  }
 
   // 현재 편집 중이면 blur 후 선택 전환
   if (document.activeElement?.isContentEditable) {
