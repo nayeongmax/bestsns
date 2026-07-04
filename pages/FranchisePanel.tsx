@@ -291,7 +291,10 @@ const CollectorTab: React.FC = () => {
 
   const applyKeywords = (text: string) => {
     let result = text ?? '';
-    keywords.forEach(kw => { if (kw.from.trim()) result = result.split(kw.from).join(kw.to); });
+    keywords.forEach(kw => {
+      const from = kw.from.trim();
+      if (from) result = result.split(from).join(kw.to);
+    });
     return result;
   };
 
@@ -613,14 +616,15 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
               ) : (
                 <p className="text-[10px] text-orange-500 font-bold mb-1.5">⚠ 치환키워드 탭에서 API 키 입력 필요</p>
               )}
-              <label className={`flex items-center gap-1.5 text-xs mb-1 ${hasAiKey ? 'text-gray-600 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}>
-                <input type="checkbox" checked={aiRewrite} onChange={e => setAiRewrite(e.target.checked)} disabled={!hasAiKey} />
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 mb-1 cursor-pointer">
+                <input type="checkbox" checked={aiRewrite} onChange={e => setAiRewrite(e.target.checked)} />
                 AI 리라이팅 적용 (제목+내용)
               </label>
-              <label className={`flex items-center gap-1.5 text-xs mb-1 ${hasAiKey ? 'text-gray-600 cursor-pointer' : 'text-gray-300 cursor-not-allowed'}`}>
-                <input type="checkbox" checked={aiFillComment} onChange={e => setAiFillComment(e.target.checked)} disabled={!hasAiKey} />
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 mb-1 cursor-pointer">
+                <input type="checkbox" checked={aiFillComment} onChange={e => setAiFillComment(e.target.checked)} />
                 댓글 부족 시 AI 댓글로 채우기
               </label>
+              <p className="text-[10px] text-gray-400">※ AI 기능은 API 키 입력 후 저장 시 적용</p>
             </div>
 
             {/* 네이버 로그인 (비공개 카페) */}
