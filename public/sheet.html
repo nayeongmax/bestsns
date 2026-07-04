@@ -950,7 +950,7 @@ function gatherSections() {
     const titleRows = [...document.querySelectorAll(`tr.title-row[data-sec-id="${sec.id}"]`)];
     titleRows.forEach(trow => {
       const ds = [...trow.querySelectorAll('[contenteditable]')];
-      const crow = trow.nextSibling;
+      const crow = trow.nextElementSibling;
       const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
       const gs = d => d?.getAttribute('style')||'';
       const gva = d => d?.closest('td')?.dataset.va||'';
@@ -1756,9 +1756,14 @@ async function init() {
   _initComplete = true;
 }
 
-// 창 닫기 전 미저장 변경사항 경고
+// 창 닫기 전: 대기 중인 로컬 저장 타이머를 즉시 플러시 후 경고
+// (마지막 타이핑 후 1초 이내에 창을 닫으면 타이머가 취소되므로 여기서 동기 저장)
 window.addEventListener('beforeunload', e => {
   if (_hasUnsaved) {
+    clearTimeout(_localSaveTimer);
+    collectCurrentTab();
+    const localKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
+    localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
     e.preventDefault();
     e.returnValue = '';
   }
