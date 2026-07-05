@@ -108,7 +108,7 @@ exports.handler = async (event) => {
 
     const [main, probe] = await Promise.all([
       safeRelayFetch(mainParams, 20000),
-      safeRelayFetch(probeParams, 8000),
+      safeRelayFetch(probeParams, 15000),
     ]);
 
     mainData = main;
@@ -131,6 +131,17 @@ exports.handler = async (event) => {
         probeMsg:    probe?.message,
         articles:    probe?.articles?.length ?? -1,
       };
+      // 프로브 실패 시 메인 배치에서 가장 높은 articleId를 fallback으로 사용
+      // (relayPage 1이 아닌 현재 페이지 기준이므로 보정은 프론트에서 처리)
+      if (newestId === 0 && main?.articles?.length > 0) {
+        const fallbackId = extractMaxId(main.articles);
+        if (fallbackId > 0) {
+          newestId = fallbackId;
+          probeDebug._fallback = true;
+          probeDebug._fallbackId = fallbackId;
+          probeDebug._relayPage = relayPage;
+        }
+      }
     }
   } else {
     // 이후 요청: 수집만 (더 많은 시간 할당)
