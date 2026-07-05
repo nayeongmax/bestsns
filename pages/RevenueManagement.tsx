@@ -471,9 +471,9 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
   );
 
   const renderDataList = () => (
-    <div className="space-y-4 sm:space-y-10 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
-      <div className="bg-white rounded-xl sm:rounded-3xl md:rounded-[60px] p-3 sm:p-6 md:p-10 lg:p-16 shadow-sm border border-gray-100">
-         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-16 px-1 sm:px-4">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+      <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-5 md:p-6 shadow-sm border border-gray-100">
+         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 px-1">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-10 min-w-0">
               <h3 className="text-lg sm:text-2xl md:text-4xl font-black text-gray-900 italic tracking-tighter uppercase underline decoration-blue-500 underline-offset-6 sm:underline-offset-12 truncate">작업 현황 관리</h3>
               <div className="flex items-center gap-2 sm:gap-6 bg-gray-50 px-3 sm:px-8 py-2 sm:py-3 rounded-xl sm:rounded-3xl shadow-inner w-fit">
@@ -486,37 +486,37 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
          </div>
 
          {/* 이달 요약 카드 3개 */}
-         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-12">
-           <div className="bg-blue-50 rounded-2xl sm:rounded-[32px] p-4 sm:p-8 border border-blue-100 flex flex-col gap-1 sm:gap-2">
-             <span className="text-[9px] sm:text-[10px] font-black text-blue-400 uppercase tracking-widest">이달 건수</span>
-             <span className="text-2xl sm:text-4xl font-black text-blue-700 italic">{currentMonthProjects.length}<span className="text-base sm:text-xl ml-1">건</span></span>
+         <div className="grid grid-cols-3 gap-3 mb-4 sm:mb-5">
+           <div className="bg-blue-50 rounded-xl p-3 sm:p-4 border border-blue-100 flex flex-col gap-1">
+             <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">이달 건수</span>
+             <span className="text-xl sm:text-2xl font-black text-blue-700 italic">{currentMonthProjects.length}<span className="text-base ml-1">건</span></span>
            </div>
-           <div className="bg-gray-900 rounded-2xl sm:rounded-[32px] p-4 sm:p-8 flex flex-col gap-1 sm:gap-2">
-             <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">총합 결제금</span>
-             <span className="text-lg sm:text-2xl font-black text-white italic">₩{totalIncome.toLocaleString()}</span>
-             <span className="text-[9px] sm:text-[11px] font-bold text-green-400">실제정산금 ₩{totalProfit.toLocaleString()}</span>
+           <div className="bg-gray-900 rounded-xl p-3 sm:p-4 flex flex-col gap-1">
+             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">총합 결제금</span>
+             <span className="text-sm sm:text-lg font-black text-white italic">₩{totalIncome.toLocaleString()}</span>
+             <span className="text-[9px] font-bold text-green-400">정산 ₩{totalProfit.toLocaleString()}</span>
            </div>
-           <div className={`rounded-2xl sm:rounded-[32px] p-4 sm:p-8 border flex flex-col gap-1 sm:gap-2 ${totalIncome >= prevMonthIncome ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
-             <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">저번달 대비</span>
-             <span className={`text-xl sm:text-3xl font-black italic break-all ${totalIncome >= prevMonthIncome ? 'text-green-600' : 'text-red-500'}`}>
+           <div className={`rounded-xl p-3 sm:p-4 border flex flex-col gap-1 ${totalIncome >= prevMonthIncome ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
+             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">저번달 대비</span>
+             <span className={`text-lg sm:text-2xl font-black italic ${totalIncome >= prevMonthIncome ? 'text-green-600' : 'text-red-500'}`}>
                {totalIncome >= prevMonthIncome ? '+' : ''}₩{(totalIncome - prevMonthIncome).toLocaleString()}
              </span>
-             <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold">전월 ₩{prevMonthIncome.toLocaleString()}</span>
+             <span className="text-[9px] text-gray-400 font-bold">전월 ₩{prevMonthIncome.toLocaleString()}</span>
            </div>
          </div>
 
          <div className="overflow-x-auto rounded-lg sm:rounded-2xl md:rounded-[48px] border border-gray-50 shadow-sm -mx-1 sm:mx-0" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
            <table className="w-full text-left min-w-[640px]">
-              <thead className="bg-gray-50/50 text-[9px] sm:text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
+              <thead className="bg-gray-50/50 text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">
                 <tr>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 whitespace-nowrap">차수</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 whitespace-nowrap">작업 종류</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 whitespace-nowrap">업체명</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">운영사</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">마감일</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right whitespace-nowrap">결제금 / 정산금</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">링크</th>
-                  <th className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">관리</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">차수</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">작업 종류</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">업체명</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-center whitespace-nowrap">운영사</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-center whitespace-nowrap">마감일</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-right whitespace-nowrap">결제금 / 정산금</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-center whitespace-nowrap">링크</th>
+                  <th className="px-2 sm:px-3 py-2 sm:py-3 text-center whitespace-nowrap">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -524,29 +524,27 @@ const RevenueManagement: React.FC<Props> = ({ user }) => {
                   const com = companies.find(c => c.id === p.operatingCompanyId);
                   return (
                     <tr key={p.id} className="hover:bg-blue-50/30 transition-all group">
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 whitespace-nowrap"><span className="bg-gray-900 text-white px-2 py-1 sm:px-4 sm:py-1.5 rounded-full font-black text-[10px] sm:text-[11px] italic">{p.round}차</span></td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-[10px] sm:text-[11px] font-black text-orange-500 uppercase italic whitespace-nowrap">{p.type}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 font-black text-gray-900 text-sm sm:text-[16px] italic whitespace-nowrap">{p.clientName}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-bold text-gray-400 text-[10px] sm:text-xs italic whitespace-nowrap">{com?.name || '-'}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center font-black text-red-400 text-[11px] sm:text-[13px] italic whitespace-nowrap">{p.endDate}</td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-right whitespace-nowrap">
-                        <p className="font-black text-gray-900 text-sm sm:text-lg italic">₩{p.paymentAmount.toLocaleString()}</p>
-                        <p className="font-bold text-green-600 text-[10px] sm:text-xs italic mt-0.5">정산 ₩{p.settlementAmount.toLocaleString()}</p>
+                      <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap"><span className="bg-gray-900 text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded-full font-black text-[10px] sm:text-[11px] italic">{p.round}차</span></td>
+                      <td className="px-2 sm:px-3 py-2 sm:py-3 text-[10px] sm:text-[11px] font-black text-orange-500 uppercase italic whitespace-nowrap">{p.type}</td>
+                      <td className="px-2 sm:px-3 py-2 sm:py-3 font-black text-gray-900 text-sm sm:text-[15px] italic whitespace-nowrap">{p.clientName}</td>
+                      <td className="px-2 sm:px-3 py-2 sm:py-3 text-center font-bold text-gray-400 text-[10px] sm:text-xs italic whitespace-nowrap">{com?.name || '-'}</td>
+                      <td className="px-2 sm:px-3 py-2 sm:py-3 text-center font-black text-red-400 text-[11px] sm:text-[12px] italic whitespace-nowrap">{p.endDate}</td>
+                      <td className="px-2 sm:px-3 py-2 sm:py-3 text-right whitespace-nowrap">
+                        <p className="font-black text-gray-900 text-sm sm:text-base italic">₩{p.paymentAmount.toLocaleString()}</p>
+                        <p className="font-bold text-green-600 text-[10px] sm:text-xs italic">정산 ₩{p.settlementAmount.toLocaleString()}</p>
                       </td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">
+                      <td className="px-2 sm:px-3 py-2 sm:py-3 text-center whitespace-nowrap">
                         {p.workLink?.trim() ? (
-                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] sm:text-xs hover:underline">
-                            링크
-                          </a>
+                          <a href={p.workLink.trim()} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold text-[10px] sm:text-xs hover:underline">링크</a>
                         ) : (
                           <span className="text-gray-300 text-[10px] sm:text-xs">-</span>
                         )}
                       </td>
-                      <td className="px-2 sm:px-6 md:px-10 py-3 sm:py-6 md:py-8 text-center whitespace-nowrap">
-                         <div className="flex justify-center gap-2 sm:gap-4">
-                            <button onClick={() => handleExtendProject(p)} className="text-[9px] sm:text-[11px] font-black text-green-500 hover:text-green-700 italic uppercase">재연장</button>
-                            <button onClick={() => startEditProject(p)} className="text-[9px] sm:text-[11px] font-black text-blue-400 hover:text-blue-600 italic uppercase">수정</button>
-                            <button onClick={() => setDeleteConfirmProjectId(p.id)} className="text-[9px] sm:text-[11px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>
+                      <td className="px-2 sm:px-3 py-2 sm:py-3 text-center whitespace-nowrap">
+                         <div className="flex justify-center gap-1 sm:gap-3">
+                            <button onClick={() => handleExtendProject(p)} className="text-[9px] sm:text-[10px] font-black text-green-500 hover:text-green-700 italic uppercase">재연장</button>
+                            <button onClick={() => startEditProject(p)} className="text-[9px] sm:text-[10px] font-black text-blue-400 hover:text-blue-600 italic uppercase">수정</button>
+                            <button onClick={() => setDeleteConfirmProjectId(p.id)} className="text-[9px] sm:text-[10px] font-black text-red-200 hover:text-red-500 italic uppercase">삭제</button>
                          </div>
                       </td>
                     </tr>
