@@ -42,7 +42,18 @@ interface CafeArticle {
   commentCount: number;
   readCount: number;
   url: string;
+  content?: string;
   comments: { content: string; writer: string; date: string }[];
+}
+
+interface ProcessedRow {
+  title: string;
+  rewrittenTitle: string;
+  body: string;
+  rewrittenBody: string;
+  comments: string[];
+  date: string;
+  url: string;
 }
 
 interface CrawlHistoryEntry {
@@ -123,6 +134,14 @@ const CollectorTab: React.FC = () => {
   });
   const [rewriteLoading,  setRewriteLoading]  = useState(false);
   const [rewriteResult,   setRewriteResult]   = useState('');
+  const [aiExporting,     setAiExporting]     = useState(false);
+  const [aiExportStatus,  setAiExportStatus]  = useState('');
+
+  // keywords를 항상 최신값으로 유지하는 ref (stale closure 완전 방지)
+  const keywordsRef = useRef<ReplaceKw[]>(keywords);
+  keywordsRef.current = keywords;
+
+  const hasAiKey = openaiKey.trim().length > 0;
 
   /* ── 수집 이력 ── */
   const [history, setHistory] = useState<CrawlHistoryEntry[]>(() => {
@@ -169,26 +188,37 @@ const CollectorTab: React.FC = () => {
     let remaining = resume ? Math.max(0, total - articles.length) : total;
 
     const fetchBatch = async (page: number, batchSize: number) => {
-      const res = await fetch('/.netlify/functions/scrape-naver-cafe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cafeId: resolvedCafeId,
-          menuId: menuId.trim(),
-          startPage: page,
-          startDate: startDate.trim() || undefined,
-          endDate: endDate.trim() || todayStr(),
-          maxArticles: batchSize,
-          maxComments: parseInt(maxComments) || 0,
-          fetchComments: parseInt(maxComments) > 0,
-          naverCookie: naverCookie.trim() || undefined,
-        }),
-      });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 24000); // 24초: Netlify 26초 제한 전 선제 중단
+      let res: Response;
+      try {
+        res = await fetch('/.netlify/functions/scrape-naver-cafe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cafeId: resolvedCafeId,
+            menuId: menuId.trim(),
+            startPage: page,
+            startDate: startDate.trim() || undefined,
+            endDate: endDate.trim() || todayStr(),
+            maxArticles: batchSize,
+            maxComments: parseInt(maxComments) || 0,
+            fetchComments: parseInt(maxComments) > 0,
+            naverCookie: naverCookie.trim() || undefined,
+          }),
+          signal: ctrl.signal,
+        });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : '';
+        throw new Error(msg.includes('abort') ? '릴레이 응답 대기 중 타임아웃' : `네트워크 오류: ${msg}`);
+      } finally {
+        clearTimeout(timer);
+      }
       // HTML 에러 응답 처리 (릴레이 과부하/타임아웃 시 HTML 반환)
       const text = await res.text();
       let data: any;
       try { data = JSON.parse(text); }
-      catch { throw new Error(`서버 응답 오류 (HTTP ${res.status}) — 잠시 후 재시도`); }
+      catch { throw new Error(`서버 응답 오류 (HTTP ${res.status})`); }
       if (data.status !== 'ok') throw new Error(data.message || '수집 실패');
       return data;
     };
@@ -263,20 +293,46 @@ const CollectorTab: React.FC = () => {
     setSelected(new Set());
   };
 
-  const applyKeywords = (text: string) => {
-    let result = text;
-    keywords.forEach(kw => { if (kw.from.trim()) result = result.split(kw.from).join(kw.to); });
+  const makeApply = (kws: ReplaceKw[]) => (text: string): string => {
+    let result = (text ?? '').normalize('NFC');
+    kws.forEach(kw => {
+      const from = kw.from.trim().normalize('NFC');
+      if (!from) return;
+      try {
+        const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        result = result.replace(new RegExp(escaped, 'g'), kw.to);
+      } catch {
+        result = result.split(from).join(kw.to);
+      }
+    });
     return result;
   };
 
-  const exportCsv = (rewritten = false) => {
-    const esc = (s: string) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const applyKeywords = (text: string) => makeApply(keywordsRef.current)(text);
 
-    // 공유 문자열 수집
+  /* ── GPT API 호출 헬퍼 ── */
+  const callGpt = async (prompt: string, content: string): Promise<string> => {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey.trim()}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: `${prompt}\n\n${content}` }],
+        max_tokens: 1000,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.choices?.[0]?.message?.content?.trim() || '';
+  };
+
+  /* ── XLSX 빌더 (8컬럼: 구분|원본|리라이팅|댓글1|댓글2|댓글3|날짜|URL) ── */
+  const buildXlsx = (rows: ProcessedRow[]) => {
+    const esc = (s: string) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     const strs: string[] = [];
     const strIdx = (v: string) => { const i = strs.indexOf(v); if (i >= 0) return i; strs.push(v); return strs.length - 1; };
 
-    // 스타일 ID: 0=헤더, 1=라벨(굵게), 2=일반, 3=제목행(연노랑), 4=댓글(연초록)
+    // 스타일 ID: 0=헤더, 1=라벨(굵게), 2=일반, 3=원본제목(연노랑), 4=댓글(연초록), 5=리라이팅(연보라)
     const styleXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <fonts>
@@ -289,6 +345,7 @@ const CollectorTab: React.FC = () => {
 <fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/></fgColor></patternFill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFFFF2CC"/></fgColor></patternFill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFE2EFDA"/></fgColor></patternFill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFEDE7F6"/></fgColor></patternFill>
 </fills>
 <borders><border><left/><right/><top/><bottom/><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
@@ -298,50 +355,49 @@ const CollectorTab: React.FC = () => {
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
 <xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
 <xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="0" fillId="5" borderId="0" xfId="0"><alignment wrapText="1" vertical="top"/></xf>
 </cellXfs>
 </styleSheet>`;
 
-    // 셀 생성 헬퍼
     const cell = (val: string, styleId: number, col: number, row: number) => {
       const addr = String.fromCharCode(65 + col) + (row + 1);
       const si = strIdx(val);
       return `<c r="${addr}" t="s" s="${styleId}"><v>${si}</v></c>`;
     };
 
-    // 시트 데이터 생성
     let rowsXml = '';
-    // 헤더행 (ht=20, customHeight=1)
-    const hdr = ['구분','내용','댓글1','댓글2','댓글3','날짜','URL'];
+    const hdr = ['구분','원본','리라이팅','댓글1','댓글2','댓글3','날짜','URL'];
     rowsXml += `<row r="1" ht="20" customHeight="1">${hdr.map((h,c)=>cell(h,0,c,0)).join('')}</row>`;
 
     let rowIdx = 1;
-    articles.forEach(a => {
-      const title = rewritten ? applyKeywords(a.title) : a.title;
-      const body  = rewritten ? applyKeywords(a.content ?? '') : (a.content ?? '');
-      const cmts  = a.comments ?? [];
-      // 제목행 ht=37.5 (제목=연노랑 3, 댓글=연초록 4)
-      const titleCells = [
+    rows.forEach(r => {
+      const c = r.comments;
+      rowsXml += `<row r="${rowIdx+1}" ht="37.5" customHeight="1">${[
         cell('제목:',1,0,rowIdx),
-        cell(title,3,1,rowIdx),
-        cell(cmts[0]?.content??'',4,2,rowIdx),
-        cell(cmts[1]?.content??'',4,3,rowIdx),
-        cell(cmts[2]?.content??'',4,4,rowIdx),
-        cell(a.date,2,5,rowIdx),
-        cell(a.url,2,6,rowIdx),
-      ];
-      rowsXml += `<row r="${rowIdx+1}" ht="37.5" customHeight="1">${titleCells.join('')}</row>`;
+        cell(r.title,3,1,rowIdx),
+        cell(r.rewrittenTitle,5,2,rowIdx),
+        cell(c[0]??'',4,3,rowIdx),
+        cell(c[1]??'',4,4,rowIdx),
+        cell(c[2]??'',4,5,rowIdx),
+        cell(r.date,2,6,rowIdx),
+        cell(r.url,2,7,rowIdx),
+      ].join('')}</row>`;
       rowIdx++;
-      // 내용행 ht=135
-      rowsXml += `<row r="${rowIdx+1}" ht="135" customHeight="1">${cell('내용:',1,0,rowIdx)}${cell(body,2,1,rowIdx)}</row>`;
+      rowsXml += `<row r="${rowIdx+1}" ht="135" customHeight="1">${[
+        cell('내용:',1,0,rowIdx),
+        cell(r.body,2,1,rowIdx),
+        cell(r.rewrittenBody,5,2,rowIdx),
+      ].join('')}</row>`;
       rowIdx++;
     });
 
     const colsXml = `<cols>
 <col min="1" max="1" width="6" customWidth="1"/>
-<col min="2" max="2" width="42" customWidth="1"/>
-<col min="3" max="5" width="28" customWidth="1"/>
-<col min="6" max="6" width="12" customWidth="1"/>
-<col min="7" max="7" width="32" customWidth="1"/>
+<col min="2" max="2" width="38" customWidth="1"/>
+<col min="3" max="3" width="38" customWidth="1"/>
+<col min="4" max="6" width="22" customWidth="1"/>
+<col min="7" max="7" width="12" customWidth="1"/>
+<col min="8" max="8" width="32" customWidth="1"/>
 </cols>`;
 
     const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -391,11 +447,11 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
 
     const blob = new Blob([zipped], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const link = document.createElement('a');
-    const filename = `cafe_posts_${todayStr().replace(/\./g, '')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xlsx`;
+    const filename = `cafe_posts_${todayStr().replace(/\./g,'')}_${new Date().toTimeString().slice(0,5).replace(':','')}.xlsx`;
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
-    const entry: CrawlHistoryEntry = {
+    saveHistory([{
       id: Date.now().toString(),
       collectedAt: new Date().toLocaleString('ko-KR'),
       cafeUrl: cafeUrl.trim(),
@@ -403,8 +459,85 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
       endDate: endDate.trim() || todayStr(),
       count: articles.length,
       filename,
+    }, ...history]);
+  };
+
+  /* ── 원문 CSV 저장 (치환 키워드 적용, 리라이팅 컬럼 비움) ── */
+  const exportPlain = () => {
+    // keywordsRef.current = 현재 렌더의 keywords (stale closure 없음)
+    // localStorage = 탭 전환 후 재마운트 시에도 최신값 보장
+    let kws: ReplaceKw[] = keywordsRef.current;
+    try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
+    const apply = makeApply(kws);
+    const rows: ProcessedRow[] = articles.map(a => ({
+      title: apply(a.title),
+      rewrittenTitle: '',
+      body: apply(a.content ?? ''),
+      rewrittenBody: '',
+      comments: (a.comments ?? []).slice(0, 3).map(c => apply(c.content)),
+      date: a.date,
+      url: a.url,
+    }));
+    buildXlsx(rows);
+  };
+
+  /* ── AI 리라이팅 + 댓글 생성 + 치환 후 CSV 저장 ── */
+  const doAiExport = async () => {
+    if (!hasAiKey) { alert('치환키워드 탭에서 OpenAI API 키를 먼저 입력해주세요.'); return; }
+    setAiExporting(true);
+    setAiExportStatus(`AI 처리 준비 중... (0/${articles.length})`);
+
+    let kws: ReplaceKw[] = keywordsRef.current;
+    try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
+    const applyFresh = makeApply(kws);
+
+    let done = 0;
+    const processArticle = async (a: CafeArticle): Promise<ProcessedRow> => {
+      const origTitle = applyFresh(a.title);
+      const origBody  = applyFresh(a.content ?? '');
+      let rewrittenTitle = '';
+      let rewrittenBody  = '';
+      const existing = (a.comments ?? []).slice(0, 3).map(c => applyFresh(c.content));
+      const finalComments = [...existing];
+
+      if (aiRewrite) {
+        try { rewrittenTitle = await callGpt(rewritePrompt, `제목: ${a.title}`); } catch { rewrittenTitle = origTitle; }
+        try { rewrittenBody  = await callGpt(rewritePrompt, `내용:\n${a.content ?? ''}`); } catch { rewrittenBody  = origBody; }
+      }
+
+      if (aiFillComment && finalComments.length < 2) {
+        const needed = 2 - finalComments.length;
+        for (let j = 0; j < needed; j++) {
+          try {
+            const c = await callGpt(commentPrompt, `제목: ${a.title}\n내용: ${a.content ?? ''}`);
+            finalComments.push(c);
+          } catch { break; }
+        }
+      }
+
+      done++;
+      setAiExportStatus(`AI 처리 중... (${done}/${articles.length})`);
+      return { title: origTitle, rewrittenTitle, body: origBody, rewrittenBody, comments: finalComments, date: a.date, url: a.url };
     };
-    saveHistory([entry, ...history]);
+
+    try {
+      const results: ProcessedRow[] = new Array(articles.length);
+      let nextIdx = 0;
+      const worker = async () => {
+        while (nextIdx < articles.length) {
+          const i = nextIdx++;
+          results[i] = await processArticle(articles[i]);
+        }
+      };
+      await Promise.all(Array.from({ length: 5 }, worker));
+      buildXlsx(results);
+      setAiExportStatus('완료!');
+      setTimeout(() => setAiExportStatus(''), 2000);
+    } catch (e: unknown) {
+      alert(`AI 처리 오류: ${e instanceof Error ? e.message : '실패'}`);
+    } finally {
+      setAiExporting(false);
+    }
   };
 
   /* ── 리라이팅 테스트 ── */
@@ -499,6 +632,11 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             {/* AI 설정 */}
             <div className="mt-2 pt-2 border-t border-gray-200">
               <p className="text-xs font-black text-gray-500 mb-1.5">■ AI 설정</p>
+              {hasAiKey ? (
+                <p className="text-[10px] text-green-600 font-bold mb-1.5">✅ GPT API 연결됨</p>
+              ) : (
+                <p className="text-[10px] text-orange-500 font-bold mb-1.5">⚠ 치환키워드 탭에서 API 키 입력 필요</p>
+              )}
               <label className="flex items-center gap-1.5 text-xs text-gray-600 mb-1 cursor-pointer">
                 <input type="checkbox" checked={aiRewrite} onChange={e => setAiRewrite(e.target.checked)} />
                 AI 리라이팅 적용 (제목+내용)
@@ -507,7 +645,7 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 <input type="checkbox" checked={aiFillComment} onChange={e => setAiFillComment(e.target.checked)} />
                 댓글 부족 시 AI 댓글로 채우기
               </label>
-              <p className="text-[10px] text-gray-400">※ API 키·프롬프트는 치환키워드 탭에서</p>
+              <p className="text-[10px] text-gray-400">※ AI 기능은 API 키 입력 후 저장 시 적용</p>
             </div>
 
             {/* 네이버 로그인 (비공개 카페) */}
@@ -586,6 +724,18 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
               {status}
             </div>
 
+            {/* 치환 미리보기 */}
+            {articles.length > 0 && keywords.some(k => k.from.trim()) && (() => {
+              const preview = applyKeywords(articles[0].title);
+              const changed = preview !== articles[0].title;
+              return (
+                <div className={`mt-2 px-2 py-1.5 rounded text-[10px] font-bold leading-snug border ${changed ? 'bg-green-50 border-green-200 text-green-700' : 'bg-orange-50 border-orange-200 text-orange-600'}`}>
+                  {changed ? '✅ 치환 적용 됨:' : '⚠ 치환 미적용 (원문 단어 없음):'}
+                  <span className="block mt-0.5 font-normal break-all">{preview}</span>
+                </div>
+              );
+            })()}
+
             {/* 버튼들 */}
             <div className="mt-2 pt-2 border-t border-gray-200 space-y-1.5">
               <button type="button" onClick={() => doCollect(false)} disabled={loading}
@@ -608,13 +758,14 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 className="w-full py-2 rounded font-black text-sm text-white bg-blue-500 hover:bg-blue-600">
                 구글 시트로 열기
               </button>
-              <button type="button" onClick={() => exportCsv(false)} disabled={articles.length === 0}
+              <button type="button" onClick={exportPlain} disabled={articles.length === 0}
                 className="w-full py-2 rounded font-black text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed">
-                💾 CSV 저장 (원문만)
+                💾 CSV 저장 (원문+치환)
               </button>
-              <button type="button" onClick={() => exportCsv(true)} disabled={articles.length === 0}
+              <button type="button" onClick={doAiExport}
+                disabled={articles.length === 0 || !hasAiKey || aiExporting}
                 className="w-full py-2 rounded font-black text-sm text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed">
-                🤖 리라이팅 후 저장
+                {aiExporting ? (aiExportStatus || 'AI 처리 중...') : '🤖 AI 리라이팅 후 저장'}
               </button>
             </div>
           </div>
