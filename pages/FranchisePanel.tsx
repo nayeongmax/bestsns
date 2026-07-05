@@ -271,58 +271,120 @@ const CollectorTab: React.FC = () => {
       return data;
     };
 
+    // ── 자가 치유 수집 ──────────────────────────────────────────────
+    // 두 가지 실패 모드 자동 처리:
+    //   1) 릴레이 연결 실패 → 지수 백오프 재연결 (0→4→10→20s)
+    //   2) 페이지 불일치   → 오차 측정 후 오프셋 자동 수정 + 재요청
+    type HealResult = { data: any; offset: number | null; newest: number | null };
+
+    const selfHealingFetch = async (
+      browserPage: number,
+      initOffset: number | null,
+      initNewest: number | null,
+    ): Promise<HealResult | null> => {
+      let offset  = initOffset;
+      let newest  = initNewest;
+
+      // 페이지 보정 최대 3회
+      for (let corrIter = 0; corrIter < 3 && !stopRef.current; corrIter++) {
+        // ── 로그: 현재 시도 상태 ──
+        if (corrIter === 0) {
+          if (offset === null)
+            addLog('calib', '🔧 페이지 보정 계산 중...', '릴레이↔브라우저 오프셋 측정 (병렬 2회 요청)');
+          else
+            addLog('calib', `🔧 오프셋 ${offset} 적용`, `릴레이 ${browserPage - offset}p 요청`);
+          addLog('req', '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
+        } else {
+          addLog('calib', `🔧 [자동보정 ${corrIter}/2] 오프셋 ${offset} 재적용 → 릴레이 ${browserPage - (offset ?? 0)}p 재요청`);
+        }
+
+        // ── 연결 재시도: 지수 백오프 ──
+        const backoffs = [0, 4000, 10000, 20000];
+        let data: any = null;
+        for (let ci = 0; ci < backoffs.length && !stopRef.current; ci++) {
+          if (backoffs[ci] > 0) {
+            addLog('err', `🔄 ${backoffs[ci] / 1000}초 후 재연결 (${ci}/${backoffs.length - 1})...`);
+            setStatus(`릴레이 재연결 대기 중... (${backoffs[ci] / 1000}s)`);
+            await new Promise(r => setTimeout(r, backoffs[ci]));
+          }
+          try {
+            data = await fetchBatch(browserPage, offset);
+            break;
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+            if (ci < backoffs.length - 1)
+              addLog('err', `⚠ 연결 실패 (${ci + 1}/${backoffs.length}): ${msg}`);
+            else
+              addLog('err', `❌ 릴레이 연결 불가 (최대 재시도 초과): ${msg}`);
+          }
+        }
+        if (!data) return null;
+
+        // ── 오프셋·newestId 캐시 갱신 ──
+        const sNewest: number = data._calibDebug?.newestId ?? 0;
+        if (sNewest > 0 && newest === null) newest = sNewest;
+        if (typeof data._offset === 'number' && data._offset !== 0) {
+          if (offset === null)
+            addLog('calib', `✅ 보정 완료 — 오프셋 ${data._offset}`, `브라우저 ${browserPage}p = 릴레이 ${browserPage - data._offset}p`);
+          offset = data._offset;
+        }
+
+        // ── 페이지 검증 ──
+        if (newest && data.articles?.length > 0) {
+          const actual = computeActualPage(data.articles, newest);
+          if (actual !== null) {
+            const diff = actual - browserPage;
+            if (Math.abs(diff) <= 2) {
+              addLog('verify', `🔍 검증 통과 — 요청 ${browserPage}p = 실제 ${actual}p`, `newestId ${newest}`);
+              return { data, offset, newest };
+            }
+            // 불일치: 오프셋 수정 후 재시도
+            const fixed = (offset ?? 0) + diff;
+            addLog('verify_fail',
+              `⚠ 불일치 — 요청 ${browserPage}p ≠ 실제 ${actual}p (${diff > 0 ? '+' : ''}${diff}p)`,
+              `오프셋 ${offset ?? 0} → ${fixed} 자동 수정, 즉시 재요청`
+            );
+            offset = fixed;
+            continue; // 수정된 오프셋으로 재시도, 이 배치 데이터 폐기
+          }
+        }
+
+        // newestId 없어 검증 불가 → 그대로 반환
+        return { data, offset, newest };
+      }
+
+      addLog('err', '⚠ 자동 보정 한도(3회) 초과 — 수집 중단');
+      return null;
+    };
+    // ─────────────────────────────────────────────────────────────────
+
     try {
       while (remaining > 0 && !stopRef.current) {
         setStatus(`수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`);
         addLog('page', `📄 페이지 ${currentPage} 수집 시작`, `목표 ${total}개 중 ${accumulated.length}개 완료`);
 
-        if (currentOffset === null) {
-          addLog('calib', '🔧 페이지 보정 계산 중...', '릴레이↔브라우저 오프셋 측정 (병렬 2회 호출)');
-        } else {
-          addLog('calib', `🔧 오프셋 ${currentOffset} 적용`, `릴레이 ${currentPage - currentOffset}페이지 요청`);
-        }
-        addLog('req', '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
+        const result = await selfHealingFetch(currentPage, currentOffset, newestArticleId);
 
-        let data: any = null;
-        let lastErr = '';
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            data = await fetchBatch(currentPage, currentOffset);
-            break;
-          } catch (e: unknown) {
-            lastErr = e instanceof Error ? e.message : '알 수 없는 오류';
-            if (attempt < 2) {
-              const delay = lastErr.includes('타임아웃') ? 5000 : 3000;
-              setStatus(`재시도 중... (${attempt + 1}/2회, 페이지 ${currentPage})`);
-              addLog('err', `⚠ 재시도 ${attempt + 1}/2 — ${lastErr}`);
-              await new Promise(r => setTimeout(r, delay));
-            }
-          }
-        }
-        if (!data) {
-          addLog('err', `❌ 수집 실패: ${lastErr}`);
-          setStatus(`수집 중단 — ${accumulated.length}개 수집됨 (오류: ${lastErr})`);
+        if (!result) {
+          setStatus(`수집 중단 — ${accumulated.length}개 수집됨`);
           setLoading(false);
           return;
         }
 
-        // offset=0 은 보정 실패일 수 있으므로 캐시하지 않음 (다음 배치에서 재계산)
-        if (typeof data._offset === 'number' && data._offset !== 0 && currentOffset === null) {
-          currentOffset = data._offset;
-          setRelayOffset(data._offset);
-          addLog('calib', `✅ 보정 완료 — 오프셋 ${data._offset}`, `브라우저 ${currentPage} = 릴레이 ${currentPage - data._offset}페이지`);
-        }
+        const { data, offset: newOffset, newest: newNewest } = result;
 
-        // newestId 캐싱 (검증용)
-        const serverNewestId: number = data._calibDebug?.newestId ?? 0;
-        let cachedNewest = newestArticleId;
-        if (serverNewestId > 0 && cachedNewest === null) {
-          setNewestArticleId(serverNewestId);
-          cachedNewest = serverNewestId;
+        // 오프셋 상태 반영
+        if (newOffset !== null && newOffset !== currentOffset && newOffset !== 0) {
+          currentOffset = newOffset;
+          setRelayOffset(newOffset);
+        }
+        // newestId 상태 반영
+        if (newNewest !== null && newestArticleId === null) {
+          setNewestArticleId(newNewest);
         }
 
         const rawList: CafeArticle[] = data.articles || [];
-        const take = Math.min(rawList.length, remaining);
+        const take    = Math.min(rawList.length, remaining);
         const newList = rawList.slice(0, take);
 
         // 수집된 글 목록 로그
@@ -330,25 +392,11 @@ const CollectorTab: React.FC = () => {
           const snippet = (a.content || '').replace(/<[^>]*>/g, '').trim().slice(0, 80);
           addLog('article',
             `[${accumulated.length + i + 1}] ${a.title}`,
-            snippet ? `${a.writer} · ${a.date}\n${snippet}${(a.content || '').length > 80 ? '…' : ''}` : `${a.writer} · ${a.date}`
+            snippet
+              ? `${a.writer} · ${a.date}\n${snippet}${snippet.length >= 80 ? '…' : ''}`
+              : `${a.writer} · ${a.date}`,
           );
         });
-
-        // ── 페이지 검증 ──
-        if (cachedNewest && newList.length > 0) {
-          const actualPage = computeActualPage(newList, cachedNewest);
-          if (actualPage !== null) {
-            const diff = Math.abs(actualPage - currentPage);
-            if (diff <= 2) {
-              addLog('verify', `🔍 검증 통과 — 요청 ${currentPage}p = 실제 ${actualPage}p`, `오차 ${diff}페이지 이내 (newestId ${cachedNewest})`);
-            } else {
-              addLog('verify_fail',
-                `⚠ 검증 불일치 — 요청 ${currentPage}p ≠ 실제 ${actualPage}p`,
-                `차이 ${diff}페이지. 오프셋 재보정 필요 (현재 오프셋: ${currentOffset ?? '미보정'})`
-              );
-            }
-          }
-        }
 
         accumulated = [...accumulated, ...newList.map((a, i) => ({ ...a, no: accumulated.length + i + 1 }))];
         saveArticles(accumulated);
