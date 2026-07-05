@@ -190,14 +190,13 @@ const CollectorTab: React.FC = () => {
       const timer = setTimeout(() => ctrl.abort(), 52000);
       let res: Response;
       try {
-        res = await fetch('/.netlify/functions/scrape-naver-cafe', {
+        res = await fetch('/.netlify/functions/naver-cafe-direct', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             cafeId: resolvedCafeId,
             menuId: menuId.trim(),
             startPage: page,
-            startDate: '2000.01.01',
             maxArticles: BATCH_SIZE,
             maxComments: parseInt(maxComments) || 0,
             fetchComments: parseInt(maxComments) > 0,
@@ -207,7 +206,7 @@ const CollectorTab: React.FC = () => {
         });
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : '';
-        throw new Error(msg.includes('abort') ? '릴레이 응답 대기 중 타임아웃' : `네트워크 오류: ${msg}`);
+        throw new Error(msg.includes('abort') ? '수집 서버 응답 대기 중 타임아웃' : `네트워크 오류: ${msg}`);
       } finally {
         clearTimeout(timer);
       }
