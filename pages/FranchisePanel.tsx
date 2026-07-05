@@ -603,6 +603,9 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카테고리 ID (전체글이면 비워두세요):</label>
               <input className={inputCls} value={menuId} onChange={e => setMenuId(e.target.value)} placeholder="121" autoComplete="off" />
+              {menuId.trim() === '0' && (
+                <p className="text-[10px] text-orange-500 font-bold mt-0.5">⚠ 0은 오류 유발 — 전체글 수집 시 비워두세요</p>
+              )}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">시작 페이지 번호:</label>
