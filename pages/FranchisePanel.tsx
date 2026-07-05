@@ -342,6 +342,16 @@ const CollectorTab: React.FC = () => {
               `🔬 프로브 구조 — fields: ${pd.fields}`,
               `articleId=${pd.articleId}, id=${pd.id}, articleNo=${pd.articleNo}, newestId=${pd.newestId}, url=${pd.url}`
             );
+          } else if (pd._fallback) {
+            // 프로브 실패 → 현재 배치 최고 ID를 fallback으로 사용
+            // fallback newestId는 현재 릴레이 페이지 기준이므로 실제 newest 추산
+            const relayPg: number = data._relayPage ?? 1;
+            const fallbackNewest = pd._fallbackId + (relayPg - 1) * 15;
+            addLog('calib',
+              `⚠ 프로브 타임아웃 — fallback newestId 추산`,
+              `현재배치 최고ID: ${pd._fallbackId}, 릴레이 ${relayPg}p 기준 추산: ~${fallbackNewest}`
+            );
+            if (newest === null && fallbackNewest > 0) newest = fallbackNewest;
           } else {
             addLog('err',
               `🔬 프로브 실패 — status: ${pd.probeStatus}`,
