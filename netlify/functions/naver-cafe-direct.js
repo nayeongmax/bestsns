@@ -80,14 +80,17 @@ exports.handler = async (event) => {
   const offset      = hasOffset ? _offset : 0;
   const relayPage   = Math.max(1, browserPage - offset);
 
+  const userMaxComments = parseInt(maxComments) || 0;
   const mainParams = {
     cafeId,
     menuId: relayMenuId,
     startPage: relayPage,
     startDate: '2000.01.01',
-    maxArticles: Math.min(15, parseInt(maxArticles) || 15),
-    maxComments: parseInt(maxComments) || 0,
-    fetchComments: fetchComments && parseInt(maxComments) > 0,
+    // 10개로 제한: 글 상세 API 호출(본문+댓글)이 추가되어 타임아웃 방지
+    maxArticles: Math.min(10, parseInt(maxArticles) || 10),
+    // maxComments 최소 1: 릴레이가 댓글 수집 시 글 상세 API를 호출 → 본문도 획득
+    maxComments: Math.max(1, userMaxComments),
+    fetchComments: true,
     naverCookie: cookie,
   };
 
