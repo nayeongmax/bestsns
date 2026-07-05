@@ -320,12 +320,12 @@ const CollectorTab: React.FC = () => {
         }
         if (!data) return null;
 
-        // ── 오프셋·newestId 캐시 갱신 ──
-        const sNewest: number = data._calibDebug?.newestId ?? 0;
+        // ── newestId 캐시 갱신 (서버가 probe와 함께 반환) ──
+        const sNewest: number = data._newestId ?? 0;
         if (sNewest > 0 && newest === null) newest = sNewest;
-        if (typeof data._offset === 'number' && data._offset !== 0) {
-          if (offset === null)
-            addLog('calib', `✅ 보정 완료 — 오프셋 ${data._offset}`, `브라우저 ${browserPage}p = 릴레이 ${browserPage - data._offset}p`);
+
+        // 서버 오프셋 반영 (레거시 호환)
+        if (typeof data._offset === 'number' && data._offset !== 0 && offset === null) {
           offset = data._offset;
         }
 
@@ -378,10 +378,11 @@ const CollectorTab: React.FC = () => {
           currentOffset = newOffset;
           setRelayOffset(newOffset);
         }
-        // newestId 상태 반영
+        // newestId 상태 반영 (검증용, 최초 1회만 캐싱)
         if (newNewest !== null && newestArticleId === null) {
           setNewestArticleId(newNewest);
         }
+        const latestNewest = newNewest ?? newestArticleId;
 
         const rawList: CafeArticle[] = data.articles || [];
         const take    = Math.min(rawList.length, remaining);
