@@ -204,6 +204,11 @@ const CollectorTab: React.FC = () => {
             cafeId: resolvedCafeId,
             menuId: menuId.trim(),
             startPage: page,
+            // 릴레이에는 아주 오래된 날짜를 넘겨서 개별 글 내용을 반드시 수집하게 함
+            // (날짜 파라미터가 없으면 릴레이가 목록만 스크랩하고 본문을 건너뜀)
+            // 실제 날짜 필터링은 클라이언트에서 처리
+            startDate: '2000.01.01',
+            endDate: todayStr(),
             maxArticles: BATCH_SIZE,
             maxComments: parseInt(maxComments) || 0,
             fetchComments: parseInt(maxComments) > 0,
