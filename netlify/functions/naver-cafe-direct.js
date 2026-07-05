@@ -1,14 +1,10 @@
-// 릴레이(Mobile API)와 브라우저(f-e API)의 페이지 번호 차이를 자동 보정합니다.
+// 릴레이(Mobile API)와 브라우저(f-e API)의 페이지 번호 보정
 //
-// 보정 원리:
-//   1) 릴레이 page 1, maxArticles:1, startDate 포함 → 최신 게시글 ID(newestId) 획득
-//   2) 릴레이 page N, maxArticles:1, startDate 포함 → 해당 페이지 게시글 ID(topId) 획득
-//   3) 브라우저 페이지 = floor((newestId - topId) / 15) + 1
-//   4) offset = 브라우저페이지 - 릴레이페이지N
-//   5) 사용자가 입력한 브라우저페이지 P → 릴레이에는 (P - offset) 전송
-//
-// maxArticles:1 + 병렬 호출로 보정에 ~5s만 사용, 총 23s 이내.
-// offset은 응답에 포함해 프론트에서 캐싱, 이후 배치는 재계산 없이 재사용.
+// 보정 전략:
+//   - 별도 calibration 호출 없음 (Netlify 26s 제한 초과 방지)
+//   - 첫 요청(_offset 없음): page 1 프로브를 수집과 병렬 실행 → newestId 획득
+//   - 이후 요청(_offset 제공): 수집만 실행 (프로브 없음)
+//   - 프론트엔드가 newestId + 수집 articleId로 실제 페이지를 역산해 오프셋 보정
 
 const RELAY_URL = process.env.RELAY_URL || 'http://223.130.163.229:3333';
 
@@ -19,7 +15,15 @@ const RESP_HEADERS = {
   'Content-Type': 'application/json; charset=UTF-8',
 };
 
-async function relayCall(params, timeoutMs) {
+function extractMaxId(articles) {
+  if (!Array.isArray(articles) || !articles.length) return 0;
+  const ids = articles
+    .map(a => parseInt(a.articleId ?? a.id ?? a.articleNo ?? a.article_id ?? 0) || 0)
+    .filter(n => n > 0);
+  return ids.length ? Math.max(...ids) : 0;
+}
+
+async function safeRelayFetch(params, timeoutMs) {
   try {
     const res = await fetch(`${RELAY_URL}/scrape-naver-cafe`, {
       method: 'POST',
@@ -27,48 +31,12 @@ async function relayCall(params, timeoutMs) {
       body: JSON.stringify(params),
       signal: AbortSignal.timeout(timeoutMs),
     });
-    return await res.json();
-  } catch {
-    return null;
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch { return { status: 'error', message: `릴레이 비JSON 응답 (${res.status}): ${text.slice(0, 120)}` }; }
+  } catch (e) {
+    return { status: 'error', message: `릴레이 연결 실패: ${e.message}` };
   }
-}
-
-function extractId(articles) {
-  if (!articles?.length) return 0;
-  const ids = articles
-    .map(a => parseInt(a.articleId ?? a.id ?? a.articleNo ?? a.article_id ?? 0) || 0)
-    .filter(n => n > 0);
-  return ids.length ? Math.max(...ids) : 0;
-}
-
-// startDate 포함 + maxArticles:1 → articleId 확실히 반환됨
-async function computeOffset(cafeId, relayMenuId, refRelayPage, cookie) {
-  const base = {
-    cafeId,
-    menuId: relayMenuId,
-    maxArticles: 1,
-    maxComments: 0,
-    fetchComments: false,
-    naverCookie: cookie,
-    startDate: '2000.01.01',
-  };
-
-  // 두 호출 병렬 실행 (각 7s × 병렬 = 7s, 총 7+18=25s < 26s)
-  const [page1, refData] = await Promise.all([
-    relayCall({ ...base, startPage: 1 }, 7000),
-    relayCall({ ...base, startPage: refRelayPage }, 7000),
-  ]);
-
-  const newestId = extractId(page1?.articles);
-  const topId    = extractId(refData?.articles);
-
-  if (newestId <= 0 || topId <= 0 || topId >= newestId) {
-    return { offset: null, debug: { newestId, topId, refRelayPage } };
-  }
-
-  const estimatedBrowserPage = Math.floor((newestId - topId) / 15) + 1;
-  const offset = estimatedBrowserPage - refRelayPage;
-  return { offset, debug: { newestId, topId, estimatedBrowserPage, refRelayPage } };
 }
 
 exports.handler = async (event) => {
@@ -84,82 +52,84 @@ exports.handler = async (event) => {
 
   const {
     cafeId,
-    menuId = '',
+    menuId    = '',
     startPage = 1,
-    maxArticles = 15,
-    maxComments = 0,
+    maxArticles  = 15,
+    maxComments  = 0,
     fetchComments = false,
     naverCookie,
-    _offset,
+    _offset,      // 프론트 캐싱 오프셋 (있으면 프로브 생략)
   } = body;
 
   if (!cafeId)
     return { statusCode: 400, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: 'cafeId 필요' }) };
 
-  const cookie = process.env.NAVER_COOKIE || naverCookie || undefined;
-
-  const rawMenuId = (menuId || '').trim();
+  const cookie     = process.env.NAVER_COOKIE || naverCookie || undefined;
+  const rawMenuId  = (menuId || '').trim();
   const relayMenuId = rawMenuId === '0' ? '' : rawMenuId;
-
   const browserPage = Math.max(1, parseInt(startPage) || 1);
+  const hasOffset   = typeof _offset === 'number';
+  const offset      = hasOffset ? _offset : 0;
+  const relayPage   = Math.max(1, browserPage - offset);
 
-  let offset;
-  let calibDebug = null;
+  const mainParams = {
+    cafeId,
+    menuId: relayMenuId,
+    startPage: relayPage,
+    startDate: '2000.01.01',
+    maxArticles: Math.min(15, parseInt(maxArticles) || 15),
+    maxComments: parseInt(maxComments) || 0,
+    fetchComments: fetchComments && parseInt(maxComments) > 0,
+    naverCookie: cookie,
+  };
 
-  if (typeof _offset === 'number') {
-    offset = _offset;
+  let mainData, newestId = 0;
+
+  if (!hasOffset) {
+    // 첫 요청: 수집 + page 1 프로브를 병렬로 실행
+    // 병렬이므로 총 시간 = max(수집시간, 프로브시간) ≈ 20s < 26s
+    const probeParams = {
+      cafeId,
+      menuId: relayMenuId,
+      startPage: 1,
+      startDate: '2000.01.01',
+      maxArticles: 1,
+      maxComments: 0,
+      fetchComments: false,
+      naverCookie: cookie,
+    };
+
+    const [main, probe] = await Promise.all([
+      safeRelayFetch(mainParams, 20000),
+      safeRelayFetch(probeParams, 8000),
+    ]);
+
+    mainData = main;
+    newestId = extractMaxId(probe?.articles);
   } else {
-    const result = await computeOffset(cafeId, relayMenuId, browserPage, cookie);
-    offset = result.offset;
-    calibDebug = result.debug;
+    // 이후 요청: 수집만 (더 많은 시간 할당)
+    mainData = await safeRelayFetch(mainParams, 22000);
   }
 
-  const relayPage = Math.max(1, browserPage - (offset ?? 0));
-
-  let relayRes;
-  try {
-    relayRes = await fetch(`${RELAY_URL}/scrape-naver-cafe`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cafeId,
-        menuId: relayMenuId,
-        startPage: relayPage,
-        startDate: '2000.01.01',
-        maxArticles: Math.min(15, parseInt(maxArticles) || 15),
-        maxComments: parseInt(maxComments) || 0,
-        fetchComments: fetchComments && parseInt(maxComments) > 0,
-        naverCookie: cookie,
-      }),
-      signal: AbortSignal.timeout(18000),
-    });
-  } catch (e) {
+  if (!mainData || mainData.status !== 'ok') {
+    const msg = mainData?.message || '릴레이 서버 오류';
     return {
       statusCode: 502,
       headers: RESP_HEADERS,
-      body: JSON.stringify({ status: 'error', message: `릴레이 서버 연결 실패: ${e.message}` }),
+      body: JSON.stringify({ status: 'error', message: msg }),
     };
   }
 
-  let data;
-  try { data = await relayRes.json(); }
-  catch {
-    return { statusCode: 502, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: '릴레이 응답 파싱 오류' }) };
-  }
+  // relay.nextPage → 브라우저 페이지 공간으로 변환
+  const rNext = mainData.nextPage;
+  const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + offset : null;
 
-  if (data.status !== 'ok')
-    return { statusCode: relayRes.status, headers: RESP_HEADERS, body: JSON.stringify(data) };
-
-  const rNext = data.nextPage;
-  const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + (offset ?? 0) : null;
-
-  const extra = {};
-  if (offset !== null) extra._offset = offset;
-  if (calibDebug)      extra._calibDebug = calibDebug;
+  const extra = { _relayPage: relayPage };
+  if (newestId > 0) extra._newestId = newestId;
 
   return {
     statusCode: 200,
     headers: RESP_HEADERS,
-    body: JSON.stringify({ ...data, nextPage: browserNextPage, ...extra }),
+    body: JSON.stringify({ ...mainData, nextPage: browserNextPage, ...extra }),
   };
 };
