@@ -53,10 +53,10 @@ async function computeOffset(cafeId, relayMenuId, refRelayPage, cookie) {
     startDate: '2000.01.01',
   };
 
-  // 두 호출 병렬 실행
+  // 두 호출 병렬 실행 (각 7s × 병렬 = 7s, 총 7+18=25s < 26s)
   const [page1, refData] = await Promise.all([
-    relayCall({ ...base, startPage: 1 }, 10000),
-    relayCall({ ...base, startPage: refRelayPage }, 10000),
+    relayCall({ ...base, startPage: 1 }, 7000),
+    relayCall({ ...base, startPage: refRelayPage }, 7000),
   ]);
 
   const newestId = extractId(page1?.articles);
