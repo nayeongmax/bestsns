@@ -185,11 +185,6 @@ const CollectorTab: React.FC = () => {
     let accumulated: CafeArticle[] = resume ? [...articles] : [];
     let remaining = resume ? Math.max(0, total - articles.length) : total;
 
-    // 브라우저와 동일한 Naver f-e URL로 접근해야 페이지 번호가 일치함
-    const resolvedMenuId = menuId.trim() || '0';
-    const buildListUrl = (page: number) =>
-      `https://cafe.naver.com/f-e/cafes/${resolvedCafeId}/menus/${resolvedMenuId}?page=${page}`;
-
     const fetchBatch = async (page: number) => {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 52000);
@@ -200,9 +195,8 @@ const CollectorTab: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             cafeId: resolvedCafeId,
-            menuId: resolvedMenuId,
+            menuId: menuId.trim(),
             startPage: page,
-            listUrl: buildListUrl(page),
             startDate: '2000.01.01',
             maxArticles: BATCH_SIZE,
             maxComments: parseInt(maxComments) || 0,
@@ -616,7 +610,7 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
               <input className={inputCls} type="number" min="1" value={startPage} onChange={e => setStartPage(e.target.value)} />
               {resolvedCafeId && (
                 <p className="text-[9px] text-gray-400 mt-0.5 break-all leading-tight">
-                  접속 URL: cafe.naver.com/f-e/cafes/{resolvedCafeId}/menus/{menuId.trim() || '0'}?page={startPage}
+                  참고: cafe.naver.com/f-e/cafes/{resolvedCafeId}/menus/{menuId.trim() || '0'}?page={startPage}
                 </p>
               )}
             </div>
