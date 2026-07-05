@@ -114,6 +114,19 @@ const CollectorTab: React.FC = () => {
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [relayOffset, setRelayOffset] = useState<number | null>(null);
 
+  /* ── 수집 로그 패널 ── */
+  type LogEntry = { id: number; type: 'page'|'calib'|'req'|'article'|'batch'|'wait'|'err'|'done'|'stop'; text: string; sub?: string };
+  const [liveLog, setLiveLog] = useState<LogEntry[]>([]);
+  const [showLog, setShowLog] = useState(false);
+  const logIdRef   = useRef(0);
+  const logBottomRef = useRef<HTMLDivElement>(null);
+
+  const addLog = (type: LogEntry['type'], text: string, sub?: string) => {
+    const entry: LogEntry = { id: ++logIdRef.current, type, text, sub };
+    setLiveLog(prev => [...prev, entry]);
+    setTimeout(() => logBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
+  };
+
   /* ── 결과 ── */
   const [articles, setArticles] = useState<CafeArticle[]>(() => {
     try { const s = localStorage.getItem('cafe_crawl_articles'); return s ? JSON.parse(s) : []; } catch { return []; }
@@ -200,6 +213,8 @@ const CollectorTab: React.FC = () => {
     if (!resolvedCafeId) { setStatus('카페 ID를 입력해주세요.'); return; }
     stopRef.current = false;
     setLoading(true);
+    setLiveLog([]);
+    setShowLog(true);
 
     const total = parseInt(maxArticles) || 10;
     let currentPage = resume && nextPage ? nextPage : parseInt(startPage) || 1;
@@ -246,6 +261,14 @@ const CollectorTab: React.FC = () => {
     try {
       while (remaining > 0 && !stopRef.current) {
         setStatus(`수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`);
+        addLog('page', `📄 페이지 ${currentPage} 수집 시작`, `목표 ${total}개 중 ${accumulated.length}개 완료`);
+
+        if (currentOffset === null) {
+          addLog('calib', '🔧 페이지 보정 계산 중...', '릴레이↔브라우저 오프셋 측정 (병렬 2회 호출)');
+        } else {
+          addLog('calib', `🔧 오프셋 ${currentOffset} 적용`, `릴레이 ${currentPage - currentOffset}페이지 요청`);
+        }
+        addLog('req', '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
 
         let data: any = null;
         let lastErr = '';
@@ -258,11 +281,13 @@ const CollectorTab: React.FC = () => {
             if (attempt < 2) {
               const delay = lastErr.includes('타임아웃') ? 5000 : 3000;
               setStatus(`재시도 중... (${attempt + 1}/2회, 페이지 ${currentPage})`);
+              addLog('err', `⚠ 재시도 ${attempt + 1}/2 — ${lastErr}`);
               await new Promise(r => setTimeout(r, delay));
             }
           }
         }
         if (!data) {
+          addLog('err', `❌ 수집 실패: ${lastErr}`);
           setStatus(`수집 중단 — ${accumulated.length}개 수집됨 (오류: ${lastErr})`);
           setLoading(false);
           return;
@@ -272,11 +297,21 @@ const CollectorTab: React.FC = () => {
         if (typeof data._offset === 'number' && data._offset !== 0 && currentOffset === null) {
           currentOffset = data._offset;
           setRelayOffset(data._offset);
+          addLog('calib', `✅ 보정 완료 — 오프셋 ${data._offset}`, `브라우저 ${currentPage} = 릴레이 ${currentPage - data._offset}페이지`);
         }
 
         const rawList: CafeArticle[] = data.articles || [];
         const take = Math.min(rawList.length, remaining);
         const newList = rawList.slice(0, take);
+
+        // 수집된 글 목록 로그
+        newList.forEach((a, i) => {
+          const snippet = (a.content || '').replace(/<[^>]*>/g, '').trim().slice(0, 80);
+          addLog('article',
+            `[${accumulated.length + i + 1}] ${a.title}`,
+            snippet ? `${a.writer} · ${a.date}\n${snippet}${(a.content || '').length > 80 ? '…' : ''}` : `${a.writer} · ${a.date}`
+          );
+        });
 
         accumulated = [...accumulated, ...newList.map((a, i) => ({ ...a, no: accumulated.length + i + 1 }))];
         saveArticles(accumulated);
@@ -287,6 +322,7 @@ const CollectorTab: React.FC = () => {
         }
 
         remaining -= newList.length;
+        addLog('batch', `✅ ${newList.length}개 수집 완료 (누적 ${accumulated.length}개)`);
 
         if (!data.nextPage || rawList.length === 0) {
           setNextPage(null);
@@ -296,18 +332,26 @@ const CollectorTab: React.FC = () => {
         setNextPage(data.nextPage);
         updatePreviewWindow(currentPage);
 
-        await new Promise(r => setTimeout(r, 3000));
+        if (remaining > 0 && !stopRef.current) {
+          addLog('wait', '⏳ 3초 후 다음 페이지 수집...');
+          await new Promise(r => setTimeout(r, 3000));
+        }
       }
 
-      if (!stopRef.current) setStatus(`수집 완료 — ${accumulated.length}개 글`);
+      if (!stopRef.current) {
+        addLog('done', `🎉 수집 완료 — 총 ${accumulated.length}개 글`);
+        setStatus(`수집 완료 — ${accumulated.length}개 글`);
+      }
     } catch (e: unknown) {
-      setStatus(`오류: ${e instanceof Error ? e.message : '알 수 없는 오류'}`);
+      const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+      addLog('err', `❌ 오류: ${msg}`);
+      setStatus(`오류: ${msg}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const stop = () => { stopRef.current = true; setLoading(false); setStatus('중지됨'); };
+  const stop = () => { stopRef.current = true; setLoading(false); setStatus('중지됨'); addLog('stop', '⏹ 수집 중지됨'); };
 
   const toggleSelect = (no: number) => setSelected(prev => {
     const next = new Set(prev); next.has(no) ? next.delete(no) : next.add(no); return next;
@@ -609,6 +653,63 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+
+      {/* ════ 수집 로그 패널 (fixed overlay) ════ */}
+      {showLog && (
+        <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-[420px] max-w-full shadow-2xl bg-gray-950 text-gray-100 border-l border-gray-700"
+             style={{ fontFamily: 'monospace' }}>
+          {/* 헤더 */}
+          <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-700 shrink-0">
+            <span className="text-xs font-bold text-green-400">● 수집 로그</span>
+            <div className="flex gap-2">
+              {loading && <span className="text-[10px] text-blue-400 animate-pulse">수집 중...</span>}
+              <button onClick={() => setShowLog(false)}
+                className="text-gray-400 hover:text-white text-sm px-1">✕</button>
+            </div>
+          </div>
+          {/* 로그 스크롤 영역 */}
+          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
+            {liveLog.map(entry => (
+              <div key={entry.id} className={`text-[11px] leading-snug rounded px-2 py-1 ${
+                entry.type === 'page'    ? 'bg-blue-900/60 text-blue-200 font-bold' :
+                entry.type === 'calib'  ? 'bg-yellow-900/40 text-yellow-300' :
+                entry.type === 'req'    ? 'bg-gray-800 text-gray-400' :
+                entry.type === 'article'? 'bg-gray-800/80 border-l-2 border-green-600' :
+                entry.type === 'batch'  ? 'bg-green-900/50 text-green-300 font-bold' :
+                entry.type === 'wait'   ? 'bg-gray-800/50 text-gray-500' :
+                entry.type === 'err'    ? 'bg-red-900/60 text-red-300' :
+                entry.type === 'done'   ? 'bg-green-900 text-green-200 font-black' :
+                                          'bg-orange-900/50 text-orange-300 font-bold'
+              }`}>
+                <div>{entry.text}</div>
+                {entry.sub && (
+                  <div className="text-[10px] mt-0.5 opacity-70 whitespace-pre-wrap">{entry.sub}</div>
+                )}
+              </div>
+            ))}
+            <div ref={logBottomRef} />
+          </div>
+          {/* 하단 액션 */}
+          <div className="px-3 py-2 border-t border-gray-700 flex gap-2 shrink-0">
+            <button onClick={() => setLiveLog([])}
+              className="text-[11px] text-gray-500 hover:text-gray-300">지우기</button>
+            <button onClick={() => {
+                const txt = liveLog.map(e => e.text + (e.sub ? '\n  ' + e.sub : '')).join('\n');
+                navigator.clipboard.writeText(txt).catch(() => {});
+              }}
+              className="text-[11px] text-gray-500 hover:text-gray-300">복사</button>
+          </div>
+        </div>
+      )}
+
+      {/* 로그 토글 버튼 (수집 중일 때 항상 표시) */}
+      {(loading || liveLog.length > 0) && !showLog && (
+        <button onClick={() => setShowLog(true)}
+          className="fixed right-4 bottom-4 z-50 px-3 py-2 rounded-lg bg-gray-900 text-green-400 text-xs font-bold shadow-xl border border-gray-700 hover:bg-gray-800">
+          📋 수집 로그 열기
+        </button>
+      )}
+
       {/* ── 내부 탭 ── */}
       <div className="flex border-b border-gray-200 bg-gray-50">
         <CrawlerTabBtn id="collect" label="글 수집" />
