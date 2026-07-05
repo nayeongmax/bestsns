@@ -1206,16 +1206,6 @@ sheetBodyEl.addEventListener('mousedown', e => {
   activeDiv = td.querySelector('[contenteditable]');
   activeTd = td;
 
-  // 단일 클릭 시 셀 내용 자동 복사 (네이버카페 등 외부 에디터에 바로 붙여넣기 가능)
-  if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
-    const div = td.querySelector('[contenteditable]');
-    if (div) {
-      const text = (div.innerText || div.textContent || '').trim();
-      const ph = div.getAttribute('data-ph') || '';
-      if (text && text !== ph) copyToClipboard(text);
-    }
-  }
-
   // 키보드 이벤트 수신 보장 (Delete/Ctrl+C 등)
   _kbFocus.focus();
 
