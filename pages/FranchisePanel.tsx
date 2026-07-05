@@ -99,6 +99,7 @@ const CollectorTab: React.FC = () => {
   const [cafeId,        setCafeId]        = useState('');
   const [menuId,        setMenuId]        = useState('');
   const [startPage,     setStartPage]     = useState('1');
+  const [startPageUrl,  setStartPageUrl]  = useState(''); // URL에서 페이지 추출용
   const [maxArticles,   setMaxArticles]   = useState('10');
   const [maxComments,   setMaxComments]   = useState('3');
   const [aiRewrite,     setAiRewrite]     = useState(false);
@@ -295,18 +296,9 @@ const CollectorTab: React.FC = () => {
       let offset  = initOffset;
       let newest  = initNewest;
 
-      // 페이지 보정 최대 3회
-      for (let corrIter = 0; corrIter < 3 && !stopRef.current; corrIter++) {
-        // ── 로그: 현재 시도 상태 ──
-        if (corrIter === 0) {
-          if (offset === null)
-            addLog('calib', '🔧 페이지 보정 계산 중...', '릴레이↔브라우저 오프셋 측정 (병렬 2회 요청)');
-          else
-            addLog('calib', `🔧 오프셋 ${offset} 적용`, `릴레이 ${browserPage - offset}p 요청`);
-          addLog('req', '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
-        } else {
-          addLog('calib', `🔧 [자동보정 ${corrIter}/2] 오프셋 ${offset} 재적용 → 릴레이 ${browserPage - (offset ?? 0)}p 재요청`);
-        }
+      // 연결 재시도만 수행 (페이지 보정 루프 제거 — relay page ≈ browser page)
+      for (let corrIter = 0; corrIter < 1 && !stopRef.current; corrIter++) {
+        addLog('req', '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
 
         // ── 연결 재시도: 지수 백오프 ──
         const backoffs = [0, 4000, 10000, 20000];
@@ -330,74 +322,21 @@ const CollectorTab: React.FC = () => {
         }
         if (!data) return null;
 
-        // ── newestId 캐시 갱신 (서버가 probe와 함께 반환) ──
-        const sNewest: number = data._newestId ?? 0;
-        if (sNewest > 0 && newest === null) newest = sNewest;
-
-        // ── 프로브 디버그 로그 (최초 요청 시만 첨부됨) ──
-        if (data._probeDebug) {
-          const pd = data._probeDebug;
-          if (pd.fields) {
-            addLog('calib',
-              `🔬 프로브 구조 — fields: ${pd.fields}`,
-              `articleId=${pd.articleId}, id=${pd.id}, articleNo=${pd.articleNo}, newestId=${pd.newestId}, url=${pd.url}`
-            );
-          } else {
-            addLog('err',
-              `🔬 프로브 타임아웃 — status: ${pd.probeStatus ?? 'timeout'}`,
-              pd.probeMsg ?? '페이지 검증 없이 수집 계속'
-            );
+        // ── 브라우저 기준 newestId 보정 ──
+        // 릴레이 Mobile API newestId는 삭제된 글 포함으로 브라우저보다 높음.
+        // 첫 배치의 topId + 요청 브라우저 페이지로 정확한 newestId를 역산한다.
+        if (newest === null && data.articles?.length > 0) {
+          const topId = extractArticleId(data.articles[0]);
+          if (topId > 0) {
+            newest = topId + (browserPage - 1) * 15;
+            addLog('calib', `📊 브라우저 기준 newestId 보정: ${newest} (topId ${topId}, 요청 ${browserPage}p)`);
           }
         }
 
-        // 서버 오프셋 반영 (레거시 호환)
-        if (typeof data._offset === 'number' && data._offset !== 0 && offset === null) {
-          offset = data._offset;
-        }
-
-        // ── 페이지 검증 ──
-        if (newest && data.articles?.length > 0) {
-          const verified = computeActualPage(data.articles, newest);
-          if (verified !== null) {
-            const { page: actual, topId } = verified;
-            const diff = actual - browserPage;
-            const sampleId = extractArticleId(data.articles[0]);
-            addLog('calib',
-              `📊 진단 — newestId: ${newest}, topId: ${topId}, sampleId: ${sampleId}`,
-              `실제 위치 계산: (${newest} - ${topId}) ÷ 15 + 1 = ${actual}p`
-            );
-            if (Math.abs(diff) <= 2) {
-              addLog('verify', `🔍 검증 통과 — 요청 ${browserPage}p = 실제 ${actual}p`);
-              return { data, offset, newest };
-            }
-            // 불가능한 보정값 (음수 페이지, 차이 500 이상)이면 검증 포기하고 그냥 반환
-            if (actual <= 0 || Math.abs(diff) > 500) {
-              addLog('err',
-                `⚠ 검증 불가 — 계산된 페이지(${actual}p)가 비정상, newestId 신뢰 불가`,
-                `페이지 검증 없이 수집 계속`
-              );
-              return { data, offset, newest };
-            }
-            // 불일치: 오프셋 수정 후 재시도
-            const fixed = (offset ?? 0) + diff;
-            addLog('verify_fail',
-              `⚠ 불일치 — 요청 ${browserPage}p ≠ 실제 ${actual}p (${diff > 0 ? '+' : ''}${diff}p)`,
-              `오프셋 ${offset ?? 0} → ${fixed} 자동 수정, 즉시 재요청`
-            );
-            offset = fixed;
-            continue;
-          } else {
-            addLog('err', `⚠ 검증 불가 — newestId: ${newest}, articles: ${data.articles.length}개, ID 추출 실패`);
-          }
-        } else if (!newest) {
-          addLog('err', '⚠ newestId 미획득 — page 1 프로브 실패 (페이지 검증 불가)');
-        }
-
-        // newestId 없어 검증 불가 → 그대로 반환
+        // 그대로 반환 (relay page ≈ browser page — 페이지 보정 불필요)
         return { data, offset, newest };
       }
 
-      addLog('err', '⚠ 자동 보정 한도(3회) 초과 — 수집 중단');
       return null;
     };
     // ─────────────────────────────────────────────────────────────────
@@ -879,13 +818,41 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
               )}
             </div>
             <div className="mb-2">
-              <label className="block text-xs font-bold text-gray-600 mb-0.5">시작 페이지 번호:</label>
-              <input className={inputCls} type="number" min="1" value={startPage} onChange={e => setStartPage(e.target.value)} />
-              {resolvedCafeId && (
-                <p className="text-[9px] text-gray-400 mt-0.5 break-all leading-tight">
-                  참고: cafe.naver.com/f-e/cafes/{resolvedCafeId}/menus/{menuId.trim() || '0'}?page={startPage}
-                </p>
-              )}
+              <label className="block text-xs font-bold text-gray-600 mb-0.5">시작 페이지 설정:</label>
+              {/* URL 붙여넣기 방식 */}
+              <div className="flex gap-1 mb-1">
+                <input
+                  className={`${inputCls} flex-1 text-[11px]`}
+                  placeholder="네이버 카페 URL 붙여넣기 (예: ...?page=841)"
+                  value={startPageUrl}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setStartPageUrl(val);
+                    const m = val.match(/[?&]page=(\d+)/i);
+                    if (m) setStartPage(m[1]);
+                  }}
+                />
+                {resolvedCafeId && (
+                  <button type="button"
+                    onClick={() => {
+                      const mid = menuId.trim() || '0';
+                      const p = parseInt(startPage) || 1;
+                      window.open(`https://cafe.naver.com/f-e/cafes/${resolvedCafeId}/menus/${mid}?page=${p}`, 'naverCafeSelect');
+                    }}
+                    className="shrink-0 px-2 py-1 rounded text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 whitespace-nowrap">
+                    카페 열기
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-gray-500 shrink-0">시작 페이지:</span>
+                <input className={`${inputCls} w-20 text-center font-bold`} type="number" min="1" value={startPage}
+                  onChange={e => { setStartPage(e.target.value); setStartPageUrl(''); }} />
+                {startPage && parseInt(startPage) > 0 && (
+                  <span className="text-[10px] text-green-600 font-bold">{parseInt(startPage)}페이지부터 수집</span>
+                )}
+              </div>
+              <p className="text-[9px] text-gray-400 mt-0.5">카페 열기 → 원하는 페이지로 이동 → URL 복사 후 위에 붙여넣기</p>
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">최대 수집 글 수:</label>
@@ -1012,11 +979,6 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
               {resolvedCafeId && (
                 <div className="flex items-center gap-1.5">
                   <p className="text-[10px] text-gray-400 flex-1">수집 시작 시 카페 창이 자동으로 열립니다</p>
-                  <button type="button"
-                    onClick={() => openPreviewWindow(parseInt(startPage) || 1)}
-                    className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200">
-                    창 열기
-                  </button>
                 </div>
               )}
               <button type="button" onClick={() => doCollect(true)} disabled={loading || !nextPage}
