@@ -111,6 +111,7 @@ const CollectorTab: React.FC = () => {
   const stopRef = useRef(false);
   const [status,   setStatus]   = useState('대기 중...');
   const [nextPage, setNextPage] = useState<number | null>(null);
+  const [relayOffset, setRelayOffset] = useState<number | null>(null);
 
   /* ── 결과 ── */
   const [articles, setArticles] = useState<CafeArticle[]>(() => {
@@ -184,8 +185,9 @@ const CollectorTab: React.FC = () => {
     let currentPage = resume && nextPage ? nextPage : parseInt(startPage) || 1;
     let accumulated: CafeArticle[] = resume ? [...articles] : [];
     let remaining = resume ? Math.max(0, total - articles.length) : total;
+    let currentOffset = relayOffset;
 
-    const fetchBatch = async (page: number) => {
+    const fetchBatch = async (page: number, cachedOffset: number | null) => {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 52000);
       let res: Response;
@@ -201,6 +203,7 @@ const CollectorTab: React.FC = () => {
             maxComments: parseInt(maxComments) || 0,
             fetchComments: parseInt(maxComments) > 0,
             naverCookie: naverCookie.trim() || undefined,
+            ...(cachedOffset !== null ? { _offset: cachedOffset } : {}),
           }),
           signal: ctrl.signal,
         });
@@ -226,7 +229,7 @@ const CollectorTab: React.FC = () => {
         let lastErr = '';
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            data = await fetchBatch(currentPage);
+            data = await fetchBatch(currentPage, currentOffset);
             break;
           } catch (e: unknown) {
             lastErr = e instanceof Error ? e.message : '알 수 없는 오류';
@@ -241,6 +244,11 @@ const CollectorTab: React.FC = () => {
           setStatus(`수집 중단 — ${accumulated.length}개 수집됨 (오류: ${lastErr})`);
           setLoading(false);
           return;
+        }
+
+        if (typeof data._offset === 'number' && currentOffset === null) {
+          currentOffset = data._offset;
+          setRelayOffset(data._offset);
         }
 
         const rawList: CafeArticle[] = data.articles || [];
@@ -597,12 +605,12 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카페 ID:</label>
-              <input className={inputCls} value={cafeId} onChange={e => setCafeId(e.target.value)} placeholder="31559350" autoComplete="off" />
+              <input className={inputCls} value={cafeId} onChange={e => { setCafeId(e.target.value); setRelayOffset(null); }} placeholder="31559350" autoComplete="off" />
               {!cafeId.trim() && resolvedCafeId && <p className="text-[10px] text-blue-500 mt-0.5">자동감지: {resolvedCafeId}</p>}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카테고리 ID (전체글이면 비워두세요):</label>
-              <input className={inputCls} value={menuId} onChange={e => setMenuId(e.target.value)} placeholder="121" autoComplete="off" />
+              <input className={inputCls} value={menuId} onChange={e => { setMenuId(e.target.value); setRelayOffset(null); }} placeholder="121" autoComplete="off" />
               {menuId.trim() === '0' && (
                 <p className="text-[10px] text-orange-500 font-bold mt-0.5">⚠ 0은 오류 유발 — 전체글 수집 시 비워두세요</p>
               )}
