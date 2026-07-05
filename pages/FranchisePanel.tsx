@@ -109,6 +109,7 @@ const CollectorTab: React.FC = () => {
   /* ── 수집 상태 ── */
   const [loading,  setLoading]  = useState(false);
   const stopRef = useRef(false);
+  const previewWinRef = useRef<Window | null>(null);
   const [status,   setStatus]   = useState('대기 중...');
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [relayOffset, setRelayOffset] = useState<number | null>(null);
@@ -176,6 +177,25 @@ const CollectorTab: React.FC = () => {
   /* ── 수집 ── */
   const BATCH_SIZE = 15; // 네이버 카페 1페이지 = 15개
 
+  const makeCafeUrl = (page: number) => {
+    const mid = menuId.trim() || '0';
+    return `https://cafe.naver.com/f-e/cafes/${resolvedCafeId}/menus/${mid}?page=${page}`;
+  };
+
+  const openPreviewWindow = (page: number) => {
+    const url = makeCafeUrl(page);
+    const win = window.open(url, 'naverCafePreview', 'width=1200,height=800,noopener=0');
+    previewWinRef.current = win;
+  };
+
+  const updatePreviewWindow = (page: number) => {
+    try {
+      if (previewWinRef.current && !previewWinRef.current.closed) {
+        previewWinRef.current.location.href = makeCafeUrl(page);
+      }
+    } catch { /* cross-origin 제한 무시 */ }
+  };
+
   const doCollect = async (resume: boolean) => {
     if (!resolvedCafeId) { setStatus('카페 ID를 입력해주세요.'); return; }
     stopRef.current = false;
@@ -186,6 +206,8 @@ const CollectorTab: React.FC = () => {
     let accumulated: CafeArticle[] = resume ? [...articles] : [];
     let remaining = resume ? Math.max(0, total - articles.length) : total;
     let currentOffset = relayOffset;
+
+    if (!resume) openPreviewWindow(currentPage);
 
     const fetchBatch = async (page: number, cachedOffset: number | null) => {
       const ctrl = new AbortController();
@@ -272,6 +294,7 @@ const CollectorTab: React.FC = () => {
         }
         currentPage = data.nextPage;
         setNextPage(data.nextPage);
+        updatePreviewWindow(currentPage);
 
         await new Promise(r => setTimeout(r, 3000));
       }
@@ -747,6 +770,16 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 className="w-full py-2 rounded font-black text-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 {loading ? '수집 중...' : '▶ 수집 시작'}
               </button>
+              {resolvedCafeId && (
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[10px] text-gray-400 flex-1">수집 시작 시 카페 창이 자동으로 열립니다</p>
+                  <button type="button"
+                    onClick={() => openPreviewWindow(parseInt(startPage) || 1)}
+                    className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200">
+                    창 열기
+                  </button>
+                </div>
+              )}
               <button type="button" onClick={() => doCollect(true)} disabled={loading || !nextPage}
                 className="w-full py-2 rounded font-black text-sm text-white bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed">
                 ▶ 이어서 수집
