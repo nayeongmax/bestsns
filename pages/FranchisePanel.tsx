@@ -175,7 +175,7 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
-  const BATCH_SIZE = 5; // Netlify 함수 26초 제한 안에 처리 가능한 크기
+  const BATCH_SIZE = 15; // 네이버 카페 1페이지 = 15개
 
   const doCollect = async (resume: boolean) => {
     if (!resolvedCafeId) { setStatus('카페 ID를 입력해주세요.'); return; }
@@ -187,9 +187,14 @@ const CollectorTab: React.FC = () => {
     let accumulated: CafeArticle[] = resume ? [...articles] : [];
     let remaining = resume ? Math.max(0, total - articles.length) : total;
 
-    const fetchBatch = async (page: number, batchSize: number) => {
+    // 날짜 필터는 클라이언트에서 처리 — 릴레이에 날짜를 넘기면 페이지를 건너뛰어
+    // 시작 페이지가 틀려지는 문제가 생기므로 릴레이는 순수 페이지 단위 수집만 담당
+    const sDate = startDate.trim();
+    const eDate = endDate.trim() || todayStr();
+
+    const fetchBatch = async (page: number) => {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 52000); // 52초: 릴레이 55초 제한에 맞춤
+      const timer = setTimeout(() => ctrl.abort(), 52000);
       let res: Response;
       try {
         res = await fetch('/.netlify/functions/scrape-naver-cafe', {
@@ -199,9 +204,7 @@ const CollectorTab: React.FC = () => {
             cafeId: resolvedCafeId,
             menuId: menuId.trim(),
             startPage: page,
-            startDate: startDate.trim() || undefined,
-            endDate: endDate.trim() || todayStr(),
-            maxArticles: batchSize,
+            maxArticles: BATCH_SIZE,
             maxComments: parseInt(maxComments) || 0,
             fetchComments: parseInt(maxComments) > 0,
             naverCookie: naverCookie.trim() || undefined,
@@ -214,7 +217,6 @@ const CollectorTab: React.FC = () => {
       } finally {
         clearTimeout(timer);
       }
-      // HTML 에러 응답 처리 (릴레이 과부하/타임아웃 시 HTML 반환)
       const text = await res.text();
       let data: any;
       try { data = JSON.parse(text); }
@@ -225,15 +227,14 @@ const CollectorTab: React.FC = () => {
 
     try {
       while (remaining > 0 && !stopRef.current) {
-        const batchSize = Math.min(remaining, BATCH_SIZE);
         setStatus(`수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`);
 
-        // 실패 시 최대 2회 재시도 (타임아웃은 5초 대기, 일반 오류는 3초)
+        // 실패 시 최대 2회 재시도
         let data: any = null;
         let lastErr = '';
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            data = await fetchBatch(currentPage, batchSize);
+            data = await fetchBatch(currentPage);
             break;
           } catch (e: unknown) {
             lastErr = e instanceof Error ? e.message : '알 수 없는 오류';
@@ -245,13 +246,20 @@ const CollectorTab: React.FC = () => {
           }
         }
         if (!data) {
-          // 재시도 모두 실패 → 지금까지 수집한 내용은 보존하고 종료
           setStatus(`수집 중단 — ${accumulated.length}개 수집됨 (오류: ${lastErr})`);
           setLoading(false);
-          return; // break 대신 return으로 "수집 완료" 덮어쓰기 방지
+          return;
         }
 
-        const newList: CafeArticle[] = data.articles || [];
+        const rawList: CafeArticle[] = data.articles || [];
+
+        // 클라이언트 날짜 필터
+        const newList = rawList.filter(a => {
+          if (sDate && a.date < sDate) return false;
+          if (eDate && a.date > eDate) return false;
+          return true;
+        });
+
         accumulated = [...accumulated, ...newList.map((a, i) => ({ ...a, no: accumulated.length + i + 1 }))];
         saveArticles(accumulated);
 
@@ -261,7 +269,10 @@ const CollectorTab: React.FC = () => {
         }
 
         remaining -= newList.length;
-        if (!data.nextPage || newList.length === 0) {
+
+        // rawList에 startDate보다 오래된 글이 있으면 해당 날짜 경계에 도달한 것 → 중단
+        const hitOldBoundary = sDate && rawList.some(a => a.date < sDate);
+        if (hitOldBoundary || !data.nextPage || rawList.length === 0) {
           setNextPage(null);
           break;
         }
