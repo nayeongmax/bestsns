@@ -91,11 +91,10 @@ exports.handler = async (event) => {
     naverCookie: cookie,
   };
 
-  let mainData, newestId = 0;
+  let mainData, newestId = 0, probeDebug = null;
 
   if (!hasOffset) {
     // 첫 요청: 수집 + page 1 프로브를 병렬로 실행
-    // 병렬이므로 총 시간 = max(수집시간, 프로브시간) ≈ 20s < 26s
     const probeParams = {
       cafeId,
       menuId: relayMenuId,
@@ -114,6 +113,25 @@ exports.handler = async (event) => {
 
     mainData = main;
     newestId = extractMaxId(probe?.articles);
+
+    // 디버그: 프로브 첫 번째 글의 실제 필드 구조를 확인
+    if (probe?.articles?.length > 0) {
+      const first = probe.articles[0];
+      probeDebug = {
+        fields: Object.keys(first).join(', '),
+        articleId: first.articleId,
+        id:        first.id,
+        articleNo: first.articleNo,
+        url:       (first.url || '').slice(0, 100),
+        newestId,
+      };
+    } else {
+      probeDebug = {
+        probeStatus: probe?.status,
+        probeMsg:    probe?.message,
+        articles:    probe?.articles?.length ?? -1,
+      };
+    }
   } else {
     // 이후 요청: 수집만 (더 많은 시간 할당)
     mainData = await safeRelayFetch(mainParams, 22000);
@@ -134,6 +152,7 @@ exports.handler = async (event) => {
 
   const extra = { _relayPage: relayPage };
   if (newestId > 0) extra._newestId = newestId;
+  if (probeDebug) extra._probeDebug = probeDebug;
 
   return {
     statusCode: 200,

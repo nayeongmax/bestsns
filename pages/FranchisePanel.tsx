@@ -334,6 +334,22 @@ const CollectorTab: React.FC = () => {
         const sNewest: number = data._newestId ?? 0;
         if (sNewest > 0 && newest === null) newest = sNewest;
 
+        // ── 프로브 디버그 로그 (최초 요청 시만 첨부됨) ──
+        if (data._probeDebug) {
+          const pd = data._probeDebug;
+          if (pd.fields) {
+            addLog('calib',
+              `🔬 프로브 구조 — fields: ${pd.fields}`,
+              `articleId=${pd.articleId}, id=${pd.id}, articleNo=${pd.articleNo}, newestId=${pd.newestId}, url=${pd.url}`
+            );
+          } else {
+            addLog('err',
+              `🔬 프로브 실패 — status: ${pd.probeStatus}`,
+              pd.probeMsg ?? '응답 없음'
+            );
+          }
+        }
+
         // 서버 오프셋 반영 (레거시 호환)
         if (typeof data._offset === 'number' && data._offset !== 0 && offset === null) {
           offset = data._offset;
