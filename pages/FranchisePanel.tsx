@@ -115,16 +115,29 @@ const CollectorTab: React.FC = () => {
   const [relayOffset, setRelayOffset] = useState<number | null>(null);
 
   /* ── 수집 로그 패널 ── */
-  type LogEntry = { id: number; type: 'page'|'calib'|'req'|'article'|'batch'|'wait'|'err'|'done'|'stop'; text: string; sub?: string };
+  type LogEntry = { id: number; type: 'page'|'calib'|'req'|'article'|'batch'|'wait'|'err'|'done'|'stop'|'verify'|'verify_fail'; text: string; sub?: string };
   const [liveLog, setLiveLog] = useState<LogEntry[]>([]);
   const [showLog, setShowLog] = useState(false);
   const logIdRef   = useRef(0);
   const logBottomRef = useRef<HTMLDivElement>(null);
 
+  // 검증용: 최신 글 ID (calibration 시 서버에서 받아 캐싱)
+  const [newestArticleId, setNewestArticleId] = useState<number | null>(null);
+
   const addLog = (type: LogEntry['type'], text: string, sub?: string) => {
     const entry: LogEntry = { id: ++logIdRef.current, type, text, sub };
     setLiveLog(prev => [...prev, entry]);
     setTimeout(() => logBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
+  };
+
+  // articleId 목록 + newestId → 실제 브라우저 페이지 역산
+  const computeActualPage = (articles: CafeArticle[], newestId: number): number | null => {
+    const ids = articles
+      .map(a => parseInt(String(a.articleId)) || 0)
+      .filter(n => n > 0);
+    if (!ids.length || newestId <= 0) return null;
+    const topId = Math.max(...ids);
+    return Math.floor((newestId - topId) / 15) + 1;
   };
 
   /* ── 결과 ── */
@@ -300,6 +313,14 @@ const CollectorTab: React.FC = () => {
           addLog('calib', `✅ 보정 완료 — 오프셋 ${data._offset}`, `브라우저 ${currentPage} = 릴레이 ${currentPage - data._offset}페이지`);
         }
 
+        // newestId 캐싱 (검증용)
+        const serverNewestId: number = data._calibDebug?.newestId ?? 0;
+        let cachedNewest = newestArticleId;
+        if (serverNewestId > 0 && cachedNewest === null) {
+          setNewestArticleId(serverNewestId);
+          cachedNewest = serverNewestId;
+        }
+
         const rawList: CafeArticle[] = data.articles || [];
         const take = Math.min(rawList.length, remaining);
         const newList = rawList.slice(0, take);
@@ -312,6 +333,22 @@ const CollectorTab: React.FC = () => {
             snippet ? `${a.writer} · ${a.date}\n${snippet}${(a.content || '').length > 80 ? '…' : ''}` : `${a.writer} · ${a.date}`
           );
         });
+
+        // ── 페이지 검증 ──
+        if (cachedNewest && newList.length > 0) {
+          const actualPage = computeActualPage(newList, cachedNewest);
+          if (actualPage !== null) {
+            const diff = Math.abs(actualPage - currentPage);
+            if (diff <= 2) {
+              addLog('verify', `🔍 검증 통과 — 요청 ${currentPage}p = 실제 ${actualPage}p`, `오차 ${diff}페이지 이내 (newestId ${cachedNewest})`);
+            } else {
+              addLog('verify_fail',
+                `⚠ 검증 불일치 — 요청 ${currentPage}p ≠ 실제 ${actualPage}p`,
+                `차이 ${diff}페이지. 오프셋 재보정 필요 (현재 오프셋: ${currentOffset ?? '미보정'})`
+              );
+            }
+          }
+        }
 
         accumulated = [...accumulated, ...newList.map((a, i) => ({ ...a, no: accumulated.length + i + 1 }))];
         saveArticles(accumulated);
@@ -675,11 +712,13 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 entry.type === 'calib'  ? 'bg-yellow-900/40 text-yellow-300' :
                 entry.type === 'req'    ? 'bg-gray-800 text-gray-400' :
                 entry.type === 'article'? 'bg-gray-800/80 border-l-2 border-green-600' :
-                entry.type === 'batch'  ? 'bg-green-900/50 text-green-300 font-bold' :
-                entry.type === 'wait'   ? 'bg-gray-800/50 text-gray-500' :
-                entry.type === 'err'    ? 'bg-red-900/60 text-red-300' :
-                entry.type === 'done'   ? 'bg-green-900 text-green-200 font-black' :
-                                          'bg-orange-900/50 text-orange-300 font-bold'
+                entry.type === 'batch'       ? 'bg-green-900/50 text-green-300 font-bold' :
+                entry.type === 'wait'        ? 'bg-gray-800/50 text-gray-500' :
+                entry.type === 'err'         ? 'bg-red-900/60 text-red-300' :
+                entry.type === 'done'        ? 'bg-green-900 text-green-200 font-black' :
+                entry.type === 'verify'      ? 'bg-cyan-900/50 text-cyan-300 border border-cyan-700' :
+                entry.type === 'verify_fail' ? 'bg-red-900/80 text-red-200 border border-red-500 font-bold' :
+                                               'bg-orange-900/50 text-orange-300 font-bold'
               }`}>
                 <div>{entry.text}</div>
                 {entry.sub && (
@@ -730,12 +769,12 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카페 ID:</label>
-              <input className={inputCls} value={cafeId} onChange={e => { setCafeId(e.target.value); setRelayOffset(null); }} placeholder="31559350" autoComplete="off" />
+              <input className={inputCls} value={cafeId} onChange={e => { setCafeId(e.target.value); setRelayOffset(null); setNewestArticleId(null); }} placeholder="31559350" autoComplete="off" />
               {!cafeId.trim() && resolvedCafeId && <p className="text-[10px] text-blue-500 mt-0.5">자동감지: {resolvedCafeId}</p>}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카테고리 ID (전체글이면 비워두세요):</label>
-              <input className={inputCls} value={menuId} onChange={e => { setMenuId(e.target.value); setRelayOffset(null); }} placeholder="121" autoComplete="off" />
+              <input className={inputCls} value={menuId} onChange={e => { setMenuId(e.target.value); setRelayOffset(null); setNewestArticleId(null); }} placeholder="121" autoComplete="off" />
               {menuId.trim() === '0' && (
                 <p className="text-[10px] text-orange-500 font-bold mt-0.5">⚠ 0은 오류 유발 — 전체글 수집 시 비워두세요</p>
               )}
