@@ -272,8 +272,18 @@ const CollectorTab: React.FC = () => {
 
         remaining -= newList.length;
 
-        // rawList에 startDate보다 오래된 글이 있으면 해당 날짜 경계에 도달한 것 → 중단
+        // rawList에 startDate보다 오래된 글이 있으면 경계 확인
         const hitOldBoundary = sDate && rawList.some(a => a.date < sDate);
+        const allPreDate = hitOldBoundary && newList.length === 0;
+
+        // 릴레이 날짜 네비게이션으로 시작날짜 이전 페이지가 반환된 경우 → 다음 페이지로 계속 진행
+        if ((allPreDate || rawList.length === 0) && data.nextPage) {
+          currentPage = data.nextPage;
+          setNextPage(data.nextPage);
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+
         if (hitOldBoundary || !data.nextPage || rawList.length === 0) {
           setNextPage(null);
           break;
