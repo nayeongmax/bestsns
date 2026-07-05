@@ -130,14 +130,24 @@ const CollectorTab: React.FC = () => {
     setTimeout(() => logBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
   };
 
+  // articleId 필드 또는 URL에서 글 번호 추출 (필드가 0이면 URL 파싱으로 폴백)
+  const extractArticleId = (a: CafeArticle): number => {
+    const fromField = parseInt(String(a.articleId ?? 0)) || 0;
+    if (fromField > 0) return fromField;
+    // URL에서 추출: articleid=12345 or /articles/12345 or 끝 숫자
+    const url = a.url || '';
+    const m = url.match(/articleid=(\d+)/i)
+           || url.match(/\/articles?\/(\d+)/i)
+           || url.match(/[/?&](\d{4,})/);
+    return m ? (parseInt(m[1]) || 0) : 0;
+  };
+
   // articleId 목록 + newestId → 실제 브라우저 페이지 역산
-  const computeActualPage = (articles: CafeArticle[], newestId: number): number | null => {
-    const ids = articles
-      .map(a => parseInt(String(a.articleId)) || 0)
-      .filter(n => n > 0);
+  const computeActualPage = (articles: CafeArticle[], newestId: number): { page: number; topId: number } | null => {
+    const ids = articles.map(extractArticleId).filter(n => n > 0);
     if (!ids.length || newestId <= 0) return null;
     const topId = Math.max(...ids);
-    return Math.floor((newestId - topId) / 15) + 1;
+    return { page: Math.floor((newestId - topId) / 15) + 1, topId };
   };
 
   /* ── 결과 ── */
@@ -331,11 +341,18 @@ const CollectorTab: React.FC = () => {
 
         // ── 페이지 검증 ──
         if (newest && data.articles?.length > 0) {
-          const actual = computeActualPage(data.articles, newest);
-          if (actual !== null) {
+          const verified = computeActualPage(data.articles, newest);
+          if (verified !== null) {
+            const { page: actual, topId } = verified;
             const diff = actual - browserPage;
+            // 진단 로그: 실제 ID 값 표시 (articleId가 0이면 원인 파악 가능)
+            const sampleId = extractArticleId(data.articles[0]);
+            addLog('calib',
+              `📊 진단 — newestId: ${newest}, topId: ${topId}, sampleId: ${sampleId}`,
+              `실제 위치 계산: (${newest} - ${topId}) ÷ 15 + 1 = ${actual}p`
+            );
             if (Math.abs(diff) <= 2) {
-              addLog('verify', `🔍 검증 통과 — 요청 ${browserPage}p = 실제 ${actual}p`, `newestId ${newest}`);
+              addLog('verify', `🔍 검증 통과 — 요청 ${browserPage}p = 실제 ${actual}p`);
               return { data, offset, newest };
             }
             // 불일치: 오프셋 수정 후 재시도
@@ -345,8 +362,12 @@ const CollectorTab: React.FC = () => {
               `오프셋 ${offset ?? 0} → ${fixed} 자동 수정, 즉시 재요청`
             );
             offset = fixed;
-            continue; // 수정된 오프셋으로 재시도, 이 배치 데이터 폐기
+            continue;
+          } else {
+            addLog('err', `⚠ 검증 불가 — newestId: ${newest}, articles: ${data.articles.length}개, ID 추출 실패`);
           }
+        } else if (!newest) {
+          addLog('err', '⚠ newestId 미획득 — page 1 프로브 실패 (페이지 검증 불가)');
         }
 
         // newestId 없어 검증 불가 → 그대로 반환

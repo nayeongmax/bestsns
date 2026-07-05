@@ -17,9 +17,17 @@ const RESP_HEADERS = {
 
 function extractMaxId(articles) {
   if (!Array.isArray(articles) || !articles.length) return 0;
-  const ids = articles
-    .map(a => parseInt(a.articleId ?? a.id ?? a.articleNo ?? a.article_id ?? 0) || 0)
-    .filter(n => n > 0);
+  const ids = articles.map(a => {
+    // 필드명 순서대로 시도
+    const direct = parseInt(a.articleId ?? a.id ?? a.articleNo ?? a.article_id ?? 0) || 0;
+    if (direct > 0) return direct;
+    // URL에서 숫자 추출 (articleid=NNN 또는 /articles/NNN)
+    const url = String(a.url || a.articleUrl || '');
+    const m = url.match(/articleid=(\d+)/i)
+           || url.match(/\/articles?\/(\d+)/i)
+           || url.match(/[/?&](\d{4,})/);
+    return m ? (parseInt(m[1]) || 0) : 0;
+  }).filter(n => n > 0);
   return ids.length ? Math.max(...ids) : 0;
 }
 
