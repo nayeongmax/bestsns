@@ -246,7 +246,8 @@ const CollectorTab: React.FC = () => {
           return;
         }
 
-        if (typeof data._offset === 'number' && currentOffset === null) {
+        // offset=0 은 보정 실패일 수 있으므로 캐시하지 않음 (다음 배치에서 재계산)
+        if (typeof data._offset === 'number' && data._offset !== 0 && currentOffset === null) {
           currentOffset = data._offset;
           setRelayOffset(data._offset);
         }

@@ -44,28 +44,27 @@ async function computeOffset(cafeId, relayMenuId, refRelayPage, cookie) {
     // startDate 미전달 → 릴레이가 내용 미수집 = 빠른 목록만 반환
   };
 
-  // 1) 릴레이 page 1 → 최신 게시글 ID
-  const page1 = await relayCall({ ...base, startPage: 1 }, 5000);
-  if (!page1?.articles?.length) return 0;
+  // 두 호출을 병렬로 실행 (순차 10s → 병렬 8s)
+  const [page1, refData] = await Promise.all([
+    relayCall({ ...base, startPage: 1 }, 8000),
+    relayCall({ ...base, startPage: refRelayPage }, 8000),
+  ]);
 
-  const newestId = Math.max(
-    ...page1.articles.map(a => parseInt(a.articleId) || 0).filter(n => n > 0),
-  );
-  if (newestId <= 0) return 0;
+  if (!page1?.articles?.length || !refData?.articles?.length) return null;
 
-  // 2) 릴레이 refPage → 최상위 게시글 ID
-  const refData = await relayCall({ ...base, startPage: refRelayPage }, 5000);
-  if (!refData?.articles?.length) return 0;
+  // 릴레이가 반환할 수 있는 여러 필드명 시도
+  const getId = (a) => parseInt(a.articleId ?? a.id ?? a.articleNo ?? a.article_id ?? 0) || 0;
 
-  const topId = Math.max(
-    ...refData.articles.map(a => parseInt(a.articleId) || 0).filter(n => n > 0),
-  );
-  if (topId <= 0 || topId >= newestId) return 0;
+  const newestId = Math.max(...page1.articles.map(getId).filter(n => n > 0));
+  if (newestId <= 0) return null;
 
-  // 3) 해당 게시글의 브라우저 페이지 추정
+  const topId = Math.max(...refData.articles.map(getId).filter(n => n > 0));
+  if (topId <= 0 || topId >= newestId) return null;
+
+  // 해당 게시글의 브라우저 페이지 추정
   const estimatedBrowserPage = Math.floor((newestId - topId) / 15) + 1;
 
-  // 4) offset = 브라우저페이지 - 릴레이페이지
+  // offset = 브라우저페이지 - 릴레이페이지
   return estimatedBrowserPage - refRelayPage;
 }
 
@@ -103,10 +102,11 @@ exports.handler = async (event) => {
   const browserPage = Math.max(1, parseInt(startPage) || 1);
 
   // 오프셋 결정: 캐싱값 있으면 재사용, 없으면 계산 (최초 1회만)
+  // null = 보정 실패 → 그대로 사용 (응답에 _offset 미포함, 프론트 재시도)
   let offset = (typeof _offset === 'number') ? _offset : await computeOffset(cafeId, relayMenuId, browserPage, cookie);
 
-  // 보정된 릴레이 페이지
-  const relayPage = Math.max(1, browserPage - offset);
+  // 보정된 릴레이 페이지 (offset null이면 보정 없이 그대로)
+  const relayPage = Math.max(1, browserPage - (offset ?? 0));
 
   // 본 수집 (내용 포함)
   let relayRes;
@@ -145,11 +145,14 @@ exports.handler = async (event) => {
 
   // relay.nextPage(릴레이 공간) → 브라우저 공간으로 변환
   const rNext = data.nextPage;
-  const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + offset : null;
+  const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + (offset ?? 0) : null;
+
+  // offset null(보정 실패)이면 _offset 미포함 → 프론트가 캐시하지 않고 다음 요청에서 재시도
+  const extra = offset !== null ? { _offset: offset } : {};
 
   return {
     statusCode: 200,
     headers: RESP_HEADERS,
-    body: JSON.stringify({ ...data, nextPage: browserNextPage, _offset: offset }),
+    body: JSON.stringify({ ...data, nextPage: browserNextPage, ...extra }),
   };
 };
