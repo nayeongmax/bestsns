@@ -1,9 +1,13 @@
-// Fetches article list from Naver's f-e web API (same page numbering as browser)
-// and article content/comments via the same API.
-// This gives correct page numbering — unlike the relay's Mobile API.
+// 브라우저 f-e API와 릴레이 Mobile API의 페이지 번호 차이 보정.
+//
+// 릴레이(Mobile API) 페이지 번호 = 브라우저 f-e 페이지 번호 - 1
+// 예: 브라우저 995페이지 == 릴레이 994페이지 (같은 글)
+//
+// 그러므로:
+//   relay 호출 시 startPage = browser_page - 1
+//   relay가 반환한 nextPage +1 해서 저장 (browser page space로 유지)
 
-const CHROME_UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const RELAY_URL = process.env.RELAY_URL || 'http://223.130.163.229:3333';
 
 const RESP_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -12,41 +16,8 @@ const RESP_HEADERS = {
   'Content-Type': 'application/json; charset=UTF-8',
 };
 
-function stripHtml(html) {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-async function safeFetchJson(url, headers, timeoutMs) {
-  try {
-    const res = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const text = await res.text();
-    const trimmed = text.trim();
-    if (trimmed.startsWith('<') || trimmed.startsWith('<!')) return null;
-    return JSON.parse(trimmed);
-  } catch {
-    return null;
-  }
-}
-
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS')
-    return { statusCode: 200, headers: RESP_HEADERS, body: '' };
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: RESP_HEADERS, body: '' };
   if (event.httpMethod !== 'POST')
     return { statusCode: 405, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: 'POST only' }) };
 
@@ -66,121 +37,57 @@ exports.handler = async (event) => {
     naverCookie,
   } = body;
 
-  if (!cafeId) {
+  if (!cafeId)
     return { statusCode: 400, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: 'cafeId 필요' }) };
-  }
 
-  const cookie = naverCookie || process.env.NAVER_COOKIE || '';
-  const effectiveMenuId = (menuId || '').trim() || '0';
-  const page = Math.max(1, parseInt(startPage) || 1);
+  // Netlify 환경변수 쿠키 우선, 그 다음 사용자 입력 쿠키
+  const cookie = process.env.NAVER_COOKIE || naverCookie || undefined;
+  const browserPage = Math.max(1, parseInt(startPage) || 1);
 
-  const listHeaders = {
-    Cookie: cookie,
-    'User-Agent': CHROME_UA,
-    Referer: `https://cafe.naver.com/f-e/cafes/${cafeId}/menus/${effectiveMenuId}?page=${page}`,
-    Accept: 'application/json, text/plain, */*',
-    'Accept-Language': 'ko-KR,ko;q=0.9',
-  };
+  // 브라우저 페이지 → 릴레이 페이지 (항상 -1)
+  const relayPage = Math.max(1, browserPage - 1);
 
-  // ── Step 1: Fetch article list (correct page numbering — same as browser) ──
-  const listUrl =
-    `https://cafe.naver.com/ca-fe/web-api/v1/cafes/${cafeId}/menus/${effectiveMenuId}/articles` +
-    `?page=${page}&perPage=15`;
-
-  const listData = await safeFetchJson(listUrl, listHeaders, 12000);
-
-  if (!listData) {
+  let relayRes;
+  try {
+    relayRes = await fetch(`${RELAY_URL}/scrape-naver-cafe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cafeId,
+        menuId: (menuId || '').trim(),
+        startPage: relayPage,
+        startDate: '2000.01.01',
+        maxArticles: Math.min(15, parseInt(maxArticles) || 15),
+        maxComments: parseInt(maxComments) || 0,
+        fetchComments: fetchComments && parseInt(maxComments) > 0,
+        naverCookie: cookie,
+      }),
+      signal: AbortSignal.timeout(24000),
+    });
+  } catch (e) {
     return {
       statusCode: 502,
       headers: RESP_HEADERS,
-      body: JSON.stringify({
-        status: 'error',
-        message:
-          '글 목록 조회 실패 — 네이버 쿠키를 확인하세요 (NID_AUT, NID_SES 값을 직접 입력하세요)',
-      }),
+      body: JSON.stringify({ status: 'error', message: `릴레이 서버 연결 실패: ${e.message}` }),
     };
   }
 
-  const result = listData.result || listData;
-  const articleList = result.articleList || result.articles || [];
-  const nextPage = articleList.length >= 15 ? page + 1 : null;
-
-  if (articleList.length === 0) {
-    return {
-      statusCode: 200,
-      headers: RESP_HEADERS,
-      body: JSON.stringify({ status: 'ok', articles: [], nextPage: null }),
-    };
+  let data;
+  try { data = await relayRes.json(); }
+  catch {
+    return { statusCode: 502, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: '릴레이 응답 파싱 오류' }) };
   }
 
-  const limit = Math.min(articleList.length, Math.max(1, parseInt(maxArticles) || 15));
-  const slice = articleList.slice(0, limit);
-  const commentLimit = Math.max(0, parseInt(maxComments) || 0);
+  if (data.status !== 'ok')
+    return { statusCode: relayRes.status, headers: RESP_HEADERS, body: JSON.stringify(data) };
 
-  // ── Step 2: Fetch content + comments for each article (parallel) ──
-  const fetchArticle = async (item) => {
-    const articleId = item.articleId || item.id;
-
-    const contentHeaders = {
-      Cookie: cookie,
-      'User-Agent': CHROME_UA,
-      Referer: `https://cafe.naver.com/f-e/cafes/${cafeId}/articles/${articleId}`,
-      Accept: 'application/json, text/plain, */*',
-      'Accept-Language': 'ko-KR,ko;q=0.9',
-    };
-
-    let content = '';
-    let comments = [];
-
-    // Article content
-    const contentUrl = `https://cafe.naver.com/ca-fe/web-api/v1/cafes/${cafeId}/articles/${articleId}`;
-    const contentData = await safeFetchJson(contentUrl, contentHeaders, 8000);
-    if (contentData) {
-      const art =
-        contentData.result?.article ||
-        contentData.article ||
-        {};
-      const rawHtml = art.contentHtml || art.content || art.htmlContent || '';
-      content = stripHtml(rawHtml);
-    }
-
-    // Comments
-    if (fetchComments && commentLimit > 0) {
-      const commentsUrl =
-        `https://cafe.naver.com/ca-fe/web-api/v1/cafes/${cafeId}/articles/${articleId}/comments/pages/1` +
-        `?perPage=${commentLimit}`;
-      const commentsData = await safeFetchJson(commentsUrl, contentHeaders, 6000);
-      if (commentsData) {
-        const cResult = commentsData.result || commentsData;
-        const commentList = cResult.commentList || cResult.comments || [];
-        comments = commentList.slice(0, commentLimit).map((c) => ({
-          content: c.content || c.text || '',
-          writer: c.writeNickname || c.writerId || '',
-          date: (c.writeDatetime || c.date || '').replace(/\.$/, ''),
-        }));
-      }
-    }
-
-    const rawDate = (item.writeDatetime || item.date || '').replace(/\.$/, '');
-
-    return {
-      articleId,
-      title: item.subject || item.title || '',
-      writer: item.writeNickname || item.writerId || item.writer || '',
-      date: rawDate,
-      commentCount: item.commentCount || 0,
-      readCount: item.readCount || 0,
-      url: `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`,
-      content,
-      comments,
-    };
-  };
-
-  const articles = await Promise.all(slice.map(fetchArticle));
+  // 릴레이 nextPage(릴레이 페이지 공간) → 브라우저 페이지 공간으로 변환
+  const rNext = data.nextPage;
+  const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + 1 : null;
 
   return {
     statusCode: 200,
     headers: RESP_HEADERS,
-    body: JSON.stringify({ status: 'ok', articles, nextPage }),
+    body: JSON.stringify({ ...data, nextPage: browserNextPage }),
   };
 };
