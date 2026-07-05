@@ -80,60 +80,27 @@ exports.handler = async (event) => {
   const offset      = hasOffset ? _offset : 0;
   const relayPage   = Math.max(1, browserPage - offset);
 
+  const userMaxComments = parseInt(maxComments) || 0;
   const mainParams = {
     cafeId,
     menuId: relayMenuId,
     startPage: relayPage,
     startDate: '2000.01.01',
-    maxArticles: Math.min(15, parseInt(maxArticles) || 15),
-    maxComments: parseInt(maxComments) || 0,
-    fetchComments: fetchComments && parseInt(maxComments) > 0,
+    // 10개로 제한: 글 상세 API 호출(본문+댓글)이 추가되어 타임아웃 방지
+    maxArticles: Math.min(10, parseInt(maxArticles) || 10),
+    // maxComments 최소 1: 릴레이가 댓글 수집 시 글 상세 API를 호출 → 본문도 획득
+    maxComments: Math.max(1, userMaxComments),
+    fetchComments: true,
     naverCookie: cookie,
   };
 
-  let mainData, newestId = 0, probeDebug = null;
+  let mainData;
 
   if (!hasOffset) {
-    // 첫 요청: 수집 + page 1 프로브를 병렬로 실행
-    const probeParams = {
-      cafeId,
-      menuId: relayMenuId,
-      startPage: 1,
-      startDate: '2000.01.01',
-      maxArticles: 1,
-      maxComments: 0,
-      fetchComments: false,
-      naverCookie: cookie,
-    };
-
-    const [main, probe] = await Promise.all([
-      safeRelayFetch(mainParams, 20000),
-      safeRelayFetch(probeParams, 20000),
-    ]);
-
-    mainData = main;
-    newestId = extractMaxId(probe?.articles);
-
-    // 디버그: 프로브 첫 번째 글의 실제 필드 구조를 확인
-    if (probe?.articles?.length > 0) {
-      const first = probe.articles[0];
-      probeDebug = {
-        fields: Object.keys(first).join(', '),
-        articleId: first.articleId,
-        id:        first.id,
-        articleNo: first.articleNo,
-        url:       (first.url || '').slice(0, 100),
-        newestId,
-      };
-    } else {
-      probeDebug = {
-        probeStatus: probe?.status,
-        probeMsg:    probe?.message,
-        articles:    probe?.articles?.length ?? -1,
-      };
-    }
+    // 첫 요청: 수집만 (probe 제거 — newestId는 프론트에서 브라우저 기준으로 보정)
+    mainData = await safeRelayFetch(mainParams, 22000);
   } else {
-    // 이후 요청: 수집만 (더 많은 시간 할당)
+    // 이후 요청: 수집만
     mainData = await safeRelayFetch(mainParams, 22000);
   }
 
@@ -151,8 +118,6 @@ exports.handler = async (event) => {
   const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + offset : null;
 
   const extra = { _relayPage: relayPage };
-  if (newestId > 0) extra._newestId = newestId;
-  if (probeDebug) extra._probeDebug = probeDebug;
 
   return {
     statusCode: 200,
