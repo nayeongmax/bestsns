@@ -108,7 +108,7 @@ exports.handler = async (event) => {
 
     const [main, probe] = await Promise.all([
       safeRelayFetch(mainParams, 20000),
-      safeRelayFetch(probeParams, 15000),
+      safeRelayFetch(probeParams, 20000),
     ]);
 
     mainData = main;
