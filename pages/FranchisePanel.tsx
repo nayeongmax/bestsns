@@ -175,7 +175,7 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
-  const BATCH_SIZE = 15; // 네이버 카페 1페이지 = 15개, 정확히 맞춰야 중간 누락 없음
+  const BATCH_SIZE = 5; // Netlify 함수 26초 제한 안에 처리 가능한 크기
 
   const doCollect = async (resume: boolean) => {
     if (!resolvedCafeId) { setStatus('카페 ID를 입력해주세요.'); return; }
@@ -189,7 +189,7 @@ const CollectorTab: React.FC = () => {
 
     const fetchBatch = async (page: number, batchSize: number) => {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 24000); // 24초: Netlify 26초 제한 전 선제 중단
+      const timer = setTimeout(() => ctrl.abort(), 52000); // 52초: 릴레이 55초 제한에 맞춤
       let res: Response;
       try {
         res = await fetch('/.netlify/functions/scrape-naver-cafe', {
@@ -228,7 +228,7 @@ const CollectorTab: React.FC = () => {
         const batchSize = Math.min(remaining, BATCH_SIZE);
         setStatus(`수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`);
 
-        // 실패 시 최대 2회 재시도
+        // 실패 시 최대 2회 재시도 (타임아웃은 5초 대기, 일반 오류는 3초)
         let data: any = null;
         let lastErr = '';
         for (let attempt = 0; attempt < 3; attempt++) {
@@ -238,8 +238,9 @@ const CollectorTab: React.FC = () => {
           } catch (e: unknown) {
             lastErr = e instanceof Error ? e.message : '알 수 없는 오류';
             if (attempt < 2) {
+              const delay = lastErr.includes('타임아웃') ? 5000 : 3000;
               setStatus(`재시도 중... (${attempt + 1}/2회, 페이지 ${currentPage})`);
-              await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+              await new Promise(r => setTimeout(r, delay));
             }
           }
         }
