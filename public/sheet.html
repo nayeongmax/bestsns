@@ -731,7 +731,8 @@ function renderSection(sec) {
 
   // 섹션 헤더 클릭 → 붙여넣기 대상 지정
   hrow.addEventListener('click', (e) => {
-    if (e.target.getAttribute('contenteditable') === 'true') return;
+    const td = e.target.closest('td');
+    if (td && td.querySelector('[contenteditable]')) return;
     setPasteTarget(sec.id);
   });
 
@@ -839,6 +840,7 @@ function renderEntry(secId, entry, ei) {
 
   ['bc1','bc2','bc3'].forEach(k => {
     const td = document.createElement('td'); td.style.background='#fff';
+    td.className = 'bc-cell';
     const d = makeEditable('댓글'); d.className = 'comment-text';
     if (entry[k]) d.innerHTML = entry[k];
     td.appendChild(d); crow.appendChild(td);
@@ -1200,6 +1202,9 @@ sheetBodyEl.addEventListener('mousedown', e => {
   const td = e.target.closest('td');
   if (!td || !td.querySelector('[contenteditable]')) return;
   if (isUnselectableTd(td)) return; // lbl, rlbl, 분류 셀 제외
+
+  // bc-cell (하단 댓글칸): 선택모드 건너뛰고 브라우저 자연 포커스에 맡김
+  if (td.classList.contains('bc-cell')) return;
 
   // 더블클릭은 편집모드: 선택 간섭 안 함
   if (e.detail >= 2) { _dragStartTd = null; _isDragging = false; return; }
