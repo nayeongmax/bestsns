@@ -342,20 +342,10 @@ const CollectorTab: React.FC = () => {
               `🔬 프로브 구조 — fields: ${pd.fields}`,
               `articleId=${pd.articleId}, id=${pd.id}, articleNo=${pd.articleNo}, newestId=${pd.newestId}, url=${pd.url}`
             );
-          } else if (pd._fallback) {
-            // 프로브 실패 → 현재 배치 최고 ID를 fallback으로 사용
-            // fallback newestId는 현재 릴레이 페이지 기준이므로 실제 newest 추산
-            const relayPg: number = data._relayPage ?? 1;
-            const fallbackNewest = pd._fallbackId + (relayPg - 1) * 15;
-            addLog('calib',
-              `⚠ 프로브 타임아웃 — fallback newestId 추산`,
-              `현재배치 최고ID: ${pd._fallbackId}, 릴레이 ${relayPg}p 기준 추산: ~${fallbackNewest}`
-            );
-            if (newest === null && fallbackNewest > 0) newest = fallbackNewest;
           } else {
             addLog('err',
-              `🔬 프로브 실패 — status: ${pd.probeStatus}`,
-              pd.probeMsg ?? '응답 없음'
+              `🔬 프로브 타임아웃 — status: ${pd.probeStatus ?? 'timeout'}`,
+              pd.probeMsg ?? '페이지 검증 없이 수집 계속'
             );
           }
         }
@@ -371,7 +361,6 @@ const CollectorTab: React.FC = () => {
           if (verified !== null) {
             const { page: actual, topId } = verified;
             const diff = actual - browserPage;
-            // 진단 로그: 실제 ID 값 표시 (articleId가 0이면 원인 파악 가능)
             const sampleId = extractArticleId(data.articles[0]);
             addLog('calib',
               `📊 진단 — newestId: ${newest}, topId: ${topId}, sampleId: ${sampleId}`,
@@ -379,6 +368,14 @@ const CollectorTab: React.FC = () => {
             );
             if (Math.abs(diff) <= 2) {
               addLog('verify', `🔍 검증 통과 — 요청 ${browserPage}p = 실제 ${actual}p`);
+              return { data, offset, newest };
+            }
+            // 불가능한 보정값 (음수 페이지, 차이 500 이상)이면 검증 포기하고 그냥 반환
+            if (actual <= 0 || Math.abs(diff) > 500) {
+              addLog('err',
+                `⚠ 검증 불가 — 계산된 페이지(${actual}p)가 비정상, newestId 신뢰 불가`,
+                `페이지 검증 없이 수집 계속`
+              );
               return { data, offset, newest };
             }
             // 불일치: 오프셋 수정 후 재시도
