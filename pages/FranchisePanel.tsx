@@ -99,8 +99,6 @@ const CollectorTab: React.FC = () => {
   const [cafeId,        setCafeId]        = useState('');
   const [menuId,        setMenuId]        = useState('');
   const [startPage,     setStartPage]     = useState('1');
-  const [startDate,     setStartDate]     = useState('');
-  const [endDate,       setEndDate]       = useState('');
   const [maxArticles,   setMaxArticles]   = useState('10');
   const [maxComments,   setMaxComments]   = useState('3');
   const [aiRewrite,     setAiRewrite]     = useState(false);
@@ -187,17 +185,7 @@ const CollectorTab: React.FC = () => {
     let accumulated: CafeArticle[] = resume ? [...articles] : [];
     let remaining = resume ? Math.max(0, total - articles.length) : total;
 
-    const sDate = startDate.trim();
-    const eDate = endDate.trim() || todayStr();
-
-    // 릴레이에 보낼 startDate:
-    // - 재개 시: 이미 위치를 알고 있으므로 '2000.01.01' (본문 수집 트리거, 네비게이션 없음)
-    // - 최초 시작 + sDate 있음: 사용자 날짜로 1회 호출해 릴레이의 네비게이션 결과(nextPage)를 파악한 뒤
-    //   이후 호출은 '2000.01.01'로 전환 (네비게이션 재발 방지)
-    let relayDate: string = sDate && !resume ? sDate : '2000.01.01';
-    let navigationResolved = !sDate || resume;
-
-    const fetchBatch = async (page: number, rDate: string) => {
+    const fetchBatch = async (page: number) => {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 52000);
       let res: Response;
@@ -209,8 +197,7 @@ const CollectorTab: React.FC = () => {
             cafeId: resolvedCafeId,
             menuId: menuId.trim(),
             startPage: page,
-            startDate: rDate,
-            endDate: eDate,
+            startDate: '2000.01.01',
             maxArticles: BATCH_SIZE,
             maxComments: parseInt(maxComments) || 0,
             fetchComments: parseInt(maxComments) > 0,
@@ -234,16 +221,13 @@ const CollectorTab: React.FC = () => {
 
     try {
       while (remaining > 0 && !stopRef.current) {
-        setStatus(navigationResolved
-          ? `수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`
-          : `시작 위치 확인 중...`);
+        setStatus(`수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`);
 
-        // 실패 시 최대 2회 재시도
         let data: any = null;
         let lastErr = '';
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            data = await fetchBatch(currentPage, relayDate);
+            data = await fetchBatch(currentPage);
             break;
           } catch (e: unknown) {
             lastErr = e instanceof Error ? e.message : '알 수 없는 오류';
@@ -261,29 +245,8 @@ const CollectorTab: React.FC = () => {
         }
 
         const rawList: CafeArticle[] = data.articles || [];
-
-        // 네비게이션 단계: 릴레이가 경계 페이지(시작날짜 이전)를 반환한 경우
-        // → nextPage를 실제 시작점으로 삼고, 이후 호출은 '2000.01.01'로 전환
-        if (!navigationResolved) {
-          const allPreDate = rawList.length > 0 && rawList.every(a => !a.date || a.date < sDate);
-          if ((allPreDate || rawList.length === 0) && data.nextPage) {
-            relayDate = '2000.01.01';
-            navigationResolved = true;
-            currentPage = data.nextPage;
-            await new Promise(r => setTimeout(r, 1000));
-            continue;
-          }
-          // 릴레이가 올바른 페이지를 반환함 → 이후 호출만 '2000.01.01'로 전환
-          relayDate = '2000.01.01';
-          navigationResolved = true;
-        }
-
-        // 클라이언트 날짜 필터
-        const newList = rawList.filter(a => {
-          if (sDate && a.date < sDate) return false;
-          if (eDate && a.date > eDate) return false;
-          return true;
-        });
+        const take = Math.min(rawList.length, remaining);
+        const newList = rawList.slice(0, take);
 
         accumulated = [...accumulated, ...newList.map((a, i) => ({ ...a, no: accumulated.length + i + 1 }))];
         saveArticles(accumulated);
@@ -295,15 +258,13 @@ const CollectorTab: React.FC = () => {
 
         remaining -= newList.length;
 
-        const hitOldBoundary = sDate && rawList.some(a => a.date < sDate);
-        if (hitOldBoundary || !data.nextPage || rawList.length === 0) {
+        if (!data.nextPage || rawList.length === 0) {
           setNextPage(null);
           break;
         }
         currentPage = data.nextPage;
         setNextPage(data.nextPage);
 
-        // 릴레이/네이버 요청 간격 (너무 빠르면 차단됨)
         await new Promise(r => setTimeout(r, 3000));
       }
 
@@ -491,8 +452,8 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
       id: Date.now().toString(),
       collectedAt: new Date().toLocaleString('ko-KR'),
       cafeUrl: cafeUrl.trim(),
-      startDate: startDate.trim() || '-',
-      endDate: endDate.trim() || todayStr(),
+      startDate: '-',
+      endDate: '-',
       count: articles.length,
       filename,
     }, ...history]);
@@ -647,14 +608,6 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">시작 페이지 번호:</label>
               <input className={inputCls} type="number" min="1" value={startPage} onChange={e => setStartPage(e.target.value)} />
-            </div>
-            <div className="mb-2">
-              <label className="block text-xs font-bold text-gray-600 mb-0.5">시작일 (YYYY.MM.DD):</label>
-              <input className={inputCls} value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="2025.06.01" autoComplete="off" spellCheck={false} />
-            </div>
-            <div className="mb-2">
-              <label className="block text-xs font-bold text-gray-600 mb-0.5">종료일 (YYYY.MM.DD, 비우면 오늘):</label>
-              <input className={inputCls} value={endDate} onChange={e => setEndDate(e.target.value)} placeholder={todayStr()} autoComplete="off" spellCheck={false} />
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">최대 수집 글 수:</label>
