@@ -187,12 +187,17 @@ const CollectorTab: React.FC = () => {
     let accumulated: CafeArticle[] = resume ? [...articles] : [];
     let remaining = resume ? Math.max(0, total - articles.length) : total;
 
-    // 날짜 필터는 클라이언트에서 처리 — 릴레이에 날짜를 넘기면 페이지를 건너뛰어
-    // 시작 페이지가 틀려지는 문제가 생기므로 릴레이는 순수 페이지 단위 수집만 담당
     const sDate = startDate.trim();
     const eDate = endDate.trim() || todayStr();
 
-    const fetchBatch = async (page: number) => {
+    // 릴레이에 보낼 startDate:
+    // - 재개 시: 이미 위치를 알고 있으므로 '2000.01.01' (본문 수집 트리거, 네비게이션 없음)
+    // - 최초 시작 + sDate 있음: 사용자 날짜로 1회 호출해 릴레이의 네비게이션 결과(nextPage)를 파악한 뒤
+    //   이후 호출은 '2000.01.01'로 전환 (네비게이션 재발 방지)
+    let relayDate: string = sDate && !resume ? sDate : '2000.01.01';
+    let navigationResolved = !sDate || resume;
+
+    const fetchBatch = async (page: number, rDate: string) => {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 52000);
       let res: Response;
@@ -204,7 +209,7 @@ const CollectorTab: React.FC = () => {
             cafeId: resolvedCafeId,
             menuId: menuId.trim(),
             startPage: page,
-            startDate: sDate || undefined,
+            startDate: rDate,
             endDate: eDate,
             maxArticles: BATCH_SIZE,
             maxComments: parseInt(maxComments) || 0,
@@ -229,14 +234,16 @@ const CollectorTab: React.FC = () => {
 
     try {
       while (remaining > 0 && !stopRef.current) {
-        setStatus(`수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`);
+        setStatus(navigationResolved
+          ? `수집 중... (${accumulated.length}/${total}개, 페이지 ${currentPage})`
+          : `시작 위치 확인 중...`);
 
         // 실패 시 최대 2회 재시도
         let data: any = null;
         let lastErr = '';
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            data = await fetchBatch(currentPage);
+            data = await fetchBatch(currentPage, relayDate);
             break;
           } catch (e: unknown) {
             lastErr = e instanceof Error ? e.message : '알 수 없는 오류';
@@ -255,6 +262,22 @@ const CollectorTab: React.FC = () => {
 
         const rawList: CafeArticle[] = data.articles || [];
 
+        // 네비게이션 단계: 릴레이가 경계 페이지(시작날짜 이전)를 반환한 경우
+        // → nextPage를 실제 시작점으로 삼고, 이후 호출은 '2000.01.01'로 전환
+        if (!navigationResolved) {
+          const allPreDate = rawList.length > 0 && rawList.every(a => !a.date || a.date < sDate);
+          if ((allPreDate || rawList.length === 0) && data.nextPage) {
+            relayDate = '2000.01.01';
+            navigationResolved = true;
+            currentPage = data.nextPage;
+            await new Promise(r => setTimeout(r, 1000));
+            continue;
+          }
+          // 릴레이가 올바른 페이지를 반환함 → 이후 호출만 '2000.01.01'로 전환
+          relayDate = '2000.01.01';
+          navigationResolved = true;
+        }
+
         // 클라이언트 날짜 필터
         const newList = rawList.filter(a => {
           if (sDate && a.date < sDate) return false;
@@ -272,18 +295,7 @@ const CollectorTab: React.FC = () => {
 
         remaining -= newList.length;
 
-        // rawList에 startDate보다 오래된 글이 있으면 경계 확인
         const hitOldBoundary = sDate && rawList.some(a => a.date < sDate);
-        const allPreDate = hitOldBoundary && newList.length === 0;
-
-        // 릴레이 날짜 네비게이션으로 시작날짜 이전 페이지가 반환된 경우 → 다음 페이지로 계속 진행
-        if ((allPreDate || rawList.length === 0) && data.nextPage) {
-          currentPage = data.nextPage;
-          setNextPage(data.nextPage);
-          await new Promise(r => setTimeout(r, 1000));
-          continue;
-        }
-
         if (hitOldBoundary || !data.nextPage || rawList.length === 0) {
           setNextPage(null);
           break;
