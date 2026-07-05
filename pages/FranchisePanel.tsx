@@ -411,14 +411,42 @@ const CollectorTab: React.FC = () => {
 
         // 수집된 글 목록 로그
         newList.forEach((a, i) => {
-          const snippet = (a.content || '').replace(/<[^>]*>/g, '').trim().slice(0, 80);
+          const aid     = extractArticleId(a);
+          const artPage = (latestNewest && aid > 0)
+            ? Math.floor((latestNewest - aid) / 15) + 1
+            : null;
+          const pageTag  = artPage ? ` · ${artPage}p` : '';
+          const rawBody  = (a.content || '').replace(/<[^>]*>/g, '').trim();
+          const snippet  = rawBody.slice(0, 150);
+          const noContent = !rawBody;
           addLog('article',
             `[${accumulated.length + i + 1}] ${a.title}`,
-            snippet
-              ? `${a.writer} · ${a.date}\n${snippet}${snippet.length >= 80 ? '…' : ''}`
-              : `${a.writer} · ${a.date}`,
+            `${a.writer} · ${a.date}${pageTag}\n`
+            + (noContent ? '⚠ 내용 없음 (비공개 또는 이미지 전용 글)' : snippet + (rawBody.length > 150 ? '…' : '')),
           );
         });
+
+        // 내용이 빠진 글 재수집 (같은 페이지 1회 재시도)
+        const missingContent = newList.filter(a => !(a.content || '').replace(/<[^>]*>/g, '').trim());
+        if (missingContent.length > 0 && !stopRef.current) {
+          addLog('req', `📡 내용 없는 글 ${missingContent.length}개 재수집 중...`);
+          try {
+            const retry = await fetchBatch(currentPage, newOffset);
+            if (retry?.articles?.length) {
+              const retryMap = new Map<string, string>(
+                retry.articles.map((a: CafeArticle) => [String(a.articleId), a.content || ''])
+              );
+              newList.forEach(a => {
+                const filled = retryMap.get(String(a.articleId));
+                if (filled && !(a.content || '').trim()) a.content = filled;
+              });
+              const stillEmpty = newList.filter(a => !(a.content || '').replace(/<[^>]*>/g, '').trim()).length;
+              addLog('batch', stillEmpty > 0
+                ? `⚠ 재수집 후에도 ${stillEmpty}개 내용 없음 (비공개/이미지 글)`
+                : '✅ 내용 재수집 완료');
+            }
+          } catch { /* 재수집 실패는 무시 */ }
+        }
 
         accumulated = [...accumulated, ...newList.map((a, i) => ({ ...a, no: accumulated.length + i + 1 }))];
         saveArticles(accumulated);
