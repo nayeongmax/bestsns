@@ -1,11 +1,5 @@
-// 브라우저 f-e API와 릴레이 Mobile API의 페이지 번호 차이 보정.
-//
-// 릴레이(Mobile API) 페이지 번호 = 브라우저 f-e 페이지 번호 - 1
-// 예: 브라우저 995페이지 == 릴레이 994페이지 (같은 글)
-//
-// 그러므로:
-//   relay 호출 시 startPage = browser_page - 1
-//   relay가 반환한 nextPage +1 해서 저장 (browser page space로 유지)
+// 릴레이(Mobile API)로 네이버 카페 글을 수집합니다.
+// 주의: menuId "0" 은 릴레이 Mobile API에서 404를 유발하므로 빈 문자열("")로 변환합니다.
 
 const RELAY_URL = process.env.RELAY_URL || 'http://223.130.163.229:3333';
 
@@ -40,12 +34,11 @@ exports.handler = async (event) => {
   if (!cafeId)
     return { statusCode: 400, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: 'cafeId 필요' }) };
 
-  // Netlify 환경변수 쿠키 우선, 그 다음 사용자 입력 쿠키
   const cookie = process.env.NAVER_COOKIE || naverCookie || undefined;
-  const browserPage = Math.max(1, parseInt(startPage) || 1);
 
-  // 브라우저 페이지 → 릴레이 페이지 (항상 -1)
-  const relayPage = Math.max(1, browserPage - 1);
+  // "0"은 전체글을 의미하지만 릴레이 Mobile API에서 404를 유발 → 빈 문자열로 처리
+  const rawMenuId = (menuId || '').trim();
+  const relayMenuId = rawMenuId === '0' ? '' : rawMenuId;
 
   let relayRes;
   try {
@@ -54,8 +47,8 @@ exports.handler = async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         cafeId,
-        menuId: (menuId || '').trim(),
-        startPage: relayPage,
+        menuId: relayMenuId,
+        startPage: parseInt(startPage) || 1,
         startDate: '2000.01.01',
         maxArticles: Math.min(15, parseInt(maxArticles) || 15),
         maxComments: parseInt(maxComments) || 0,
@@ -78,16 +71,5 @@ exports.handler = async (event) => {
     return { statusCode: 502, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: '릴레이 응답 파싱 오류' }) };
   }
 
-  if (data.status !== 'ok')
-    return { statusCode: relayRes.status, headers: RESP_HEADERS, body: JSON.stringify(data) };
-
-  // 릴레이 nextPage(릴레이 페이지 공간) → 브라우저 페이지 공간으로 변환
-  const rNext = data.nextPage;
-  const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + 1 : null;
-
-  return {
-    statusCode: 200,
-    headers: RESP_HEADERS,
-    body: JSON.stringify({ ...data, nextPage: browserNextPage }),
-  };
+  return { statusCode: relayRes.status, headers: RESP_HEADERS, body: JSON.stringify(data) };
 };
