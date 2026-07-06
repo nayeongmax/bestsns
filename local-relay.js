@@ -502,13 +502,12 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
 
         // 메인 프레임 + 모든 iframe 순서로 탐색
         const allFrames = page.frames();
-        console.log(`  [Playwright] 프레임 수: ${allFrames.length}`);
+        let contentFrame = null;
         for (const frame of allFrames) {
           if (content) break;
           try {
             const fUrl = frame.url();
-            console.log(`  [Playwright] 프레임 URL: ${fUrl.slice(0, 100)}`);
-            const text = await frame.evaluate((sels) => {
+            const result = await frame.evaluate((sels) => {
               for (const sel of sels) {
                 const el = document.querySelector(sel);
                 if (el) {
@@ -516,21 +515,53 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
                   if (t.length > 10) return t;
                 }
               }
-              // 선택자 없으면 body 텍스트 길이만 확인용
-              return '__body__' + (document.body?.innerText?.length || 0);
+              return '';
             }, DOM_SELECTORS);
 
-            if (text && !text.startsWith('__body__')) {
-              content = text;
+            if (result) {
+              content = result;
+              contentFrame = frame;
               console.log(`  [Playwright DOM] 성공 (${fUrl.slice(0, 60)}), 길이=${content.length}`);
-            } else {
-              console.log(`  [Playwright] 프레임 body 길이: ${text}`);
             }
-          } catch (fe) {
-            console.log(`  [Playwright] 프레임 접근 오류: ${fe.message}`);
-          }
+          } catch (fe) { /* 무시 */ }
         }
         if (!content) console.log(`  [Playwright DOM] 모든 프레임에서 내용 없음`);
+
+        // 댓글도 같은 프레임에서 DOM으로 읽기
+        if (contentFrame && maxComments > 0 && comments.length === 0) {
+          try {
+            comments = await contentFrame.evaluate((maxC) => {
+              const result = [];
+              const COMMENT_SELS = [
+                '.CommentBox .comment_item',
+                '.comment_list .comment_item',
+                'ul.CommentBox__list > li',
+                '[class*="CommentItem"]',
+                '.cafe_comment_list li',
+                '.comment_area li',
+                '[class*="comment-item"]',
+              ];
+              let items = [];
+              for (const sel of COMMENT_SELS) {
+                items = Array.from(document.querySelectorAll(sel));
+                if (items.length > 0) break;
+              }
+              for (const item of items.slice(0, maxC)) {
+                const contentEl = item.querySelector('[class*="comment_text"], [class*="text_comment"], .comment_body p, .text');
+                const writerEl  = item.querySelector('[class*="nick"], [class*="writer_nick"], .comment_writer');
+                const dateEl    = item.querySelector('[class*="date"], time');
+                const text = (contentEl?.innerText || contentEl?.textContent || '').trim();
+                if (text) result.push({
+                  content: text,
+                  writer: (writerEl?.innerText || writerEl?.textContent || '').trim(),
+                  date:   (dateEl?.innerText   || dateEl?.textContent   || '').trim(),
+                });
+              }
+              return result;
+            }, maxComments);
+            if (comments.length > 0) console.log(`  [Playwright DOM 댓글] ${comments.length}개`);
+          } catch(ce) { /* 무시 */ }
+        }
       }
 
       if (content) return { content, comments };
