@@ -333,6 +333,12 @@ const CollectorTab: React.FC = () => {
             newest = topId + (browserPage - 1) * 15;
             addLog('calib', `📊 브라우저 기준 newestId 보정: ${newest} (topId ${topId}, 요청 ${browserPage}p)`);
           }
+          // 릴레이 응답 첫 글 전체 필드 구조 로그 (내용 없음 원인 진단)
+          const firstRaw = data.articles[0];
+          const contentFields = ['content','body','text','articleContent','bodyHtml','contentHtml','contentText','bodyText']
+            .map(f => `${f}=${JSON.stringify((firstRaw[f] || '').toString().slice(0,60))}`)
+            .join(', ');
+          addLog('calib', `🔬 첫 글 내용 필드 진단`, contentFields);
         }
 
         // 그대로 반환 (relay page ≈ browser page — 페이지 보정 불필요)
