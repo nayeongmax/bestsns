@@ -454,7 +454,8 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           try { intercepted = await response.json(); } catch {}
         }
       });
-      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      // SPA URL 사용 — ArticleRead.nhn은 iframe이라 DOM 읽기 불가
+      await page.goto(`https://cafe.naver.com/f-e/cafes/${cafeId}/articles/${articleId}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
       // API 인터셉트 대기 (최대 6초)
       const deadline = Date.now() + 6000;
@@ -623,9 +624,9 @@ async function handleScrape(body) {
     let reachedStart = false;
     let pageAllFiltered = true;
     console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
-    // 페이지 내 아이템은 최신→오래된 순 (브라우저와 동일 순서 유지)
+    // Python과 동일: 페이지 아래(오래된 글)부터 수집
     const filteredItems = [];
-    for (const item of rawItems) {
+    for (const item of [...rawItems].reverse()) {
       if (articles.length + filteredItems.length >= maxArticles) { pageAllFiltered = false; break; }
       const dateObj = parseDateStr(item.dateStr);
       if (endDateObj && dateObj && dateObj > endDateObj) continue;
