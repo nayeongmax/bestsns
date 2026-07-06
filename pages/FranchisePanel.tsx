@@ -100,6 +100,7 @@ const CollectorTab: React.FC = () => {
   const [menuId,        setMenuId]        = useState('');
   const [startPage,     setStartPage]     = useState('1');
   const [startPageUrl,  setStartPageUrl]  = useState(''); // URL에서 페이지 추출용
+  const [collectStartDate, setCollectStartDate] = useState(''); // 수집 시작 날짜 필터 (예: 2026.02.02)
   const [maxArticles,   setMaxArticles]   = useState('10');
   const [maxComments,   setMaxComments]   = useState('3');
   const [aiRewrite,     setAiRewrite]     = useState(false);
@@ -272,7 +273,7 @@ const CollectorTab: React.FC = () => {
               cafeId: resolvedCafeId,
               menuId: menuId.trim() || '',
               startPage: page,
-              startDate: '2000.01.01',
+              startDate: collectStartDate.trim() || '2000.01.01',
               maxArticles: BATCH_SIZE,
               maxComments: Math.max(1, parseInt(maxComments) || 0),
               fetchComments: true,
@@ -927,6 +928,23 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 )}
               </div>
               <p className="text-[9px] text-gray-400 mt-0.5">카페 열기 → 원하는 페이지로 이동 → URL 복사 후 위에 붙여넣기</p>
+              {/* 수집 시작 날짜 필터 */}
+              <div className="flex items-center gap-1 mt-1">
+                <span className="text-[10px] text-gray-500 shrink-0">시작 날짜 (선택):</span>
+                <input
+                  className={`${inputCls} w-28 text-center font-bold`}
+                  type="text"
+                  placeholder="예: 2026.02.02"
+                  value={collectStartDate}
+                  onChange={e => setCollectStartDate(e.target.value)}
+                />
+                {collectStartDate.trim() && (
+                  <span className="text-[10px] text-blue-600 font-bold">{collectStartDate} 이후 글만 수집</span>
+                )}
+              </div>
+              {collectStartDate.trim() && (
+                <p className="text-[9px] text-blue-500 mt-0.5">페이지 번호가 맞지 않아도 해당 날짜 이후 글만 골라 수집합니다.</p>
+              )}
             </div>
 
             {/* 릴레이 페이지 보정값 */}

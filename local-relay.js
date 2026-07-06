@@ -616,11 +616,11 @@ async function tryPlaywrightList(cafeId, menuId, page, cookie) {
     });
 
     // Python의 driver.get(list_url)과 동일: f-e SPA URL로 브라우저 열기
-    // menus/0 은 유효하지 않음 — 전체글은 /articles, 특정 메뉴는 /menus/{id}
+    // menus/0 = 전체글보기 (브라우저 URL과 동일하게 맞춰야 ca-fe API 페이지 번호 일치)
     const hasMenu = menuId && menuId !== '0';
     const listUrl = hasMenu
       ? `https://cafe.naver.com/f-e/cafes/${cafeId}/menus/${menuId}?page=${page}&viewType=L`
-      : `https://cafe.naver.com/f-e/cafes/${cafeId}/articles?page=${page}&viewType=L`;
+      : `https://cafe.naver.com/f-e/cafes/${cafeId}/menus/0?page=${page}&viewType=L`;
     console.log(`[Playwright 목록] ${listUrl}`);
     await pw.goto(listUrl, { waitUntil: 'networkidle', timeout: 30000 });
     await new Promise(r => setTimeout(r, 1500)); // route 핸들러 완료 대기
