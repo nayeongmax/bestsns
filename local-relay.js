@@ -517,6 +517,70 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
   return { content: '', comments: [] };
 }
 
+// ── 방법 0: Playwright로 목록 페이지 직접 열기 (Python과 동일, 페이지 번호 정확) ─────
+async function tryPlaywrightList(cafeId, menuId, page, cookie) {
+  const browser = await getBrowser();
+  const ctx = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  });
+  if (cookie) {
+    const cookies = [];
+    for (const part of cookie.split(';').map(p => p.trim())) {
+      const idx = part.indexOf('=');
+      if (idx > 0) cookies.push({ name: part.slice(0, idx).trim(), value: part.slice(idx + 1).trim(), domain: '.naver.com', path: '/' });
+    }
+    if (cookies.length > 0) await ctx.addCookies(cookies);
+  }
+  const pw = await ctx.newPage();
+  try {
+    let intercepted = null;
+    pw.on('response', async (res) => {
+      if (intercepted) return;
+      const url = res.url();
+      // 카페 목록 API: /ca-fe/cafes/.../articles (개별 글 URL과 구분)
+      if (url.includes('/ca-fe/cafes/') && /\/articles(\?|$)/.test(url)) {
+        try {
+          const j = await res.json();
+          const result = j?.message?.result ?? j?.result ?? j;
+          const list = result?.articleList ?? result?.items ?? result?.articles ?? [];
+          if (Array.isArray(list) && list.length > 0)
+            intercepted = { list, totalPage: result?.totalPage ?? result?.pageInfo?.totalPage ?? 0 };
+        } catch {}
+      }
+    });
+
+    // Python의 driver.get(list_url)과 동일: f-e SPA URL로 브라우저 열기
+    const mid = (menuId && menuId !== '0') ? menuId : '0';
+    const listUrl = `https://cafe.naver.com/f-e/cafes/${cafeId}/menus/${mid}?page=${page}&viewType=L`;
+    console.log(`[Playwright 목록] ${listUrl}`);
+    await pw.goto(listUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+
+    // ca-fe API 인터셉트 대기 (최대 12초)
+    const deadline = Date.now() + 12000;
+    while (!intercepted && Date.now() < deadline) await new Promise(r => setTimeout(r, 300));
+
+    if (intercepted) {
+      const { list, totalPage } = intercepted;
+      console.log(`[Playwright 목록] 성공: ${list.length}개, totalPage=${totalPage}`);
+      return list.map(item => ({
+        articleId: item.articleId ?? item.id,
+        title: decodeHtml(item.subject ?? item.title ?? ''),
+        writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
+        dateStr: item.writeDateTimestamp
+          ? fmtDate(new Date(item.writeDateTimestamp))
+          : (item.writeDate ?? item.writeDateText ?? ''),
+        commentCount: parseInt(item.commentCount ?? item.replyCount ?? 0),
+        readCount: parseInt(item.readCount ?? item.viewCount ?? 0),
+        totalPage,
+      }));
+    }
+    throw new Error('ca-fe API 인터셉트 실패');
+  } finally {
+    await pw.close();
+    await ctx.close();
+  }
+}
+
 // ── 방법 4: 모바일 API ────────────────────────────────────────────────────────
 async function tryMobileApi(cafeId, menuId, page, cookie) {
   const qs = new URLSearchParams({
@@ -573,7 +637,18 @@ async function handleScrape(body) {
   while (articles.length < maxArticles && pagesScanned < MAX_PAGES) {
     let rawItems = [];
 
+    // 방법 0: Playwright 브라우저로 목록 페이지 직접 열기 (Python과 동일, 페이지 번호 정확)
+    try {
+      rawItems = await tryPlaywrightList(cafeId, menuId, page, naverCookie);
+      method = 'Playwright(브라우저)';
+      apiSuccess = true;
+    } catch (e) {
+      lastError = e.message;
+      console.log(`[방법0 실패] ${e.message}`);
+    }
+
     // 방법 1: /ca-fe/ REST API (XHR 헤더)
+    if (rawItems.length === 0) {
     try {
       rawItems = await tryCaFeApi(cafeId, menuId, page, naverCookie);
       method = 'ca-fe REST API';
@@ -581,6 +656,7 @@ async function handleScrape(body) {
     } catch (e) {
       lastError = e.message;
       console.log(`[방법1 실패] ${e.message}`);
+    }
     }
 
     // 방법 2: apis.naver.com
