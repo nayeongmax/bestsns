@@ -839,9 +839,12 @@ async function handleScrape(body) {
 
   articles.forEach((a, i) => { a.no = i + 1; });
 
+  // 다음 수집 페이지: 현재 페이지에서 한 단계 더 오래된 페이지 (페이지 번호가 낮을수록 최신)
+  // 루프가 maxArticles 도달로 종료된 경우 page-- 가 실행되지 않으므로 여기서 -1 처리
+  const nextPageNum = articles.length > 0 && page > 1 ? page - 1 : 0;
   return {
     statusCode: 200,
-    body: { status: 'ok', articles, nextPage: page, totalCollected: articles.length, method },
+    body: { status: 'ok', articles, nextPage: nextPageNum, totalCollected: articles.length, method },
   };
 }
 
