@@ -841,6 +841,10 @@ async function handleScrape(body) {
 
     if (pageAllFiltered && articles.length === 0) dateFilteredAll = true;
     if (reachedStart) break;
+    // 이 페이지에서 매칭 글을 찾았으면 즉시 반환 — 다음 페이지는 FranchisePanel이 별도 배치로 요청
+    // (계속 이동하면 페이지 중간에 걸쳐 수집돼 나머지 글이 누락됨)
+    if (!pageAllFiltered) break;
+    // 이 페이지 글이 전부 날짜/시각 필터됨 → 더 최신 페이지로 이동
     page--;
     if (page < 1) break;
     pagesScanned++;
