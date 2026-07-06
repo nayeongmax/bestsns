@@ -454,11 +454,21 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           try { intercepted = await response.json(); } catch {}
         }
       });
-      // SPA URL 사용 — ArticleRead.nhn은 iframe이라 DOM 읽기 불가
-      await page.goto(`https://cafe.naver.com/f-e/cafes/${cafeId}/articles/${articleId}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      // ArticleRead.nhn → 브라우저가 자동으로 올바른 URL로 처리
+      const articleUrl = `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`;
+      console.log(`  [Playwright] 글 열기: ${articleUrl}`);
+      await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
 
-      // API 인터셉트 대기 (최대 6초)
-      const deadline = Date.now() + 6000;
+      // 로그인 페이지 감지
+      const curUrl = page.url();
+      console.log(`  [Playwright] 현재 URL: ${curUrl.slice(0, 100)}`);
+      if (curUrl.includes('nidlogin') || curUrl.includes('/login')) {
+        console.log(`  [Playwright] 로그인 페이지로 이동됨 — 쿠키 필요`);
+        return { content: '', comments: [] };
+      }
+
+      // API 인터셉트 대기 (최대 8초)
+      const deadline = Date.now() + 8000;
       while (!intercepted && Date.now() < deadline) await new Promise(r => setTimeout(r, 200));
 
       let content = '', comments = [];
@@ -473,37 +483,54 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         console.log(`  [Playwright 인터셉트] content길이=${content.length} 댓글=${comments.length}`);
       }
 
-      // Python과 동일: 인터셉트 내용이 없으면 DOM에서 직접 읽기
+      // DOM에서 직접 읽기 — 메인 페이지 + 모든 iframe 탐색 (Python과 동일)
       if (!content) {
-        try {
-          // 본문 렌더링 대기
-          await page.waitForSelector(
-            'div.se-main-container, div.article_viewer, div#postContent, div.ContentRenderer, div#tbody',
-            { timeout: 8000 }
-          );
-        } catch { /* 선택자 못찾아도 계속 */ }
+        // SPA/iframe 렌더링 완료 대기
+        await page.waitForLoadState('load', { timeout: 8000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 2500));
 
-        content = await page.evaluate(() => {
-          const selectors = [
-            'div.se-main-container',
-            'div.article_viewer',
-            'div#postContent',
-            'div.ContentRenderer',
-            'div#tbody',
-            'div.post-content',
-          ];
-          for (const sel of selectors) {
-            const el = document.querySelector(sel);
-            if (el) {
-              const text = (el.innerText || el.textContent || '').trim();
-              if (text.length > 10) return text;
+        const DOM_SELECTORS = [
+          'div.se-main-container',
+          'div.article_viewer',
+          'div#postContent',
+          'div.ContentRenderer',
+          'div#tbody',
+          '.post-content-wrap',
+          'div[class*="article_content"]',
+          'div[class*="se-module-text"]',
+        ];
+
+        // 메인 프레임 + 모든 iframe 순서로 탐색
+        const allFrames = page.frames();
+        console.log(`  [Playwright] 프레임 수: ${allFrames.length}`);
+        for (const frame of allFrames) {
+          if (content) break;
+          try {
+            const fUrl = frame.url();
+            console.log(`  [Playwright] 프레임 URL: ${fUrl.slice(0, 100)}`);
+            const text = await frame.evaluate((sels) => {
+              for (const sel of sels) {
+                const el = document.querySelector(sel);
+                if (el) {
+                  const t = (el.innerText || el.textContent || '').trim();
+                  if (t.length > 10) return t;
+                }
+              }
+              // 선택자 없으면 body 텍스트 길이만 확인용
+              return '__body__' + (document.body?.innerText?.length || 0);
+            }, DOM_SELECTORS);
+
+            if (text && !text.startsWith('__body__')) {
+              content = text;
+              console.log(`  [Playwright DOM] 성공 (${fUrl.slice(0, 60)}), 길이=${content.length}`);
+            } else {
+              console.log(`  [Playwright] 프레임 body 길이: ${text}`);
             }
+          } catch (fe) {
+            console.log(`  [Playwright] 프레임 접근 오류: ${fe.message}`);
           }
-          return '';
-        });
-        content = content.trim();
-        if (content) console.log(`  [Playwright DOM] content길이=${content.length}`);
-        else console.log(`  [Playwright DOM] 내용 없음`);
+        }
+        if (!content) console.log(`  [Playwright DOM] 모든 프레임에서 내용 없음`);
       }
 
       if (content) return { content, comments };
