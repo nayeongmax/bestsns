@@ -1,10 +1,9 @@
-// 네이버 카페 글 수집 - 릴레이 + Naver API 직접 내용 보완
+// 네이버 카페 글 수집
 //
-// 흐름:
-//   1) 릴레이(VPS)에서 글 목록 + 기본 내용 수집 (타임아웃 18s)
-//   2) 내용이 빈 글은 Naver cafe-articleapi v2 직접 호출로 보완 (6s 병렬)
-//   3) 그래도 빈 글은 HTML 파싱 시도
-//   이 방식은 Python 크롤러가 글마다 브라우저 방문해 내용 읽는 것과 같은 원리
+// 전략 (Python 크롤러와 동일 원리):
+//   1단계: ca-fe REST API 직접 호출 → 정확한 페이지 번호, 빠름 (3~5s)
+//   2단계: 글 목록만 가져온 뒤, 글마다 cafe-articleapi 직접 호출로 내용 수집
+//   폴백: 직접 호출 실패(IP 차단 등)시 VPS 릴레이 사용
 
 const RELAY_URL = process.env.RELAY_URL || 'http://223.130.163.229:3333';
 
@@ -15,7 +14,22 @@ const RESP_HEADERS = {
   'Content-Type': 'application/json; charset=UTF-8',
 };
 
-// HTML 태그 제거 + 개행 정리
+function buildApiHeaders(cookie) {
+  return {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': 'https://cafe.naver.com/',
+    'Origin': 'https://cafe.naver.com',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'x-cafe-product': 'pc',
+    ...(cookie ? { 'Cookie': cookie } : {}),
+  };
+}
+
 function stripHtml(html) {
   if (!html) return '';
   return html
@@ -33,41 +47,73 @@ function stripHtml(html) {
     .trim();
 }
 
-// 릴레이 응답에서 내용 추출 — 가능한 모든 필드명 시도
-function extractContent(article) {
-  // 평문 필드 우선
-  const plain = article.content || article.body || article.text
-    || article.articleContent || article.bodyText || article.contentText;
-  if (plain && plain.trim()) return plain.trim();
-
-  // HTML 필드 → 태그 제거
-  const html = article.contentHtml || article.bodyHtml || article.htmlContent;
-  if (html && html.trim()) return stripHtml(html);
-
-  return '';
+function fmtDate(ts) {
+  const d = new Date(typeof ts === 'number' && ts < 9999999999 ? ts * 1000 : ts);
+  if (isNaN(d)) return '';
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${kst.getUTCFullYear()}.${String(kst.getUTCMonth()+1).padStart(2,'0')}.${String(kst.getUTCDate()).padStart(2,'0')}`;
 }
 
-// Naver 글 상세 API 직접 호출 (Python의 get_post_content와 동일 목적)
-async function fetchContentDirect(cafeId, articleId, cookie) {
+// ── 1단계: ca-fe REST API로 글 목록 직접 조회 ────────────────────────────────
+// Python의 driver.get(list_url)과 동일: 정확한 브라우저 페이지 번호 사용
+async function fetchListDirect(cafeId, menuId, page, cookie) {
+  const url = menuId
+    ? `https://cafe.naver.com/ca-fe/cafes/${cafeId}/menus/${menuId}/articles?page=${page}&perPage=15&orderBy=date`
+    : `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles?page=${page}&perPage=15&orderBy=date&includeAllMenu=true`;
+
+  const res = await fetch(url, {
+    headers: buildApiHeaders(cookie),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`ca-fe API HTTP ${res.status}`);
+
+  const text = await res.text();
+  let j;
+  try { j = JSON.parse(text); }
+  catch { throw new Error('ca-fe API: JSON 파싱 실패'); }
+
+  const result = j?.message?.result ?? j?.result ?? j;
+  const list = result?.articleList ?? result?.items ?? result?.articles ?? [];
+  if (!Array.isArray(list) || list.length === 0) throw new Error('ca-fe API: 목록 없음');
+
+  const totalPage = result?.totalPage ?? result?.pageInfo?.totalPage ?? 0;
+  return {
+    articles: list.map(item => {
+      const id = item.articleId ?? item.id;
+      const ts = item.writeDateTimestamp ?? item.addDate ?? null;
+      const dateStr = ts ? fmtDate(ts) : (item.writeDate ?? item.writeDateText ?? '');
+      return {
+        articleId: id,
+        title: (item.subject ?? item.title ?? '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),
+        writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
+        date: dateStr,
+        commentCount: parseInt(item.commentCount ?? item.replyCount ?? 0),
+        readCount: parseInt(item.readCount ?? item.viewCount ?? 0),
+        url: `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${id}`,
+        content: '',
+        comments: [],
+      };
+    }),
+    nextPage: page - 1 > 0 ? page - 1 : null,
+    totalPage,
+    _method: 'ca-fe 직접',
+    status: 'ok',
+  };
+}
+
+// ── 2단계: 글마다 내용 직접 조회 ─────────────────────────────────────────────
+// Python의 get_post_content(driver, link)과 동일 원리
+async function fetchContentDirect(cafeId, articleId, cookie, maxComments) {
   if (!articleId) return { content: '', comments: [] };
 
-  const headers = {
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'ko-KR,ko;q=0.9',
-    'Referer': 'https://cafe.naver.com/',
-    'Origin': 'https://cafe.naver.com',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'sec-fetch-dest': 'empty',
-    'sec-fetch-mode': 'cors',
-    'sec-fetch-site': 'same-origin',
-    ...(cookie ? { 'Cookie': cookie } : {}),
-  };
-
-  // 방법 A: cafe-articleapi v2 (가장 상세한 응답)
+  // 방법 A: cafe-articleapi v2 (가장 상세)
   try {
     const res = await fetch(
       `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${cafeId}/articles/${articleId}`,
-      { headers, signal: AbortSignal.timeout(6000) },
+      {
+        headers: { ...buildApiHeaders(cookie), 'sec-fetch-site': 'cross-site' },
+        signal: AbortSignal.timeout(7000),
+      },
     );
     if (res.ok) {
       const j = await res.json();
@@ -77,7 +123,7 @@ async function fetchContentDirect(cafeId, articleId, cookie) {
       const content = stripHtml(raw);
       if (content) {
         const cItems = result?.comments?.items ?? result?.commentList ?? [];
-        const comments = cItems.slice(0, 5).map(c => ({
+        const comments = cItems.slice(0, maxComments).map(c => ({
           content: (c.content ?? c.text ?? '').trim(),
           writer: c.writer?.nick ?? c.nick ?? '',
           date: c.updateDate ?? c.writeDate ?? '',
@@ -87,11 +133,14 @@ async function fetchContentDirect(cafeId, articleId, cookie) {
     }
   } catch { /* 무시 */ }
 
-  // 방법 B: ca-fe REST API
+  // 방법 B: ca-fe 글 상세
   try {
     const res = await fetch(
       `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`,
-      { headers: { ...headers, 'sec-fetch-site': 'same-origin' }, signal: AbortSignal.timeout(6000) },
+      {
+        headers: buildApiHeaders(cookie),
+        signal: AbortSignal.timeout(7000),
+      },
     );
     if (res.ok) {
       const text = await res.text();
@@ -109,6 +158,7 @@ async function fetchContentDirect(cafeId, articleId, cookie) {
   return { content: '', comments: [] };
 }
 
+// ── 릴레이 폴백 (직접 호출 실패 시) ─────────────────────────────────────────
 async function safeRelayFetch(params, timeoutMs) {
   try {
     const res = await fetch(`${RELAY_URL}/scrape-naver-cafe`, {
@@ -143,7 +193,7 @@ exports.handler = async (event) => {
     maxArticles  = 15,
     maxComments  = 0,
     naverCookie,
-    _offset,           // 릴레이 페이지 보정값 (round(page/60) 공식)
+    _offset,
   } = body;
 
   if (!cafeId)
@@ -155,80 +205,95 @@ exports.handler = async (event) => {
   const browserPage = Math.max(1, parseInt(startPage) || 1);
   const offset      = typeof _offset === 'number' ? _offset : 0;
   const relayPage   = Math.max(1, browserPage - offset);
-
   const userMaxComments = parseInt(maxComments) || 0;
+  const batchSize   = Math.min(15, parseInt(maxArticles) || 15);
 
-  // 배치당 5개: 릴레이 글 상세 호출(3개 병렬 × 2배치) + 직접 API 보완 시간 확보
-  const batchSize = Math.min(5, parseInt(maxArticles) || 5);
+  // ── 1단계: 글 목록 수집 ────────────────────────────────────────────────────
+  let listResult = null;
+  let usedDirect = false;
 
-  const mainParams = {
-    cafeId,
-    menuId: relayMenuId,
-    startPage: relayPage,
-    startDate: '2000.01.01',
-    maxArticles: batchSize,
-    // maxComments ≥ 1: 릴레이가 글 상세 API 호출하여 본문도 함께 획득
-    maxComments: Math.max(1, userMaxComments),
-    fetchComments: true,
-    naverCookie: cookie,
-  };
-
-  // 릴레이 호출 — 18초 타임아웃으로 직접 API 보완 시간 6초 확보
-  const mainData = await safeRelayFetch(mainParams, 18000);
-
-  if (!mainData || mainData.status !== 'ok') {
-    const msg = mainData?.message || '릴레이 서버 오류';
-    return {
-      statusCode: 502,
-      headers: RESP_HEADERS,
-      body: JSON.stringify({ status: 'error', message: msg }),
-    };
+  // ca-fe API 직접 호출 (빠름, 정확한 페이지 번호)
+  try {
+    listResult = await fetchListDirect(cafeId, relayMenuId, browserPage, cookie);
+    usedDirect = true;
+  } catch (directErr) {
+    // 직접 호출 실패 → 릴레이 폴백
+    console.log(`직접 호출 실패: ${directErr.message} → 릴레이 사용`);
   }
 
-  // ── 내용 보완: 릴레이 응답 정규화 + 빈 글은 Naver API 직접 호출 ──────────────
-  if (Array.isArray(mainData.articles) && mainData.articles.length > 0) {
-    // 1단계: 릴레이 응답에서 내용 정규화 (여러 필드명 시도)
-    for (const article of mainData.articles) {
-      if (!article.content || !article.content.trim()) {
-        article.content = extractContent(article);
+  // 릴레이 폴백
+  if (!listResult) {
+    const relayParams = {
+      cafeId,
+      menuId: relayMenuId,
+      startPage: relayPage,
+      startDate: '2000.01.01',
+      maxArticles: Math.min(5, batchSize),  // 릴레이: 최대 5개로 제한
+      maxComments: Math.max(1, userMaxComments),
+      fetchComments: true,
+      naverCookie: cookie,
+    };
+    const relayData = await safeRelayFetch(relayParams, 22000);
+
+    if (!relayData || relayData.status !== 'ok') {
+      const msg = relayData?.message || '릴레이 서버 오류';
+      return { statusCode: 502, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: msg }) };
+    }
+
+    // 릴레이 nextPage → 브라우저 페이지 공간으로 변환
+    const rNext = relayData.nextPage;
+    listResult = {
+      ...relayData,
+      nextPage: (rNext && typeof rNext === 'number') ? rNext + offset : null,
+      _method: relayData.method || '릴레이',
+      _relayPage: relayPage,
+    };
+
+    // 릴레이 응답 내용 필드 정규화
+    for (const article of (listResult.articles || [])) {
+      if (!article.content?.trim()) {
+        const plain = article.body || article.text || article.articleContent || article.bodyText || article.contentText;
+        const html  = article.contentHtml || article.bodyHtml;
+        article.content = (plain?.trim()) || (html ? stripHtml(html) : '');
       }
     }
-
-    // 2단계: 아직 내용이 빈 글 → Naver API 직접 호출 (Python처럼 글마다 개별 접근)
-    const emptyArticles = mainData.articles.filter(a => !a.content || !a.content.trim());
-    if (emptyArticles.length > 0) {
-      const results = await Promise.all(
-        emptyArticles.map(article => {
-          const id = article.articleId ?? article.id;
-          return fetchContentDirect(cafeId, id, cookie)
-            .catch(() => ({ content: '', comments: [] }));
-        }),
-      );
-      emptyArticles.forEach((article, i) => {
-        const { content, comments } = results[i];
-        if (content) {
-          article.content = content;
-          // 댓글도 없으면 함께 보완
-          if (comments.length > 0 && (!article.comments || article.comments.length === 0)) {
-            article.comments = comments;
-          }
-        }
-      });
-    }
   }
 
-  // relay.nextPage → 브라우저 페이지 공간으로 변환
-  const rNext = mainData.nextPage;
-  const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + offset : null;
+  // ── 2단계: 내용이 없는 글 → 직접 내용 수집 ───────────────────────────────
+  const articles = (listResult.articles || []).slice(0, batchSize);
+  const emptyIdxs = articles.reduce((acc, a, i) => { if (!a.content?.trim()) acc.push(i); return acc; }, []);
+
+  if (emptyIdxs.length > 0) {
+    // 병렬 호출 (Python의 for each article: get_post_content와 동일)
+    const results = await Promise.all(
+      emptyIdxs.map(i => {
+        const id = articles[i].articleId ?? articles[i].id;
+        return fetchContentDirect(cafeId, id, cookie, userMaxComments)
+          .catch(() => ({ content: '', comments: [] }));
+      }),
+    );
+    emptyIdxs.forEach((artIdx, resIdx) => {
+      const { content, comments } = results[resIdx];
+      if (content) {
+        articles[artIdx].content  = content;
+        if (comments.length > 0 && (!articles[artIdx].comments || articles[artIdx].comments.length === 0)) {
+          articles[artIdx].comments = comments;
+        }
+      }
+    });
+  }
 
   return {
     statusCode: 200,
     headers: RESP_HEADERS,
     body: JSON.stringify({
-      ...mainData,
-      nextPage: browserNextPage,
-      _relayPage: relayPage,
-      _method: mainData.method || '',
+      status: 'ok',
+      articles,
+      nextPage: listResult.nextPage,
+      totalPage: listResult.totalPage ?? 0,
+      _method: listResult._method || '',
+      _relayPage: listResult._relayPage ?? browserPage,
+      _usedDirect: usedDirect,
     }),
   };
 };
