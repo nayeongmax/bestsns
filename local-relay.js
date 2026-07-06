@@ -564,7 +564,8 @@ async function tryPlaywrightList(cafeId, menuId, page, cookie) {
 
     // page.route()로 ca-fe 목록 API 가로채기 (response.on보다 안정적)
     await pw.route(url => {
-      return url.includes('/ca-fe/cafes/') && /\/articles\?/.test(url);
+      const href = url.href || url.toString();
+      return href.includes('/ca-fe/cafes/') && /\/articles\?/.test(href);
     }, async (route) => {
       let response;
       try { response = await route.fetch(); } catch(e) { await route.continue(); return; }
