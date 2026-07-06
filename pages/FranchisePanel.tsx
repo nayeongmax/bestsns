@@ -379,21 +379,15 @@ const CollectorTab: React.FC = () => {
         }
         if (!data) return null;
 
-        // 첫 배치: newestId 보정 + 수집 방법 로그
+        // 첫 배치: 수집 방법 로그 (로컬 릴레이는 ID 역산 불필요)
         if (newest === null && data.articles?.length > 0) {
-          const topId = extractArticleId(data.articles[0]);
-          if (topId > 0) {
-            newest = topId + (browserPage - 1) * 15;
-            addLog('calib', `📊 newestId 보정: ${newest} (topId ${topId}, ${browserPage}p 요청)`);
+          if (!useLocalRelay) {
+            const topId = extractArticleId(data.articles[0]);
+            if (topId > 0) {
+              newest = topId + (browserPage - 1) * 15;
+            }
           }
-          // 수집 방법 + 페이지 정보 표시
-          if (data._usedDirect) {
-            addLog('calib', `✅ ca-fe API 직접 호출 성공 — 페이지 번호 정확 (오프셋 불필요)`);
-          } else {
-            if (data._method) addLog('calib', `🔌 수집 방법: ${data._method}`);
-            if (data._relayPage) addLog('calib', `📌 릴레이 페이지: ${data._relayPage} (브라우저: ${browserPage}, 보정값: ${offset})`);
-          }
-
+          if (data._method) addLog('calib', `🔌 수집 방법: ${data._method}`);
           const firstRaw = data.articles[0] as any;
           const hasContent = !!(firstRaw.content?.trim());
           addLog('calib', `🔬 첫 글 내용: ${hasContent ? `있음 (${firstRaw.content.slice(0, 60)}...)` : '비어 있음'}`);
@@ -439,9 +433,10 @@ const CollectorTab: React.FC = () => {
         // 수집된 글 목록 로그
         newList.forEach((a, i) => {
           const aid     = extractArticleId(a);
-          const artPage = (latestNewest && aid > 0)
-            ? Math.floor((latestNewest - aid) / 15) + 1
-            : null;
+          // 로컬 릴레이: 실제 요청한 페이지 표시 / 서버 릴레이: 게시글 ID로 역산
+          const artPage = useLocalRelay
+            ? currentPage
+            : (latestNewest && aid > 0 ? Math.floor((latestNewest - aid) / 15) + 1 : null);
           const pageTag  = artPage ? ` · ${artPage}p` : '';
           const rawBody  = (a.content || '').replace(/<[^>]*>/g, '').trim();
           const snippet  = rawBody.slice(0, 150);
