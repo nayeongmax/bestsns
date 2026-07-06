@@ -14,8 +14,8 @@ let _browser = null;
 async function getBrowser() {
   if (!_browser || !_browser.isConnected()) {
     _browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-setuid-sandbox'],
+      headless: false,
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-setuid-sandbox'],
     });
   }
   return _browser;
