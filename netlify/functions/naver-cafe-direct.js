@@ -1,10 +1,10 @@
-// 릴레이(Mobile API)와 브라우저(f-e API)의 페이지 번호 보정
+// 네이버 카페 글 수집 - 릴레이 + Naver API 직접 내용 보완
 //
-// 보정 전략:
-//   - 별도 calibration 호출 없음 (Netlify 26s 제한 초과 방지)
-//   - 첫 요청(_offset 없음): page 1 프로브를 수집과 병렬 실행 → newestId 획득
-//   - 이후 요청(_offset 제공): 수집만 실행 (프로브 없음)
-//   - 프론트엔드가 newestId + 수집 articleId로 실제 페이지를 역산해 오프셋 보정
+// 흐름:
+//   1) 릴레이(VPS)에서 글 목록 + 기본 내용 수집 (타임아웃 18s)
+//   2) 내용이 빈 글은 Naver cafe-articleapi v2 직접 호출로 보완 (6s 병렬)
+//   3) 그래도 빈 글은 HTML 파싱 시도
+//   이 방식은 Python 크롤러가 글마다 브라우저 방문해 내용 읽는 것과 같은 원리
 
 const RELAY_URL = process.env.RELAY_URL || 'http://223.130.163.229:3333';
 
@@ -15,20 +15,98 @@ const RESP_HEADERS = {
   'Content-Type': 'application/json; charset=UTF-8',
 };
 
-function extractMaxId(articles) {
-  if (!Array.isArray(articles) || !articles.length) return 0;
-  const ids = articles.map(a => {
-    // 필드명 순서대로 시도
-    const direct = parseInt(a.articleId ?? a.id ?? a.articleNo ?? a.article_id ?? 0) || 0;
-    if (direct > 0) return direct;
-    // URL에서 숫자 추출 (articleid=NNN 또는 /articles/NNN)
-    const url = String(a.url || a.articleUrl || '');
-    const m = url.match(/articleid=(\d+)/i)
-           || url.match(/\/articles?\/(\d+)/i)
-           || url.match(/[/?&](\d{4,})/);
-    return m ? (parseInt(m[1]) || 0) : 0;
-  }).filter(n => n > 0);
-  return ids.length ? Math.max(...ids) : 0;
+// HTML 태그 제거 + 개행 정리
+function stripHtml(html) {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// 릴레이 응답에서 내용 추출 — 가능한 모든 필드명 시도
+function extractContent(article) {
+  // 평문 필드 우선
+  const plain = article.content || article.body || article.text
+    || article.articleContent || article.bodyText || article.contentText;
+  if (plain && plain.trim()) return plain.trim();
+
+  // HTML 필드 → 태그 제거
+  const html = article.contentHtml || article.bodyHtml || article.htmlContent;
+  if (html && html.trim()) return stripHtml(html);
+
+  return '';
+}
+
+// Naver 글 상세 API 직접 호출 (Python의 get_post_content와 동일 목적)
+async function fetchContentDirect(cafeId, articleId, cookie) {
+  if (!articleId) return { content: '', comments: [] };
+
+  const headers = {
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'ko-KR,ko;q=0.9',
+    'Referer': 'https://cafe.naver.com/',
+    'Origin': 'https://cafe.naver.com',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    ...(cookie ? { 'Cookie': cookie } : {}),
+  };
+
+  // 방법 A: cafe-articleapi v2 (가장 상세한 응답)
+  try {
+    const res = await fetch(
+      `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${cafeId}/articles/${articleId}`,
+      { headers, signal: AbortSignal.timeout(6000) },
+    );
+    if (res.ok) {
+      const j = await res.json();
+      const result = j?.result ?? j?.message?.result ?? j;
+      const art = result?.article ?? result;
+      const raw = art?.contentHtml ?? art?.content ?? art?.contentText ?? '';
+      const content = stripHtml(raw);
+      if (content) {
+        const cItems = result?.comments?.items ?? result?.commentList ?? [];
+        const comments = cItems.slice(0, 5).map(c => ({
+          content: (c.content ?? c.text ?? '').trim(),
+          writer: c.writer?.nick ?? c.nick ?? '',
+          date: c.updateDate ?? c.writeDate ?? '',
+        })).filter(c => c.content);
+        return { content, comments };
+      }
+    }
+  } catch { /* 무시 */ }
+
+  // 방법 B: ca-fe REST API
+  try {
+    const res = await fetch(
+      `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`,
+      { headers: { ...headers, 'sec-fetch-site': 'same-origin' }, signal: AbortSignal.timeout(6000) },
+    );
+    if (res.ok) {
+      const text = await res.text();
+      if (text.trim().startsWith('{')) {
+        const j = JSON.parse(text);
+        const result = j?.result ?? j?.message?.result ?? j;
+        const art = result?.article ?? result;
+        const raw = art?.contentHtml ?? art?.content ?? art?.contentText ?? '';
+        const content = stripHtml(raw);
+        if (content) return { content, comments: [] };
+      }
+    }
+  } catch { /* 무시 */ }
+
+  return { content: '', comments: [] };
 }
 
 async function safeRelayFetch(params, timeoutMs) {
@@ -60,49 +138,43 @@ exports.handler = async (event) => {
 
   const {
     cafeId,
-    menuId    = '',
-    startPage = 1,
+    menuId       = '',
+    startPage    = 1,
     maxArticles  = 15,
     maxComments  = 0,
-    fetchComments = false,
     naverCookie,
-    _offset,      // 프론트 캐싱 오프셋 (있으면 프로브 생략)
+    _offset,           // 릴레이 페이지 보정값 (round(page/60) 공식)
   } = body;
 
   if (!cafeId)
     return { statusCode: 400, headers: RESP_HEADERS, body: JSON.stringify({ status: 'error', message: 'cafeId 필요' }) };
 
-  const cookie     = process.env.NAVER_COOKIE || naverCookie || undefined;
-  const rawMenuId  = (menuId || '').trim();
+  const cookie      = process.env.NAVER_COOKIE || naverCookie || undefined;
+  const rawMenuId   = (menuId || '').trim();
   const relayMenuId = rawMenuId === '0' ? '' : rawMenuId;
   const browserPage = Math.max(1, parseInt(startPage) || 1);
-  const hasOffset   = typeof _offset === 'number';
-  const offset      = hasOffset ? _offset : 0;
+  const offset      = typeof _offset === 'number' ? _offset : 0;
   const relayPage   = Math.max(1, browserPage - offset);
 
   const userMaxComments = parseInt(maxComments) || 0;
+
+  // 배치당 5개: 릴레이 글 상세 호출(3개 병렬 × 2배치) + 직접 API 보완 시간 확보
+  const batchSize = Math.min(5, parseInt(maxArticles) || 5);
+
   const mainParams = {
     cafeId,
     menuId: relayMenuId,
     startPage: relayPage,
     startDate: '2000.01.01',
-    // 10개로 제한: 글 상세 API 호출(본문+댓글)이 추가되어 타임아웃 방지
-    maxArticles: Math.min(10, parseInt(maxArticles) || 10),
-    // maxComments 최소 1: 릴레이가 댓글 수집 시 글 상세 API를 호출 → 본문도 획득
+    maxArticles: batchSize,
+    // maxComments ≥ 1: 릴레이가 글 상세 API 호출하여 본문도 함께 획득
     maxComments: Math.max(1, userMaxComments),
     fetchComments: true,
     naverCookie: cookie,
   };
 
-  let mainData;
-
-  if (!hasOffset) {
-    // 첫 요청: 수집만 (probe 제거 — newestId는 프론트에서 브라우저 기준으로 보정)
-    mainData = await safeRelayFetch(mainParams, 22000);
-  } else {
-    // 이후 요청: 수집만
-    mainData = await safeRelayFetch(mainParams, 22000);
-  }
+  // 릴레이 호출 — 18초 타임아웃으로 직접 API 보완 시간 6초 확보
+  const mainData = await safeRelayFetch(mainParams, 18000);
 
   if (!mainData || mainData.status !== 'ok') {
     const msg = mainData?.message || '릴레이 서버 오류';
@@ -113,15 +185,50 @@ exports.handler = async (event) => {
     };
   }
 
+  // ── 내용 보완: 릴레이 응답 정규화 + 빈 글은 Naver API 직접 호출 ──────────────
+  if (Array.isArray(mainData.articles) && mainData.articles.length > 0) {
+    // 1단계: 릴레이 응답에서 내용 정규화 (여러 필드명 시도)
+    for (const article of mainData.articles) {
+      if (!article.content || !article.content.trim()) {
+        article.content = extractContent(article);
+      }
+    }
+
+    // 2단계: 아직 내용이 빈 글 → Naver API 직접 호출 (Python처럼 글마다 개별 접근)
+    const emptyArticles = mainData.articles.filter(a => !a.content || !a.content.trim());
+    if (emptyArticles.length > 0) {
+      const results = await Promise.all(
+        emptyArticles.map(article => {
+          const id = article.articleId ?? article.id;
+          return fetchContentDirect(cafeId, id, cookie)
+            .catch(() => ({ content: '', comments: [] }));
+        }),
+      );
+      emptyArticles.forEach((article, i) => {
+        const { content, comments } = results[i];
+        if (content) {
+          article.content = content;
+          // 댓글도 없으면 함께 보완
+          if (comments.length > 0 && (!article.comments || article.comments.length === 0)) {
+            article.comments = comments;
+          }
+        }
+      });
+    }
+  }
+
   // relay.nextPage → 브라우저 페이지 공간으로 변환
   const rNext = mainData.nextPage;
   const browserNextPage = (rNext && typeof rNext === 'number') ? rNext + offset : null;
 
-  const extra = { _relayPage: relayPage };
-
   return {
     statusCode: 200,
     headers: RESP_HEADERS,
-    body: JSON.stringify({ ...mainData, nextPage: browserNextPage, ...extra }),
+    body: JSON.stringify({
+      ...mainData,
+      nextPage: browserNextPage,
+      _relayPage: relayPage,
+      _method: mainData.method || '',
+    }),
   };
 };
