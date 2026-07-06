@@ -445,7 +445,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
     }
     const page = await context.newPage();
     try {
-      // SPA가 내부적으로 호출하는 API 응답 가로채기 (빠름)
+      // SPA가 내부적으로 호출하는 API 응답 가로채기
       let intercepted = null;
       page.on('response', async (response) => {
         if (intercepted) return;
@@ -455,10 +455,14 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         }
       });
       await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      // API 호출 대기 (최대 8초)
-      const deadline = Date.now() + 8000;
+
+      // API 인터셉트 대기 (최대 6초)
+      const deadline = Date.now() + 6000;
       while (!intercepted && Date.now() < deadline) await new Promise(r => setTimeout(r, 200));
+
       let content = '', comments = [];
+
+      // API 인터셉트 성공 시 내용 추출
       if (intercepted) {
         const art = intercepted?.result?.article;
         const raw = art?.contentHtml || art?.content || art?.contentText || '';
@@ -466,9 +470,43 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         const rawC = intercepted?.result?.comments?.items || [];
         comments = rawC.slice(0, maxComments).map(c => ({ content: (c.content || '').trim(), writer: c.writer?.nick || '', date: '' })).filter(c => c.content);
         console.log(`  [Playwright 인터셉트] content길이=${content.length} 댓글=${comments.length}`);
-        if (content) return { content, comments };
       }
-      console.log(`  [Playwright] 인터셉트 실패, 결과 없음`);
+
+      // Python과 동일: 인터셉트 내용이 없으면 DOM에서 직접 읽기
+      if (!content) {
+        try {
+          // 본문 렌더링 대기
+          await page.waitForSelector(
+            'div.se-main-container, div.article_viewer, div#postContent, div.ContentRenderer, div#tbody',
+            { timeout: 8000 }
+          );
+        } catch { /* 선택자 못찾아도 계속 */ }
+
+        content = await page.evaluate(() => {
+          const selectors = [
+            'div.se-main-container',
+            'div.article_viewer',
+            'div#postContent',
+            'div.ContentRenderer',
+            'div#tbody',
+            'div.post-content',
+          ];
+          for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el) {
+              const text = (el.innerText || el.textContent || '').trim();
+              if (text.length > 10) return text;
+            }
+          }
+          return '';
+        });
+        content = content.trim();
+        if (content) console.log(`  [Playwright DOM] content길이=${content.length}`);
+        else console.log(`  [Playwright DOM] 내용 없음`);
+      }
+
+      if (content) return { content, comments };
+      console.log(`  [Playwright] 최종 실패 — 내용 없음`);
     } finally {
       await page.close();
       await context.close();
@@ -585,9 +623,9 @@ async function handleScrape(body) {
     let reachedStart = false;
     let pageAllFiltered = true;
     console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
-    // 페이지 내 아이템은 최신→오래된 순으로 오므로, 역순 처리해서 오래된→최신 순으로 push
+    // 페이지 내 아이템은 최신→오래된 순 (브라우저와 동일 순서 유지)
     const filteredItems = [];
-    for (const item of [...rawItems].reverse()) {
+    for (const item of rawItems) {
       if (articles.length + filteredItems.length >= maxArticles) { pageAllFiltered = false; break; }
       const dateObj = parseDateStr(item.dateStr);
       if (endDateObj && dateObj && dateObj > endDateObj) continue;
