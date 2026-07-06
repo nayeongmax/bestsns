@@ -113,10 +113,16 @@ const CollectorTab: React.FC = () => {
   const previewWinRef = useRef<Window | null>(null);
   const [status,   setStatus]   = useState('대기 중...');
   const [nextPage, setNextPage] = useState<number | null>(null);
-  // 릴레이 페이지 오프셋: 삭제글 누적으로 페이지가 깊을수록 커짐.
-  // 경험치: 20p→0, 930p→16 → offset ≈ round(page / 60)
   const autoOffset = (page: number) => Math.round(page / 60);
   const [relayOffset, setRelayOffset] = useState<number | null>(autoOffset(1));
+
+  // 로컬 릴레이 모드: Python처럼 로컬 PC Playwright로 DOM에서 내용 읽기
+  const [useLocalRelay, setUseLocalRelay] = useState(() => {
+    try { return localStorage.getItem('crawl_use_local_relay') === 'true'; } catch { return false; }
+  });
+  const [localRelayUrl, setLocalRelayUrl] = useState(() => {
+    try { return localStorage.getItem('crawl_local_relay_url') || 'http://localhost:3333'; } catch { return 'http://localhost:3333'; }
+  });
 
   /* ── 수집 로그 패널 ── */
   type LogEntry = { id: number; type: 'page'|'calib'|'req'|'article'|'batch'|'wait'|'err'|'done'|'stop'|'verify'|'verify_fail'; text: string; sub?: string };
@@ -253,6 +259,52 @@ const CollectorTab: React.FC = () => {
     if (!resume) openPreviewWindow(currentPage);
 
     const fetchBatch = async (page: number, cachedOffset: number | null) => {
+      // 로컬 릴레이 모드: Python처럼 Playwright로 DOM에서 직접 읽기
+      if (useLocalRelay) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 90000); // Playwright는 느릴 수 있음
+        let res: Response;
+        try {
+          res = await fetch(`${localRelayUrl}/scrape-naver-cafe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cafeId: resolvedCafeId,
+              menuId: menuId.trim() || '',
+              startPage: page,
+              startDate: '2000.01.01',
+              maxArticles: BATCH_SIZE,
+              maxComments: Math.max(1, parseInt(maxComments) || 0),
+              fetchComments: true,
+              naverCookie: naverCookie.trim() || undefined,
+            }),
+            signal: ctrl.signal,
+          });
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : '';
+          if (msg.includes('abort')) throw new Error('로컬 릴레이 응답 대기 중 타임아웃 (90s)');
+          if (msg.includes('fetch') || msg.includes('Failed')) throw new Error(`로컬 릴레이 연결 실패 — node local-relay.js를 먼저 실행하세요`);
+          throw new Error(`네트워크 오류: ${msg}`);
+        } finally {
+          clearTimeout(timer);
+        }
+        const text = await res.text();
+        let data: any;
+        try { data = JSON.parse(text); }
+        catch { throw new Error(`로컬 릴레이 응답 오류 (HTTP ${res.status})`); }
+        if (data.status !== 'ok') throw new Error(data.message || '로컬 릴레이 수집 실패');
+        // 릴레이 응답 내용 필드 정규화
+        for (const article of (data.articles || [])) {
+          if (!article.content?.trim()) {
+            const plain = article.body || article.text || article.articleContent || article.bodyText || article.contentText;
+            const html  = article.contentHtml || article.bodyHtml;
+            article.content = (plain?.trim()) || (html ? html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim() : '');
+          }
+        }
+        return { ...data, _usedDirect: false, _method: `로컬릴레이(${data.method || 'Playwright'})` };
+      }
+
+      // 기본 모드: Netlify 서버리스 함수
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 52000);
       let res: Response;
@@ -302,7 +354,7 @@ const CollectorTab: React.FC = () => {
 
       // 연결 재시도만 수행 (페이지 보정 루프 제거 — relay page ≈ browser page)
       for (let corrIter = 0; corrIter < 1 && !stopRef.current; corrIter++) {
-        addLog('req', '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
+        addLog('req', useLocalRelay ? '💻 로컬 릴레이 요청 중...' : '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
 
         // ── 연결 재시도: 지수 백오프 ──
         const backoffs = [0, 4000, 10000, 20000];
@@ -980,12 +1032,47 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
               </div>
             )}
 
-            {/* 릴레이 상태 */}
+            {/* 로컬 릴레이 모드 (Python과 동일한 DOM 읽기) */}
             <div className="mt-3 pt-2 border-t border-gray-200">
-              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-bold mb-2 bg-green-50 text-green-700">
-                <span>🟢</span>
-                <span>서버 릴레이 연결됨 — 한국(서울) 서버로 수집</span>
-              </div>
+              <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 cursor-pointer mb-1.5">
+                <input
+                  type="checkbox"
+                  checked={useLocalRelay}
+                  onChange={e => {
+                    setUseLocalRelay(e.target.checked);
+                    try { localStorage.setItem('crawl_use_local_relay', String(e.target.checked)); } catch {}
+                  }}
+                />
+                내 PC 로컬 릴레이 사용 (Python과 동일)
+              </label>
+              {useLocalRelay && (
+                <div className="space-y-1.5 ml-1">
+                  <div className="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-[10px] text-blue-700 leading-snug">
+                    <p className="font-black mb-0.5">✅ Python처럼 Playwright로 DOM에서 직접 읽기</p>
+                    <p>이미지가 있어도 텍스트 수집 가능 · 페이지 오차 없음</p>
+                    <p className="mt-1 font-bold">먼저 실행:</p>
+                    <code className="block bg-blue-100 rounded px-1 py-0.5 mt-0.5 text-[9px] font-mono break-all">node local-relay.js</code>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-600 mb-0.5">릴레이 주소:</label>
+                    <input
+                      className="w-full px-2 py-1 text-[10px] border border-gray-300 rounded focus:outline-none focus:border-blue-400 bg-white font-mono"
+                      value={localRelayUrl}
+                      onChange={e => {
+                        setLocalRelayUrl(e.target.value);
+                        try { localStorage.setItem('crawl_local_relay_url', e.target.value); } catch {}
+                      }}
+                      placeholder="http://localhost:3333"
+                    />
+                  </div>
+                </div>
+              )}
+              {!useLocalRelay && (
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-bold bg-green-50 text-green-700">
+                  <span>🟢</span>
+                  <span>서버 릴레이 연결됨 — 한국(서울) 서버로 수집</span>
+                </div>
+              )}
             </div>
 
 
