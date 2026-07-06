@@ -221,8 +221,8 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
-  // 배치당 5개: 릴레이 18s + 직접 API 보완 6s 구조에 맞춤
-  const BATCH_SIZE = 5;
+  // 로컬 릴레이: 페이지 1장 전체(15개) / 서버 릴레이: 5개
+  const BATCH_SIZE = useLocalRelay ? 15 : 5;
 
   const makeCafeUrl = (page: number) => {
     const mid = menuId.trim() || '0';
@@ -262,7 +262,7 @@ const CollectorTab: React.FC = () => {
       // 로컬 릴레이 모드: Python처럼 Playwright로 DOM에서 직접 읽기
       if (useLocalRelay) {
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 90000); // Playwright는 느릴 수 있음
+        const timer = setTimeout(() => ctrl.abort(), 150000); // Playwright 15개×10s = ~150s
         let res: Response;
         try {
           res = await fetch(`${localRelayUrl}/scrape-naver-cafe`, {
@@ -354,7 +354,7 @@ const CollectorTab: React.FC = () => {
 
       // 연결 재시도만 수행 (페이지 보정 루프 제거 — relay page ≈ browser page)
       for (let corrIter = 0; corrIter < 1 && !stopRef.current; corrIter++) {
-        addLog('req', useLocalRelay ? '💻 로컬 릴레이 요청 중...' : '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
+        addLog('req', useLocalRelay ? `💻 로컬 릴레이 요청 중... (페이지 1장 전체 15개)` : '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
 
         // ── 연결 재시도: 지수 백오프 ──
         const backoffs = [0, 4000, 10000, 20000];
