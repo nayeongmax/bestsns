@@ -332,8 +332,8 @@ function parseTsvToEntries(text) {
 
     const get = (row, idx) => (row && row[idx] !== undefined ? row[idx].trim() : '');
 
-    // 날짜 패턴 감지 (YYYY.MM.DD 형식)
-    const isDate = v => /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/.test(v.trim());
+    // 날짜 패턴 감지 (YYYY.MM.DD 또는 YYYY.MM.DD HH:MM 형식)
+    const isDate = v => /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}(\s+\d{2}:\d{2})?$/.test(v.trim());
     // URL 패턴 감지
     const isUrl  = v => /^https?:\/\//.test(v.trim());
 
@@ -1443,7 +1443,7 @@ function textToHtml(s) {
 // 마지막 열이 https://로 시작하면 linkDiv에, 그 앞이 날짜 형식이면 dateDiv에 고정 배치
 function fillTrowDivs(trowDivs, contentCols, startIdx) {
   const isRS   = div => div.parentElement?.previousElementSibling?.classList?.contains('rlbl');
-  const isDate = s => /^\d{4}[\.\-\/]\d{1,2}[\.\-\/]\d{1,2}$/.test(s.trim());
+  const isDate = s => /^\d{4}[\.\-\/]\d{1,2}[\.\-\/]\d{1,2}(\s+\d{2}:\d{2})?$/.test(s.trim());
   const isLink = s => /^https?:\/\//.test(s.trim());
   if (!contentCols.length) return;
   const fillDivs = [];
@@ -1471,8 +1471,13 @@ function fillTrowDivs(trowDivs, contentCols, startIdx) {
   }
   const commentDivs = fillDivs.slice(1, fillDivs.length - fixedCount);
   const commentEnd  = dateIdx !== -1 ? dateIdx : (linkIdx !== -1 ? linkIdx : contentCols.length);
-  for (let j = 1; j < commentEnd && (j - 1) < commentDivs.length; j++) {
-    commentDivs[j - 1].innerHTML = textToHtml(contentCols[j]);
+  // Count RS divs excluded from fillDivs so their corresponding contentCols entries are skipped
+  let rsCount = 0;
+  for (let i = startIdx + 1; i < trowDivs.length; i++) {
+    if (isRS(trowDivs[i])) rsCount++;
+  }
+  for (let j = 1 + rsCount; j < commentEnd && (j - 1 - rsCount) < commentDivs.length; j++) {
+    commentDivs[j - 1 - rsCount].innerHTML = textToHtml(contentCols[j]);
   }
 }
 

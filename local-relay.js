@@ -707,8 +707,15 @@ async function handleScrape(body) {
   const { cafeId, menuId='', startPage=1, startDate, endDate, maxArticles=50, maxComments=3, naverCookie='' } = body;
   if (!cafeId) return { statusCode: 400, body: { status: 'error', message: 'cafeId가 필요합니다.' } };
 
-  const startDateObj = startDate ? parseDateStr(startDate) : null;
+  // "HH:MM" 형식이면 시각만 비교하는 모드 (날짜 무관)
+  const isTimeOnly = startDate && /^\d{2}:\d{2}(:\d{2})?$/.test(startDate.trim());
+  const startDateObj = !isTimeOnly && startDate ? parseDateStr(startDate) : null;
+  const startTimeMinutes = isTimeOnly ? (() => {
+    const p = startDate.trim().split(':');
+    return parseInt(p[0]) * 60 + parseInt(p[1]);
+  })() : null;
   const endDateObj   = endDate   ? parseDateStr(endDate)   : null;
+  if (isTimeOnly) console.log(`[시각 필터] ${startDate} (${startTimeMinutes}분)`);
 
   const articles = [];
   // perPage=15 으로 요청하면 카페 페이지 번호 = API 페이지 번호 (1:1 대응)
@@ -795,6 +802,12 @@ async function handleScrape(body) {
       const dateObj = item.dateTimestamp ? new Date(item.dateTimestamp) : parseDateStr(item.dateStr);
       if (endDateObj && dateObj && dateObj > endDateObj) continue;
       if (startDateObj && dateObj && dateObj < startDateObj) continue;
+      // HH:MM 시각만 입력한 경우: KST 시각 기준으로 비교
+      if (startTimeMinutes !== null && dateObj) {
+        const kst = new Date(dateObj.getTime() + 9 * 60 * 60 * 1000);
+        const artMinutes = kst.getUTCHours() * 60 + kst.getUTCMinutes();
+        if (artMinutes < startTimeMinutes) continue;
+      }
       pageAllFiltered = false;
       filteredItems.push({ item, dateObj });
     }
@@ -828,6 +841,10 @@ async function handleScrape(body) {
 
     if (pageAllFiltered && articles.length === 0) dateFilteredAll = true;
     if (reachedStart) break;
+    // 이 페이지에서 매칭 글을 찾았으면 즉시 반환 — 다음 페이지는 FranchisePanel이 별도 배치로 요청
+    // (계속 이동하면 페이지 중간에 걸쳐 수집돼 나머지 글이 누락됨)
+    if (!pageAllFiltered) break;
+    // 이 페이지 글이 전부 날짜/시각 필터됨 → 더 최신 페이지로 이동
     page--;
     if (page < 1) break;
     pagesScanned++;
