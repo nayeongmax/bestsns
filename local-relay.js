@@ -70,7 +70,11 @@ function decodeHtml(s) {
 
 function parseDateStr(s) {
   if (!s) return null;
-  let m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
+  // 날짜+시간: "2026.02.02 14:30" 또는 "2026.02.02 14:30:00"
+  let m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (m) return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]||'00'}+09:00`);
+  // 날짜만: "2026.02.02"
+  m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
   if (m) return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00+09:00`);
   m = s.match(/^(\d{2})\.(\d{2})$/);
   if (m) return new Date(`${new Date().getFullYear()}-${m[1]}-${m[2]}T00:00:00+09:00`);
@@ -79,11 +83,23 @@ function parseDateStr(s) {
   return null;
 }
 
+// Unix 타임스탬프를 밀리초 단위로 정규화 (초 단위 자동 감지)
+function normTs(ts) {
+  if (!ts) return null;
+  const n = Number(ts);
+  return isNaN(n) ? null : (n < 9999999999 ? n * 1000 : n);
+}
+
 function fmtDate(d) {
   if (!d) return '';
-  // KST = UTC+9
   const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
   return `${kst.getUTCFullYear()}.${String(kst.getUTCMonth()+1).padStart(2,'0')}.${String(kst.getUTCDate()).padStart(2,'0')}`;
+}
+
+function fmtDateTime(d) {
+  if (!d) return '';
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${kst.getUTCFullYear()}.${String(kst.getUTCMonth()+1).padStart(2,'0')}.${String(kst.getUTCDate()).padStart(2,'0')} ${String(kst.getUTCHours()).padStart(2,'0')}:${String(kst.getUTCMinutes()).padStart(2,'0')}`;
 }
 
 function httpsGet(url, headers, depth=0) {
@@ -257,8 +273,9 @@ async function tryCaFeApi(cafeId, menuId, page, cookie) {
     title: decodeHtml(item.subject ?? item.title ?? ''),
     writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
     dateStr: item.writeDateTimestamp
-      ? fmtDate(new Date(item.writeDateTimestamp))
+      ? fmtDate(new Date(normTs(item.writeDateTimestamp)))
       : (item.writeDate ?? item.writeDateText ?? ''),
+    dateTimestamp: normTs(item.writeDateTimestamp),
     commentCount: parseInt(item.commentCount ?? item.replyCount ?? 0),
     readCount: parseInt(item.readCount ?? item.viewCount ?? 0),
     totalPage: result?.totalPage ?? result?.pageInfo?.totalPage ?? 0,
@@ -296,15 +313,17 @@ async function tryApisNaver(cafeId, menuId, page, cookie) {
   if (list[0]) console.log(`  [apis.naver] 날짜관련 필드: writeDateTimestamp=${list[0].writeDateTimestamp} writeDate=${list[0].writeDate} addDate=${list[0].addDate}`);
 
   return list.map(item => {
-    const ts = item.writeDateTimestamp ?? item.addDate ?? item.lastUpdateDate ?? null;
+    const rawTs = item.writeDateTimestamp ?? item.addDate ?? item.lastUpdateDate ?? null;
+    const ts = normTs(rawTs);
     const dateStr = ts
-      ? fmtDate(new Date(typeof ts === 'number' && ts < 9999999999 ? ts * 1000 : ts))
+      ? fmtDate(new Date(ts))
       : (item.writeDate ?? item.writeDateText ?? item.addDateText ?? '');
     return {
       articleId: item.articleId ?? item.id,
       title: decodeHtml(item.subject ?? item.title ?? ''),
       writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
       dateStr,
+      dateTimestamp: ts,
       commentCount: parseInt(item.commentCount ?? 0),
       readCount: parseInt(item.readCount ?? 0),
       totalPage: result?.totalPage ?? 0,
@@ -633,8 +652,9 @@ async function tryPlaywrightList(cafeId, menuId, page, cookie) {
         title: decodeHtml(item.subject ?? item.title ?? ''),
         writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
         dateStr: item.writeDateTimestamp
-          ? fmtDate(new Date(item.writeDateTimestamp))
+          ? fmtDate(new Date(normTs(item.writeDateTimestamp)))
           : (item.writeDate ?? item.writeDateText ?? ''),
+        dateTimestamp: normTs(item.writeDateTimestamp),
         commentCount: parseInt(item.commentCount ?? item.replyCount ?? 0),
         readCount: parseInt(item.readCount ?? item.viewCount ?? 0),
         totalPage,
@@ -676,6 +696,7 @@ async function tryMobileApi(cafeId, menuId, page, cookie) {
     title: decodeHtml(item.subject ?? item.title ?? ''),
     writer: item.writerInfo?.nick ?? item.nick ?? '',
     dateStr: item.writeDate ?? item.writeDateText ?? '',
+    dateTimestamp: normTs(item.writeDateTimestamp),
     commentCount: parseInt(item.commentCount ?? 0),
     readCount: parseInt(item.readCount ?? 0),
     totalPage: json?.result?.totalPage ?? 0,
@@ -770,7 +791,8 @@ async function handleScrape(body) {
     const filteredItems = [];
     for (const item of [...rawItems].reverse()) {
       if (articles.length + filteredItems.length >= maxArticles) { pageAllFiltered = false; break; }
-      const dateObj = parseDateStr(item.dateStr);
+      // 타임스탬프 우선, 없으면 날짜 문자열로 비교 (시간 필터 정밀 지원)
+      const dateObj = item.dateTimestamp ? new Date(item.dateTimestamp) : parseDateStr(item.dateStr);
       if (endDateObj && dateObj && dateObj > endDateObj) continue;
       if (startDateObj && dateObj && dateObj < startDateObj) continue;
       pageAllFiltered = false;
@@ -794,7 +816,8 @@ async function handleScrape(body) {
           title: item.title,
           content,
           writer: item.writer,
-          date: dateObj ? fmtDate(dateObj) : item.dateStr,
+          // 타임스탬프 있으면 날짜+시간 표시, 없으면 날짜만
+          date: item.dateTimestamp ? fmtDateTime(new Date(item.dateTimestamp)) : (dateObj ? fmtDate(dateObj) : item.dateStr),
           commentCount: item.commentCount || 0,
           readCount: item.readCount || 0,
           url: `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${item.articleId}`,

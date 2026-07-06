@@ -929,7 +929,7 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 <input
                   className={`${inputCls} w-28 text-center font-bold`}
                   type="text"
-                  placeholder="예: 2026.02.02"
+                  placeholder="예: 2026.02.02 14:30"
                   value={collectStartDate}
                   onChange={e => setCollectStartDate(e.target.value)}
                 />
@@ -938,7 +938,7 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 )}
               </div>
               {collectStartDate.trim() && (
-                <p className="text-[9px] text-blue-500 mt-0.5">페이지 번호가 맞지 않아도 해당 날짜 이후 글만 골라 수집합니다.</p>
+                <p className="text-[9px] text-blue-500 mt-0.5">날짜만 입력 시 해당 일 00:00 이후, 시간까지 입력 시 정확히 그 시각 이후 글만 수집합니다.</p>
               )}
             </div>
 
