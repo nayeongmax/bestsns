@@ -215,7 +215,8 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
-  const BATCH_SIZE = 15; // 네이버 카페 1페이지 = 15개
+  // 배치당 5개: 릴레이 18s + 직접 API 보완 6s 구조에 맞춤
+  const BATCH_SIZE = 5;
 
   const makeCafeUrl = (page: number) => {
     const mid = menuId.trim() || '0';
@@ -325,24 +326,24 @@ const CollectorTab: React.FC = () => {
         }
         if (!data) return null;
 
-        // ── 브라우저 기준 newestId 보정 ──
-        // 릴레이 Mobile API newestId는 삭제된 글 포함으로 브라우저보다 높음.
-        // 첫 배치의 topId + 요청 브라우저 페이지로 정확한 newestId를 역산한다.
+        // 첫 배치: newestId 보정 + 수집 방법 로그
         if (newest === null && data.articles?.length > 0) {
           const topId = extractArticleId(data.articles[0]);
           if (topId > 0) {
             newest = topId + (browserPage - 1) * 15;
-            addLog('calib', `📊 브라우저 기준 newestId 보정: ${newest} (topId ${topId}, 요청 ${browserPage}p)`);
+            addLog('calib', `📊 newestId 보정: ${newest} (topId ${topId}, ${browserPage}p 요청)`);
           }
-          // 릴레이 응답 첫 글 전체 필드 구조 로그 (내용 없음 원인 진단)
-          const firstRaw = data.articles[0];
-          const contentFields = ['content','body','text','articleContent','bodyHtml','contentHtml','contentText','bodyText']
-            .map(f => `${f}=${JSON.stringify((firstRaw[f] || '').toString().slice(0,60))}`)
-            .join(', ');
-          addLog('calib', `🔬 첫 글 내용 필드 진단`, contentFields);
+          // 어떤 API 방법으로 수집됐는지 표시
+          if (data._method) addLog('calib', `🔌 수집 방법: ${data._method}`);
+          // 릴레이 페이지 확인
+          if (data._relayPage) addLog('calib', `📌 릴레이 페이지: ${data._relayPage} (브라우저: ${browserPage}, 보정값: ${offset})`);
+
+          // 내용 필드 진단 (내용 없음 원인 파악)
+          const firstRaw = data.articles[0] as any;
+          const hasContent = !!(firstRaw.content || firstRaw.body || firstRaw.contentHtml || firstRaw.bodyHtml);
+          addLog('calib', `🔬 첫 글 내용: ${hasContent ? `있음 (${(firstRaw.content || firstRaw.body || firstRaw.contentHtml || '').slice(0, 50)}...)` : '없음 — Naver API 직접 보완 시도됨'}`);
         }
 
-        // 그대로 반환 (relay page ≈ browser page — 페이지 보정 불필요)
         return { data, offset, newest };
       }
 
@@ -393,7 +394,9 @@ const CollectorTab: React.FC = () => {
           addLog('article',
             `[${accumulated.length + i + 1}] ${a.title}`,
             `${a.writer} · ${a.date}${pageTag}\n`
-            + (noContent ? '📷 이미지 전용 또는 본문 없는 글' : snippet + (rawBody.length > 150 ? '…' : '')),
+            + (noContent
+              ? '⚠️ 내용 없음 (이미지 전용 또는 보호된 글)'
+              : `✅ 내용 ${rawBody.length}자: ${snippet}${rawBody.length > 150 ? '…' : ''}`),
           );
         });
 
