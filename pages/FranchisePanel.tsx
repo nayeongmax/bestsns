@@ -113,9 +113,10 @@ const CollectorTab: React.FC = () => {
   const previewWinRef = useRef<Window | null>(null);
   const [status,   setStatus]   = useState('대기 중...');
   const [nextPage, setNextPage] = useState<number | null>(null);
-  // 릴레이 Mobile API는 브라우저 f-e API보다 약 15페이지 뒤의 글을 반환함.
-  // 기본값 15: 요청 browserPage에서 15를 빼서 relay에 요청 → 브라우저 페이지와 일치.
-  const [relayOffset, setRelayOffset] = useState<number | null>(16);
+  // 릴레이 페이지 오프셋: 삭제글 누적으로 페이지가 깊을수록 커짐.
+  // 경험치: 20p→0, 930p→16 → offset ≈ round(page / 60)
+  const autoOffset = (page: number) => Math.round(page / 60);
+  const [relayOffset, setRelayOffset] = useState<number | null>(autoOffset(1));
 
   /* ── 수집 로그 패널 ── */
   type LogEntry = { id: number; type: 'page'|'calib'|'req'|'article'|'batch'|'wait'|'err'|'done'|'stop'|'verify'|'verify_fail'; text: string; sub?: string };
@@ -815,12 +816,12 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카페 ID:</label>
-              <input className={inputCls} value={cafeId} onChange={e => { setCafeId(e.target.value); setRelayOffset(16); setNewestArticleId(null); }} placeholder="31559350" autoComplete="off" />
+              <input className={inputCls} value={cafeId} onChange={e => { setCafeId(e.target.value); setRelayOffset(autoOffset(parseInt(startPage) || 1)); setNewestArticleId(null); }} placeholder="31559350" autoComplete="off" />
               {!cafeId.trim() && resolvedCafeId && <p className="text-[10px] text-blue-500 mt-0.5">자동감지: {resolvedCafeId}</p>}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카테고리 ID (전체글이면 비워두세요):</label>
-              <input className={inputCls} value={menuId} onChange={e => { setMenuId(e.target.value); setRelayOffset(16); setNewestArticleId(null); }} placeholder="121" autoComplete="off" />
+              <input className={inputCls} value={menuId} onChange={e => { setMenuId(e.target.value); setRelayOffset(autoOffset(parseInt(startPage) || 1)); setNewestArticleId(null); }} placeholder="121" autoComplete="off" />
               {menuId.trim() === '0' && (
                 <p className="text-[10px] text-orange-500 font-bold mt-0.5">⚠ 0은 오류 유발 — 전체글 수집 시 비워두세요</p>
               )}
@@ -837,7 +838,10 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                     const val = e.target.value;
                     setStartPageUrl(val);
                     const m = val.match(/[?&]page=(\d+)/i);
-                    if (m) setStartPage(m[1]);
+                    if (m) {
+                      setStartPage(m[1]);
+                      setRelayOffset(autoOffset(parseInt(m[1])));
+                    }
                   }}
                 />
                 {resolvedCafeId && (
@@ -855,7 +859,12 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-gray-500 shrink-0">시작 페이지:</span>
                 <input className={`${inputCls} w-20 text-center font-bold`} type="number" min="1" value={startPage}
-                  onChange={e => { setStartPage(e.target.value); setStartPageUrl(''); }} />
+                  onChange={e => {
+                    setStartPage(e.target.value);
+                    setStartPageUrl('');
+                    const p = parseInt(e.target.value);
+                    if (p > 0) setRelayOffset(autoOffset(p));
+                  }} />
                 {startPage && parseInt(startPage) > 0 && (
                   <span className="text-[10px] text-green-600 font-bold">{parseInt(startPage)}페이지부터 수집</span>
                 )}
@@ -878,7 +887,7 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                   {parseInt(startPage) > 0 && `예: ${startPage}p 요청 → 릴레이 ${Math.max(1, parseInt(startPage) - (relayOffset ?? 15))}p`}
                 </span>
               </div>
-              <p className="text-[9px] text-amber-600 mt-1">수집 결과가 원하는 페이지보다 N페이지 뒤면 보정값을 N으로 설정 (기본: 16)</p>
+              <p className="text-[9px] text-amber-600 mt-1">시작 페이지 입력 시 자동 계산 (공식: round(페이지÷60)). 결과가 맞지 않으면 직접 조정하세요.</p>
             </div>
 
             <div className="mb-2">
