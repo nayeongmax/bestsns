@@ -113,7 +113,9 @@ const CollectorTab: React.FC = () => {
   const previewWinRef = useRef<Window | null>(null);
   const [status,   setStatus]   = useState('대기 중...');
   const [nextPage, setNextPage] = useState<number | null>(null);
-  const [relayOffset, setRelayOffset] = useState<number | null>(null);
+  // 릴레이 Mobile API는 브라우저 f-e API보다 약 15페이지 뒤의 글을 반환함.
+  // 기본값 15: 요청 browserPage에서 15를 빼서 relay에 요청 → 브라우저 페이지와 일치.
+  const [relayOffset, setRelayOffset] = useState<number | null>(15);
 
   /* ── 수집 로그 패널 ── */
   type LogEntry = { id: number; type: 'page'|'calib'|'req'|'article'|'batch'|'wait'|'err'|'done'|'stop'|'verify'|'verify_fail'; text: string; sub?: string };
@@ -807,12 +809,12 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카페 ID:</label>
-              <input className={inputCls} value={cafeId} onChange={e => { setCafeId(e.target.value); setRelayOffset(null); setNewestArticleId(null); }} placeholder="31559350" autoComplete="off" />
+              <input className={inputCls} value={cafeId} onChange={e => { setCafeId(e.target.value); setRelayOffset(15); setNewestArticleId(null); }} placeholder="31559350" autoComplete="off" />
               {!cafeId.trim() && resolvedCafeId && <p className="text-[10px] text-blue-500 mt-0.5">자동감지: {resolvedCafeId}</p>}
             </div>
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">카테고리 ID (전체글이면 비워두세요):</label>
-              <input className={inputCls} value={menuId} onChange={e => { setMenuId(e.target.value); setRelayOffset(null); setNewestArticleId(null); }} placeholder="121" autoComplete="off" />
+              <input className={inputCls} value={menuId} onChange={e => { setMenuId(e.target.value); setRelayOffset(15); setNewestArticleId(null); }} placeholder="121" autoComplete="off" />
               {menuId.trim() === '0' && (
                 <p className="text-[10px] text-orange-500 font-bold mt-0.5">⚠ 0은 오류 유발 — 전체글 수집 시 비워두세요</p>
               )}
@@ -854,6 +856,25 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
               </div>
               <p className="text-[9px] text-gray-400 mt-0.5">카페 열기 → 원하는 페이지로 이동 → URL 복사 후 위에 붙여넣기</p>
             </div>
+
+            {/* 릴레이 페이지 보정값 */}
+            <div className="mb-2 p-2 bg-amber-50 border border-amber-200 rounded">
+              <label className="block text-xs font-bold text-amber-700 mb-1">릴레이 페이지 보정값:</label>
+              <div className="flex items-center gap-2">
+                <input
+                  className="w-16 text-center border border-amber-300 rounded px-2 py-1 text-sm font-bold bg-white"
+                  type="number"
+                  value={relayOffset ?? 15}
+                  onChange={e => setRelayOffset(parseInt(e.target.value) || 0)}
+                />
+                <span className="text-[10px] text-amber-600 leading-tight">
+                  릴레이 요청 = 입력 페이지 - 보정값<br/>
+                  {parseInt(startPage) > 0 && `예: ${startPage}p 요청 → 릴레이 ${Math.max(1, parseInt(startPage) - (relayOffset ?? 15))}p`}
+                </span>
+              </div>
+              <p className="text-[9px] text-amber-600 mt-1">수집 결과가 원하는 페이지보다 N페이지 뒤면 보정값을 N으로 설정 (기본: 15)</p>
+            </div>
+
             <div className="mb-2">
               <label className="block text-xs font-bold text-gray-600 mb-0.5">최대 수집 글 수:</label>
               <input className={inputCls} type="number" min="1" max="500" value={maxArticles} onChange={e => setMaxArticles(e.target.value)} />
