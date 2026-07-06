@@ -561,30 +561,37 @@ async function tryPlaywrightList(cafeId, menuId, page, cookie) {
   const pw = await ctx.newPage();
   try {
     let intercepted = null;
-    pw.on('response', async (res) => {
-      if (intercepted) return;
-      const url = res.url();
-      // 카페 목록 API: /ca-fe/cafes/.../articles (개별 글 URL과 구분)
-      if (url.includes('/ca-fe/cafes/') && /\/articles(\?|$)/.test(url)) {
-        try {
-          const j = await res.json();
-          const result = j?.message?.result ?? j?.result ?? j;
-          const list = result?.articleList ?? result?.items ?? result?.articles ?? [];
-          if (Array.isArray(list) && list.length > 0)
-            intercepted = { list, totalPage: result?.totalPage ?? result?.pageInfo?.totalPage ?? 0 };
-        } catch {}
-      }
+
+    // page.route()로 ca-fe 목록 API 가로채기 (response.on보다 안정적)
+    await pw.route(url => {
+      return url.includes('/ca-fe/cafes/') && /\/articles\?/.test(url);
+    }, async (route) => {
+      let response;
+      try { response = await route.fetch(); } catch(e) { await route.continue(); return; }
+      const body = await response.text().catch(() => '');
+      console.log(`  [목록 라우트] ${route.request().url().slice(0, 100)}`);
+      console.log(`  [목록 라우트] 앞80자: ${body.slice(0, 80)}`);
+      try {
+        const j = JSON.parse(body);
+        const result = j?.message?.result ?? j?.result ?? j;
+        const list = result?.articleList ?? result?.items ?? result?.articles ?? [];
+        if (!intercepted && Array.isArray(list) && list.length > 0) {
+          intercepted = { list, totalPage: result?.totalPage ?? result?.pageInfo?.totalPage ?? 0 };
+          console.log(`  [목록 라우트] 성공! ${list.length}개`);
+        }
+      } catch(e) { console.log(`  [목록 라우트] JSON 파싱 실패: ${e.message}`); }
+      await route.fulfill({ response });
     });
 
     // Python의 driver.get(list_url)과 동일: f-e SPA URL로 브라우저 열기
-    const mid = (menuId && menuId !== '0') ? menuId : '0';
-    const listUrl = `https://cafe.naver.com/f-e/cafes/${cafeId}/menus/${mid}?page=${page}&viewType=L`;
+    // menus/0 은 유효하지 않음 — 전체글은 /articles, 특정 메뉴는 /menus/{id}
+    const hasMenu = menuId && menuId !== '0';
+    const listUrl = hasMenu
+      ? `https://cafe.naver.com/f-e/cafes/${cafeId}/menus/${menuId}?page=${page}&viewType=L`
+      : `https://cafe.naver.com/f-e/cafes/${cafeId}/articles?page=${page}&viewType=L`;
     console.log(`[Playwright 목록] ${listUrl}`);
-    await pw.goto(listUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
-
-    // ca-fe API 인터셉트 대기 (최대 12초)
-    const deadline = Date.now() + 12000;
-    while (!intercepted && Date.now() < deadline) await new Promise(r => setTimeout(r, 300));
+    await pw.goto(listUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    await new Promise(r => setTimeout(r, 1500)); // route 핸들러 완료 대기
 
     if (intercepted) {
       const { list, totalPage } = intercepted;
