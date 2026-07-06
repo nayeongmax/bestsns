@@ -100,6 +100,7 @@ const CollectorTab: React.FC = () => {
   const [menuId,        setMenuId]        = useState('');
   const [startPage,     setStartPage]     = useState('1');
   const [startPageUrl,  setStartPageUrl]  = useState(''); // URL에서 페이지 추출용
+  const [collectStartDate, setCollectStartDate] = useState(''); // 수집 시작 날짜 필터 (예: 2026.02.02)
   const [maxArticles,   setMaxArticles]   = useState('10');
   const [maxComments,   setMaxComments]   = useState('3');
   const [aiRewrite,     setAiRewrite]     = useState(false);
@@ -221,8 +222,8 @@ const CollectorTab: React.FC = () => {
   const resolvedCafeId = cafeId.trim() || parseCafeId(cafeUrl);
 
   /* ── 수집 ── */
-  // 배치당 5개: 릴레이 18s + 직접 API 보완 6s 구조에 맞춤
-  const BATCH_SIZE = 5;
+  // 로컬 릴레이: 페이지 1장 전체(15개) / 서버 릴레이: 5개
+  const BATCH_SIZE = useLocalRelay ? 15 : 5;
 
   const makeCafeUrl = (page: number) => {
     const mid = menuId.trim() || '0';
@@ -262,7 +263,7 @@ const CollectorTab: React.FC = () => {
       // 로컬 릴레이 모드: Python처럼 Playwright로 DOM에서 직접 읽기
       if (useLocalRelay) {
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 90000); // Playwright는 느릴 수 있음
+        const timer = setTimeout(() => ctrl.abort(), 150000); // Playwright 15개×10s = ~150s
         let res: Response;
         try {
           res = await fetch(`${localRelayUrl}/scrape-naver-cafe`, {
@@ -272,7 +273,7 @@ const CollectorTab: React.FC = () => {
               cafeId: resolvedCafeId,
               menuId: menuId.trim() || '',
               startPage: page,
-              startDate: '2000.01.01',
+              startDate: collectStartDate.trim() || '2000.01.01',
               maxArticles: BATCH_SIZE,
               maxComments: Math.max(1, parseInt(maxComments) || 0),
               fetchComments: true,
@@ -354,7 +355,7 @@ const CollectorTab: React.FC = () => {
 
       // 연결 재시도만 수행 (페이지 보정 루프 제거 — relay page ≈ browser page)
       for (let corrIter = 0; corrIter < 1 && !stopRef.current; corrIter++) {
-        addLog('req', useLocalRelay ? '💻 로컬 릴레이 요청 중...' : '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
+        addLog('req', useLocalRelay ? `💻 로컬 릴레이 요청 중... (페이지 1장 전체 15개)` : '📡 릴레이 서버 요청 중...', `cafe ${resolvedCafeId} / menu ${menuId.trim() || '전체'}`);
 
         // ── 연결 재시도: 지수 백오프 ──
         const backoffs = [0, 4000, 10000, 20000];
@@ -927,6 +928,23 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
                 )}
               </div>
               <p className="text-[9px] text-gray-400 mt-0.5">카페 열기 → 원하는 페이지로 이동 → URL 복사 후 위에 붙여넣기</p>
+              {/* 수집 시작 날짜 필터 */}
+              <div className="flex items-center gap-1 mt-1">
+                <span className="text-[10px] text-gray-500 shrink-0">시작 날짜 (선택):</span>
+                <input
+                  className={`${inputCls} w-28 text-center font-bold`}
+                  type="text"
+                  placeholder="예: 2026.02.02"
+                  value={collectStartDate}
+                  onChange={e => setCollectStartDate(e.target.value)}
+                />
+                {collectStartDate.trim() && (
+                  <span className="text-[10px] text-blue-600 font-bold">{collectStartDate} 이후 글만 수집</span>
+                )}
+              </div>
+              {collectStartDate.trim() && (
+                <p className="text-[9px] text-blue-500 mt-0.5">페이지 번호가 맞지 않아도 해당 날짜 이후 글만 골라 수집합니다.</p>
+              )}
             </div>
 
             {/* 릴레이 페이지 보정값 */}

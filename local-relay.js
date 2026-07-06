@@ -14,8 +14,8 @@ let _browser = null;
 async function getBrowser() {
   if (!_browser || !_browser.isConnected()) {
     _browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-setuid-sandbox'],
+      headless: false,
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-setuid-sandbox'],
     });
   }
   return _browser;
@@ -445,7 +445,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
     }
     const page = await context.newPage();
     try {
-      // SPA가 내부적으로 호출하는 API 응답 가로채기 (빠름)
+      // SPA가 내부적으로 호출하는 API 응답 가로채기
       let intercepted = null;
       page.on('response', async (response) => {
         if (intercepted) return;
@@ -454,11 +454,26 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           try { intercepted = await response.json(); } catch {}
         }
       });
-      await page.goto(`https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      // API 호출 대기 (최대 8초)
+      // ArticleRead.nhn → 브라우저가 자동으로 올바른 URL로 처리
+      const articleUrl = `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`;
+      console.log(`  [Playwright] 글 열기: ${articleUrl}`);
+      await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+
+      // 로그인 페이지 감지
+      const curUrl = page.url();
+      console.log(`  [Playwright] 현재 URL: ${curUrl.slice(0, 100)}`);
+      if (curUrl.includes('nidlogin') || curUrl.includes('/login')) {
+        console.log(`  [Playwright] 로그인 페이지로 이동됨 — 쿠키 필요`);
+        return { content: '', comments: [] };
+      }
+
+      // API 인터셉트 대기 (최대 8초)
       const deadline = Date.now() + 8000;
       while (!intercepted && Date.now() < deadline) await new Promise(r => setTimeout(r, 200));
+
       let content = '', comments = [];
+
+      // API 인터셉트 성공 시 내용 추출
       if (intercepted) {
         const art = intercepted?.result?.article;
         const raw = art?.contentHtml || art?.content || art?.contentText || '';
@@ -466,9 +481,91 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         const rawC = intercepted?.result?.comments?.items || [];
         comments = rawC.slice(0, maxComments).map(c => ({ content: (c.content || '').trim(), writer: c.writer?.nick || '', date: '' })).filter(c => c.content);
         console.log(`  [Playwright 인터셉트] content길이=${content.length} 댓글=${comments.length}`);
-        if (content) return { content, comments };
       }
-      console.log(`  [Playwright] 인터셉트 실패, 결과 없음`);
+
+      // DOM에서 직접 읽기 — 메인 페이지 + 모든 iframe 탐색 (Python과 동일)
+      if (!content) {
+        // SPA/iframe 렌더링 완료 대기
+        await page.waitForLoadState('load', { timeout: 8000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 2500));
+
+        const DOM_SELECTORS = [
+          'div.se-main-container',
+          'div.article_viewer',
+          'div#postContent',
+          'div.ContentRenderer',
+          'div#tbody',
+          '.post-content-wrap',
+          'div[class*="article_content"]',
+          'div[class*="se-module-text"]',
+        ];
+
+        // 메인 프레임 + 모든 iframe 순서로 탐색
+        const allFrames = page.frames();
+        let contentFrame = null;
+        for (const frame of allFrames) {
+          if (content) break;
+          try {
+            const fUrl = frame.url();
+            const result = await frame.evaluate((sels) => {
+              for (const sel of sels) {
+                const el = document.querySelector(sel);
+                if (el) {
+                  const t = (el.innerText || el.textContent || '').trim();
+                  if (t.length > 10) return t;
+                }
+              }
+              return '';
+            }, DOM_SELECTORS);
+
+            if (result) {
+              content = result;
+              contentFrame = frame;
+              console.log(`  [Playwright DOM] 성공 (${fUrl.slice(0, 60)}), 길이=${content.length}`);
+            }
+          } catch (fe) { /* 무시 */ }
+        }
+        if (!content) console.log(`  [Playwright DOM] 모든 프레임에서 내용 없음`);
+
+        // 댓글도 같은 프레임에서 DOM으로 읽기
+        if (contentFrame && maxComments > 0 && comments.length === 0) {
+          try {
+            comments = await contentFrame.evaluate((maxC) => {
+              const result = [];
+              const COMMENT_SELS = [
+                '.CommentBox .comment_item',
+                '.comment_list .comment_item',
+                'ul.CommentBox__list > li',
+                '[class*="CommentItem"]',
+                '.cafe_comment_list li',
+                '.comment_area li',
+                '[class*="comment-item"]',
+              ];
+              let items = [];
+              for (const sel of COMMENT_SELS) {
+                items = Array.from(document.querySelectorAll(sel));
+                if (items.length > 0) break;
+              }
+              for (const item of items.slice(0, maxC)) {
+                const contentEl = item.querySelector('[class*="comment_text"], [class*="text_comment"], .comment_body p, .text');
+                const writerEl  = item.querySelector('[class*="nick"], [class*="writer_nick"], .comment_writer');
+                const dateEl    = item.querySelector('[class*="date"], time');
+                const text = (contentEl?.innerText || contentEl?.textContent || '').trim();
+                if (text) result.push({
+                  content: text,
+                  writer: (writerEl?.innerText || writerEl?.textContent || '').trim(),
+                  date:   (dateEl?.innerText   || dateEl?.textContent   || '').trim(),
+                });
+              }
+              return result;
+            }, maxComments);
+            if (comments.length > 0) console.log(`  [Playwright DOM 댓글] ${comments.length}개`);
+          } catch(ce) { /* 무시 */ }
+        }
+      }
+
+      if (content) return { content, comments };
+      console.log(`  [Playwright] 최종 실패 — 내용 없음`);
     } finally {
       await page.close();
       await context.close();
@@ -476,6 +573,78 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
   } catch(e) { console.log(`  [Playwright] 실패: ${e.message}`); }
 
   return { content: '', comments: [] };
+}
+
+// ── 방법 0: Playwright로 목록 페이지 직접 열기 (Python과 동일, 페이지 번호 정확) ─────
+async function tryPlaywrightList(cafeId, menuId, page, cookie) {
+  const browser = await getBrowser();
+  const ctx = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  });
+  if (cookie) {
+    const cookies = [];
+    for (const part of cookie.split(';').map(p => p.trim())) {
+      const idx = part.indexOf('=');
+      if (idx > 0) cookies.push({ name: part.slice(0, idx).trim(), value: part.slice(idx + 1).trim(), domain: '.naver.com', path: '/' });
+    }
+    if (cookies.length > 0) await ctx.addCookies(cookies);
+  }
+  const pw = await ctx.newPage();
+  try {
+    let intercepted = null;
+
+    // page.route()로 ca-fe 목록 API 가로채기 (response.on보다 안정적)
+    await pw.route(url => {
+      const href = url.href || url.toString();
+      return href.includes('/ca-fe/cafes/') && /\/articles\?/.test(href);
+    }, async (route) => {
+      let response;
+      try { response = await route.fetch(); } catch(e) { await route.continue(); return; }
+      const body = await response.text().catch(() => '');
+      console.log(`  [목록 라우트] ${route.request().url().slice(0, 100)}`);
+      console.log(`  [목록 라우트] 앞80자: ${body.slice(0, 80)}`);
+      try {
+        const j = JSON.parse(body);
+        const result = j?.message?.result ?? j?.result ?? j;
+        const list = result?.articleList ?? result?.items ?? result?.articles ?? [];
+        if (!intercepted && Array.isArray(list) && list.length > 0) {
+          intercepted = { list, totalPage: result?.totalPage ?? result?.pageInfo?.totalPage ?? 0 };
+          console.log(`  [목록 라우트] 성공! ${list.length}개`);
+        }
+      } catch(e) { console.log(`  [목록 라우트] JSON 파싱 실패: ${e.message}`); }
+      await route.fulfill({ response });
+    });
+
+    // Python의 driver.get(list_url)과 동일: f-e SPA URL로 브라우저 열기
+    // menus/0 = 전체글보기 (브라우저 URL과 동일하게 맞춰야 ca-fe API 페이지 번호 일치)
+    const hasMenu = menuId && menuId !== '0';
+    const listUrl = hasMenu
+      ? `https://cafe.naver.com/f-e/cafes/${cafeId}/menus/${menuId}?page=${page}&viewType=L`
+      : `https://cafe.naver.com/f-e/cafes/${cafeId}/menus/0?page=${page}&viewType=L`;
+    console.log(`[Playwright 목록] ${listUrl}`);
+    await pw.goto(listUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    await new Promise(r => setTimeout(r, 1500)); // route 핸들러 완료 대기
+
+    if (intercepted) {
+      const { list, totalPage } = intercepted;
+      console.log(`[Playwright 목록] 성공: ${list.length}개, totalPage=${totalPage}`);
+      return list.map(item => ({
+        articleId: item.articleId ?? item.id,
+        title: decodeHtml(item.subject ?? item.title ?? ''),
+        writer: item.writerInfo?.nick ?? item.writer?.nick ?? item.nick ?? '',
+        dateStr: item.writeDateTimestamp
+          ? fmtDate(new Date(item.writeDateTimestamp))
+          : (item.writeDate ?? item.writeDateText ?? ''),
+        commentCount: parseInt(item.commentCount ?? item.replyCount ?? 0),
+        readCount: parseInt(item.readCount ?? item.viewCount ?? 0),
+        totalPage,
+      }));
+    }
+    throw new Error('ca-fe API 인터셉트 실패');
+  } finally {
+    await pw.close();
+    await ctx.close();
+  }
 }
 
 // ── 방법 4: 모바일 API ────────────────────────────────────────────────────────
@@ -534,7 +703,18 @@ async function handleScrape(body) {
   while (articles.length < maxArticles && pagesScanned < MAX_PAGES) {
     let rawItems = [];
 
+    // 방법 0: Playwright 브라우저로 목록 페이지 직접 열기 (Python과 동일, 페이지 번호 정확)
+    try {
+      rawItems = await tryPlaywrightList(cafeId, menuId, page, naverCookie);
+      method = 'Playwright(브라우저)';
+      apiSuccess = true;
+    } catch (e) {
+      lastError = e.message;
+      console.log(`[방법0 실패] ${e.message}`);
+    }
+
     // 방법 1: /ca-fe/ REST API (XHR 헤더)
+    if (rawItems.length === 0) {
     try {
       rawItems = await tryCaFeApi(cafeId, menuId, page, naverCookie);
       method = 'ca-fe REST API';
@@ -542,6 +722,7 @@ async function handleScrape(body) {
     } catch (e) {
       lastError = e.message;
       console.log(`[방법1 실패] ${e.message}`);
+    }
     }
 
     // 방법 2: apis.naver.com
@@ -585,7 +766,7 @@ async function handleScrape(body) {
     let reachedStart = false;
     let pageAllFiltered = true;
     console.log(`  페이지 ${page} → ${rawItems.length}개 아이템, 날짜 샘플: ${rawItems.slice(0,3).map(i=>`"${i.dateStr}"`).join(', ')}`);
-    // 페이지 내 아이템은 최신→오래된 순으로 오므로, 역순 처리해서 오래된→최신 순으로 push
+    // Python과 동일: 페이지 아래(오래된 글)부터 수집
     const filteredItems = [];
     for (const item of [...rawItems].reverse()) {
       if (articles.length + filteredItems.length >= maxArticles) { pageAllFiltered = false; break; }
@@ -658,9 +839,12 @@ async function handleScrape(body) {
 
   articles.forEach((a, i) => { a.no = i + 1; });
 
+  // 다음 수집 페이지: 현재 페이지에서 한 단계 더 오래된 페이지 (페이지 번호가 낮을수록 최신)
+  // 루프가 maxArticles 도달로 종료된 경우 page-- 가 실행되지 않으므로 여기서 -1 처리
+  const nextPageNum = articles.length > 0 && page > 1 ? page - 1 : 0;
   return {
     statusCode: 200,
-    body: { status: 'ok', articles, nextPage: page, totalCollected: articles.length, method },
+    body: { status: 'ok', articles, nextPage: nextPageNum, totalCollected: articles.length, method },
   };
 }
 
