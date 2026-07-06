@@ -1809,6 +1809,8 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
 
   const checkHasActiveSub = () => {
     if (isAdmin) return true;
+    // 관리자가 선정한 가맹점(isFranchise=true)은 구독 없이 체험판으로 전체 이용 가능
+    if (user.isFranchise) return true;
     try {
       const s = localStorage.getItem(`franchise_sub_${user.id}`);
       if (s) {
@@ -1818,6 +1820,17 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
     } catch {}
     return false;
   };
+
+  const isTrial = !isAdmin && !!user.isFranchise && (() => {
+    try {
+      const s = localStorage.getItem(`franchise_sub_${user.id}`);
+      if (s) {
+        const d = JSON.parse(s);
+        return !(d.plan && d.until && new Date(d.until) > new Date());
+      }
+    } catch {}
+    return true;
+  })();
 
   const handleTabClick = (tabId: FranchiseTab) => {
     if (!isAdmin && PROTECTED_TABS.includes(tabId) && !checkHasActiveSub()) {
@@ -1839,6 +1852,12 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
 
   return (
     <div className="max-w-7xl mx-auto py-0 md:py-6">
+      {isTrial && (
+        <div className="mx-3 md:mx-4 mb-3 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
+          <span className="text-emerald-600 text-sm">🎁</span>
+          <p className="text-xs font-bold text-emerald-700">체험판 이용 중 — 모든 기능을 무료로 사용하고 있습니다.</p>
+        </div>
+      )}
       <div className="flex overflow-x-auto no-scrollbar border-b border-gray-200 bg-white sticky top-14 xl:top-20 z-10">
         {tabs.map(tab => (
           <button key={tab.id} type="button" onClick={() => handleTabClick(tab.id)}
