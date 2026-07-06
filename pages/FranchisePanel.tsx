@@ -333,15 +333,17 @@ const CollectorTab: React.FC = () => {
             newest = topId + (browserPage - 1) * 15;
             addLog('calib', `📊 newestId 보정: ${newest} (topId ${topId}, ${browserPage}p 요청)`);
           }
-          // 어떤 API 방법으로 수집됐는지 표시
-          if (data._method) addLog('calib', `🔌 수집 방법: ${data._method}`);
-          // 릴레이 페이지 확인
-          if (data._relayPage) addLog('calib', `📌 릴레이 페이지: ${data._relayPage} (브라우저: ${browserPage}, 보정값: ${offset})`);
+          // 수집 방법 + 페이지 정보 표시
+          if (data._usedDirect) {
+            addLog('calib', `✅ ca-fe API 직접 호출 성공 — 페이지 번호 정확 (오프셋 불필요)`);
+          } else {
+            if (data._method) addLog('calib', `🔌 수집 방법: ${data._method}`);
+            if (data._relayPage) addLog('calib', `📌 릴레이 페이지: ${data._relayPage} (브라우저: ${browserPage}, 보정값: ${offset})`);
+          }
 
-          // 내용 필드 진단 (내용 없음 원인 파악)
           const firstRaw = data.articles[0] as any;
-          const hasContent = !!(firstRaw.content || firstRaw.body || firstRaw.contentHtml || firstRaw.bodyHtml);
-          addLog('calib', `🔬 첫 글 내용: ${hasContent ? `있음 (${(firstRaw.content || firstRaw.body || firstRaw.contentHtml || '').slice(0, 50)}...)` : '없음 — Naver API 직접 보완 시도됨'}`);
+          const hasContent = !!(firstRaw.content?.trim());
+          addLog('calib', `🔬 첫 글 내용: ${hasContent ? `있음 (${firstRaw.content.slice(0, 60)}...)` : '비어 있음'}`);
         }
 
         return { data, offset, newest };
