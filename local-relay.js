@@ -17,8 +17,8 @@ const USER_DATA_DIR = path.join(__dirname, '.browser-session');
 let _persistentCtx = null;
 async function getPersistentContext() {
   if (_persistentCtx) {
-    try { if (_persistentCtx.browser().isConnected()) return _persistentCtx; } catch(e) {}
-    _persistentCtx = null;
+    // launchPersistentContext는 .browser()가 null을 반환하므로 pages()로 생존 여부 확인
+    try { _persistentCtx.pages(); return _persistentCtx; } catch(e) { _persistentCtx = null; }
   }
   console.log(`[브라우저] 세션 시작: ${USER_DATA_DIR}`);
   _persistentCtx = await chromium.launchPersistentContext(USER_DATA_DIR, {
@@ -367,9 +367,8 @@ function stripHtml(html) {
 }
 
 async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
-  // 브라우저 세션에서 최신 쿠키 가져오기 (수동 쿠키보다 항상 최신)
-  const browserCookie = await getNaverCookieStr();
-  const effectiveCookie = browserCookie || cookie;
+  // cookie는 handleScrape에서 이미 브라우저 세션 쿠키로 resolve된 값
+  const effectiveCookie = cookie;
 
   // 방법 A: articleapi v2
   try {
@@ -761,6 +760,9 @@ async function handleScrape(body) {
   const { cafeId, menuId='', startPage=1, startDate, endDate, maxArticles=50, maxComments=3, naverCookie='' } = body;
   if (!cafeId) return { statusCode: 400, body: { status: 'error', message: 'cafeId가 필요합니다.' } };
 
+  // 수집 시작 전 브라우저 세션 쿠키를 한 번만 가져와서 모든 API 호출에 재사용
+  const effectiveCookie = await getNaverCookieStr() || naverCookie;
+
   // "HH:MM" 형식이면 시각만 비교하는 모드 (날짜 무관)
   const isTimeOnly = startDate && /^\d{2}:\d{2}(:\d{2})?$/.test(startDate.trim());
   const startDateObj = !isTimeOnly && startDate ? parseDateStr(startDate) : null;
@@ -787,7 +789,7 @@ async function handleScrape(body) {
 
     // 방법 0: Playwright 브라우저로 목록 페이지 직접 열기 (Python과 동일, 페이지 번호 정확)
     try {
-      rawItems = await tryPlaywrightList(cafeId, menuId, page, naverCookie);
+      rawItems = await tryPlaywrightList(cafeId, menuId, page, effectiveCookie);
       method = 'Playwright(브라우저)';
       apiSuccess = true;
     } catch (e) {
@@ -798,7 +800,7 @@ async function handleScrape(body) {
     // 방법 1: /ca-fe/ REST API (XHR 헤더)
     if (rawItems.length === 0) {
     try {
-      rawItems = await tryCaFeApi(cafeId, menuId, page, naverCookie);
+      rawItems = await tryCaFeApi(cafeId, menuId, page, effectiveCookie);
       method = 'ca-fe REST API';
       apiSuccess = true;
     } catch (e) {
@@ -810,7 +812,7 @@ async function handleScrape(body) {
     // 방법 2: apis.naver.com
     if (rawItems.length === 0) {
       try {
-        rawItems = await tryApisNaver(cafeId, menuId, page, naverCookie);
+        rawItems = await tryApisNaver(cafeId, menuId, page, effectiveCookie);
         method = 'apis.naver.com';
         apiSuccess = true;
       } catch (e) {
@@ -822,7 +824,7 @@ async function handleScrape(body) {
     // 방법 3: ArticleList.nhn HTML
     if (rawItems.length === 0) {
       try {
-        rawItems = await tryArticleListHtml(cafeId, menuId, page, naverCookie);
+        rawItems = await tryArticleListHtml(cafeId, menuId, page, effectiveCookie);
         method = 'ArticleList HTML';
         apiSuccess = true;
       } catch (e) {
@@ -834,7 +836,7 @@ async function handleScrape(body) {
     // 방법 4: 모바일 API
     if (rawItems.length === 0) {
       try {
-        rawItems = await tryMobileApi(cafeId, menuId, page, naverCookie);
+        rawItems = await tryMobileApi(cafeId, menuId, page, effectiveCookie);
         method = '모바일 API';
         apiSuccess = true;
       } catch (e) {
@@ -871,7 +873,7 @@ async function handleScrape(body) {
       const batch = filteredItems.slice(i, i + BATCH);
       const results = await Promise.all(batch.map(({ item }) =>
         item.articleId
-          ? fetchArticleDetail(cafeId, item.articleId, naverCookie, maxComments).catch(e => { console.log(`  [상세] 실패: ${e.message}`); return { content: '', comments: [] }; })
+          ? fetchArticleDetail(cafeId, item.articleId, effectiveCookie, maxComments).catch(e => { console.log(`  [상세] 실패: ${e.message}`); return { content: '', comments: [] }; })
           : Promise.resolve({ content: '', comments: [] })
       ));
       for (let j = 0; j < batch.length; j++) {
