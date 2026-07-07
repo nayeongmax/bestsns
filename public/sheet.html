@@ -1438,21 +1438,20 @@ function textToHtml(s) {
 }
 
 // trow의 contenteditable 셀들에 GS 열 데이터를 구조화해서 채움
-// - startIdx: 채우기 시작할 trowDivs 인덱스 (보통 1 = mainDiv)
-// - contentCols: 채울 내용 배열 [제목, 댓글..., 날짜, 링크]
-// 마지막 열이 https://로 시작하면 linkDiv에, 그 앞이 날짜 형식이면 dateDiv에 고정 배치
+// XLSX 구조: [제목, 리라이팅제목, 댓글1, 댓글2, 댓글3, 날짜, URL]
+// div 구조:  [mainDiv, rsDiv, c1Div, c2Div, c3Div, dateDiv, linkDiv]
+// → contentCols와 div를 순서대로 1:1 매핑 (rsDiv에 리라이팅 제목 포함)
 function fillTrowDivs(trowDivs, contentCols, startIdx) {
-  const isRS   = div => div.parentElement?.previousElementSibling?.classList?.contains('rlbl');
   const isDate = s => /^\d{4}[\.\-\/]\d{1,2}[\.\-\/]\d{1,2}(\s+\d{2}:\d{2})?$/.test(s.trim());
   const isLink = s => /^https?:\/\//.test(s.trim());
   if (!contentCols.length) return;
-  const fillDivs = [];
-  for (let i = startIdx; i < trowDivs.length; i++) {
-    // 사용자가 명시적으로 선택한 시작 셀은 우측 셀이어도 포함
-    if (i === startIdx || !isRS(trowDivs[i])) fillDivs.push(trowDivs[i]);
-  }
-  if (!fillDivs.length) return;
-  fillDivs[0].innerHTML = textToHtml(contentCols[0]);
+
+  // startIdx 이후 모든 div 수집 (RS div 포함)
+  const allDivs = [];
+  for (let i = startIdx; i < trowDivs.length; i++) allDivs.push(trowDivs[i]);
+  if (!allDivs.length) return;
+
+  // contentCols 끝에서 URL, 날짜 감지
   let linkIdx = -1, dateIdx = -1;
   if (isLink(contentCols[contentCols.length - 1])) {
     linkIdx = contentCols.length - 1;
@@ -1462,22 +1461,20 @@ function fillTrowDivs(trowDivs, contentCols, startIdx) {
   } else if (isDate(contentCols[contentCols.length - 1])) {
     dateIdx = contentCols.length - 1;
   }
-  const fixedCount = (dateIdx !== -1 ? 1 : 0) + (linkIdx !== -1 ? 1 : 0);
-  if (linkIdx !== -1 && fillDivs.length >= 2) {
-    fillDivs[fillDivs.length - 1].innerHTML = textToHtml(contentCols[linkIdx]);
+
+  // URL → 마지막 div, 날짜 → 뒤에서 두 번째 div
+  if (linkIdx !== -1 && allDivs.length >= 1) {
+    allDivs[allDivs.length - 1].innerHTML = textToHtml(contentCols[linkIdx]);
   }
-  if (dateIdx !== -1 && fillDivs.length >= (linkIdx !== -1 ? 3 : 2)) {
-    fillDivs[fillDivs.length - (linkIdx !== -1 ? 2 : 1)].innerHTML = textToHtml(contentCols[dateIdx]);
+  if (dateIdx !== -1) {
+    const dPos = linkIdx !== -1 ? allDivs.length - 2 : allDivs.length - 1;
+    if (dPos >= 0) allDivs[dPos].innerHTML = textToHtml(contentCols[dateIdx]);
   }
-  const commentDivs = fillDivs.slice(1, fillDivs.length - fixedCount);
-  const commentEnd  = dateIdx !== -1 ? dateIdx : (linkIdx !== -1 ? linkIdx : contentCols.length);
-  // Count RS divs excluded from fillDivs so their corresponding contentCols entries are skipped
-  let rsCount = 0;
-  for (let i = startIdx + 1; i < trowDivs.length; i++) {
-    if (isRS(trowDivs[i])) rsCount++;
-  }
-  for (let j = 1 + rsCount; j < commentEnd && (j - 1 - rsCount) < commentDivs.length; j++) {
-    commentDivs[j - 1 - rsCount].innerHTML = textToHtml(contentCols[j]);
+
+  // 제목·리라이팅제목·댓글 → div 순서대로 채움
+  const contentEnd = dateIdx !== -1 ? dateIdx : (linkIdx !== -1 ? linkIdx : contentCols.length);
+  for (let i = 0; i < contentEnd && i < allDivs.length; i++) {
+    allDivs[i].innerHTML = textToHtml(contentCols[i]);
   }
 }
 
@@ -1605,7 +1602,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const crowDivs = Array.from(crow.querySelectorAll('[contenteditable]'));
             let bColI = bodyStart;
             for (let i = 0; i < crowDivs.length; i++) {
-              if (isRightSide(crowDivs[i])) continue; // rbodyDiv 건너뜀
               if (bColI >= bodyCols.length) break;
               crowDivs[i].innerHTML = textToHtml(bodyCols[bColI++]);
             }
