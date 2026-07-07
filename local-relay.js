@@ -973,9 +973,17 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n✅ 네이버 카페 릴레이 서버 실행 중`);
   console.log(`   http://localhost:${PORT}`);
   console.log(`\n   웹앱에서 수집 시 이 창을 열어두세요.`);
   console.log(`   종료: Ctrl+C\n`);
+
+  // 서버 시작 즉시 브라우저 열기 — 로그인 안 돼있으면 창에서 바로 로그인 가능
+  try {
+    await getPersistentContext();
+    console.log('[브라우저] 로그인 상태 확인 완료\n');
+  } catch(e) {
+    console.log(`[브라우저] 실행 실패: ${e.message}\n`);
+  }
 });
