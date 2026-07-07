@@ -291,7 +291,7 @@ const CollectorTab: React.FC = () => {
               cafeId: resolvedCafeId,
               menuId: menuId.trim() || '',
               startPage: page,
-              startDate: collectStartDate.trim() || '2000.01.01',
+              startDate: collectStartDate.trim().replace(/(\d{2}[.\-\/]\d{2})\.\s+/, '$1 ') || '2000.01.01',
               maxArticles: BATCH_SIZE,
               maxComments: Math.max(1, parseInt(maxComments) || 0),
               fetchComments: true,
