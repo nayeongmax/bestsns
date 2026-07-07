@@ -70,8 +70,8 @@ function decodeHtml(s) {
 
 function parseDateStr(s) {
   if (!s) return null;
-  // 날짜+시간: "2026.02.02 14:30" 또는 "2026.02.02 14:30:00"
-  let m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  // 날짜+시간: "2026.02.02 14:30", "2026.02.02. 14:30" (마침표+공백 허용), "2026.02.02 14:30:00"
+  let m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})[.\s]+(\d{2}):(\d{2})(?::(\d{2}))?/);
   if (m) return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]||'00'}+09:00`);
   // 날짜만: "2026.02.02"
   m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
@@ -879,8 +879,7 @@ async function handleScrape(body) {
 
   articles.forEach((a, i) => { a.no = i + 1; });
 
-  // 다음 수집 페이지: 현재 페이지에서 한 단계 더 오래된 페이지 (페이지 번호가 낮을수록 최신)
-  // 루프가 maxArticles 도달로 종료된 경우 page-- 가 실행되지 않으므로 여기서 -1 처리
+  // 다음 수집 페이지: page - 1 (낮은 번호 = 더 오래된 글)
   const nextPageNum = articles.length > 0 && page > 1 ? page - 1 : 0;
   return {
     statusCode: 200,
