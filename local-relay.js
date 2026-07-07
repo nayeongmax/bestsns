@@ -844,9 +844,9 @@ async function handleScrape(body) {
     // 이 페이지에서 매칭 글을 찾았으면 즉시 반환 — 다음 페이지는 FranchisePanel이 별도 배치로 요청
     // (계속 이동하면 페이지 중간에 걸쳐 수집돼 나머지 글이 누락됨)
     if (!pageAllFiltered) break;
-    // 이 페이지 글이 전부 날짜/시각 필터됨 → 다음 페이지로 이동
-    page++;
-    if (page > 99999) break;
+    // 이 페이지 글이 전부 날짜/시각 필터됨 → 더 최신 페이지로 이동
+    page--;
+    if (page < 1) break;
     pagesScanned++;
     await new Promise(r => setTimeout(r, 300));
   }
@@ -879,8 +879,8 @@ async function handleScrape(body) {
 
   articles.forEach((a, i) => { a.no = i + 1; });
 
-  // 다음 수집 페이지: 시작 페이지 + 1 (순차 수집, 더 오래된 방향)
-  const nextPageNum = articles.length > 0 ? page + 1 : 0;
+  // 다음 수집 페이지: page - 1 (낮은 번호 = 더 오래된 글)
+  const nextPageNum = articles.length > 0 && page > 1 ? page - 1 : 0;
   return {
     statusCode: 200,
     body: { status: 'ok', articles, nextPage: nextPageNum, totalCollected: articles.length, method },
