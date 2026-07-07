@@ -364,6 +364,12 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       const rawContent = article?.contentHtml ?? article?.content ?? article?.contentText ?? '';
       const content = stripHtml(rawContent);
       console.log(`  [상세] content길이=${content.length} 댓글=${(result?.comments?.items ?? result?.commentList ?? []).length}`);
+      if (!content) {
+        const keys = Object.keys(article || {}).join(', ');
+        console.log(`  [상세 디버그] article keys: ${keys}`);
+        console.log(`  [상세 디버그] contentHtml앞100자: ${String(article?.contentHtml ?? '').slice(0,100).replace(/\n/g,' ')}`);
+        console.log(`  [상세 디버그] body앞200자: ${body.slice(0,200).replace(/\n/g,' ')}`);
+      }
 
       // 댓글
       let comments = [];
@@ -434,18 +440,30 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       // __NEXT_DATA__에서 본문 추출
       const ndm = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
       if (ndm) {
-        const nd = JSON.parse(ndm[1]);
-        const articleData = deepFind(nd, ['article', 'articleDetail', 'content', 'contentHtml']);
-        if (articleData && typeof articleData === 'string') {
-          console.log(`  [HTML detail] __NEXT_DATA__ 파싱 성공, 길이=${articleData.length}`);
-          return { content: stripHtml(articleData), comments: [] };
-        }
+        try {
+          const nd = JSON.parse(ndm[1]);
+          // 여러 키 경로 시도 (SE3 포함)
+          const articleData = deepFind(nd, ['contentHtml']) ?? deepFind(nd, ['content']) ?? deepFind(nd, ['contentText']);
+          if (articleData && typeof articleData === 'string' && articleData.length > 10) {
+            const stripped = stripHtml(articleData);
+            if (stripped) {
+              console.log(`  [HTML detail] __NEXT_DATA__ 파싱 성공, 길이=${stripped.length}`);
+              return { content: stripped, comments: [] };
+            }
+          }
+          console.log(`  [HTML detail] __NEXT_DATA__ 있음 but 내용 없음`);
+        } catch(pe) { console.log(`  [HTML detail] __NEXT_DATA__ JSON 파싱 실패: ${pe.message}`); }
       }
-      // 본문 div 패턴
+      // 본문 div 패턴 (다양한 SE 클래스 포함)
       const bodyM = html.match(/<div[^>]+class="[^"]*se-main-container[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-                 ?? html.match(/<div[^>]+id="tbody"[^>]*>([\s\S]*?)<\/div>/i);
-      if (bodyM) return { content: stripHtml(bodyM[1]), comments: [] };
-      console.log(`  [HTML detail] 파싱 실패`);
+                 ?? html.match(/<div[^>]+class="[^"]*se-component[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
+                 ?? html.match(/<div[^>]+id="tbody"[^>]*>([\s\S]*?)<\/div>/i)
+                 ?? html.match(/<div[^>]+class="[^"]*article_body[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+      if (bodyM) {
+        const t = stripHtml(bodyM[1]);
+        if (t) return { content: t, comments: [] };
+      }
+      console.log(`  [HTML detail] 파싱 실패, HTML앞200자: ${html.slice(0,200).replace(/\n/g,' ')}`);
     }
   } catch(e) { console.log(`  [HTML detail] 실패: ${e.message}`); }
 
@@ -474,21 +492,21 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           try { intercepted = await response.json(); } catch {}
         }
       });
-      // ArticleRead.nhn → 브라우저가 자동으로 올바른 URL로 처리
-      const articleUrl = `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`;
+      // ArticleRead.nhn 대신 ca-fe SPA URL 직접 접근 (iframe 없이 바로 로딩됨)
+      const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
       console.log(`  [Playwright] 글 열기: ${articleUrl}`);
-      await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+      await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // 로그인 페이지 감지
       const curUrl = page.url();
       console.log(`  [Playwright] 현재 URL: ${curUrl.slice(0, 100)}`);
-      if (curUrl.includes('nidlogin') || curUrl.includes('/login')) {
+      if (curUrl.includes('nidlogin') || curUrl.includes('/login') || curUrl.includes('naver.com/login')) {
         console.log(`  [Playwright] 로그인 페이지로 이동됨 — 쿠키 필요`);
         return { content: '', comments: [] };
       }
 
-      // API 인터셉트 대기 (최대 8초)
-      const deadline = Date.now() + 8000;
+      // API 인터셉트 대기 (최대 10초 — SPA 렌더링 여유)
+      const deadline = Date.now() + 10000;
       while (!intercepted && Date.now() < deadline) await new Promise(r => setTimeout(r, 200));
 
       let content = '', comments = [];
@@ -503,7 +521,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         console.log(`  [Playwright 인터셉트] content길이=${content.length} 댓글=${comments.length}`);
       }
 
-      // 인터셉트 실패 시 브라우저 내부 fetch로 API 직접 호출 (쿠키 자동 포함)
+      // 인터셉트 실패 시 브라우저 내부 fetch로 API 직접 호출 (ca-fe 컨텍스트에서 실행 → 올바른 Origin)
       if (!content) {
         try {
           const apiData = await page.evaluate(async ([cId, aId]) => {
@@ -511,7 +529,11 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
             try {
               const res = await fetch(apiUrl, {
                 credentials: 'include',
-                headers: { 'Accept': 'application/json, text/plain, */*', 'x-cafe-product': 'pc' },
+                headers: {
+                  'Accept': 'application/json, text/plain, */*',
+                  'x-cafe-product': 'pc',
+                  'Referer': `https://cafe.naver.com/ca-fe/cafes/${cId}/articles/${aId}`,
+                },
               });
               if (!res.ok) return { status: res.status, data: null };
               const j = await res.json();
@@ -533,11 +555,11 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         } catch(fe) { console.log(`  [Playwright eval fetch] 실패: ${fe.message}`); }
       }
 
-      // DOM에서 직접 읽기 — 메인 페이지 + 모든 iframe 탐색 (Python과 동일)
+      // DOM에서 직접 읽기 — ca-fe SPA는 메인 프레임에 바로 렌더링됨
       if (!content) {
-        // SPA/iframe 렌더링 완료 대기
-        await page.waitForLoadState('load', { timeout: 8000 }).catch(() => {});
-        await new Promise(r => setTimeout(r, 2500));
+        // SPA 렌더링 완료 대기 (networkidle로 충분히 기다림)
+        await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 1500));
 
         const DOM_SELECTORS = [
           'div.se-main-container',
@@ -548,6 +570,8 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           '.post-content-wrap',
           'div[class*="article_content"]',
           'div[class*="se-module-text"]',
+          '[class*="ArticleContentBox"]',
+          '[class*="article-content"]',
         ];
 
         // 메인 프레임 + 모든 iframe 순서로 탐색
