@@ -364,6 +364,12 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       const rawContent = article?.contentHtml ?? article?.content ?? article?.contentText ?? '';
       const content = stripHtml(rawContent);
       console.log(`  [상세] content길이=${content.length} 댓글=${(result?.comments?.items ?? result?.commentList ?? []).length}`);
+      if (!content) {
+        const keys = Object.keys(article || {}).join(', ');
+        console.log(`  [상세 디버그] article keys: ${keys}`);
+        console.log(`  [상세 디버그] contentHtml앞100자: ${String(article?.contentHtml ?? '').slice(0,100).replace(/\n/g,' ')}`);
+        console.log(`  [상세 디버그] body앞200자: ${body.slice(0,200).replace(/\n/g,' ')}`);
+      }
 
       // 댓글
       let comments = [];
@@ -434,18 +440,30 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       // __NEXT_DATA__에서 본문 추출
       const ndm = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
       if (ndm) {
-        const nd = JSON.parse(ndm[1]);
-        const articleData = deepFind(nd, ['article', 'articleDetail', 'content', 'contentHtml']);
-        if (articleData && typeof articleData === 'string') {
-          console.log(`  [HTML detail] __NEXT_DATA__ 파싱 성공, 길이=${articleData.length}`);
-          return { content: stripHtml(articleData), comments: [] };
-        }
+        try {
+          const nd = JSON.parse(ndm[1]);
+          // 여러 키 경로 시도 (SE3 포함)
+          const articleData = deepFind(nd, ['contentHtml']) ?? deepFind(nd, ['content']) ?? deepFind(nd, ['contentText']);
+          if (articleData && typeof articleData === 'string' && articleData.length > 10) {
+            const stripped = stripHtml(articleData);
+            if (stripped) {
+              console.log(`  [HTML detail] __NEXT_DATA__ 파싱 성공, 길이=${stripped.length}`);
+              return { content: stripped, comments: [] };
+            }
+          }
+          console.log(`  [HTML detail] __NEXT_DATA__ 있음 but 내용 없음`);
+        } catch(pe) { console.log(`  [HTML detail] __NEXT_DATA__ JSON 파싱 실패: ${pe.message}`); }
       }
-      // 본문 div 패턴
+      // 본문 div 패턴 (다양한 SE 클래스 포함)
       const bodyM = html.match(/<div[^>]+class="[^"]*se-main-container[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-                 ?? html.match(/<div[^>]+id="tbody"[^>]*>([\s\S]*?)<\/div>/i);
-      if (bodyM) return { content: stripHtml(bodyM[1]), comments: [] };
-      console.log(`  [HTML detail] 파싱 실패`);
+                 ?? html.match(/<div[^>]+class="[^"]*se-component[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
+                 ?? html.match(/<div[^>]+id="tbody"[^>]*>([\s\S]*?)<\/div>/i)
+                 ?? html.match(/<div[^>]+class="[^"]*article_body[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+      if (bodyM) {
+        const t = stripHtml(bodyM[1]);
+        if (t) return { content: t, comments: [] };
+      }
+      console.log(`  [HTML detail] 파싱 실패, HTML앞200자: ${html.slice(0,200).replace(/\n/g,' ')}`);
     }
   } catch(e) { console.log(`  [HTML detail] 실패: ${e.message}`); }
 
