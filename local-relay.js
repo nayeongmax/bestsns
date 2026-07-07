@@ -397,7 +397,8 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           }
         } catch(e) { /* 무시 */ }
       }
-      return { content, comments };
+      if (content) return { content, comments };
+      console.log(`  [articleapi] content 비어있음 — 다음 방법으로 폴백`);
     }
   } catch(e) { console.log(`  [articleapi] articleId=${articleId} 실패: ${e.message}`); }
 
@@ -500,6 +501,36 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         const rawC = intercepted?.result?.comments?.items || [];
         comments = rawC.slice(0, maxComments).map(c => ({ content: (c.content || '').trim(), writer: c.writer?.nick || '', date: '' })).filter(c => c.content);
         console.log(`  [Playwright 인터셉트] content길이=${content.length} 댓글=${comments.length}`);
+      }
+
+      // 인터셉트 실패 시 브라우저 내부 fetch로 API 직접 호출 (쿠키 자동 포함)
+      if (!content) {
+        try {
+          const apiData = await page.evaluate(async ([cId, aId]) => {
+            const apiUrl = `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${cId}/articles/${aId}`;
+            try {
+              const res = await fetch(apiUrl, {
+                credentials: 'include',
+                headers: { 'Accept': 'application/json, text/plain, */*', 'x-cafe-product': 'pc' },
+              });
+              if (!res.ok) return { status: res.status, data: null };
+              const j = await res.json();
+              return { status: res.status, data: j };
+            } catch(e) { return { status: 0, error: e.message }; }
+          }, [cafeId, articleId]);
+          console.log(`  [Playwright eval fetch] HTTP ${apiData?.status}`);
+          if (apiData?.status === 200 && apiData?.data) {
+            const result = apiData.data?.result ?? apiData.data?.message?.result ?? apiData.data;
+            const art = result?.article ?? result;
+            const raw = art?.contentHtml ?? art?.content ?? art?.contentText ?? '';
+            content = stripHtml(raw);
+            if (content) {
+              const rawC = result?.comments?.items ?? [];
+              comments = rawC.slice(0, maxComments).map(c => ({ content: (c.content || '').trim(), writer: c.writer?.nick || '', date: '' })).filter(c => c.content);
+              console.log(`  [Playwright eval fetch] content길이=${content.length}`);
+            }
+          }
+        } catch(fe) { console.log(`  [Playwright eval fetch] 실패: ${fe.message}`); }
       }
 
       // DOM에서 직접 읽기 — 메인 페이지 + 모든 iframe 탐색 (Python과 동일)
