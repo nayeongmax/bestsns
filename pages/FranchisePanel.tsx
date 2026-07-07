@@ -671,10 +671,9 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
     }, ...history]);
   };
 
-  /* ── 원문 CSV 저장 (치환 키워드 적용, 리라이팅 컬럼 비움) ── */
+  /* ── 원문 CSV 저장 (치환 키워드 적용) — AI 리라이팅 체크 시 AI 처리 포함 ── */
   const exportPlain = () => {
-    // keywordsRef.current = 현재 렌더의 keywords (stale closure 없음)
-    // localStorage = 탭 전환 후 재마운트 시에도 최신값 보장
+    if (aiRewrite || aiFillComment) { doAiExport(); return; }
     let kws: ReplaceKw[] = keywordsRef.current;
     try { const s = localStorage.getItem('crawl_keywords'); if (s) kws = JSON.parse(s); } catch {}
     const apply = makeApply(kws);
