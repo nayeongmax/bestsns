@@ -70,8 +70,8 @@ function decodeHtml(s) {
 
 function parseDateStr(s) {
   if (!s) return null;
-  // 날짜+시간: "2026.02.02 14:30" 또는 "2026.02.02 14:30:00"
-  let m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  // 날짜+시간: "2026.02.02 14:30", "2026.02.02. 14:30" (마침표+공백 허용), "2026.02.02 14:30:00"
+  let m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})[.\s]+(\d{2}):(\d{2})(?::(\d{2}))?/);
   if (m) return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]||'00'}+09:00`);
   // 날짜만: "2026.02.02"
   m = s.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
@@ -844,9 +844,9 @@ async function handleScrape(body) {
     // 이 페이지에서 매칭 글을 찾았으면 즉시 반환 — 다음 페이지는 FranchisePanel이 별도 배치로 요청
     // (계속 이동하면 페이지 중간에 걸쳐 수집돼 나머지 글이 누락됨)
     if (!pageAllFiltered) break;
-    // 이 페이지 글이 전부 날짜/시각 필터됨 → 더 최신 페이지로 이동
-    page--;
-    if (page < 1) break;
+    // 이 페이지 글이 전부 날짜/시각 필터됨 → 다음 페이지로 이동
+    page++;
+    if (page > 99999) break;
     pagesScanned++;
     await new Promise(r => setTimeout(r, 300));
   }
@@ -879,9 +879,8 @@ async function handleScrape(body) {
 
   articles.forEach((a, i) => { a.no = i + 1; });
 
-  // 다음 수집 페이지: 현재 페이지에서 한 단계 더 오래된 페이지 (페이지 번호가 낮을수록 최신)
-  // 루프가 maxArticles 도달로 종료된 경우 page-- 가 실행되지 않으므로 여기서 -1 처리
-  const nextPageNum = articles.length > 0 && page > 1 ? page - 1 : 0;
+  // 다음 수집 페이지: 시작 페이지 + 1 (순차 수집, 더 오래된 방향)
+  const nextPageNum = articles.length > 0 ? page + 1 : 0;
   return {
     statusCode: 200,
     body: { status: 'ok', articles, nextPage: nextPageNum, totalCollected: articles.length, method },
