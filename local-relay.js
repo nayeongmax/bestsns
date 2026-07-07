@@ -492,21 +492,21 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           try { intercepted = await response.json(); } catch {}
         }
       });
-      // ArticleRead.nhn → 브라우저가 자동으로 올바른 URL로 처리
-      const articleUrl = `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`;
+      // ArticleRead.nhn 대신 ca-fe SPA URL 직접 접근 (iframe 없이 바로 로딩됨)
+      const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
       console.log(`  [Playwright] 글 열기: ${articleUrl}`);
-      await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+      await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // 로그인 페이지 감지
       const curUrl = page.url();
       console.log(`  [Playwright] 현재 URL: ${curUrl.slice(0, 100)}`);
-      if (curUrl.includes('nidlogin') || curUrl.includes('/login')) {
+      if (curUrl.includes('nidlogin') || curUrl.includes('/login') || curUrl.includes('naver.com/login')) {
         console.log(`  [Playwright] 로그인 페이지로 이동됨 — 쿠키 필요`);
         return { content: '', comments: [] };
       }
 
-      // API 인터셉트 대기 (최대 8초)
-      const deadline = Date.now() + 8000;
+      // API 인터셉트 대기 (최대 10초 — SPA 렌더링 여유)
+      const deadline = Date.now() + 10000;
       while (!intercepted && Date.now() < deadline) await new Promise(r => setTimeout(r, 200));
 
       let content = '', comments = [];
@@ -521,7 +521,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         console.log(`  [Playwright 인터셉트] content길이=${content.length} 댓글=${comments.length}`);
       }
 
-      // 인터셉트 실패 시 브라우저 내부 fetch로 API 직접 호출 (쿠키 자동 포함)
+      // 인터셉트 실패 시 브라우저 내부 fetch로 API 직접 호출 (ca-fe 컨텍스트에서 실행 → 올바른 Origin)
       if (!content) {
         try {
           const apiData = await page.evaluate(async ([cId, aId]) => {
@@ -529,7 +529,11 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
             try {
               const res = await fetch(apiUrl, {
                 credentials: 'include',
-                headers: { 'Accept': 'application/json, text/plain, */*', 'x-cafe-product': 'pc' },
+                headers: {
+                  'Accept': 'application/json, text/plain, */*',
+                  'x-cafe-product': 'pc',
+                  'Referer': `https://cafe.naver.com/ca-fe/cafes/${cId}/articles/${aId}`,
+                },
               });
               if (!res.ok) return { status: res.status, data: null };
               const j = await res.json();
@@ -551,11 +555,11 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
         } catch(fe) { console.log(`  [Playwright eval fetch] 실패: ${fe.message}`); }
       }
 
-      // DOM에서 직접 읽기 — 메인 페이지 + 모든 iframe 탐색 (Python과 동일)
+      // DOM에서 직접 읽기 — ca-fe SPA는 메인 프레임에 바로 렌더링됨
       if (!content) {
-        // SPA/iframe 렌더링 완료 대기
-        await page.waitForLoadState('load', { timeout: 8000 }).catch(() => {});
-        await new Promise(r => setTimeout(r, 2500));
+        // SPA 렌더링 완료 대기 (networkidle로 충분히 기다림)
+        await page.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 1500));
 
         const DOM_SELECTORS = [
           'div.se-main-container',
@@ -566,6 +570,8 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           '.post-content-wrap',
           'div[class*="article_content"]',
           'div[class*="se-module-text"]',
+          '[class*="ArticleContentBox"]',
+          '[class*="article-content"]',
         ];
 
         // 메인 프레임 + 모든 iframe 순서로 탐색
