@@ -1666,7 +1666,6 @@ document.addEventListener('DOMContentLoaded', () => {
           // 선두 빈 열과 레이블 스킵
           while (colI < cols.length && (cols[colI].trim() === '' || isLabel(cols[colI]))) colI++;
           for (let i = 0; i < crowDivs.length; i++) {
-            if (isRightSide(crowDivs[i])) continue; // rbodyDiv 건너뜀
             if (colI >= cols.length) break;
             crowDivs[i].innerHTML = textToHtml(cols[colI++]);
           }
