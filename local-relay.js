@@ -8,17 +8,35 @@
 const http = require('http');
 const https = require('https');
 const zlib = require('zlib');
+const path = require('path');
 const { chromium } = require('playwright-core');
 
-let _browser = null;
-async function getBrowser() {
-  if (!_browser || !_browser.isConnected()) {
-    _browser = await chromium.launch({
-      headless: false,
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-setuid-sandbox'],
-    });
+// 영구 세션 저장 — 한 번 로그인하면 relay 재시작해도 쿠키 유지
+const USER_DATA_DIR = path.join(__dirname, '.browser-session');
+
+let _persistentCtx = null;
+async function getPersistentContext() {
+  if (_persistentCtx) {
+    try { if (_persistentCtx.browser().isConnected()) return _persistentCtx; } catch(e) {}
+    _persistentCtx = null;
   }
-  return _browser;
+  console.log(`[브라우저] 세션 시작: ${USER_DATA_DIR}`);
+  _persistentCtx = await chromium.launchPersistentContext(USER_DATA_DIR, {
+    headless: false,
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-setuid-sandbox'],
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  });
+  console.log('[브라우저] 준비됨 (로그인 안 돼있으면 브라우저 창에서 직접 로그인하세요)');
+  return _persistentCtx;
+}
+
+// 브라우저 세션에서 최신 쿠키 자동 추출
+async function getNaverCookieStr() {
+  try {
+    const ctx = await getPersistentContext();
+    const cookies = await ctx.cookies(['https://cafe.naver.com', 'https://naver.com', 'https://apis.naver.com']);
+    return cookies.map(c => `${c.name}=${c.value}`).join('; ');
+  } catch(e) { return ''; }
 }
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3333;
@@ -349,12 +367,16 @@ function stripHtml(html) {
 }
 
 async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
+  // 브라우저 세션에서 최신 쿠키 가져오기 (수동 쿠키보다 항상 최신)
+  const browserCookie = await getNaverCookieStr();
+  const effectiveCookie = browserCookie || cookie;
+
   // 방법 A: articleapi v2
   try {
     const url = `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${cafeId}/articles/${articleId}`;
     const { status, body } = await httpsGet(url, {
-      ...buildApiHeaders(cookie, `https://cafe.naver.com/`),
-      'sec-fetch-site': 'cross-site',
+      ...buildApiHeaders(effectiveCookie, `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`),
+      'sec-fetch-site': 'same-site',
     });
     console.log(`  [articleapi] articleId=${articleId} HTTP ${status}${status !== 200 ? ' body앞100자: ' + body.slice(0,100).replace(/\n/g,' ') : ''}`);
     if (status === 200) {
@@ -411,7 +433,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
   // 방법 A2: ca-fe API로 글 상세
   try {
     const url2 = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
-    const { status: s2, body: b2 } = await httpsGet(url2, buildApiHeaders(cookie, 'https://cafe.naver.com/'));
+    const { status: s2, body: b2 } = await httpsGet(url2, buildApiHeaders(effectiveCookie, 'https://cafe.naver.com/'));
     console.log(`  [ca-fe detail] HTTP ${s2}, 앞80자: ${b2.slice(0,80).replace(/\n/g,' ')}`);
     if (s2 === 200 && b2.trim().startsWith('{')) {
       const j2 = JSON.parse(b2);
@@ -434,7 +456,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
   // 방법 B: HTML 파싱
   try {
     const url = `https://cafe.naver.com/ArticleRead.nhn?clubid=${cafeId}&articleid=${articleId}`;
-    const { status, body: html } = await httpsGet(url, buildNaverHeaders(cookie, 'https://cafe.naver.com/'));
+    const { status, body: html } = await httpsGet(url, buildNaverHeaders(effectiveCookie, 'https://cafe.naver.com/'));
     console.log(`  [HTML detail] HTTP ${status}, 앞80자: ${html.slice(0,80).replace(/\n/g,' ')}`);
     if (status === 200) {
       // __NEXT_DATA__에서 본문 추출
@@ -469,18 +491,8 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
 
   // 방법 C: Playwright 헤드리스 브라우저
   try {
-    const browser = await getBrowser();
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    });
-    if (cookie) {
-      const cookies = [];
-      for (const part of cookie.split(';').map(p => p.trim())) {
-        const idx = part.indexOf('=');
-        if (idx > 0) cookies.push({ name: part.slice(0, idx).trim(), value: part.slice(idx + 1).trim(), domain: '.naver.com', path: '/' });
-      }
-      if (cookies.length > 0) await context.addCookies(cookies);
-    }
+    // 영구 컨텍스트 사용 — 로그인 세션 자동 재사용, 쿠키 수동 주입 불필요
+    const context = await getPersistentContext();
     const page = await context.newPage();
     try {
       // SPA가 내부적으로 호출하는 API 응답 가로채기
@@ -492,7 +504,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
           try { intercepted = await response.json(); } catch {}
         }
       });
-      // ArticleRead.nhn 대신 ca-fe SPA URL 직접 접근 (iframe 없이 바로 로딩됨)
+      // ca-fe SPA URL 직접 접근 (메인 프레임에 바로 렌더링)
       const articleUrl = `https://cafe.naver.com/ca-fe/cafes/${cafeId}/articles/${articleId}`;
       console.log(`  [Playwright] 글 열기: ${articleUrl}`);
       await page.goto(articleUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -641,8 +653,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
       if (content) return { content, comments };
       console.log(`  [Playwright] 최종 실패 — 내용 없음`);
     } finally {
-      await page.close();
-      await context.close();
+      await page.close(); // 페이지만 닫고 영구 컨텍스트는 유지
     }
   } catch(e) { console.log(`  [Playwright] 실패: ${e.message}`); }
 
@@ -651,18 +662,7 @@ async function fetchArticleDetail(cafeId, articleId, cookie, maxComments) {
 
 // ── 방법 0: Playwright로 목록 페이지 직접 열기 (Python과 동일, 페이지 번호 정확) ─────
 async function tryPlaywrightList(cafeId, menuId, page, cookie) {
-  const browser = await getBrowser();
-  const ctx = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  });
-  if (cookie) {
-    const cookies = [];
-    for (const part of cookie.split(';').map(p => p.trim())) {
-      const idx = part.indexOf('=');
-      if (idx > 0) cookies.push({ name: part.slice(0, idx).trim(), value: part.slice(idx + 1).trim(), domain: '.naver.com', path: '/' });
-    }
-    if (cookies.length > 0) await ctx.addCookies(cookies);
-  }
+  const ctx = await getPersistentContext(); // 영구 세션 재사용
   const pw = await ctx.newPage();
   try {
     let intercepted = null;
@@ -717,8 +717,7 @@ async function tryPlaywrightList(cafeId, menuId, page, cookie) {
     }
     throw new Error('ca-fe API 인터셉트 실패');
   } finally {
-    await pw.close();
-    await ctx.close();
+    await pw.close(); // 페이지만 닫고 영구 컨텍스트는 유지
   }
 }
 
