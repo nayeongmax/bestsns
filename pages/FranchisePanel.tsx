@@ -88,8 +88,17 @@ function todayStr() {
 }
 
 const EMPTY_KW: ReplaceKw[] = Array.from({ length: 10 }, () => ({ from: '', to: '' }));
-const DEFAULT_REWRITE_PROMPT = '원문을 완전히 다른 사람이 쓴 글처럼 리라이팅해줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
-const DEFAULT_COMMENT_PROMPT = '아래 글에 어울리는 자연스러운 댓글을 1개만 만들어줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
+const _OLD_REWRITE_PROMPT = '원문을 완전히 다른 사람이 쓴 글처럼 리라이팅해줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ,ㄹㄹ,~~,!!,... 이런식으로 1~2개 자연스럽게 적절히 섞어서 써줘.';
+const DEFAULT_REWRITE_PROMPT = `원문을 완전히 다른 사람이 쓴 글처럼 자연스럽게 리라이팅해줘.
+반드시 아래 규칙을 지켜줘:
+- 이모지 사용 금지
+- 번호매기기(1. 2. 3.) 금지
+- **굵은글씨** 같은 마크다운 표시 금지
+- 문장이 끝나면 줄바꿈해줘
+- 쉼표로 문장을 길게 이어쓰지 말고 문장을 내려서 써줘
+- ^^, ㅎㅎ 같은 이모티콘은 1~2개만 자연스럽게 넣어줘
+- 실제 카페에 올리는 자연스러운 한국어 글체로 써줘`;
+const DEFAULT_COMMENT_PROMPT = '아래 글에 어울리는 자연스러운 댓글을 1개만 만들어줘.\n실제 사람이 쓰듯 ^^,ㅎㅎ 같은 이모티콘 1~2개 자연스럽게 넣어줘. 이모지나 번호매기기는 쓰지 마.';
 
 const CollectorTab: React.FC = () => {
   const [crawlerTab, setCrawlerTab] = useState<CrawlerTab>('collect');
@@ -174,7 +183,14 @@ const CollectorTab: React.FC = () => {
   const [openaiKey,       setOpenaiKey]       = useState(() => localStorage.getItem('crawl_openai_key') || '');
   const [showKey,         setShowKey]         = useState(false);
   const [testTitle,       setTestTitle]       = useState('코타키나발루 맛집 추천해주세요');
-  const [rewritePrompt,   setRewritePrompt]   = useState(() => localStorage.getItem('crawl_rewrite_prompt') || DEFAULT_REWRITE_PROMPT);
+  const [rewritePrompt,   setRewritePrompt]   = useState(() => {
+    const saved = localStorage.getItem('crawl_rewrite_prompt');
+    if (!saved || saved === _OLD_REWRITE_PROMPT) {
+      localStorage.setItem('crawl_rewrite_prompt', DEFAULT_REWRITE_PROMPT);
+      return DEFAULT_REWRITE_PROMPT;
+    }
+    return saved;
+  });
   const [commentPrompt,   setCommentPrompt]   = useState(() => localStorage.getItem('crawl_comment_prompt') || DEFAULT_COMMENT_PROMPT);
   const [keywords,        setKeywords]        = useState<ReplaceKw[]>(() => {
     try { const s = localStorage.getItem('crawl_keywords'); return s ? JSON.parse(s) : EMPTY_KW; } catch { return EMPTY_KW; }
@@ -709,7 +725,8 @@ ${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
       const finalComments = [...existing];
 
       if (aiRewrite) {
-        try { rewrittenTitle = await callGpt(rewritePrompt, `제목: ${a.title}`); } catch { rewrittenTitle = origTitle; }
+        const titlePrompt = `${rewritePrompt}\n\n★ 제목 리라이팅 규칙: 반드시 줄바꿈 없이 한 문장 한 줄로만 답해줘.`;
+        try { rewrittenTitle = await callGpt(titlePrompt, `제목: ${a.title}`); } catch { rewrittenTitle = origTitle; }
         try { rewrittenBody  = await callGpt(rewritePrompt, `내용:\n${a.content ?? ''}`); } catch { rewrittenBody  = origBody; }
       }
 
