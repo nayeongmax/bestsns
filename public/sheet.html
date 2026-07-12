@@ -1247,14 +1247,23 @@ sheetBodyEl.addEventListener('mousemove', e => {
   const endIdx   = allTrs.indexOf(endTr);
   if (startIdx === -1 || endIdx === -1) return;
 
-  // 시작 셀의 열 인덱스 — 같은 열만 선택
-  const startColIdx = Array.from(startTr.querySelectorAll('td')).indexOf(_dragStartTd);
+  // 시작 셀 열 인덱스 + 행 타입 파악
+  // cat-cell(rowspan=2) 때문에 title-row와 content-row의 td 인덱스가 1씩 차이남
+  const startColIdx   = Array.from(startTr.querySelectorAll('td')).indexOf(_dragStartTd);
+  const startIsTitleRow = startTr.classList.contains('title-row');
+  const titleColIdx   = startIsTitleRow ? startColIdx : startColIdx + 1;
+  const contentColIdx = startIsTitleRow ? startColIdx - 1 : startColIdx;
 
   clearSelection();
   const lo = Math.min(startIdx, endIdx), hi = Math.max(startIdx, endIdx);
   for (let i = lo; i <= hi; i++) {
-    const tds = allTrs[i].querySelectorAll('td');
-    const t = tds[startColIdx];
+    const row = allTrs[i];
+    const isTRow = row.classList.contains('title-row');
+    const isCRow = row.classList.contains('content-row');
+    if (!isTRow && !isCRow) continue; // sep 행 건너뜀
+    const colIdx = isTRow ? titleColIdx : contentColIdx;
+    const tds = row.querySelectorAll('td');
+    const t = tds[colIdx];
     if (!t || isUnselectableTd(t)) continue;
     t.classList.add('cell-selected');
     const ce = t.querySelector('[contenteditable]');
