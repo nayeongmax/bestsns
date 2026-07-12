@@ -1264,7 +1264,12 @@ sheetBodyEl.addEventListener('mousemove', e => {
   const colLo = Math.min(startVC, endVC), colHi = Math.max(startVC, endVC);
 
   clearSelection();
-  const lo = Math.min(startIdx, endIdx), hi = Math.max(startIdx, endIdx);
+  let lo = Math.min(startIdx, endIdx), hi = Math.max(startIdx, endIdx);
+  // lo가 content-row면 paired title-row(lo-1)도 포함
+  if (allTrs[lo]?.classList.contains('content-row') && allTrs[lo-1]?.classList.contains('title-row')) lo--;
+  // hi가 title-row면 paired content-row(hi+1)도 포함
+  if (allTrs[hi]?.classList.contains('title-row') && allTrs[hi+1]?.classList.contains('content-row')) hi++;
+
   for (let i = lo; i <= hi; i++) {
     const row = allTrs[i];
     const isTRow = row.classList.contains('title-row');
