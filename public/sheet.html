@@ -1247,12 +1247,21 @@ sheetBodyEl.addEventListener('mousemove', e => {
   const endIdx   = allTrs.indexOf(endTr);
   if (startIdx === -1 || endIdx === -1) return;
 
-  // 시작 셀 열 인덱스 + 행 타입 파악
-  // cat-cell(rowspan=2) 때문에 title-row와 content-row의 td 인덱스가 1씩 차이남
-  const startColIdx   = Array.from(startTr.querySelectorAll('td')).indexOf(_dragStartTd);
-  const startIsTitleRow = startTr.classList.contains('title-row');
-  const titleColIdx   = startIsTitleRow ? startColIdx : startColIdx + 1;
-  const contentColIdx = startIsTitleRow ? startColIdx - 1 : startColIdx;
+  // cat-cell rowspan=2 보정: content-row는 td 인덱스가 1씩 작으므로 시각적 열로 통일
+  const getVisualCol = (cell) => {
+    const tr = cell.closest('tr');
+    const idx = Array.from(tr.querySelectorAll('td')).indexOf(cell);
+    return tr.classList.contains('content-row') ? idx + 1 : idx;
+  };
+  const getTdByVisualCol = (row, vc) => {
+    const idx = row.classList.contains('content-row') ? vc - 1 : vc;
+    if (idx < 0) return null;
+    return row.querySelectorAll('td')[idx] || null;
+  };
+
+  const startVC = getVisualCol(_dragStartTd);
+  const endVC   = getVisualCol(td);
+  const colLo = Math.min(startVC, endVC), colHi = Math.max(startVC, endVC);
 
   clearSelection();
   const lo = Math.min(startIdx, endIdx), hi = Math.max(startIdx, endIdx);
@@ -1260,14 +1269,14 @@ sheetBodyEl.addEventListener('mousemove', e => {
     const row = allTrs[i];
     const isTRow = row.classList.contains('title-row');
     const isCRow = row.classList.contains('content-row');
-    if (!isTRow && !isCRow) continue; // sep 행 건너뜀
-    const colIdx = isTRow ? titleColIdx : contentColIdx;
-    const tds = row.querySelectorAll('td');
-    const t = tds[colIdx];
-    if (!t || isUnselectableTd(t)) continue;
-    t.classList.add('cell-selected');
-    const ce = t.querySelector('[contenteditable]');
-    if (ce) { selectedCells.add(t); activeDiv = ce; activeTd = t; }
+    if (!isTRow && !isCRow) continue;
+    for (let vc = colLo; vc <= colHi; vc++) {
+      const t = getTdByVisualCol(row, vc);
+      if (!t || isUnselectableTd(t)) continue;
+      t.classList.add('cell-selected');
+      const ce = t.querySelector('[contenteditable]');
+      if (ce) { selectedCells.add(t); activeDiv = ce; activeTd = t; }
+    }
   }
 });
 document.addEventListener('mouseup', () => { _isDragging = false; _lastHoverTd = null; });
