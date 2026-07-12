@@ -1247,17 +1247,18 @@ sheetBodyEl.addEventListener('mousemove', e => {
   const endIdx   = allTrs.indexOf(endTr);
   if (startIdx === -1 || endIdx === -1) return;
 
+  // 시작 셀의 열 인덱스 — 같은 열만 선택
+  const startColIdx = Array.from(startTr.querySelectorAll('td')).indexOf(_dragStartTd);
+
   clearSelection();
   const lo = Math.min(startIdx, endIdx), hi = Math.max(startIdx, endIdx);
   for (let i = lo; i <= hi; i++) {
-    const hasCE = allTrs[i].querySelector('[contenteditable]');
-    if (!hasCE) continue; // sep 행 등 편집 셀 없는 행은 건너뜀
-    allTrs[i].querySelectorAll('td').forEach(t => {
-      if (isUnselectableTd(t)) return; // 제목:/내용: 레이블, 분류 셀 제외
-      t.classList.add('cell-selected'); // 빈 TD도 시각적으로 선택 표시
-      const ce = t.querySelector('[contenteditable]');
-      if (ce) { selectedCells.add(t); activeDiv = ce; activeTd = t; }
-    });
+    const tds = allTrs[i].querySelectorAll('td');
+    const t = tds[startColIdx];
+    if (!t || isUnselectableTd(t)) continue;
+    t.classList.add('cell-selected');
+    const ce = t.querySelector('[contenteditable]');
+    if (ce) { selectedCells.add(t); activeDiv = ce; activeTd = t; }
   }
 });
 document.addEventListener('mouseup', () => { _isDragging = false; _lastHoverTd = null; });
