@@ -233,8 +233,11 @@
     <option value="14">14</option><option value="16">16</option><option value="18">18</option>
     <option value="20">20</option><option value="24">24</option>
   </select>
-  <label style="margin-left:3px">색상</label>
-  <input type="color" id="fmtColor" value="#000000" title="글자 색상" oninput="applyFontColor(this.value)" onchange="applyFontColor(this.value)">
+  <label style="margin-left:3px">글자색</label>
+  <input type="color" id="fmtColor" value="#000000" title="글자 색상" onmousedown="saveSel()" oninput="applyFontColor(this.value)" onchange="applyFontColor(this.value)">
+  <label style="margin-left:6px">배경색</label>
+  <input type="color" id="fmtBgColor" value="#ffff00" title="셀 배경 색상" onmousedown="saveSel()" oninput="applyBgColor(this.value)" onchange="applyBgColor(this.value)">
+  <button onmousedown="saveSel();holdFocus(event)" onclick="applyBgColor('')" title="배경색 제거" style="margin-left:2px;font-size:10px;padding:1px 4px;">지우기</button>
   <span class="fsep"></span>
   <button onmousedown="holdFocus(event)" onclick="applyHAlign('left')" title="왼쪽 정렬">≡왼</button>
   <button onmousedown="holdFocus(event)" onclick="applyHAlign('center')" title="가운데 정렬">≡중</button>
@@ -595,6 +598,12 @@ function redoAction() {
 
 function holdFocus(e) { e.preventDefault(); }
 
+// 색상 피커 클릭 전에 현재 선택 상태를 저장 (피커 열리면 포커스 날아가므로)
+let _savedSel = null;
+function saveSel() {
+  _savedSel = { div: activeDiv, td: activeTd, cells: new Set(selectedCells) };
+}
+
 // 클립보드에 일반 텍스트 복사 (셀 선택 시 자동 복사용)
 function copyToClipboard(text) {
   if (!text) return;
@@ -619,8 +628,21 @@ function applyFontSize(val) {
   if (targets.length) markUnsaved();
 }
 function applyFontColor(val) {
-  if (!activeDiv) return;
-  activeDiv.style.color = val;
+  const sel = _savedSel || { div: activeDiv, cells: selectedCells };
+  const targets = [...sel.cells].map(td => td.querySelector('[contenteditable]')).filter(Boolean);
+  if (sel.div && !targets.includes(sel.div)) targets.unshift(sel.div);
+  if (!targets.length) return;
+  targets.forEach(d => { d.style.color = val; });
+  markUnsaved();
+}
+function applyBgColor(val) {
+  const sel = _savedSel || { td: activeTd, cells: selectedCells };
+  const tds = sel.cells && sel.cells.size > 0 ? [...sel.cells] : (sel.td ? [sel.td] : []);
+  if (!tds.length) return;
+  tds.forEach(td => {
+    if (val) { td.style.background = val; td.dataset.bg = val; }
+    else      { td.style.background = ''; delete td.dataset.bg; }
+  });
   markUnsaved();
 }
 function applyHAlign(align) {
@@ -776,6 +798,7 @@ function renderEntry(secId, entry, ei) {
   if (entry.title) mainDiv.innerHTML = entry.title;
   if (entry.ts) mainDiv.setAttribute('style', entry.ts);
   if (entry.tva) restoreVA(mainTd, entry.tva);
+  if (entry.titleBg) { mainTd.style.background = entry.titleBg; mainTd.dataset.bg = entry.titleBg; }
   mainTd.appendChild(mainDiv);
   trow.appendChild(mainTd);
 
@@ -787,16 +810,18 @@ function renderEntry(secId, entry, ei) {
   if (entry.rtitle) rtitleDiv.innerHTML = entry.rtitle;
   if (entry.rs) rtitleDiv.setAttribute('style', entry.rs);
   if (entry.rva) restoreVA(rtitleTd, entry.rva);
+  if (entry.rtitleBg) { rtitleTd.style.background = entry.rtitleBg; rtitleTd.dataset.bg = entry.rtitleBg; }
   rtitleTd.appendChild(rtitleDiv);
   trow.appendChild(rtitleTd);
 
   ['c1','c2','c3'].forEach((key) => {
     const td = document.createElement('td'); td.className = 'comment-cell';
     const d = makeEditable('댓글'); d.className = 'comment-text';
-    const sKey = key + 's', vaKey = key + 'va';
+    const sKey = key + 's', vaKey = key + 'va', bgKey = key + 'bg';
     if (entry[key]) d.innerHTML = entry[key];
     if (entry[sKey]) d.setAttribute('style', entry[sKey]);
     if (entry[vaKey]) td.style.verticalAlign = entry[vaKey];
+    if (entry[bgKey]) { td.style.background = entry[bgKey]; td.dataset.bg = entry[bgKey]; }
     td.appendChild(d); trow.appendChild(td);
   });
 
@@ -804,12 +829,14 @@ function renderEntry(secId, entry, ei) {
   dateTd.className = 'date-cell'; dateTd.rowSpan = 2;
   const dateDiv = makeEditable('날짜'); dateDiv.className = 'date-text';
   dateDiv.textContent = entry.date || ''; dateTd.appendChild(dateDiv);
+  if (entry.dateBg) { dateTd.style.background = entry.dateBg; dateTd.dataset.bg = entry.dateBg; }
   trow.appendChild(dateTd);
 
   const linkTd = document.createElement('td');
   linkTd.className = 'link-cell'; linkTd.rowSpan = 2;
   const linkDiv = makeEditable('링크'); linkDiv.style.fontSize = '9px';
   linkDiv.textContent = entry.link || ''; linkTd.appendChild(linkDiv);
+  if (entry.linkBg) { linkTd.style.background = entry.linkBg; linkTd.dataset.bg = entry.linkBg; }
   trow.appendChild(linkTd);
 
   const crow = document.createElement('tr');
@@ -824,6 +851,7 @@ function renderEntry(secId, entry, ei) {
   if (entry.body) bodyDiv.innerHTML = entry.body;
   if (entry.bs) bodyDiv.setAttribute('style', entry.bs);
   if (entry.bva) restoreVA(bodyTd, entry.bva);
+  if (entry.bodyBg) { bodyTd.style.background = entry.bodyBg; bodyTd.dataset.bg = entry.bodyBg; }
   bodyTd.appendChild(bodyDiv);
   crow.appendChild(bodyTd);
 
@@ -835,14 +863,17 @@ function renderEntry(secId, entry, ei) {
   if (entry.rbody) rbodyDiv.innerHTML = entry.rbody;
   if (entry.rbs) rbodyDiv.setAttribute('style', entry.rbs);
   if (entry.rbva) restoreVA(rbodyTd, entry.rbva);
+  if (entry.rbodyBg) { rbodyTd.style.background = entry.rbodyBg; rbodyTd.dataset.bg = entry.rbodyBg; }
   rbodyTd.appendChild(rbodyDiv);
   crow.appendChild(rbodyTd);
 
   ['bc1','bc2','bc3'].forEach(k => {
-    const td = document.createElement('td'); td.style.background='#fff';
+    const td = document.createElement('td');
     td.className = 'bc-cell';
     const d = makeEditable('댓글'); d.className = 'comment-text';
     if (entry[k]) d.innerHTML = entry[k];
+    const bgKey = k + 'bg';
+    if (entry[bgKey]) { td.style.background = entry[bgKey]; td.dataset.bg = entry[bgKey]; }
     td.appendChild(d); crow.appendChild(td);
   });
 
@@ -975,22 +1006,23 @@ function gatherSections() {
       const ds = [...trow.querySelectorAll('[contenteditable]')];
       const crow = trow.nextElementSibling;
       const cs = crow ? [...crow.querySelectorAll('[contenteditable]')] : [];
-      const gs = d => d?.getAttribute('style')||'';
+      const gs  = d => d?.getAttribute('style')||'';
       const gva = d => d?.closest('td')?.dataset.va||'';
+      const gbg = d => d?.closest('td')?.dataset.bg||'';
       entries.push({
         cat:   ds[0]?.textContent||'',
-        title: ds[1]?.innerHTML||'',  ts:  gs(ds[1]),  tva:  gva(ds[1]),
-        rtitle:ds[2]?.innerHTML||'',  rs:  gs(ds[2]),  rva:  gva(ds[2]),
-        c1:    ds[3]?.innerHTML||'',  c1s: gs(ds[3]),  c1va: gva(ds[3]),
-        c2:    ds[4]?.innerHTML||'',  c2s: gs(ds[4]),  c2va: gva(ds[4]),
-        c3:    ds[5]?.innerHTML||'',  c3s: gs(ds[5]),  c3va: gva(ds[5]),
-        date:  ds[6]?.textContent||'',
-        link:  ds[7]?.textContent||'',
-        body:  cs[0]?.innerHTML||'',  bs:  gs(cs[0]),  bva:  gva(cs[0]),
-        rbody: cs[1]?.innerHTML||'',  rbs: gs(cs[1]),  rbva: gva(cs[1]),
-        bc1:   cs[2]?.innerHTML||'',
-        bc2:   cs[3]?.innerHTML||'',
-        bc3:   cs[4]?.innerHTML||'',
+        title: ds[1]?.innerHTML||'',  ts:  gs(ds[1]),  tva:  gva(ds[1]),  titleBg:  gbg(ds[1]),
+        rtitle:ds[2]?.innerHTML||'',  rs:  gs(ds[2]),  rva:  gva(ds[2]),  rtitleBg: gbg(ds[2]),
+        c1:    ds[3]?.innerHTML||'',  c1s: gs(ds[3]),  c1va: gva(ds[3]),  c1bg:     gbg(ds[3]),
+        c2:    ds[4]?.innerHTML||'',  c2s: gs(ds[4]),  c2va: gva(ds[4]),  c2bg:     gbg(ds[4]),
+        c3:    ds[5]?.innerHTML||'',  c3s: gs(ds[5]),  c3va: gva(ds[5]),  c3bg:     gbg(ds[5]),
+        date:  ds[6]?.textContent||'',  dateBg: gbg(ds[6]),
+        link:  ds[7]?.textContent||'',  linkBg: gbg(ds[7]),
+        body:  cs[0]?.innerHTML||'',  bs:  gs(cs[0]),  bva:  gva(cs[0]),  bodyBg:  gbg(cs[0]),
+        rbody: cs[1]?.innerHTML||'',  rbs: gs(cs[1]),  rbva: gva(cs[1]),  rbodyBg: gbg(cs[1]),
+        bc1:   cs[2]?.innerHTML||'',  bc1bg: gbg(cs[2]),
+        bc2:   cs[3]?.innerHTML||'',  bc2bg: gbg(cs[3]),
+        bc3:   cs[4]?.innerHTML||'',  bc3bg: gbg(cs[4]),
       });
     });
 
