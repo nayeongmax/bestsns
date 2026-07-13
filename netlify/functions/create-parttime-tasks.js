@@ -47,8 +47,8 @@ exports.handler = async (event) => {
         id,
         title: String(t.title || '').slice(0, 200),
         description: String(t.description || t.title || '').slice(0, 5000),
-        category: '카페원고',
-        reward: 0,
+        category: String(t.category || '카페원고').slice(0, 50),
+        reward: Math.max(0, parseInt(t.reward, 10) || 0),
         max_applicants: 1,
         sections: {
           제목: String(t.title || '').slice(0, 200),
