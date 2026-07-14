@@ -1118,6 +1118,13 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                             <a href={ws.링크} target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline break-all text-sm">{ws.링크}</a>
                           </div>
                         )}
+                        {ws.카테고리 && (
+                          <div>
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-700 border border-blue-200">
+                              카테고리 : {ws.카테고리}
+                            </span>
+                          </div>
+                        )}
                         {ws.제목 && (
                           <div>
                             <p className="text-[10px] font-black text-gray-400 uppercase mb-1">📝 게시글 제목</p>
