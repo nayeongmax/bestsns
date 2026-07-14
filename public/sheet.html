@@ -293,11 +293,13 @@
 
 <!-- 업무 생성 모달 -->
 <div class="task-modal-overlay" id="taskModalOverlay" onclick="closeTaskModal()"></div>
-<div class="task-modal" id="taskModal">
+<div class="task-modal" id="taskModal" onmousedown="event.stopPropagation()">
   <h3>📝 누구나알바 업무 생성</h3>
   <div id="taskModalInfo" class="modal-info"></div>
-  <label>카테고리</label>
-  <input id="taskCategory" type="text" placeholder="예: 카페원고, 블로그, SNS" value="카페원고">
+  <label>업무제목</label>
+  <input id="taskJobTitle" type="text" placeholder="예: 자유 게시판 리라이팅 작업">
+  <label>작업기한 (날짜)</label>
+  <input id="taskWorkDate" type="date">
   <label>행당 보상금액 (원)</label>
   <input id="taskReward" type="number" placeholder="예: 3000" min="0" step="100" value="">
   <div class="modal-btns">
@@ -1416,6 +1418,10 @@ sheetBodyEl.addEventListener('focusout', e => {
 
 // 키보드 단축키
 document.addEventListener('keydown', e => {
+  // input/textarea 포커스 중이면 모든 시트 단축키 비활성화 (모달 입력 버그 방지)
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
   const inEdit = document.activeElement?.isContentEditable;
 
   // Escape → 편집모드 탈출, 선택 유지
@@ -2075,18 +2081,20 @@ function collectCheckedTasks() {
     const secId = trow?.dataset.secId;
     const hrow = secId ? document.getElementById(`section-${secId}`) : null;
     const secLink = hrow?.querySelector('input.sec-link-input')?.value?.trim() || '';
+    const secName = hrow?.querySelector('[contenteditable]')?.textContent?.trim() || '';
 
     const ds = trow ? [...trow.querySelectorAll('[contenteditable]')] : [];
     const cs = crow  ? [...crow.querySelectorAll('[contenteditable]')]  : [];
 
-    const rtitle    = stripHtml(ds[2]?.innerHTML || '');
-    const rbody     = stripHtml(cs[1]?.innerHTML || '');
-    const rawDate   = (ds[6]?.textContent || '').trim();
-    const entryLink = (ds[7]?.textContent || '').trim();
+    const cafeCat   = (ds[0]?.textContent || '').trim();           // 분류 셀 (카페 게시판)
+    const rtitle    = stripHtml(ds[2]?.innerHTML || '');           // 우측 제목
+    const rbody     = stripHtml(cs[1]?.innerHTML || '');           // 우측 내용
+    const rawDate   = (ds[6]?.textContent || '').trim();           // 날짜
+    const entryLink = (ds[7]?.textContent || '').trim();           // 행별 링크
     const link      = entryLink || secLink;
     const workDate  = rawDate.replace(/\./g, '-').replace(/-$/, '') || new Date().toISOString().slice(0, 10);
 
-    if (rtitle) tasks.push({ title: rtitle, description: rbody, link, workDate, _cb: cb });
+    if (rtitle) tasks.push({ title: rtitle, description: rbody, link, workDate, cafeCat, secName, _cb: cb });
   }
   return tasks;
 }
@@ -2100,11 +2108,21 @@ function createParttimeTasks() {
   _pendingTasks  = all.map(({ _cb, ...t }) => t);
   _pendingChecks = all.map(({ _cb }) => _cb);
 
-  document.getElementById('taskModalInfo').textContent =
-    `선택된 행 ${all.length}개를 업무로 생성합니다.`;
+  document.getElementById('taskModalInfo').textContent = `선택된 행 ${all.length}개를 업무로 생성합니다.`;
+
+  // 업무제목 기본값: 섹션명 기반
+  const firstName = _pendingTasks[0]?.secName || '';
+  document.getElementById('taskJobTitle').value = firstName ? `${firstName} 원고 리라이팅` : '';
+  // 날짜 기본값: 첫 번째 행의 날짜
+  document.getElementById('taskWorkDate').value = _pendingTasks[0]?.workDate || '';
+  // 보상금액 초기화
+  document.getElementById('taskReward').value = '';
+
+  // 활성 contenteditable blur 후 모달 오픈 (포커스 충돌 방지)
+  if (document.activeElement?.isContentEditable) document.activeElement.blur();
   document.getElementById('taskModalOverlay').style.display = 'block';
   document.getElementById('taskModal').style.display = 'block';
-  document.getElementById('taskCategory').focus();
+  setTimeout(() => document.getElementById('taskJobTitle').focus(), 30);
 }
 
 function closeTaskModal() {
@@ -2114,12 +2132,15 @@ function closeTaskModal() {
 }
 
 async function submitParttimeTasks() {
-  const category = document.getElementById('taskCategory').value.trim() || '카페원고';
+  const jobTitle = document.getElementById('taskJobTitle').value.trim();
+  const workDate = document.getElementById('taskWorkDate').value || new Date().toISOString().slice(0, 10);
   const reward   = Math.max(0, parseInt(document.getElementById('taskReward').value, 10) || 0);
 
+  if (!jobTitle) { alert('업무제목을 입력해 주세요.'); document.getElementById('taskJobTitle').focus(); return; }
   if (!_pendingTasks.length) { closeTaskModal(); return; }
 
-  const tasks = _pendingTasks.map(t => ({ ...t, category, reward }));
+  // 모달에서 입력한 날짜로 workDate 덮어쓰기, jobTitle은 task.title에, 분류(cafeCat)는 sections에 포함
+  const tasks = _pendingTasks.map(t => ({ ...t, jobTitle, workDate, reward }));
   const userId = USER_ID || 'admin';
 
   const btn = document.querySelector('#taskModal .modal-btns button.primary');
