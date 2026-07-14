@@ -472,7 +472,7 @@ const todayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-type SectionItemType = '제목' | '내용' | '게시글' | '댓글' | '키워드' | '이미지' | '동영상' | 'gif' | '작업링크' | '작업안내';
+type SectionItemType = '제목' | '내용' | '게시글' | '댓글' | '키워드' | '이미지' | '동영상' | 'gif' | '작업링크' | '작업안내' | '카테고리';
 
 interface SectionItem {
   id: string;
@@ -495,6 +495,7 @@ const SECTION_TYPES: { key: SectionItemType; label: string }[] = [
   { key: 'gif', label: 'gif' },
   { key: '작업링크', label: '작업링크' },
   { key: '작업안내', label: '작업안내' },
+  { key: '카테고리', label: '카테고리' },
 ];
 
 const MAX_IMAGES_PER_SECTION = 10;
@@ -516,6 +517,8 @@ const sectionsToItems = (s: PartTimeTaskSections): SectionItem[] => {
         items.push({ id, type: '댓글', value: s.댓글목록[index] });
       } else if (type === '작업링크' && s.작업링크목록?.[index] !== undefined) {
         items.push({ id, type: '작업링크', value: s.작업링크목록[index] });
+      } else if (type === '카테고리' && s.카테고리목록?.[index] !== undefined) {
+        items.push({ id, type: '카테고리', value: s.카테고리목록[index] });
       }
     });
   } else {
@@ -681,7 +684,8 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
     const contentList: string[] = [];
     const imageSecList: Array<{ text?: string; images?: string[] }> = [];
     const workGuideList: string[] = [];
-    const sectionOrder: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용' | '이미지' | '작업안내'; index: number }> = [];
+    const categoryList: string[] = [];
+    const sectionOrder: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용' | '이미지' | '작업안내' | '카테고리'; index: number }> = [];
     sectionItems.forEach((item) => {
       if (item.type === '제목' && item.value?.trim()) {
         const idx = titleList.length;
@@ -725,6 +729,10 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
         const idx = workGuideList.length;
         workGuideList.push(item.value.trim());
         sectionOrder.push({ type: '작업안내', index: idx });
+      } else if (item.type === '카테고리' && item.value?.trim()) {
+        const idx = categoryList.length;
+        categoryList.push(item.value.trim());
+        sectionOrder.push({ type: '카테고리', index: idx });
       }
     });
 
@@ -744,6 +752,7 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
       sectionsOut.작업안내목록 = workGuideList;
       if (workGuideList.length === 1) sectionsOut.작업안내 = workGuideList[0];
     }
+    if (categoryList.length) sectionsOut.카테고리목록 = categoryList;
     if (contentList.length) sectionsOut.내용목록 = contentList;
     if (sectionOrder.length) sectionsOut.sectionOrder = sectionOrder;
     const projectNo = (() => {
@@ -1099,6 +1108,21 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
                     rows={6}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm resize-y"
                   />
+                )}
+                {item.type === '카테고리' && (
+                  <div className="space-y-2">
+                    <input
+                      value={item.value ?? ''}
+                      onChange={(e) => updateSection(item.id, { value: e.target.value })}
+                      placeholder="카테고리명 (예: 자유, 수익화)"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
+                    />
+                    {item.value?.trim() && (
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-700 border border-blue-200">
+                        카테고리 : {item.value.trim()}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
