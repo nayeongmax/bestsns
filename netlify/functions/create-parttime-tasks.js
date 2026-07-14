@@ -51,12 +51,13 @@ exports.handler = async (event) => {
       if (cafeCat) sections['카테고리선택'] = cafeCat;
       return {
         id,
-        // jobTitle = 업무 등록 제목 (누구나알바 업무 목록에 표시)
         title: String(t.jobTitle || t.title || '').slice(0, 200),
         description: String(t.description || t.title || '').slice(0, 5000),
-        category: '네이버카페',   // 누구나알바 작업 카테고리는 항상 네이버카페
+        category: '네이버카페',
         reward: Math.max(0, parseInt(t.reward, 10) || 0),
         max_applicants: 1,
+        postVisibility: '전체공개',
+        workTimeSlot: (t.workTimeSlot && t.workTimeSlot !== '시간미지정') ? t.workTimeSlot : null,
         sections,
         application_period_start: today,
         application_period_end: workDate,
