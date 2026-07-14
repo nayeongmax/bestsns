@@ -43,22 +43,21 @@ exports.handler = async (event) => {
     .map(t => {
       const workDate = (t.workDate || today).slice(0, 10);
       const id = `t_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      // 카페 게시판 카테고리 (분류 셀 값) → 작업 안내에 포함
       const cafeCat = (t.cafeCat || '').trim();
       const sections = {
-        제목: String(t.title || '').slice(0, 200),
-        내용: String(t.description || '').slice(0, 5000),
+        게시글목록: [{ 제목: String(t.title || '').slice(0, 200), 내용: String(t.description || '').slice(0, 5000) }],
         작업링크: t.link || '',
       };
-      if (cafeCat) sections['작업안내'] = `게시판: ${cafeCat}`;
+      if (cafeCat) sections['카테고리선택'] = cafeCat;
       return {
         id,
-        // jobTitle = 업무 등록 제목 (누구나알바 업무 목록에 표시)
         title: String(t.jobTitle || t.title || '').slice(0, 200),
         description: String(t.description || t.title || '').slice(0, 5000),
-        category: '네이버카페',   // 누구나알바 작업 카테고리는 항상 네이버카페
+        category: '네이버카페',
         reward: Math.max(0, parseInt(t.reward, 10) || 0),
         max_applicants: 1,
+        postVisibility: '전체공개',
+        workTimeSlot: (t.workTimeSlot && t.workTimeSlot !== '시간미지정') ? t.workTimeSlot : null,
         sections,
         application_period_start: today,
         application_period_end: workDate,

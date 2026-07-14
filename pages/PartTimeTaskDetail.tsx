@@ -958,6 +958,11 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                     🕐 {task.workTimeSlot}
                   </span>
                 )}
+                {sections.카테고리선택 && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-black bg-green-500 text-white border border-green-600 shadow-sm whitespace-nowrap">
+                    카테고리 선택 : {sections.카테고리선택}
+                  </span>
+                )}
               </div>
             </div>
             {/* 필수 안내 배너 */}

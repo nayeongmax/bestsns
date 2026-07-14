@@ -151,6 +151,8 @@ export interface PartTimeTaskSections {
   작업세트목록?: WorkItemSet[];
   /** 섹션 표시 순서 (등록 시 넣은 순서 유지) [{ type, index }] */
   sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용' | '이미지' | '작업안내'; index: number }>;
+  /** 원고 업무 생성 시 카페 게시판 카테고리 (예: 자유, 수익화). 뱃지로 표시됨 */
+  카테고리선택?: string;
 }
 
 /** 누구나알바 작업의뢰 (광고주→운영진 신청) */
