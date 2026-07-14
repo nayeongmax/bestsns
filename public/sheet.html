@@ -628,7 +628,6 @@ let activeDiv = null;
 let activeTd  = null;
 let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
 let _pasteTargetTd = null;     // 붙여넣기 대상 셀
-let _copyBuffer    = null;     // 다중 셀 복사 버퍼 (copy 이벤트에서 소비)
 
 // ── 전역 Undo / Redo ──────────────────────────────────────────────────────────
 const MAX_UNDO = 50;
@@ -667,18 +666,21 @@ function saveSel() {
   _savedSel = { div: activeDiv, td: activeTd, cells: new Set(selectedCells) };
 }
 
-// 클립보드에 일반 텍스트 복사 (셀 선택 시 자동 복사용)
+// 클립보드에 일반 텍스트 복사
+// execCommand(동기) 우선 → async API 보조 (두 경로 모두 시도)
 function copyToClipboard(text) {
   if (!text) return;
-  try { if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text); return; } } catch(e) {}
-  // Fallback (iframe 환경)
+  // 1) 동기 execCommand: 사용자 제스처 컨텍스트 안에서 즉시 실행
   const ta = document.createElement('textarea');
   ta.value = text;
-  ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;';
+  ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
   document.body.appendChild(ta);
   ta.focus(); ta.select();
   try { document.execCommand('copy'); } catch(e) {}
   document.body.removeChild(ta);
+  _kbFocus.focus(); // 포커스 원위치
+  // 2) async 클립보드 API (iframe 권한 있으면 더 확실하게 덮어씀)
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).catch(() => {});
 }
 
 function applyFontSize(val) {
@@ -1513,7 +1515,6 @@ document.addEventListener('keydown', e => {
 
   if (!inEdit) {
     // Ctrl+C → 선택 셀 내용 복사 (편집모드 아닐 때)
-    // _copyBuffer에 저장 후 copy 이벤트에서 clipboardData.setData로 처리 (iframe에서 가장 신뢰성 높음)
     if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCells.size > 0) {
       const rowOrder = [];
       const rowMap = new Map();
@@ -1523,9 +1524,9 @@ document.addEventListener('keydown', e => {
         const div = td.querySelector('[contenteditable]');
         rowMap.get(tr).push((div?.innerText || div?.textContent || '').trim());
       });
-      _copyBuffer = rowOrder.map(tr => rowMap.get(tr).join('\t')).join('\n');
-      // preventDefault 하지 않음 — 브라우저가 copy 이벤트를 발생시키도록 함
-      return;
+      const text = rowOrder.map(tr => rowMap.get(tr).join('\t')).join('\n');
+      if (text) copyToClipboard(text);
+      e.preventDefault(); return;
     }
 
     // Delete / Backspace → 선택한 셀 내용 전체 삭제
@@ -1559,48 +1560,36 @@ document.addEventListener('keydown', e => {
 });
 
 // ── 편집 모드 붙여넣기 — text/plain만 사용해 셀 전체 내용 교체 ──────────────
-// 브라우저가 text/html을 직접 삽입하면 태그 구조로 인해 엉뚱한 내용이 들어가는 문제 방지
-sheetBodyEl.addEventListener('paste', e => {
+sheetBodyEl.addEventListener('paste', async e => {
   const div = e.target.closest('[contenteditable]');
   if (!div || div.closest('tr.section-header')) return;
   e.preventDefault();
-  const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+  let text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+  // clipboardData가 빈 경우 async API로 재시도 (iframe 환경 대응)
+  if (!text && navigator.clipboard?.readText) {
+    try { text = await navigator.clipboard.readText(); } catch(err) {}
+  }
   if (!text) return;
   immediateUndoPush();
   div.innerHTML = textToHtml(text);
   markUnsaved();
 });
 
-// ── 복사 처리: 다중 셀 버퍼 + 편집모드 스타일 정화 ──────────────────────────
+// ── 편집모드 복사: 배경색·폰트 스타일 정화 후 클립보드 기록 ────────────────
+// (비편집 모드 Ctrl+C는 keydown에서 copyToClipboard로 처리)
 document.addEventListener('copy', e => {
-  // 비편집 모드 다중 셀 복사 (_copyBuffer에 저장된 경우)
-  if (_copyBuffer !== null && !document.activeElement?.isContentEditable) {
-    const buf = _copyBuffer;
-    _copyBuffer = null;
-    try {
-      e.clipboardData.setData('text/plain', buf);
-      e.clipboardData.setData('text/html',
-        '<meta charset="utf-8">' +
-        buf.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-           .replace(/\t/g,'</td><td>').replace(/\n/g,'</td></tr><tr><td>')
-      );
-      e.preventDefault();
-    } catch(err) {
-      _copyBuffer = null;
-    }
-    return;
-  }
-
-  // 편집 모드: 스타일 정화 후 복사 (네이버카페 등 외부 에디터에 붙여넣을 때 배경색·폰트 오염 방지)
   const active = document.activeElement;
   if (!active?.isContentEditable || !active.closest('#sheetBody')) return;
   const sel = window.getSelection();
   if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
 
   const plainText = sel.toString();
+  if (!plainText) return;
+
   const frag = sel.getRangeAt(0).cloneContents();
   const tmp = document.createElement('div');
   tmp.appendChild(frag);
+  // background-color, font-size, font-family, color 제거 (bold/italic 등은 유지)
   tmp.querySelectorAll('[style]').forEach(el => {
     const s = el.style;
     ['background-color','font-size','font-family','color','text-align'].forEach(p => s.removeProperty(p));
@@ -1612,7 +1601,8 @@ document.addEventListener('copy', e => {
     e.clipboardData.setData('text/html', '<meta charset="utf-8">' + tmp.innerHTML);
     e.preventDefault();
   } catch(err) {
-    // clipboardData 접근 불가 시 브라우저 기본 복사에 위임
+    // clipboardData 접근 불가 시 브라우저 기본 복사에 위임 (텍스트는 정상 복사됨)
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(plainText).catch(() => {});
   }
 });
 
@@ -1693,9 +1683,13 @@ function fillTrowDivs(trowDivs, contentCols, startIdx) {
 document.addEventListener('DOMContentLoaded', () => {
   const hp = document.getElementById('hiddenPaste');
   if (!hp) return;
-  hp.addEventListener('paste', e => {
+  hp.addEventListener('paste', async e => {
     e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+    let text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+    // clipboardData가 빈 경우 async API로 재시도
+    if (!text && navigator.clipboard?.readText) {
+      try { text = await navigator.clipboard.readText(); } catch(err) {}
+    }
     hp.innerHTML = '';
     hp.blur();
     try { _kbFocus.focus(); } catch(e) {}
@@ -2262,13 +2256,21 @@ async function submitParttimeTasks() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, tasks }),
     });
-    const data = await res.json();
+    let data;
+    try { data = await res.json(); } catch(jsonErr) {
+      const raw = await res.text().catch(() => '');
+      alert(`업무 생성 실패 (${res.status}): 응답 파싱 오류\n${raw.slice(0, 300)}`);
+      return;
+    }
     if (data.ok) {
       closeTaskModal();
       alert(`✅ 업무 1개 (게시글 ${data.postCount || _pendingTasks.length}건) 생성됐습니다!\n누구나알바 어드민에서 확인하세요.`);
       _pendingChecks.forEach(cb => { cb.checked = false; });
+      updateCheckCount();
     } else {
-      alert('업무 생성 실패: ' + (data.error || '알 수 없는 오류'));
+      // data.error: 함수 오류 / data.errorMessage: Netlify 크래시 형식
+      const errMsg = data.error || data.errorMessage || JSON.stringify(data);
+      alert(`업무 생성 실패 (${res.status}): ${errMsg}`);
     }
   } catch(e) {
     alert('업무 생성 중 오류: ' + e.message);
