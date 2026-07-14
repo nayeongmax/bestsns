@@ -148,10 +148,12 @@ export interface PartTimeTaskSections {
   작업안내?: string;
   /** 작업 안내 여러 개 (순서 유지). sectionOrder에 '작업안내' 타입으로 등록됨 */
   작업안내목록?: string[];
+  /** 카테고리 여러 개 (순서 유지). sectionOrder에 '카테고리' 타입으로 등록됨 */
+  카테고리목록?: string[];
   /** 링크+게시글+링크확인 세트 여러 개 (있으면 개별 필드 대신 이걸 사용) */
   작업세트목록?: WorkItemSet[];
   /** 섹션 표시 순서 (등록 시 넣은 순서 유지) [{ type, index }] */
-  sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용' | '이미지' | '작업안내'; index: number }>;
+  sectionOrder?: Array<{ type: '게시글' | '댓글' | '작업링크' | '제목' | '내용' | '이미지' | '작업안내' | '카테고리'; index: number }>;
   /** 원고 업무 생성 시 카페 게시판 카테고리 (예: 자유, 수익화). 뱃지로 표시됨 */
   카테고리선택?: string;
 }

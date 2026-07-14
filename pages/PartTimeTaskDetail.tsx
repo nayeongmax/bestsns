@@ -1101,6 +1101,17 @@ const PartTimeTaskDetail: React.FC<Props> = ({ user, members = [], onUpdateUser,
                     </div>
                   );
                 }
+                if (type === '카테고리') {
+                  const text = sections.카테고리목록?.[index];
+                  if (!text) return null;
+                  return (
+                    <div key={`${type}-${index}`} className="bg-white rounded-xl p-3 border border-gray-100">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-blue-700 border border-blue-200">
+                        카테고리 : {text}
+                      </span>
+                    </div>
+                  );
+                }
                 return null;
               });
             }
