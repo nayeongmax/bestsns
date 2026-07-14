@@ -43,14 +43,12 @@ exports.handler = async (event) => {
     .map(t => {
       const workDate = (t.workDate || today).slice(0, 10);
       const id = `t_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      // 카페 게시판 카테고리 (분류 셀 값) → 작업 안내에 포함
       const cafeCat = (t.cafeCat || '').trim();
       const sections = {
-        제목: String(t.title || '').slice(0, 200),
-        내용: String(t.description || '').slice(0, 5000),
+        게시글목록: [{ 제목: String(t.title || '').slice(0, 200), 내용: String(t.description || '').slice(0, 5000) }],
         작업링크: t.link || '',
       };
-      if (cafeCat) sections['작업안내'] = `게시판: ${cafeCat}`;
+      if (cafeCat) sections['카테고리선택'] = cafeCat;
       return {
         id,
         // jobTitle = 업무 등록 제목 (누구나알바 업무 목록에 표시)
