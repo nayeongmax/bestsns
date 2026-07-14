@@ -628,6 +628,7 @@ let activeDiv = null;
 let activeTd  = null;
 let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
 let _pasteTargetTd = null;     // 붙여넣기 대상 셀
+let _copyBuffer    = null;     // 다중 셀 복사 버퍼 (copy 이벤트에서 소비)
 
 // ── 전역 Undo / Redo ──────────────────────────────────────────────────────────
 const MAX_UNDO = 50;
@@ -1512,14 +1513,19 @@ document.addEventListener('keydown', e => {
 
   if (!inEdit) {
     // Ctrl+C → 선택 셀 내용 복사 (편집모드 아닐 때)
+    // _copyBuffer에 저장 후 copy 이벤트에서 clipboardData.setData로 처리 (iframe에서 가장 신뢰성 높음)
     if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCells.size > 0) {
-      const texts = [];
+      const rowOrder = [];
+      const rowMap = new Map();
       selectedCells.forEach(td => {
+        const tr = td.closest('tr');
+        if (!rowMap.has(tr)) { rowMap.set(tr, []); rowOrder.push(tr); }
         const div = td.querySelector('[contenteditable]');
-        if (div) texts.push((div.innerText || div.textContent || '').trim());
+        rowMap.get(tr).push((div?.innerText || div?.textContent || '').trim());
       });
-      copyToClipboard(texts.filter(Boolean).join('\n'));
-      e.preventDefault(); return;
+      _copyBuffer = rowOrder.map(tr => rowMap.get(tr).join('\t')).join('\n');
+      // preventDefault 하지 않음 — 브라우저가 copy 이벤트를 발생시키도록 함
+      return;
     }
 
     // Delete / Backspace → 선택한 셀 내용 전체 삭제
@@ -1565,8 +1571,27 @@ sheetBodyEl.addEventListener('paste', e => {
   markUnsaved();
 });
 
-// ── 복사 시 스타일 정화 (네이버카페 등 외부 에디터에 붙여넣을 때 배경색·폰트 오염 방지) ──
+// ── 복사 처리: 다중 셀 버퍼 + 편집모드 스타일 정화 ──────────────────────────
 document.addEventListener('copy', e => {
+  // 비편집 모드 다중 셀 복사 (_copyBuffer에 저장된 경우)
+  if (_copyBuffer !== null && !document.activeElement?.isContentEditable) {
+    const buf = _copyBuffer;
+    _copyBuffer = null;
+    try {
+      e.clipboardData.setData('text/plain', buf);
+      e.clipboardData.setData('text/html',
+        '<meta charset="utf-8">' +
+        buf.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+           .replace(/\t/g,'</td><td>').replace(/\n/g,'</td></tr><tr><td>')
+      );
+      e.preventDefault();
+    } catch(err) {
+      _copyBuffer = null;
+    }
+    return;
+  }
+
+  // 편집 모드: 스타일 정화 후 복사 (네이버카페 등 외부 에디터에 붙여넣을 때 배경색·폰트 오염 방지)
   const active = document.activeElement;
   if (!active?.isContentEditable || !active.closest('#sheetBody')) return;
   const sel = window.getSelection();
@@ -1576,16 +1601,19 @@ document.addEventListener('copy', e => {
   const frag = sel.getRangeAt(0).cloneContents();
   const tmp = document.createElement('div');
   tmp.appendChild(frag);
-  // background-color, font-size, font-family, color 제거 (bold/italic 등은 유지)
   tmp.querySelectorAll('[style]').forEach(el => {
     const s = el.style;
     ['background-color','font-size','font-family','color','text-align'].forEach(p => s.removeProperty(p));
     if (!el.getAttribute('style').trim()) el.removeAttribute('style');
   });
 
-  e.clipboardData.setData('text/plain', plainText);
-  e.clipboardData.setData('text/html', '<meta charset="utf-8">' + tmp.innerHTML);
-  e.preventDefault();
+  try {
+    e.clipboardData.setData('text/plain', plainText);
+    e.clipboardData.setData('text/html', '<meta charset="utf-8">' + tmp.innerHTML);
+    e.preventDefault();
+  } catch(err) {
+    // clipboardData 접근 불가 시 브라우저 기본 복사에 위임
+  }
 });
 
 // RFC 4180 TSV 파서 — 셀 내부의 \n (구글 시트 멀티라인 셀)을 올바르게 처리
