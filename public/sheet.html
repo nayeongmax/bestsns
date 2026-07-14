@@ -1555,18 +1555,9 @@ document.addEventListener('keydown', e => {
   }
 
   if (!inEdit) {
-    // Ctrl+C → 선택 셀 내용 복사 (편집모드 아닐 때)
+    // Ctrl+C → 복사버튼과 동일한 경로로 처리 (copySelectedCells)
     if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCells.size > 0) {
-      const rowOrder = [];
-      const rowMap = new Map();
-      selectedCells.forEach(td => {
-        const tr = td.closest('tr');
-        if (!rowMap.has(tr)) { rowMap.set(tr, []); rowOrder.push(tr); }
-        const div = td.querySelector('[contenteditable]');
-        rowMap.get(tr).push((div?.innerText || div?.textContent || '').trim());
-      });
-      const text = rowOrder.map(tr => rowMap.get(tr).join('\t')).join('\n');
-      if (text) copyToClipboard(text);
+      copySelectedCells();
       e.preventDefault(); return;
     }
 
