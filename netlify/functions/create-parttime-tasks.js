@@ -50,18 +50,17 @@ exports.handler = async (event) => {
     // 모달 공통값 (첫 번째 task 기준 — 모달에서 동일하게 입력됨)
     const first = validTasks[0];
     const workDate = (first.workDate || today).slice(0, 10);
-    const cafeCat  = (first.cafeCat || '').trim();
 
-    // 체크된 행 전체를 작업세트목록으로 묶기 (링크 → 제목+내용)
+    // 체크된 행 전체를 작업세트목록으로 묶기 — 카테고리는 게시글마다 개별 저장
     const worklist = validTasks.map(t => ({
-      '링크':   t.link   || '',
-      '제목':   String(t.title       || '').slice(0, 200),
-      '내용':   String(t.description || '').slice(0, 5000),
+      '링크':     t.link   || '',
+      '제목':     String(t.title       || '').slice(0, 200),
+      '내용':     String(t.description || '').slice(0, 5000),
+      '카테고리': String(t.cafeCat     || '').slice(0, 50),
       '링크확인': '',
     }));
 
     const sections = { '작업세트목록': worklist };
-    if (cafeCat) sections['카테고리선택'] = cafeCat;
 
     const id = `t_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -75,7 +74,7 @@ exports.handler = async (event) => {
       post_visibility: '전체공개',
       work_time_slot:  (first.workTimeSlot && first.workTimeSlot !== '시간미지정') ? first.workTimeSlot : null,
       sections,
-      application_period_start: today,
+      application_period_start: workDate,
       application_period_end:   workDate,
       work_period_start:        workDate,
       work_period_end:          workDate,
