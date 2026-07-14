@@ -1524,10 +1524,22 @@ document.addEventListener('keydown', e => {
       });
       const text = rowOrder.map(tr => rowMap.get(tr).join('\t')).join('\n');
       if (text) {
-        // _copyBuffer에 텍스트 저장 후 e.preventDefault() 없이 return
-        // → 브라우저가 copy 이벤트를 자연 발동 → 핸들러에서 setData+preventDefault로 클립보드 기록
-        // (iframe에서 클립보드 쓰기의 유일하게 신뢰할 수 있는 방법)
+        // _copyBuffer에 저장 + 임시 contenteditable 포커스 → 브라우저가 copy 이벤트 확실히 발동
+        // _kbFocus는 non-contenteditable이라 선택 없으면 copy 이벤트가 아예 안 발동됨
         _copyBuffer = text;
+        const tmp = document.createElement('div');
+        tmp.contentEditable = 'true';
+        tmp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden;';
+        tmp.textContent = text;
+        document.body.appendChild(tmp);
+        tmp.focus();
+        const r = document.createRange();
+        r.selectNodeContents(tmp);
+        const s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+        // e.preventDefault() 생략 → 브라우저가 copy 이벤트 발동 → 핸들러에서 _copyBuffer로 setData 처리
+        setTimeout(() => { document.body.removeChild(tmp); _kbFocus.focus(); }, 0);
         return;
       }
       e.preventDefault(); return;
@@ -1577,9 +1589,8 @@ sheetBodyEl.addEventListener('paste', e => {
 
 // ── 복사 이벤트: 비편집 모드(다중 셀) + 편집 모드(셀 내 텍스트 선택) 모두 처리 ──
 document.addEventListener('copy', e => {
-  // 1) 비편집 모드: Ctrl+C keydown에서 _copyBuffer에 저장한 경우
-  //    activeElement가 contenteditable이 아닌 상태에서 copy 이벤트가 왔을 때만 처리
-  if (_copyBuffer !== null && !document.activeElement?.isContentEditable) {
+  // 1) 비편집 모드: Ctrl+C keydown에서 _copyBuffer에 저장한 경우 (tmp contenteditable이 포커스되어 있음)
+  if (_copyBuffer !== null) {
     const buf = _copyBuffer;
     _copyBuffer = null;
     try {
