@@ -111,6 +111,7 @@ export interface WorkItemSet {
   링크: string;
   제목: string;
   내용: string;
+  카테고리?: string;
   링크확인: string;
 }
 
