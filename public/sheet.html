@@ -628,6 +628,7 @@ let activeDiv = null;
 let activeTd  = null;
 let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
 let _pasteTargetTd = null;     // 붙여넣기 대상 셀
+let _pendingCopyText = null;   // 비편집 모드 다중 셀 복사 시 copy 이벤트 핸들러에 전달
 
 // ── 전역 Undo / Redo ──────────────────────────────────────────────────────────
 const MAX_UNDO = 50;
@@ -670,17 +671,18 @@ function saveSel() {
 // execCommand(동기) 우선 → async API 보조 (두 경로 모두 시도)
 function copyToClipboard(text) {
   if (!text) return;
-  // 1) 동기 execCommand: 사용자 제스처 컨텍스트 안에서 즉시 실행
+  _pendingCopyText = text;
   const ta = document.createElement('textarea');
   ta.value = text;
   ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
   document.body.appendChild(ta);
   ta.focus(); ta.select();
-  try { document.execCommand('copy'); } catch(e) {}
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  _pendingCopyText = null;
   document.body.removeChild(ta);
-  _kbFocus.focus(); // 포커스 원위치
-  // 2) async 클립보드 API (iframe 권한 있으면 더 확실하게 덮어씀)
-  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).catch(() => {});
+  _kbFocus.focus();
+  if (!ok && navigator.clipboard?.writeText) navigator.clipboard.writeText(text).catch(() => {});
 }
 
 function applyFontSize(val) {
@@ -1575,16 +1577,26 @@ sheetBodyEl.addEventListener('paste', e => {
   markUnsaved();
 });
 
-// ── 편집모드 복사: 선택 텍스트를 플레인텍스트로 클립보드에 씀 ──────────────
+// ── 복사 이벤트: 비편집 모드(다중 셀) + 편집 모드(셀 내 텍스트 선택) 모두 처리 ──
 document.addEventListener('copy', e => {
+  // 1) 비편집 모드: copyToClipboard()가 execCommand로 트리거한 경우
+  if (_pendingCopyText) {
+    try {
+      e.clipboardData.setData('text/plain', _pendingCopyText);
+      e.preventDefault();
+    } catch(err) {
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(_pendingCopyText).catch(() => {});
+    }
+    return;
+  }
+
+  // 2) 편집 모드: contenteditable 셀 안에서 텍스트 선택 후 Ctrl+C
   const active = document.activeElement;
   if (!active?.isContentEditable || !active.closest('#sheetBody')) return;
   const sel = window.getSelection();
   if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
-
   const plainText = sel.toString();
   if (!plainText) return;
-
   try {
     e.clipboardData.setData('text/plain', plainText);
     e.preventDefault();
