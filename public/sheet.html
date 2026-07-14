@@ -82,6 +82,34 @@
   .sync-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 9998;
   }
+  /* 업무 생성 모달 */
+  .task-modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 9998;
+  }
+  .task-modal {
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: #fff; border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    padding: 20px; min-width: 280px; max-width: 360px; width: 90%; z-index: 9999;
+    font-size: 13px;
+  }
+  .task-modal h3 { font-size: 14px; font-weight: bold; margin-bottom: 14px; color: #1a73e8; }
+  .task-modal label { display: block; font-size: 11px; color: #555; margin-bottom: 3px; margin-top: 10px; }
+  .task-modal label:first-of-type { margin-top: 0; }
+  .task-modal input {
+    width: 100%; padding: 7px 10px; font-size: 13px; border: 1px solid #ccc;
+    border-radius: 5px; box-sizing: border-box;
+  }
+  .task-modal input:focus { border-color: #1a73e8; outline: none; }
+  .task-modal .modal-btns { display: flex; gap: 8px; margin-top: 16px; }
+  .task-modal .modal-btns button {
+    flex: 1; padding: 8px; font-size: 13px; cursor: pointer; border-radius: 5px;
+    border: 1px solid #ccc; background: #f5f5f5;
+  }
+  .task-modal .modal-btns button.primary {
+    background: #1a73e8; color: #fff; border-color: #1a73e8; font-weight: bold;
+  }
+  .task-modal .modal-btns button:hover { filter: brightness(0.95); }
+  .task-modal .modal-info { font-size: 11px; color: #888; margin-top: 10px; line-height: 1.5; }
   .sync-code-chip {
     font-size: 10px; background: #e8f0fe; color: #1a73e8;
     border: 1px solid #c5d8fb; border-radius: 10px; padding: 2px 8px; cursor: pointer;
@@ -220,6 +248,7 @@
   </select>
   <button onclick="moveSectionUp()" title="선택 섹션 위로" style="padding:3px 7px;">▲</button>
   <button onclick="moveSectionDown()" title="선택 섹션 아래로" style="padding:3px 7px;">▼</button>
+  <button onclick="createParttimeTasks()" style="background:#1a73e8;border-color:#1a73e8;color:#fff;font-weight:bold;margin-left:8px;" title="체크된 행을 누구나알바에 업무 생성">📝 업무생성</button>
   <span class="saved-badge" id="savedBadge" style="display:none;"></span>
   <span class="cloud-badge" id="cloudBadge"></span>
 </div>
@@ -260,6 +289,21 @@
     <button class="primary" style="background:#34a853;border-color:#34a853;" onclick="syncDownload()">⬇ 불러오기</button>
   </div>
   <div class="sync-status" id="syncStatus"></div>
+</div>
+
+<!-- 업무 생성 모달 -->
+<div class="task-modal-overlay" id="taskModalOverlay" onclick="closeTaskModal()"></div>
+<div class="task-modal" id="taskModal">
+  <h3>📝 누구나알바 업무 생성</h3>
+  <div id="taskModalInfo" class="modal-info"></div>
+  <label>카테고리</label>
+  <input id="taskCategory" type="text" placeholder="예: 카페원고, 블로그, SNS" value="카페원고">
+  <label>행당 보상금액 (원)</label>
+  <input id="taskReward" type="number" placeholder="예: 3000" min="0" step="100" value="">
+  <div class="modal-btns">
+    <button onclick="closeTaskModal()">취소</button>
+    <button class="primary" onclick="submitParttimeTasks()">생성하기</button>
+  </div>
 </div>
 
 <div class="sheet-wrap">
@@ -736,6 +780,20 @@ function renderSection(sec) {
   metaDiv.textContent = sec.metaHeader || '';
   metaCell.appendChild(metaDiv);
 
+  // 섹션 공통 링크 (같은 섹션 내 모든 행에 공유)
+  const linkLbl = document.createElement('div');
+  linkLbl.style.cssText = 'font-size:8px;color:#ffd;margin-top:4px;';
+  linkLbl.textContent = '🔗 섹션링크:';
+  const linkInp = document.createElement('input');
+  linkInp.type = 'text';
+  linkInp.className = 'sec-link-input';
+  linkInp.placeholder = 'https://...';
+  linkInp.value = sec.link || '';
+  linkInp.style.cssText = 'width:100%;font-size:8px;border:none;padding:1px 3px;border-radius:2px;color:#333;background:#ffe;box-sizing:border-box;';
+  linkInp.addEventListener('input', () => markUnsaved());
+  metaCell.appendChild(linkLbl);
+  metaCell.appendChild(linkInp);
+
   const btnDiv = document.createElement('div');
   btnDiv.style.marginTop = '4px';
   const addBtn = document.createElement('button');
@@ -783,6 +841,11 @@ function renderEntry(secId, entry, ei) {
   const catDiv = makeEditable('분류');
   catDiv.style.textAlign = 'center'; catDiv.textContent = entry.cat || '';
   catTd.appendChild(catDiv);
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.className = 'row-check';
+  cb.title = '업무 생성에 포함';
+  cb.style.cssText = 'display:block;margin:3px auto 0;cursor:pointer;';
+  catTd.appendChild(cb);
   const delBtn = document.createElement('button');
   delBtn.textContent = '✕'; delBtn.title = '행 삭제';
   delBtn.style.cssText = 'font-size:8px;padding:0 2px;cursor:pointer;background:#fdd;border:1px solid #ccc;border-radius:2px;display:block;margin:2px auto 0;';
@@ -1026,12 +1089,14 @@ function gatherSections() {
       });
     });
 
+    const secLinkInp = hrow?.querySelector('input.sec-link-input');
     result.push({
       id: sec.id,
       name: nameDiv?.textContent || sec.name,
       tags: sec.tags || '',
       rHeader: rHdrDiv?.textContent || sec.rHeader || '',
       metaHeader: metaDiv?.textContent || sec.metaHeader || '',
+      link: secLinkInp?.value || sec.link || '',
       entries
     });
   });
@@ -1990,6 +2055,96 @@ window.addEventListener('beforeunload', () => {
   flushLocalSave();
   flushCloudSave();
 });
+
+// ─── 누구나알바 업무 생성 ────────────────────────────────────────────────────
+let _pendingTasks = [];   // 모달 열릴 때 미리 수집해둔 task 목록
+let _pendingChecks = [];  // 성공 후 체크 해제용
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html || '';
+  return tmp.textContent.trim();
+}
+
+function collectCheckedTasks() {
+  const checked = [...document.querySelectorAll('tr.title-row input.row-check:checked')];
+  const tasks = [];
+  for (const cb of checked) {
+    const trow = cb.closest('tr.title-row');
+    const crow = trow?.nextElementSibling;
+    const secId = trow?.dataset.secId;
+    const hrow = secId ? document.getElementById(`section-${secId}`) : null;
+    const secLink = hrow?.querySelector('input.sec-link-input')?.value?.trim() || '';
+
+    const ds = trow ? [...trow.querySelectorAll('[contenteditable]')] : [];
+    const cs = crow  ? [...crow.querySelectorAll('[contenteditable]')]  : [];
+
+    const rtitle    = stripHtml(ds[2]?.innerHTML || '');
+    const rbody     = stripHtml(cs[1]?.innerHTML || '');
+    const rawDate   = (ds[6]?.textContent || '').trim();
+    const entryLink = (ds[7]?.textContent || '').trim();
+    const link      = entryLink || secLink;
+    const workDate  = rawDate.replace(/\./g, '-').replace(/-$/, '') || new Date().toISOString().slice(0, 10);
+
+    if (rtitle) tasks.push({ title: rtitle, description: rbody, link, workDate, _cb: cb });
+  }
+  return tasks;
+}
+
+function createParttimeTasks() {
+  const all = collectCheckedTasks();
+  if (!all.length) {
+    alert('체크된 행이 없거나, 우측 제목이 없습니다.\n분류 셀의 체크박스를 선택하고 우측 제목을 입력해 주세요.');
+    return;
+  }
+  _pendingTasks  = all.map(({ _cb, ...t }) => t);
+  _pendingChecks = all.map(({ _cb }) => _cb);
+
+  document.getElementById('taskModalInfo').textContent =
+    `선택된 행 ${all.length}개를 업무로 생성합니다.`;
+  document.getElementById('taskModalOverlay').style.display = 'block';
+  document.getElementById('taskModal').style.display = 'block';
+  document.getElementById('taskCategory').focus();
+}
+
+function closeTaskModal() {
+  document.getElementById('taskModalOverlay').style.display = 'none';
+  document.getElementById('taskModal').style.display = 'none';
+  _pendingTasks = []; _pendingChecks = [];
+}
+
+async function submitParttimeTasks() {
+  const category = document.getElementById('taskCategory').value.trim() || '카페원고';
+  const reward   = Math.max(0, parseInt(document.getElementById('taskReward').value, 10) || 0);
+
+  if (!_pendingTasks.length) { closeTaskModal(); return; }
+
+  const tasks = _pendingTasks.map(t => ({ ...t, category, reward }));
+  const userId = USER_ID || 'admin';
+
+  const btn = document.querySelector('#taskModal .modal-btns button.primary');
+  btn.disabled = true; btn.textContent = '생성 중...';
+
+  try {
+    const res = await fetch('/api/create-parttime-tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, tasks }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      closeTaskModal();
+      alert(`✅ ${data.count}개 업무가 생성됐습니다!\n누구나알바 어드민에서 확인하세요.`);
+      _pendingChecks.forEach(cb => { cb.checked = false; });
+    } else {
+      alert('업무 생성 실패: ' + (data.error || '알 수 없는 오류'));
+    }
+  } catch(e) {
+    alert('업무 생성 중 오류: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '생성하기';
+  }
+}
 
 init();
 </script>
