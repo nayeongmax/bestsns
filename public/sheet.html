@@ -1575,8 +1575,9 @@ sheetBodyEl.addEventListener('paste', async e => {
   markUnsaved();
 });
 
-// ── 편집모드 복사: 배경색·폰트 스타일 정화 후 클립보드 기록 ────────────────
-// (비편집 모드 Ctrl+C는 keydown에서 copyToClipboard로 처리)
+// ── 편집모드 복사: 브라우저 기본 복사 허용 + async API로 플레인텍스트 보강 ──
+// e.preventDefault() 미사용 — setData가 iframe에서 조용히 실패해도
+// 브라우저 기본 복사(선택 텍스트)가 항상 동작해 클립보드가 비지 않음
 document.addEventListener('copy', e => {
   const active = document.activeElement;
   if (!active?.isContentEditable || !active.closest('#sheetBody')) return;
@@ -1586,24 +1587,14 @@ document.addEventListener('copy', e => {
   const plainText = sel.toString();
   if (!plainText) return;
 
-  const frag = sel.getRangeAt(0).cloneContents();
-  const tmp = document.createElement('div');
-  tmp.appendChild(frag);
-  // background-color, font-size, font-family, color 제거 (bold/italic 등은 유지)
-  tmp.querySelectorAll('[style]').forEach(el => {
-    const s = el.style;
-    ['background-color','font-size','font-family','color','text-align'].forEach(p => s.removeProperty(p));
-    if (!el.getAttribute('style').trim()) el.removeAttribute('style');
-  });
-
+  // setData 시도 (성공하면 붙여넣기 앱이 스타일 없는 버전을 받음)
   try {
     e.clipboardData.setData('text/plain', plainText);
-    e.clipboardData.setData('text/html', '<meta charset="utf-8">' + tmp.innerHTML);
-    e.preventDefault();
-  } catch(err) {
-    // clipboardData 접근 불가 시 브라우저 기본 복사에 위임 (텍스트는 정상 복사됨)
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(plainText).catch(() => {});
-  }
+    // e.preventDefault() 의도적으로 생략 — 실패해도 브라우저 기본 복사가 살아있음
+  } catch(err) {}
+
+  // async API 보조: 스타일 제거된 플레인텍스트를 클립보드에 덮어씀
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(plainText).catch(() => {});
 });
 
 // RFC 4180 TSV 파서 — 셀 내부의 \n (구글 시트 멀티라인 셀)을 올바르게 처리
