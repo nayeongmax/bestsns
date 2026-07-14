@@ -1939,7 +1939,8 @@ async function syncDownload() {
     activeTabId = data.payload.activeTabId || tabs[0]?.id;
     syncCode = code;
     localStorage.setItem('snsSheet_syncCode', syncCode);
-    localStorage.setItem('snsSheet_tabs_v2', JSON.stringify({ tabs, activeTabId }));
+    const dlKey = USER_ID ? `snsSheet_tabs_${USER_ID}` : 'snsSheet_tabs_v2';
+    localStorage.setItem(dlKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
     updateChip();
     renderTabBar();
     switchTab(activeTabId, false);
@@ -1978,13 +1979,19 @@ function purgeOldSampleSections(tabsArr) {
 
 async function init() {
   if (USER_ID) {
-    // ① 로컬 캐시 읽기
+    // ① 로컬 캐시 읽기 (userId 전용 키 우선, 없으면 공용 v2 키 폴백 후 마이그레이션)
     let localData = null, localTime = 0;
     try {
-      const raw = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
+      const userRaw = localStorage.getItem(`snsSheet_tabs_${USER_ID}`);
+      const fallbackRaw = !userRaw ? localStorage.getItem('snsSheet_tabs_v2') : null;
+      const raw = userRaw || fallbackRaw;
       if (raw) {
         const p = JSON.parse(raw);
-        if (p?.tabs?.length > 0) { localData = p; localTime = p.savedAt || 0; }
+        if (p?.tabs?.length > 0) {
+          localData = p; localTime = p.savedAt || 0;
+          // v2 키에서 불러왔으면 userId 전용 키로 즉시 복사 (마이그레이션)
+          if (fallbackRaw) localStorage.setItem(`snsSheet_tabs_${USER_ID}`, raw);
+        }
       }
     } catch(e) {}
 
