@@ -1564,24 +1564,18 @@ document.addEventListener('keydown', e => {
 });
 
 // ── 편집 모드 붙여넣기 — text/plain만 사용해 셀 전체 내용 교체 ──────────────
-sheetBodyEl.addEventListener('paste', async e => {
+sheetBodyEl.addEventListener('paste', e => {
   const div = e.target.closest('[contenteditable]');
   if (!div || div.closest('tr.section-header')) return;
   e.preventDefault();
-  let text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
-  // clipboardData가 빈 경우 async API로 재시도 (iframe 환경 대응)
-  if (!text && navigator.clipboard?.readText) {
-    try { text = await navigator.clipboard.readText(); } catch(err) {}
-  }
+  const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
   if (!text) return;
   immediateUndoPush();
   div.innerHTML = textToHtml(text);
   markUnsaved();
 });
 
-// ── 편집모드 복사: 브라우저 기본 복사 허용 + async API로 플레인텍스트 보강 ──
-// e.preventDefault() 미사용 — setData가 iframe에서 조용히 실패해도
-// 브라우저 기본 복사(선택 텍스트)가 항상 동작해 클립보드가 비지 않음
+// ── 편집모드 복사: 선택 텍스트를 플레인텍스트로 클립보드에 씀 ──────────────
 document.addEventListener('copy', e => {
   const active = document.activeElement;
   if (!active?.isContentEditable || !active.closest('#sheetBody')) return;
@@ -1591,14 +1585,12 @@ document.addEventListener('copy', e => {
   const plainText = sel.toString();
   if (!plainText) return;
 
-  // setData 시도 (성공하면 붙여넣기 앱이 스타일 없는 버전을 받음)
   try {
     e.clipboardData.setData('text/plain', plainText);
-    // e.preventDefault() 의도적으로 생략 — 실패해도 브라우저 기본 복사가 살아있음
-  } catch(err) {}
-
-  // async API 보조: 스타일 제거된 플레인텍스트를 클립보드에 덮어씀
-  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(plainText).catch(() => {});
+    e.preventDefault();
+  } catch(err) {
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(plainText).catch(() => {});
+  }
 });
 
 // RFC 4180 TSV 파서 — 셀 내부의 \n (구글 시트 멀티라인 셀)을 올바르게 처리
@@ -1678,13 +1670,9 @@ function fillTrowDivs(trowDivs, contentCols, startIdx) {
 document.addEventListener('DOMContentLoaded', () => {
   const hp = document.getElementById('hiddenPaste');
   if (!hp) return;
-  hp.addEventListener('paste', async e => {
+  hp.addEventListener('paste', e => {
     e.preventDefault();
-    let text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
-    // clipboardData가 빈 경우 async API로 재시도
-    if (!text && navigator.clipboard?.readText) {
-      try { text = await navigator.clipboard.readText(); } catch(err) {}
-    }
+    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
     hp.innerHTML = '';
     hp.blur();
     try { _kbFocus.focus(); } catch(e) {}
