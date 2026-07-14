@@ -185,6 +185,28 @@ export async function upsertFranchisePlans(plans: FranchisePlan[]): Promise<void
   }
 }
 
+export async function deleteFranchisePlan(id: string): Promise<void> {
+  // Remove from localStorage
+  try {
+    const raw = localStorage.getItem(LS_PLANS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as FranchisePlan[];
+      if (Array.isArray(parsed)) {
+        localStorage.setItem(LS_PLANS_KEY, JSON.stringify(parsed.filter((p) => p.id !== id)));
+      }
+    }
+  } catch {
+    // ignore storage errors
+  }
+
+  // Best-effort Supabase delete
+  try {
+    await supabase.from('franchise_plans').delete().eq('id', id);
+  } catch {
+    // ignore silently
+  }
+}
+
 // ─── Products functions ───────────────────────────────────────────────────────
 
 export async function fetchFranchiseProducts(): Promise<FranchiseProduct[]> {

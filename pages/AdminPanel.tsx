@@ -14,7 +14,7 @@ import MarketingAdmin from '../components/admin/MarketingAdmin.tsx';
 import PartTimeAdmin from '../components/admin/PartTimeAdmin.tsx';
 import AiConsultAdmin from '../components/admin/AiConsultAdmin.tsx';
 import PopupAdmin from '../components/admin/PopupAdmin.tsx';
-import { FranchisePlan, FranchiseProduct, DEFAULT_PLANS, fetchFranchisePlans, fetchFranchiseProductsAdmin, upsertFranchisePlans, upsertFranchiseProducts, deleteFranchiseProduct } from '../franchiseDb';
+import { FranchisePlan, FranchiseProduct, DEFAULT_PLANS, fetchFranchisePlans, fetchFranchiseProductsAdmin, upsertFranchisePlans, upsertFranchiseProducts, deleteFranchiseProduct, deleteFranchisePlan } from '../franchiseDb';
 
 interface Props {
   user: UserProfile | null;
@@ -267,9 +267,8 @@ const FranchiseAdmin: React.FC = () => {
   };
   const deletePlan = async (id: string) => {
     if (!confirm('이 플랜을 삭제할까요?')) return;
-    const next = plans.filter(p => p.id !== id);
-    await upsertFranchisePlans(next).catch(() => {});
-    setPlans(next);
+    await deleteFranchisePlan(id).catch(() => {});
+    setPlans(prev => prev.filter(p => p.id !== id));
   };
 
   // ── 상품 저장 ──
