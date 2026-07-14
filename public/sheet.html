@@ -1147,18 +1147,13 @@ function importSheet() {
 function handleImportFile(input) {
   const file = input.files[0];
   if (!file) return;
+  input.value = ''; // 같은 파일 재선택 허용 (onchange 이전에 초기화)
   const reader = new FileReader();
   reader.onload = function(ev) {
     try {
       const data = JSON.parse(ev.target.result);
       if (!Array.isArray(data.tabs) || data.tabs.length === 0) {
-        alert('올바른 시트 파일이 아닙니다. (.json 파일 저장 버튼으로 내보낸 파일을 선택해주세요)');
-        input.value = '';
-        return;
-      }
-      const dateStr = data.exportedAt ? new Date(data.exportedAt).toLocaleString('ko-KR') : '';
-      if (!confirm(`"${file.name}"을 불러옵니다.${dateStr ? '\n저장 시각: ' + dateStr : ''}\n\n현재 시트가 이 파일로 교체됩니다. 계속할까요?`)) {
-        input.value = '';
+        showCloudBadge('⚠ 올바른 시트 파일이 아닙니다', 'err');
         return;
       }
       tabs = data.tabs;
@@ -1170,11 +1165,11 @@ function handleImportFile(input) {
       localStorage.setItem(localKey, JSON.stringify({ tabs, activeTabId, savedAt: Date.now() }));
       if (USER_ID) setTimeout(bgCloudSave, 500);
       markSaved();
-      showCloudBadge('✔ 불러오기 완료!', 'ok');
+      const dateStr = data.exportedAt ? new Date(data.exportedAt).toLocaleString('ko-KR') : '';
+      showCloudBadge(`✔ 불러오기 완료!${dateStr ? ' (' + dateStr + ')' : ''}`, 'ok');
     } catch(e) {
-      alert('파일을 읽는 중 오류가 발생했습니다: ' + e.message);
+      showCloudBadge('⚠ 파일 오류: ' + e.message, 'err');
     }
-    input.value = ''; // 같은 파일 재선택 허용
   };
   reader.readAsText(file, 'utf-8');
 }
