@@ -567,6 +567,8 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tasks, setTasks] = useState<PartTimeTask[]>([]);
   const [jobRequests, setJobRequests] = useState<PartTimeJobRequest[]>([]);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const dragSrcIdx = useRef<number | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
@@ -609,18 +611,6 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
   };
 
   const removeSection = (id: string) => setSectionItems((prev) => prev.filter((s) => s.id !== id));
-
-  const moveSection = (id: string, dir: 'up' | 'down') => {
-    setSectionItems((prev) => {
-      const idx = prev.findIndex((s) => s.id === id);
-      if (idx < 0) return prev;
-      const next = prev.slice();
-      const target = dir === 'up' ? idx - 1 : idx + 1;
-      if (target < 0 || target >= next.length) return prev;
-      [next[idx], next[target]] = [next[target], next[idx]];
-      return next;
-    });
-  };
 
   const updateSection = (id: string, upd: Partial<SectionItem>) => {
     setSectionItems((prev) => prev.map((s) => (s.id === id ? { ...s, ...upd } : s)));
@@ -938,16 +928,43 @@ export const PartTimeTaskRegister: React.FC<{ user: UserProfile | null; members?
               </button>
             ))}
           </div>
-          <div className="space-y-4">
+          <div
+            className="space-y-4"
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverIdx(null);
+            }}
+          >
             {sectionItems.map((item, idx) => (
-              <div key={item.id} className="p-5 rounded-2xl border border-gray-200 bg-gray-50/50 space-y-3 relative">
+              <div
+                key={item.id}
+                draggable
+                onDragStart={(e) => { dragSrcIdx.current = idx; e.dataTransfer.effectAllowed = 'move'; }}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverIdx(idx); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const from = dragSrcIdx.current;
+                  if (from !== null && from !== idx) {
+                    setSectionItems((prev) => {
+                      const next = [...prev];
+                      const [moved] = next.splice(from, 1);
+                      next.splice(idx, 0, moved);
+                      return next;
+                    });
+                  }
+                  dragSrcIdx.current = null;
+                  setDragOverIdx(null);
+                }}
+                onDragEnd={() => { dragSrcIdx.current = null; setDragOverIdx(null); }}
+                className={`p-5 rounded-2xl border bg-gray-50/50 space-y-3 relative transition-colors ${dragOverIdx === idx && dragSrcIdx.current !== idx ? 'border-blue-400 bg-blue-50/30 shadow-md' : 'border-gray-200'}`}
+              >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black text-blue-700 uppercase bg-blue-100 px-2 py-1 rounded-lg">
-                    {SECTION_TYPES.find((t) => t.key === item.type)?.label ?? item.type} {idx + 1}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 select-none text-base leading-none" title="드래그하여 순서 변경">⠿</span>
+                    <span className="text-xs font-black text-blue-700 uppercase bg-blue-100 px-2 py-1 rounded-lg">
+                      {SECTION_TYPES.find((t) => t.key === item.type)?.label ?? item.type} {idx + 1}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => moveSection(item.id, 'up')} disabled={idx === 0} className="p-1.5 rounded-lg bg-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-300 text-sm">▲</button>
-                    <button type="button" onClick={() => moveSection(item.id, 'down')} disabled={idx === sectionItems.length - 1} className="p-1.5 rounded-lg bg-gray-200 text-gray-600 disabled:opacity-30 hover:bg-gray-300 text-sm">▼</button>
                     <button type="button" onClick={() => removeSection(item.id)} className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 text-sm font-black">삭제</button>
                   </div>
                 </div>
