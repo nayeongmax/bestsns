@@ -2171,7 +2171,7 @@ function stripHtml(html) {
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/div>/gi, '\n')
     .replace(/<\/p>/gi, '\n');
-  return tmp.textContent.trim().replace(/\n{3,}/g, '\n\n');
+  return tmp.textContent.trim().replace(/\n{2,}/g, '\n');
 }
 
 function updateCheckCount() {
