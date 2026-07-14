@@ -797,19 +797,59 @@ function renderSection(sec) {
   metaDiv.textContent = sec.metaHeader || '';
   metaCell.appendChild(metaDiv);
 
-  // 섹션 공통 링크 (같은 섹션 내 모든 행에 공유)
-  const linkLbl = document.createElement('div');
-  linkLbl.style.cssText = 'font-size:8px;color:#ffd;margin-top:4px;';
-  linkLbl.textContent = '🔗 섹션링크:';
+  // 섹션 공통 링크 — 잠금/수정 모드
+  const linkRow = document.createElement('div');
+  linkRow.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:4px;';
+  const linkIcon = document.createElement('span');
+  linkIcon.textContent = '🔗'; linkIcon.style.cssText = 'font-size:9px;color:#ffd;flex-shrink:0;';
   const linkInp = document.createElement('input');
   linkInp.type = 'text';
   linkInp.className = 'sec-link-input';
   linkInp.placeholder = 'https://...';
   linkInp.value = sec.link || '';
-  linkInp.style.cssText = 'width:100%;font-size:8px;border:none;padding:1px 3px;border-radius:2px;color:#333;background:#ffe;box-sizing:border-box;';
+  linkInp.style.cssText = 'flex:1;min-width:0;font-size:8px;border:none;padding:1px 3px;border-radius:2px;box-sizing:border-box;';
+  const linkLockBtn = document.createElement('button');
+  linkLockBtn.type = 'button';
+  linkLockBtn.style.cssText = 'font-size:8px;padding:1px 5px;cursor:pointer;background:#fff9;color:#333;border:1px solid #ccc9;border-radius:2px;white-space:nowrap;flex-shrink:0;';
+
+  const applyLinkLock = (locked) => {
+    linkInp.readOnly = locked;
+    linkInp.style.background = locked ? 'rgba(255,255,255,0.15)' : '#ffe';
+    linkInp.style.color = locked ? '#ffd' : '#333';
+    linkInp.style.cursor = locked ? 'default' : 'text';
+    linkLockBtn.textContent = locked ? '수정' : '저장';
+  };
+
+  // 초기 상태: 링크 있으면 잠금, 없으면 편집 가능
+  applyLinkLock(Boolean(sec.link));
+
+  // 수정/저장 버튼 클릭 — mousedown으로 blur 방지
+  linkLockBtn.addEventListener('mousedown', e => e.preventDefault());
+  linkLockBtn.addEventListener('click', () => {
+    if (linkInp.readOnly) {
+      applyLinkLock(false);
+      linkInp.focus(); linkInp.select();
+    } else {
+      applyLinkLock(true);
+      markUnsaved();
+    }
+  });
+
+  // 편집 중 Enter → 저장, Escape → 취소
+  linkInp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); if (linkInp.value.trim()) { applyLinkLock(true); markUnsaved(); } }
+    if (e.key === 'Escape') { linkInp.value = sec.link || ''; applyLinkLock(Boolean(sec.link)); }
+  });
+  // blur → 값 있으면 자동 저장+잠금
+  linkInp.addEventListener('blur', () => {
+    if (!linkInp.readOnly && linkInp.value.trim()) { applyLinkLock(true); markUnsaved(); }
+  });
   linkInp.addEventListener('input', () => markUnsaved());
-  metaCell.appendChild(linkLbl);
-  metaCell.appendChild(linkInp);
+
+  linkRow.appendChild(linkIcon);
+  linkRow.appendChild(linkInp);
+  linkRow.appendChild(linkLockBtn);
+  metaCell.appendChild(linkRow);
 
   const btnDiv = document.createElement('div');
   btnDiv.style.marginTop = '4px';
