@@ -628,7 +628,7 @@ let activeDiv = null;
 let activeTd  = null;
 let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
 let _pasteTargetTd = null;     // 붙여넣기 대상 셀
-let _pendingCopyText = null;   // 비편집 모드 다중 셀 복사 시 copy 이벤트 핸들러에 전달
+let _copyBuffer = null;        // 비편집 모드 Ctrl+C → copy 이벤트 핸들러에 전달
 
 // ── 전역 Undo / Redo ──────────────────────────────────────────────────────────
 const MAX_UNDO = 50;
@@ -671,18 +671,10 @@ function saveSel() {
 // execCommand(동기) 우선 → async API 보조 (두 경로 모두 시도)
 function copyToClipboard(text) {
   if (!text) return;
-  _pendingCopyText = text;
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
-  document.body.appendChild(ta);
-  ta.focus(); ta.select();
-  let ok = false;
-  try { ok = document.execCommand('copy'); } catch(e) {}
-  _pendingCopyText = null;
-  document.body.removeChild(ta);
-  _kbFocus.focus();
-  if (!ok && navigator.clipboard?.writeText) navigator.clipboard.writeText(text).catch(() => {});
+  _copyBuffer = text;
+  // e.preventDefault() 없이 copy 이벤트가 자연 발동되면 핸들러에서 setData 처리
+  // 혹시 copy 이벤트가 안 오는 경우를 위한 타임아웃 정리
+  setTimeout(() => { _copyBuffer = null; }, 500);
 }
 
 function applyFontSize(val) {
@@ -1532,23 +1524,10 @@ document.addEventListener('keydown', e => {
       });
       const text = rowOrder.map(tr => rowMap.get(tr).join('\t')).join('\n');
       if (text) {
-        // 임시 contenteditable에 텍스트를 놓고 브라우저 네이티브 copy 이벤트 발동
-        // execCommand 대신 이 방법을 쓰는 이유: execCommand가 발생시킨 copy 이벤트는
-        // activeElement가 #sheetBody 밖이라 핸들러가 무시함. 반면 이 방법은
-        // 브라우저가 직접 tmp 선택 텍스트를 클립보드에 쓰므로 항상 동작
-        const tmp = document.createElement('div');
-        tmp.contentEditable = 'true';
-        tmp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden;';
-        tmp.textContent = text;
-        document.body.appendChild(tmp);
-        tmp.focus();
-        const r = document.createRange();
-        r.selectNodeContents(tmp);
-        const s = window.getSelection();
-        s.removeAllRanges();
-        s.addRange(r);
-        // e.preventDefault() 생략 → 브라우저가 copy 이벤트를 자연 발동해 tmp 텍스트를 클립보드에 복사
-        setTimeout(() => { document.body.removeChild(tmp); _kbFocus.focus(); }, 0);
+        // _copyBuffer에 텍스트 저장 후 e.preventDefault() 없이 return
+        // → 브라우저가 copy 이벤트를 자연 발동 → 핸들러에서 setData+preventDefault로 클립보드 기록
+        // (iframe에서 클립보드 쓰기의 유일하게 신뢰할 수 있는 방법)
+        _copyBuffer = text;
         return;
       }
       e.preventDefault(); return;
@@ -1598,14 +1577,15 @@ sheetBodyEl.addEventListener('paste', e => {
 
 // ── 복사 이벤트: 비편집 모드(다중 셀) + 편집 모드(셀 내 텍스트 선택) 모두 처리 ──
 document.addEventListener('copy', e => {
-  // 1) 비편집 모드: copyToClipboard()가 execCommand로 트리거한 경우
-  if (_pendingCopyText) {
+  // 1) 비편집 모드: Ctrl+C keydown에서 _copyBuffer에 저장한 경우
+  //    activeElement가 contenteditable이 아닌 상태에서 copy 이벤트가 왔을 때만 처리
+  if (_copyBuffer !== null && !document.activeElement?.isContentEditable) {
+    const buf = _copyBuffer;
+    _copyBuffer = null;
     try {
-      e.clipboardData.setData('text/plain', _pendingCopyText);
+      e.clipboardData.setData('text/plain', buf);
       e.preventDefault();
-    } catch(err) {
-      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(_pendingCopyText).catch(() => {});
-    }
+    } catch(err) {}
     return;
   }
 
@@ -1619,9 +1599,7 @@ document.addEventListener('copy', e => {
   try {
     e.clipboardData.setData('text/plain', plainText);
     e.preventDefault();
-  } catch(err) {
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(plainText).catch(() => {});
-  }
+  } catch(err) {}
 });
 
 // RFC 4180 TSV 파서 — 셀 내부의 \n (구글 시트 멀티라인 셀)을 올바르게 처리
