@@ -628,7 +628,6 @@ let activeDiv = null;
 let activeTd  = null;
 let selectedCells = new Set();  // 선택된 td 목록 (엑셀 스타일)
 let _pasteTargetTd = null;     // 붙여넣기 대상 셀
-let _copyBuffer = null;        // 비편집 모드 Ctrl+C → copy 이벤트 핸들러에 전달
 
 // ── 전역 Undo / Redo ──────────────────────────────────────────────────────────
 const MAX_UNDO = 50;
@@ -671,10 +670,14 @@ function saveSel() {
 // execCommand(동기) 우선 → async API 보조 (두 경로 모두 시도)
 function copyToClipboard(text) {
   if (!text) return;
-  _copyBuffer = text;
-  // e.preventDefault() 없이 copy 이벤트가 자연 발동되면 핸들러에서 setData 처리
-  // 혹시 copy 이벤트가 안 오는 경우를 위한 타임아웃 정리
-  setTimeout(() => { _copyBuffer = null; }, 500);
+  try { if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text); return; } } catch(e) {}
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
 }
 
 function applyFontSize(val) {
@@ -1523,25 +1526,7 @@ document.addEventListener('keydown', e => {
         rowMap.get(tr).push((div?.innerText || div?.textContent || '').trim());
       });
       const text = rowOrder.map(tr => rowMap.get(tr).join('\t')).join('\n');
-      if (text) {
-        // _copyBuffer에 저장 + 임시 contenteditable 포커스 → 브라우저가 copy 이벤트 확실히 발동
-        // _kbFocus는 non-contenteditable이라 선택 없으면 copy 이벤트가 아예 안 발동됨
-        _copyBuffer = text;
-        const tmp = document.createElement('div');
-        tmp.contentEditable = 'true';
-        tmp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;overflow:hidden;';
-        tmp.textContent = text;
-        document.body.appendChild(tmp);
-        tmp.focus();
-        const r = document.createRange();
-        r.selectNodeContents(tmp);
-        const s = window.getSelection();
-        s.removeAllRanges();
-        s.addRange(r);
-        // e.preventDefault() 생략 → 브라우저가 copy 이벤트 발동 → 핸들러에서 _copyBuffer로 setData 처리
-        setTimeout(() => { document.body.removeChild(tmp); _kbFocus.focus(); }, 0);
-        return;
-      }
+      if (text) copyToClipboard(text);
       e.preventDefault(); return;
     }
 
@@ -1587,28 +1572,26 @@ sheetBodyEl.addEventListener('paste', e => {
   markUnsaved();
 });
 
-// ── 복사 이벤트: 비편집 모드(다중 셀) + 편집 모드(셀 내 텍스트 선택) 모두 처리 ──
+// ── 편집모드 복사: 스타일 제거 후 플레인텍스트로 클립보드에 씀 ──────────────
 document.addEventListener('copy', e => {
-  // 1) 비편집 모드: Ctrl+C keydown에서 _copyBuffer에 저장한 경우 (tmp contenteditable이 포커스되어 있음)
-  if (_copyBuffer !== null) {
-    const buf = _copyBuffer;
-    _copyBuffer = null;
-    try {
-      e.clipboardData.setData('text/plain', buf);
-      e.preventDefault();
-    } catch(err) {}
-    return;
-  }
-
-  // 2) 편집 모드: contenteditable 셀 안에서 텍스트 선택 후 Ctrl+C
   const active = document.activeElement;
   if (!active?.isContentEditable || !active.closest('#sheetBody')) return;
   const sel = window.getSelection();
   if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+
   const plainText = sel.toString();
-  if (!plainText) return;
+  const frag = sel.getRangeAt(0).cloneContents();
+  const tmp = document.createElement('div');
+  tmp.appendChild(frag);
+  tmp.querySelectorAll('[style]').forEach(el => {
+    const s = el.style;
+    ['background-color','font-size','font-family','color','text-align'].forEach(p => s.removeProperty(p));
+    if (!el.getAttribute('style').trim()) el.removeAttribute('style');
+  });
+
   try {
     e.clipboardData.setData('text/plain', plainText);
+    e.clipboardData.setData('text/html', '<meta charset="utf-8">' + tmp.innerHTML);
     e.preventDefault();
   } catch(err) {}
 });
