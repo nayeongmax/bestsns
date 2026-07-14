@@ -801,10 +801,18 @@ function renderSection(sec) {
   const nameCell = document.createElement('td');
   nameCell.colSpan = 3;
   nameCell.style.cssText = 'background:#ff0000;color:#fff;font-weight:bold;';
+  const nameFlex = document.createElement('div');
+  nameFlex.style.cssText = 'display:flex;align-items:center;gap:6px;';
   const nameDiv = makeEditable('섹션명');
-  nameDiv.style.color = '#fff';
+  nameDiv.style.cssText = 'color:#fff;flex:1;';
   nameDiv.textContent = sec.name;
-  nameCell.appendChild(nameDiv);
+  const delBtn = document.createElement('button');
+  delBtn.textContent = '섹션 삭제';
+  delBtn.style.cssText = 'font-size:9px;padding:2px 7px;cursor:pointer;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.5);border-radius:3px;white-space:nowrap;flex-shrink:0;';
+  delBtn.onclick = () => deleteSection(sec.id);
+  nameFlex.appendChild(nameDiv);
+  nameFlex.appendChild(delBtn);
+  nameCell.appendChild(nameFlex);
   if (sec.tags) {
     const tagDiv = document.createElement('div');
     tagDiv.style.cssText = 'font-size:9px;margin-top:3px;opacity:0.9;color:#fff;';
@@ -837,18 +845,18 @@ function renderSection(sec) {
 
   // 섹션 공통 링크 — 잠금/수정 모드
   const linkRow = document.createElement('div');
-  linkRow.style.cssText = 'display:flex;align-items:center;gap:3px;margin-top:4px;';
+  linkRow.style.cssText = 'display:flex;align-items:stretch;gap:3px;margin-top:5px;';
   const linkIcon = document.createElement('span');
-  linkIcon.textContent = '🔗'; linkIcon.style.cssText = 'font-size:9px;color:#ffd;flex-shrink:0;';
+  linkIcon.textContent = '🔗'; linkIcon.style.cssText = 'font-size:11px;color:#ffd;flex-shrink:0;align-self:center;';
   const linkInp = document.createElement('input');
   linkInp.type = 'text';
   linkInp.className = 'sec-link-input';
   linkInp.placeholder = 'https://...';
   linkInp.value = sec.link || '';
-  linkInp.style.cssText = 'flex:1;min-width:0;font-size:8px;border:none;padding:1px 3px;border-radius:2px;box-sizing:border-box;';
+  linkInp.style.cssText = 'flex:1;min-width:0;font-size:11px;border:none;padding:3px 5px;border-radius:2px;box-sizing:border-box;';
   const linkLockBtn = document.createElement('button');
   linkLockBtn.type = 'button';
-  linkLockBtn.style.cssText = 'font-size:8px;padding:1px 5px;cursor:pointer;background:#fff9;color:#333;border:1px solid #ccc9;border-radius:2px;white-space:nowrap;flex-shrink:0;';
+  linkLockBtn.style.cssText = 'font-size:11px;padding:3px 10px;cursor:pointer;background:#fff9;color:#333;border:1px solid #ccc9;border-radius:2px;white-space:nowrap;flex-shrink:0;';
 
   const applyLinkLock = (locked) => {
     linkInp.readOnly = locked;
@@ -889,18 +897,6 @@ function renderSection(sec) {
   linkRow.appendChild(linkLockBtn);
   metaCell.appendChild(linkRow);
 
-  const btnDiv = document.createElement('div');
-  btnDiv.style.marginTop = '4px';
-  const addBtn = document.createElement('button');
-  addBtn.textContent = '+ 행 추가';
-  addBtn.style.cssText = 'font-size:9px;padding:1px 5px;cursor:pointer;background:#fff;color:#333;border:1px solid #ccc;border-radius:2px;margin-right:3px;';
-  addBtn.onclick = () => addEntry(sec.id);
-  const delBtn = document.createElement('button');
-  delBtn.textContent = '섹션 삭제';
-  delBtn.style.cssText = 'font-size:9px;padding:1px 5px;cursor:pointer;background:#fdd;color:#900;border:1px solid #ccc;border-radius:2px;';
-  delBtn.onclick = () => deleteSection(sec.id);
-  btnDiv.appendChild(addBtn); btnDiv.appendChild(delBtn);
-  metaCell.appendChild(btnDiv);
   hrow.appendChild(metaCell);
   tbody.appendChild(hrow);
 
