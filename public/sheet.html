@@ -257,6 +257,7 @@
   </select>
   <button onclick="moveSectionUp()" title="선택 섹션 위로" style="padding:3px 7px;">▲</button>
   <button onclick="moveSectionDown()" title="선택 섹션 아래로" style="padding:3px 7px;">▼</button>
+  <button id="copySelBtn" onclick="copySelectedCells()" style="display:none;background:#fff9c4;border-color:#f9a825;color:#333;font-weight:bold;" title="선택된 셀 내용 복사 (Ctrl+C 대체)">📋 복사</button>
   <button onclick="createParttimeTasks()" style="background:#1a73e8;border-color:#1a73e8;color:#fff;font-weight:bold;margin-left:8px;" title="체크된 행을 누구나알바에 업무 생성">📝 업무생성</button>
   <span id="rowCheckCount" style="display:none;font-size:11px;font-weight:bold;background:#e8f0fe;color:#1a73e8;border:1px solid #c5d8fb;border-radius:10px;padding:1px 8px;margin-left:2px;"></span>
   <span class="saved-badge" id="savedBadge" style="display:none;"></span>
@@ -678,6 +679,42 @@ function copyToClipboard(text) {
   ta.focus(); ta.select();
   try { document.execCommand('copy'); } catch(e) {}
   document.body.removeChild(ta);
+}
+
+// 선택된 셀 내용을 클립보드에 복사 (툴바 버튼 클릭 — click 이벤트는 iframe 클립보드 제한 없음)
+function copySelectedCells() {
+  if (selectedCells.size === 0) return;
+  const rowOrder = [], rowMap = new Map();
+  selectedCells.forEach(td => {
+    const tr = td.closest('tr');
+    if (!rowMap.has(tr)) { rowMap.set(tr, []); rowOrder.push(tr); }
+    const div = td.querySelector('[contenteditable]');
+    rowMap.get(tr).push((div?.innerText || div?.textContent || '').trim());
+  });
+  const text = rowOrder.map(tr => rowMap.get(tr).join('\t')).join('\n');
+  if (!text) return;
+  const btn = document.getElementById('copySelBtn');
+  const done = () => { if (btn) { btn.textContent = '✓ 복사됨!'; setTimeout(() => { btn.textContent = '📋 복사'; }, 1500); } };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try { document.execCommand('copy'); done(); } catch(e) {}
+      document.body.removeChild(ta);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;top:-200px;left:0;width:1px;height:1px;opacity:0;';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand('copy'); done(); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+}
+
+function updateCopyBtn() {
+  const btn = document.getElementById('copySelBtn');
+  if (btn) btn.style.display = selectedCells.size > 0 ? '' : 'none';
 }
 
 function applyFontSize(val) {
@@ -1314,6 +1351,7 @@ document.getElementById('sheetBody').addEventListener('change', e => {
 function clearSelection() {
   sheetBodyEl.querySelectorAll('.cell-selected').forEach(t => t.classList.remove('cell-selected'));
   selectedCells.clear();
+  updateCopyBtn();
 }
 
 const sheetBodyEl = document.getElementById('sheetBody');
@@ -1382,6 +1420,7 @@ sheetBodyEl.addEventListener('mousedown', e => {
   td.classList.add('cell-selected');
   activeDiv = td.querySelector('[contenteditable]');
   activeTd = td;
+  updateCopyBtn();
 
   // 키보드 이벤트 수신 보장 (Delete/Ctrl+C 등)
   _kbFocus.focus();
@@ -1442,6 +1481,7 @@ sheetBodyEl.addEventListener('mousemove', e => {
       if (ce) { selectedCells.add(t); activeDiv = ce; activeTd = t; }
     }
   }
+  updateCopyBtn();
 });
 document.addEventListener('mouseup', () => { _isDragging = false; _lastHoverTd = null; });
 
