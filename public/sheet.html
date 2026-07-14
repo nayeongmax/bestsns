@@ -258,6 +258,7 @@
   <button onclick="moveSectionUp()" title="선택 섹션 위로" style="padding:3px 7px;">▲</button>
   <button onclick="moveSectionDown()" title="선택 섹션 아래로" style="padding:3px 7px;">▼</button>
   <button onclick="createParttimeTasks()" style="background:#1a73e8;border-color:#1a73e8;color:#fff;font-weight:bold;margin-left:8px;" title="체크된 행을 누구나알바에 업무 생성">📝 업무생성</button>
+  <span id="rowCheckCount" style="display:none;font-size:11px;font-weight:bold;background:#e8f0fe;color:#1a73e8;border:1px solid #c5d8fb;border-radius:10px;padding:1px 8px;margin-left:2px;"></span>
   <span class="saved-badge" id="savedBadge" style="display:none;"></span>
   <span class="cloud-badge" id="cloudBadge"></span>
 </div>
@@ -1304,6 +1305,11 @@ document.getElementById('sheetBody').addEventListener('input', () => {
   debouncedUndoPush();
 });
 
+// 체크박스 변경 시 카운트 배지 업데이트
+document.getElementById('sheetBody').addEventListener('change', e => {
+  if (e.target?.classList.contains('row-check')) updateCheckCount();
+});
+
 // ─── 엑셀 스타일 셀 선택 ────────────────────────────────────────────────────
 function clearSelection() {
   sheetBodyEl.querySelectorAll('.cell-selected').forEach(t => t.classList.remove('cell-selected'));
@@ -2129,6 +2135,14 @@ function stripHtml(html) {
   return tmp.textContent.trim();
 }
 
+function updateCheckCount() {
+  const n = document.querySelectorAll('tr.title-row input.row-check:checked').length;
+  const el = document.getElementById('rowCheckCount');
+  if (!el) return;
+  if (n > 0) { el.textContent = `✓ ${n}개 선택`; el.style.display = 'inline'; }
+  else { el.style.display = 'none'; }
+}
+
 function collectCheckedTasks() {
   const checked = [...document.querySelectorAll('tr.title-row input.row-check:checked')];
   const tasks = [];
@@ -2137,21 +2151,24 @@ function collectCheckedTasks() {
     const crow = trow?.nextElementSibling;
     const secId = trow?.dataset.secId;
     const hrow = secId ? document.getElementById(`section-${secId}`) : null;
+    // 섹션링크 우선 사용 (행별 링크는 무시)
     const secLink = hrow?.querySelector('input.sec-link-input')?.value?.trim() || '';
     const secName = hrow?.querySelector('[contenteditable]')?.textContent?.trim() || '';
 
     const ds = trow ? [...trow.querySelectorAll('[contenteditable]')] : [];
     const cs = crow  ? [...crow.querySelectorAll('[contenteditable]')]  : [];
 
-    const cafeCat   = (ds[0]?.textContent || '').trim();           // 분류 셀 (카페 게시판)
-    const rtitle    = stripHtml(ds[2]?.innerHTML || '');           // 우측 제목
-    const rbody     = stripHtml(cs[1]?.innerHTML || '');           // 우측 내용
-    const rawDate   = (ds[6]?.textContent || '').trim();           // 날짜
-    const entryLink = (ds[7]?.textContent || '').trim();           // 행별 링크
-    const link      = entryLink || secLink;
-    const workDate  = rawDate.replace(/\./g, '-').replace(/-$/, '') || new Date().toISOString().slice(0, 10);
+    const cafeCat = (ds[0]?.textContent || '').trim();
+    const rtitle  = stripHtml(ds[2]?.innerHTML || '');   // 우측 제목
+    const rbody   = stripHtml(cs[1]?.innerHTML || '');   // 우측 내용
+    // 우측이 없으면 좌측(원본)도 fallback으로 사용
+    const title   = rtitle || stripHtml(ds[1]?.innerHTML || '');
+    const body    = rbody  || stripHtml(cs[0]?.innerHTML || '');
+    const rawDate = (ds[6]?.textContent || '').trim();
+    const workDate = rawDate.replace(/\./g, '-').replace(/-$/, '') || new Date().toISOString().slice(0, 10);
 
-    if (rtitle) tasks.push({ title: rtitle, description: rbody, link, workDate, cafeCat, secName, _cb: cb });
+    // 체크된 행은 내용 여부와 관계없이 전부 포함
+    tasks.push({ title, description: body, link: secLink, workDate, cafeCat, secName, _cb: cb });
   }
   return tasks;
 }
