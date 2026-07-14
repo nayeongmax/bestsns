@@ -1367,7 +1367,11 @@ sheetBodyEl.addEventListener('mousedown', e => {
   // 더블클릭은 편집모드: 선택 간섭 안 함
   if (e.detail >= 2) { _dragStartTd = null; _isDragging = false; return; }
 
-  // 현재 편집 중이면 blur 후 선택 전환
+  // 현재 편집 중인 셀 내부 클릭 → 브라우저 기본 동작(커서 이동·텍스트 드래그 선택) 허용
+  // 이 조건 없이 preventDefault하면 편집모드에서 마우스 복사가 아예 불가능해짐
+  if (document.activeElement?.isContentEditable && td === activeTd) return;
+
+  // 다른 셀 클릭: 편집모드 탈출 후 선택 전환
   if (document.activeElement?.isContentEditable) {
     document.activeElement.blur();
   }
