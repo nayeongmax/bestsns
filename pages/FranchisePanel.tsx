@@ -47,61 +47,98 @@ const AlbaBalanceCard: React.FC<{ userId: string }> = ({ userId }) => {
 
   const canCreate = balance !== null ? Math.floor(balance / ALBA_COST_PER_POST) : 0;
 
+  // 날짜별 그룹핑 (MM.DD. 형식)
+  const groupedTxs = txs.reduce<{ date: string; items: AlbaBalanceTx[] }[]>((acc, tx) => {
+    const d = tx.createdAt.slice(0, 10); // YYYY-MM-DD
+    const label = `${d.slice(5, 7)}.${d.slice(8, 10)}.`;
+    const last = acc[acc.length - 1];
+    if (last && last.date === label) { last.items.push(tx); }
+    else { acc.push({ date: label, items: [tx] }); }
+    return acc;
+  }, []);
+
   if (loading) return <div className="px-4 py-2 text-xs text-gray-400 font-bold">잔액 불러오는 중...</div>;
 
   return (
-    <div className="mx-3 md:mx-4 my-3 space-y-2">
-      {/* 잔액 + 충전 안내 */}
-      <div className="flex flex-wrap items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl px-4 py-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-xl">💰</span>
-          <div>
-            <p className="text-[10px] font-black text-blue-500 uppercase tracking-wider">알바비 잔액</p>
-            <p className="text-lg font-black text-blue-700">{(balance ?? 0).toLocaleString()}원</p>
-            <p className="text-[11px] text-blue-500 font-bold">
-              게시글 <span className="text-blue-700">{canCreate}개</span> 업무 생성 가능 (1개당 {ALBA_COST_PER_POST.toLocaleString()}원)
-            </p>
+    <>
+      {/* 잔액 + 충전 안내 카드 */}
+      <div className="mx-3 md:mx-4 my-3">
+        <div className="flex flex-wrap items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl px-4 py-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="text-xl">💰</span>
+            <div>
+              <p className="text-[10px] font-black text-blue-500 uppercase tracking-wider">알바비 잔액</p>
+              <p className="text-lg font-black text-blue-700">{(balance ?? 0).toLocaleString()}원</p>
+              <p className="text-[11px] text-blue-500 font-bold">
+                게시글 <span className="text-blue-700">{canCreate}개</span> 업무 생성 가능 (1개당 {ALBA_COST_PER_POST.toLocaleString()}원)
+              </p>
+            </div>
           </div>
-        </div>
-        {(bankInfo.bankName || bankInfo.accountNo) && (
-          <div className="bg-white border border-blue-100 rounded-xl px-3 py-2 text-xs">
-            <p className="font-black text-gray-500 mb-0.5">충전 계좌 (계좌이체)</p>
-            <p className="font-black text-gray-800">{bankInfo.bankName} {bankInfo.accountNo}</p>
-            {bankInfo.holder && <p className="text-gray-500 font-bold">예금주: {bankInfo.holder}</p>}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setShowHistory(v => !v)}
-          className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-blue-200 text-blue-600 font-black text-xs hover:bg-blue-50 transition-colors"
-        >
-          {showHistory ? '내역 숨기기' : '충전/사용 내역'}
-        </button>
-      </div>
-
-      {/* 거래 내역 */}
-      {showHistory && (
-        <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-          {txs.length === 0 ? (
-            <p className="text-center text-xs text-gray-400 font-bold py-4">거래 내역이 없습니다.</p>
-          ) : (
-            <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto">
-              {txs.map(tx => (
-                <div key={tx.id} className="flex items-center justify-between px-4 py-2.5">
-                  <div>
-                    <p className="text-xs font-black text-gray-700">{tx.description || (tx.type === 'charge' ? '충전' : '사용')}</p>
-                    <p className="text-[10px] text-gray-400 font-bold">{tx.createdAt.slice(0, 16).replace('T', ' ')}</p>
-                  </div>
-                  <span className={`text-sm font-black ${tx.type === 'charge' ? 'text-blue-600' : 'text-red-500'}`}>
-                    {tx.type === 'charge' ? '+' : '-'}{tx.amount.toLocaleString()}원
-                  </span>
-                </div>
-              ))}
+          {(bankInfo.bankName || bankInfo.accountNo) && (
+            <div className="bg-white border border-blue-100 rounded-xl px-3 py-2 text-xs">
+              <p className="font-black text-gray-500 mb-0.5">충전 계좌 (계좌이체)</p>
+              <p className="font-black text-gray-800">{bankInfo.bankName} {bankInfo.accountNo}</p>
+              {bankInfo.holder && <p className="text-gray-500 font-bold">예금주: {bankInfo.holder}</p>}
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => setShowHistory(true)}
+            className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-blue-200 text-blue-600 font-black text-xs hover:bg-blue-50 transition-colors"
+          >
+            충전/사용 내역
+          </button>
+        </div>
+      </div>
+
+      {/* 내역 팝업 모달 */}
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowHistory(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* 헤더 */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h3 className="font-black text-gray-900 text-base">충전 / 사용 내역</h3>
+              <button type="button" onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600 text-xl font-black leading-none">×</button>
+            </div>
+
+            {/* 내역 목록 */}
+            <div className="overflow-y-auto max-h-[60vh]">
+              {txs.length === 0 ? (
+                <p className="text-center text-sm text-gray-400 font-bold py-12">거래 내역이 없습니다.</p>
+              ) : (
+                groupedTxs.map(({ date, items }) => (
+                  <div key={date}>
+                    {/* 날짜 구분선 */}
+                    <div className="flex items-center gap-3 px-6 py-2 bg-gray-50">
+                      <span className="text-[11px] font-black text-gray-400">{date}</span>
+                      <div className="flex-1 h-px bg-gray-200" />
+                    </div>
+                    {/* 해당 날짜 거래 */}
+                    {items.map(tx => (
+                      <div key={tx.id} className="flex items-center px-6 py-3 border-b border-gray-50 last:border-0">
+                        <span className={`w-2 h-2 rounded-full shrink-0 mr-3 ${tx.type === 'charge' ? 'bg-blue-400' : 'bg-red-400'}`} />
+                        <span className="flex-1 text-sm font-bold text-gray-700 truncate">
+                          {tx.description || (tx.type === 'charge' ? '충전' : '사용')}
+                        </span>
+                        <span className={`text-sm font-black ml-4 shrink-0 ${tx.type === 'charge' ? 'text-blue-600' : 'text-red-500'}`}>
+                          {tx.type === 'charge' ? '+' : '-'}{tx.amount.toLocaleString()}원
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* 하단 잔액 요약 */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
+              <span className="text-sm font-black text-gray-500">현재 잔액</span>
+              <span className="text-base font-black text-blue-700">{(balance ?? 0).toLocaleString()}원</span>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
