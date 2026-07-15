@@ -2088,7 +2088,7 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         {activeTab === 'revenue'                   && <RevenueManagement user={user} />}
         {/* iframe은 항상 마운트 유지 — DOM에서 제거되면 beforeunload가 발화하지 않아 편집 내용이 손실됨 */}
         <div style={{ display: activeTab === 'manuscripts' ? 'block' : 'none' }}>
-          {!isAdmin && <AlbaBalanceCard userId={user.id} />}
+          <AlbaBalanceCard userId={user.id} />
           <ManuscriptSheet userId={user.id} />
         </div>
         {activeTab === 'collector'                 && <CollectorTab />}
