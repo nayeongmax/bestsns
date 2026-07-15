@@ -5,6 +5,7 @@ import RevenueManagement from './RevenueManagement';
 import { supabase } from '../supabase';
 import { upsertSmmOrders } from '../smmDb';
 import { FranchisePlan, FranchiseProduct, fetchFranchisePlans, fetchFranchiseProducts, fetchFranchisePointsUsed } from '../franchiseDb';
+import { fetchAlbaBalance, fetchAlbaTransactions, fetchAppSettings, AlbaBalanceTx } from '../albaBalanceDb';
 
 type FranchiseTab = 'members' | 'subscription' | 'revenue' | 'manuscripts' | 'collector' | 'marketing';
 
@@ -13,6 +14,96 @@ interface Props {
   members: UserProfile[];
   onUpdateUser?: (u: UserProfile) => void;
 }
+
+/* ══════════════════════════════════════════════
+   알바비 잔액 카드 (비관리자 가맹점 전용)
+══════════════════════════════════════════════ */
+
+const ALBA_COST_PER_POST = 500;
+
+const AlbaBalanceCard: React.FC<{ userId: string }> = ({ userId }) => {
+  const [balance, setBalance]       = useState<number | null>(null);
+  const [txs, setTxs]               = useState<AlbaBalanceTx[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [bankInfo, setBankInfo]     = useState({ bankName: '', accountNo: '', holder: '' });
+  const [loading, setLoading]       = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetchAlbaBalance(userId),
+      fetchAlbaTransactions(userId),
+      fetchAppSettings(['alba_bank_name', 'alba_bank_account', 'alba_bank_holder']),
+    ]).then(([bal, history, settings]) => {
+      setBalance(bal);
+      setTxs(history);
+      setBankInfo({
+        bankName:  settings['alba_bank_name']    ?? '',
+        accountNo: settings['alba_bank_account'] ?? '',
+        holder:    settings['alba_bank_holder']  ?? '',
+      });
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [userId]);
+
+  const canCreate = balance !== null ? Math.floor(balance / ALBA_COST_PER_POST) : 0;
+
+  if (loading) return <div className="px-4 py-2 text-xs text-gray-400 font-bold">잔액 불러오는 중...</div>;
+
+  return (
+    <div className="mx-3 md:mx-4 my-3 space-y-2">
+      {/* 잔액 + 충전 안내 */}
+      <div className="flex flex-wrap items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl px-4 py-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-xl">💰</span>
+          <div>
+            <p className="text-[10px] font-black text-blue-500 uppercase tracking-wider">알바비 잔액</p>
+            <p className="text-lg font-black text-blue-700">{(balance ?? 0).toLocaleString()}원</p>
+            <p className="text-[11px] text-blue-500 font-bold">
+              게시글 <span className="text-blue-700">{canCreate}개</span> 업무 생성 가능 (1개당 {ALBA_COST_PER_POST.toLocaleString()}원)
+            </p>
+          </div>
+        </div>
+        {(bankInfo.bankName || bankInfo.accountNo) && (
+          <div className="bg-white border border-blue-100 rounded-xl px-3 py-2 text-xs">
+            <p className="font-black text-gray-500 mb-0.5">충전 계좌 (계좌이체)</p>
+            <p className="font-black text-gray-800">{bankInfo.bankName} {bankInfo.accountNo}</p>
+            {bankInfo.holder && <p className="text-gray-500 font-bold">예금주: {bankInfo.holder}</p>}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowHistory(v => !v)}
+          className="shrink-0 px-3 py-1.5 rounded-xl bg-white border border-blue-200 text-blue-600 font-black text-xs hover:bg-blue-50 transition-colors"
+        >
+          {showHistory ? '내역 숨기기' : '충전/사용 내역'}
+        </button>
+      </div>
+
+      {/* 거래 내역 */}
+      {showHistory && (
+        <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+          {txs.length === 0 ? (
+            <p className="text-center text-xs text-gray-400 font-bold py-4">거래 내역이 없습니다.</p>
+          ) : (
+            <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto">
+              {txs.map(tx => (
+                <div key={tx.id} className="flex items-center justify-between px-4 py-2.5">
+                  <div>
+                    <p className="text-xs font-black text-gray-700">{tx.description || (tx.type === 'charge' ? '충전' : '사용')}</p>
+                    <p className="text-[10px] text-gray-400 font-bold">{tx.createdAt.slice(0, 16).replace('T', ' ')}</p>
+                  </div>
+                  <span className={`text-sm font-black ${tx.type === 'charge' ? 'text-blue-600' : 'text-red-500'}`}>
+                    {tx.type === 'charge' ? '+' : '-'}{tx.amount.toLocaleString()}원
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /* ══════════════════════════════════════════════
    원고시트 — SNS 수집 시트 (iframe 임베드)
@@ -1997,6 +2088,7 @@ const FranchisePanel: React.FC<Props> = ({ user, members, onUpdateUser }) => {
         {activeTab === 'revenue'                   && <RevenueManagement user={user} />}
         {/* iframe은 항상 마운트 유지 — DOM에서 제거되면 beforeunload가 발화하지 않아 편집 내용이 손실됨 */}
         <div style={{ display: activeTab === 'manuscripts' ? 'block' : 'none' }}>
+          {!isAdmin && <AlbaBalanceCard userId={user.id} />}
           <ManuscriptSheet userId={user.id} />
         </div>
         {activeTab === 'collector'                 && <CollectorTab />}

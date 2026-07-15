@@ -2284,6 +2284,15 @@ async function submitParttimeTasks() {
       alert(`✅ 업무 1개 (게시글 ${data.postCount || _pendingTasks.length}건) 생성됐습니다!\n누구나알바 어드민에서 확인하세요.`);
       _pendingChecks.forEach(cb => { cb.checked = false; });
       updateCheckCount();
+    } else if (data.insufficientBalance) {
+      alert(
+        `💸 알바비가 부족합니다.\n\n` +
+        `필요 금액: ${(data.required ?? 0).toLocaleString()}원 ` +
+        `(게시글 ${data.postCount ?? _pendingTasks.length}건 × ${(data.costPerPost ?? 500).toLocaleString()}원)\n` +
+        `현재 잔액: ${(data.available ?? 0).toLocaleString()}원\n\n` +
+        `관리자에게 알바비 충전을 요청하세요.\n` +
+        `(원고시트 위의 잔액 카드에서 계좌 정보를 확인하세요)`
+      );
     } else {
       // data.error: 함수 오류 / data.errorMessage: Netlify 크래시 형식
       const errMsg = data.error || data.errorMessage || JSON.stringify(data);

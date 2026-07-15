@@ -21,6 +21,8 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
+const ALBA_COST_PER_POST = 500; // 게시글 1개당 알바비 (원)
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };
   if (event.httpMethod !== 'POST') {
@@ -31,7 +33,6 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body); }
   catch (e) { return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: '잘못된 요청입니다: ' + e.message }) }; }
 
-  // 전체 핸들러를 try/catch로 감싸 예외 시 정확한 에러 반환
   try {
     const { userId, tasks } = body;
     if (!userId || !Array.isArray(tasks) || tasks.length === 0) {
@@ -45,6 +46,41 @@ exports.handler = async (event) => {
     const validTasks = tasks.filter(t => (t.title || '').trim());
     if (validTasks.length === 0) {
       return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: '생성할 업무가 없습니다. (title 필드 확인 필요)' }) };
+    }
+
+    // 관리자/매니저 여부 확인 — admin/manager는 잔액 체크 없이 생성 가능
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'manager';
+
+    if (!isAdmin) {
+      // 알바비 잔액 확인
+      const { data: txs } = await supabase
+        .from('alba_balance_transactions')
+        .select('type, amount')
+        .eq('user_id', userId);
+      const balance = (txs ?? []).reduce(
+        (sum, tx) => sum + (tx.type === 'charge' ? tx.amount : -tx.amount),
+        0,
+      );
+      const required = validTasks.length * ALBA_COST_PER_POST;
+      if (balance < required) {
+        return {
+          statusCode: 402,
+          headers: CORS,
+          body: JSON.stringify({
+            error: `알바비가 부족합니다. 필요: ${required.toLocaleString()}원, 잔액: ${balance.toLocaleString()}원`,
+            insufficientBalance: true,
+            required,
+            available: balance,
+            postCount: validTasks.length,
+            costPerPost: ALBA_COST_PER_POST,
+          }),
+        };
+      }
     }
 
     // 모달 공통값 (첫 번째 task 기준 — 모달에서 동일하게 입력됨)
@@ -91,7 +127,20 @@ exports.handler = async (event) => {
       return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: '업무 생성 실패: ' + error.message }) };
     }
 
-    console.log(`[create-parttime-tasks] 업무 1개 (게시글 ${validTasks.length}건) 생성 by ${userId}`);
+    // 알바비 차감 (관리자 제외)
+    if (!isAdmin) {
+      const required = validTasks.length * ALBA_COST_PER_POST;
+      await supabase.from('alba_balance_transactions').insert({
+        id: `ab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        user_id: userId,
+        type: 'usage',
+        amount: required,
+        description: `업무 생성 — 게시글 ${validTasks.length}건 × ${ALBA_COST_PER_POST.toLocaleString()}원`,
+        task_id: id,
+      });
+    }
+
+    console.log(`[create-parttime-tasks] 업무 1개 (게시글 ${validTasks.length}건) 생성 by ${userId}${isAdmin ? ' [admin]' : ''}`);
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true, count: 1, postCount: validTasks.length }) };
 
   } catch (e) {

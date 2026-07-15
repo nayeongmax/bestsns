@@ -15,6 +15,7 @@ import PartTimeAdmin from '../components/admin/PartTimeAdmin.tsx';
 import AiConsultAdmin from '../components/admin/AiConsultAdmin.tsx';
 import PopupAdmin from '../components/admin/PopupAdmin.tsx';
 import { FranchisePlan, FranchiseProduct, DEFAULT_PLANS, fetchFranchisePlans, fetchFranchiseProductsAdmin, upsertFranchisePlans, upsertFranchiseProducts, deleteFranchiseProduct, deleteFranchisePlan } from '../franchiseDb';
+import { fetchAlbaBalance, fetchAlbaTransactions, chargeAlbaBalance, fetchAppSettings, saveAppSettings, AlbaBalanceTx } from '../albaBalanceDb';
 
 interface Props {
   user: UserProfile | null;
@@ -189,7 +190,7 @@ const AdminPanel: React.FC<Props> = ({
         {activeTab === 'parttime' && <PartTimeAdmin addNotif={addNotif} members={members} />}
         {activeTab === 'aiconsult' && <AiConsultAdmin />}
         {activeTab === 'popup' && <PopupAdmin />}
-        {activeTab === 'franchise' && <FranchiseAdmin />}
+        {activeTab === 'franchise' && <FranchiseAdmin members={members} />}
       </main>
     </div>
   );
@@ -198,12 +199,12 @@ const AdminPanel: React.FC<Props> = ({
 /* ══════════════════════════════════════════════
    가맹점설정 관리 (어드민 전용)
 ══════════════════════════════════════════════ */
-type FranchiseAdminSub = 'plans' | 'products';
+type FranchiseAdminSub = 'plans' | 'products' | 'bank' | 'alba';
 
 const discountPct = (price: number, originalPrice: number) =>
   originalPrice > 0 ? Math.round((1 - price / originalPrice) * 100) : 0;
 
-const FranchiseAdmin: React.FC = () => {
+const FranchiseAdmin: React.FC<{ members: UserProfile[] }> = ({ members }) => {
   const [sub, setSub] = useState<FranchiseAdminSub>('plans');
 
   // ── 구독플랜 ──
@@ -220,10 +221,76 @@ const FranchiseAdmin: React.FC = () => {
   const [prodSaving, setProdSaving] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
 
+  // ── 계좌 설정 ──
+  const [bankForm, setBankForm]   = useState({ bankName: '', accountNo: '', holder: '' });
+  const [bankSaving, setBankSaving] = useState(false);
+  const [bankSaved, setBankSaved]  = useState(false);
+
+  // ── 알바비 잔액 관리 ──
+  const franchiseMembers = members.filter(m => m.isFranchise && m.role !== 'admin');
+  const [albaBalances, setAlbaBalances]     = useState<Record<string, number>>({});
+  const [albaHistories, setAlbaHistories]   = useState<Record<string, AlbaBalanceTx[]>>({});
+  const [albaChargeAmt, setAlbaChargeAmt]   = useState<Record<string, string>>({});
+  const [albaChargeDesc, setAlbaChargeDesc] = useState<Record<string, string>>({});
+  const [albaCharging, setAlbaCharging]     = useState<Record<string, boolean>>({});
+  const [albaShowHistory, setAlbaShowHistory] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     fetchFranchisePlans().then(setPlans).catch(() => setPlans(DEFAULT_PLANS));
     fetchFranchiseProductsAdmin().then(setProducts).catch(() => setProducts([]));
+    fetchAppSettings(['alba_bank_name', 'alba_bank_account', 'alba_bank_holder']).then(s => {
+      setBankForm({ bankName: s['alba_bank_name'] ?? '', accountNo: s['alba_bank_account'] ?? '', holder: s['alba_bank_holder'] ?? '' });
+    }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (sub !== 'alba') return;
+    franchiseMembers.forEach(m => {
+      fetchAlbaBalance(m.id).then(bal => setAlbaBalances(prev => ({ ...prev, [m.id]: bal }))).catch(() => {});
+    });
+  }, [sub, members]);
+
+  const saveBankSettings = async () => {
+    setBankSaving(true);
+    try {
+      await saveAppSettings({
+        alba_bank_name:    bankForm.bankName.trim(),
+        alba_bank_account: bankForm.accountNo.trim(),
+        alba_bank_holder:  bankForm.holder.trim(),
+      });
+      setBankSaved(true);
+      setTimeout(() => setBankSaved(false), 2000);
+    } catch (e: any) {
+      alert('저장 실패: ' + e.message);
+    } finally {
+      setBankSaving(false);
+    }
+  };
+
+  const chargeUser = async (userId: string) => {
+    const amount = parseInt(albaChargeAmt[userId] || '0', 10);
+    if (!amount || amount <= 0) { alert('충전 금액을 입력하세요.'); return; }
+    setAlbaCharging(prev => ({ ...prev, [userId]: true }));
+    try {
+      await chargeAlbaBalance(userId, amount, albaChargeDesc[userId]?.trim() || `관리자 충전`);
+      setAlbaBalances(prev => ({ ...prev, [userId]: (prev[userId] ?? 0) + amount }));
+      setAlbaChargeAmt(prev => ({ ...prev, [userId]: '' }));
+      setAlbaChargeDesc(prev => ({ ...prev, [userId]: '' }));
+    } catch (e: any) {
+      alert('충전 실패: ' + e.message);
+    } finally {
+      setAlbaCharging(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  const loadHistory = async (userId: string) => {
+    const showing = !albaShowHistory[userId];
+    setAlbaShowHistory(prev => ({ ...prev, [userId]: showing }));
+    if (showing && !albaHistories[userId]) {
+      const txs = await fetchAlbaTransactions(userId).catch(() => [] as AlbaBalanceTx[]);
+      setAlbaHistories(prev => ({ ...prev, [userId]: txs }));
+    }
+  };
 
   // ── 플랜 저장 ──
   const openNewPlan = () => {
@@ -329,8 +396,8 @@ const FranchiseAdmin: React.FC = () => {
     <div className="max-w-4xl space-y-4">
       <h2 className="text-lg font-black text-gray-900">가맹점 설정</h2>
       {/* 서브탭 */}
-      <div className="flex gap-2 border-b border-gray-200 pb-0">
-        {([['plans','구독플랜 관리'],['products','마케팅프로그램 관리']] as const).map(([id, label]) => (
+      <div className="flex flex-wrap gap-0 border-b border-gray-200">
+        {([['plans','구독플랜 관리'],['products','마케팅프로그램 관리'],['bank','계좌 설정'],['alba','알바비 충전관리']] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => setSub(id)}
             className={`px-4 py-2 font-black text-sm border-b-2 transition-all ${sub === id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
             {label}
@@ -509,6 +576,124 @@ const FranchiseAdmin: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ── 계좌 설정 ── */}
+      {sub === 'bank' && (
+        <div className="max-w-md space-y-4">
+          <p className="text-xs text-gray-400 font-bold">가맹점 알바비 충전 시 안내할 입금 계좌 정보를 설정합니다. 원고시트 페이지 상단에 표시됩니다.</p>
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+            <div>
+              <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">은행명</label>
+              <input className={inputCls} placeholder="예: 신한은행" value={bankForm.bankName} onChange={e => setBankForm(f => ({ ...f, bankName: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">계좌번호</label>
+              <input className={inputCls} placeholder="예: 110-123-456789" value={bankForm.accountNo} onChange={e => setBankForm(f => ({ ...f, accountNo: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">예금주</label>
+              <input className={inputCls} placeholder="예: 홍길동" value={bankForm.holder} onChange={e => setBankForm(f => ({ ...f, holder: e.target.value }))} />
+            </div>
+            <button type="button" onClick={saveBankSettings} disabled={bankSaving}
+              className="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+              {bankSaved ? '✓ 저장됨' : bankSaving ? '저장 중...' : '저장하기'}
+            </button>
+          </div>
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 font-bold">
+            💡 게시글 1개당 알바비: <span className="font-black">500원</span> (고정)
+          </div>
+        </div>
+      )}
+
+      {/* ── 알바비 충전관리 ── */}
+      {sub === 'alba' && (
+        <div className="space-y-4">
+          <p className="text-xs text-gray-400 font-bold">
+            가맹점 회원의 알바비 잔액을 조회하고 충전합니다. 회원이 계좌이체로 입금하면 관리자가 직접 충전해주세요.
+          </p>
+          {franchiseMembers.length === 0 ? (
+            <p className="text-center py-10 text-gray-300 font-bold text-sm">가맹점 회원이 없습니다.</p>
+          ) : (
+            <div className="space-y-3">
+              {franchiseMembers.map(m => {
+                const bal = albaBalances[m.id] ?? null;
+                const txs = albaHistories[m.id];
+                const showHist = albaShowHistory[m.id];
+                return (
+                  <div key={m.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                    <div className="flex flex-wrap items-center gap-3 p-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-gray-800">{m.nickname}</p>
+                        <p className="text-[11px] text-gray-400 font-bold">{m.email ?? m.id}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-400 font-bold">잔액</p>
+                        <p className={`text-base font-black ${bal !== null && bal > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                          {bal !== null ? `${bal.toLocaleString()}원` : '—'}
+                        </p>
+                      </div>
+                      {/* 충전 입력 */}
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <input
+                          type="number"
+                          min={500}
+                          step={500}
+                          placeholder="충전 금액 (원)"
+                          value={albaChargeAmt[m.id] ?? ''}
+                          onChange={e => setAlbaChargeAmt(prev => ({ ...prev, [m.id]: e.target.value }))}
+                          className="w-36 px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-indigo-400"
+                        />
+                        <input
+                          type="text"
+                          placeholder="메모 (선택)"
+                          value={albaChargeDesc[m.id] ?? ''}
+                          onChange={e => setAlbaChargeDesc(prev => ({ ...prev, [m.id]: e.target.value }))}
+                          className="w-28 px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold focus:outline-none focus:border-indigo-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => chargeUser(m.id)}
+                          disabled={!!albaCharging[m.id]}
+                          className="px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                        >
+                          {albaCharging[m.id] ? '충전 중...' : '충전'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => loadHistory(m.id)}
+                          className="px-3 py-2 rounded-xl bg-gray-100 text-gray-600 font-black text-xs hover:bg-gray-200 transition-colors whitespace-nowrap"
+                        >
+                          {showHist ? '내역 숨기기' : '내역'}
+                        </button>
+                      </div>
+                    </div>
+                    {/* 거래 내역 */}
+                    {showHist && (
+                      <div className="border-t border-gray-100 bg-gray-50 max-h-48 overflow-y-auto">
+                        {!txs ? (
+                          <p className="text-center py-3 text-xs text-gray-400 font-bold">불러오는 중...</p>
+                        ) : txs.length === 0 ? (
+                          <p className="text-center py-3 text-xs text-gray-400 font-bold">거래 내역 없음</p>
+                        ) : txs.map(tx => (
+                          <div key={tx.id} className="flex items-center justify-between px-4 py-2 border-b border-gray-100 last:border-0">
+                            <div>
+                              <p className="text-xs font-black text-gray-700">{tx.description || (tx.type === 'charge' ? '충전' : '사용')}</p>
+                              <p className="text-[10px] text-gray-400 font-bold">{tx.createdAt.slice(0, 16).replace('T', ' ')}</p>
+                            </div>
+                            <span className={`text-sm font-black ${tx.type === 'charge' ? 'text-blue-600' : 'text-red-500'}`}>
+                              {tx.type === 'charge' ? '+' : '-'}{tx.amount.toLocaleString()}원
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
