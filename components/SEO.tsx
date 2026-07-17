@@ -5,6 +5,7 @@ const DEFAULT_DESCRIPTION = 'BESTSNS는 SMM 마케팅 주문, 유튜브·SNS 채
 const DEFAULT_CANONICAL = 'https://bestsns.com';
 const DEFAULT_IMAGE = 'https://bestsns.com/og-image.jpg';
 const DEFAULT_TYPE = 'website';
+const SITE_BASE = 'https://bestsns.com';
 
 interface SEOProps {
   title?: string;
@@ -15,6 +16,24 @@ interface SEOProps {
   noindex?: boolean;
 }
 
+function resolveTitle(value?: string): string {
+  const trimmed = value?.trim();
+  return trimmed || DEFAULT_TITLE;
+}
+
+function resolveDescription(value?: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return DEFAULT_DESCRIPTION;
+  return trimmed.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ');
+}
+
+function resolveImage(value?: string): string {
+  if (!value) return DEFAULT_IMAGE;
+  if (value.startsWith('https://') || value.startsWith('http://')) return value;
+  if (value.startsWith('/')) return `${SITE_BASE}${value}`;
+  return DEFAULT_IMAGE;
+}
+
 export default function SEO({
   title,
   description,
@@ -23,11 +42,11 @@ export default function SEO({
   type,
   noindex = false,
 }: SEOProps) {
-  const resolvedTitle = title || DEFAULT_TITLE;
-  const resolvedDescription = description || DEFAULT_DESCRIPTION;
-  const resolvedCanonical = canonical || DEFAULT_CANONICAL;
-  const resolvedImage = image || DEFAULT_IMAGE;
-  const resolvedType = type || DEFAULT_TYPE;
+  const resolvedTitle = resolveTitle(title);
+  const resolvedDescription = resolveDescription(description);
+  const resolvedCanonical = canonical?.trim() || DEFAULT_CANONICAL;
+  const resolvedImage = resolveImage(image);
+  const resolvedType = type?.trim() || DEFAULT_TYPE;
 
   return (
     <Helmet>
@@ -37,6 +56,7 @@ export default function SEO({
 
       {noindex && <meta name="robots" content="noindex,nofollow" />}
 
+      <meta property="og:site_name" content="BESTSNS" />
       <meta property="og:type" content={resolvedType} />
       <meta property="og:url" content={resolvedCanonical} />
       <meta property="og:title" content={resolvedTitle} />
