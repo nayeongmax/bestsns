@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import SEO from '../components/SEO';
 
 const MOCK_REVIEWS: import('@/types').SMMReview[] = [
   { id: 'm01', userId: 'mock', userNickname: '(주)미도**', rating: 5, platform: '인스타그램', productName: '팔로워 1,000명', content: '주문 후 2시간도 안 됐는데 완료됐어요! 팔로워도 안 빠지고 너무 만족스럽습니다. 다음에도 이용할게요.', createdAt: '2025-10-12' },
@@ -460,7 +461,14 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto space-y-4 sm:space-y-6 md:space-y-10 pb-24 sm:pb-24 md:pb-32 px-3 sm:px-4 md:px-8">
+    <>
+      <SEO
+        title="BESTSNS | SMM 마케팅·유튜브 채널 거래·마케팅서비스 판매·온라인 부업 플랫폼"
+        description="BESTSNS는 SMM 마케팅 주문, 유튜브·SNS 채널 거래, 마케팅 상품 판매, 온라인 부업 수익화, AI 마케팅 컨설팅을 한곳에서 이용할 수 있는 종합 마케팅 플랫폼입니다."
+        canonical="https://bestsns.com"
+        image="https://bestsns.com/og-image.jpg"
+      />
+      <div className="max-w-[1440px] mx-auto space-y-4 sm:space-y-6 md:space-y-10 pb-24 sm:pb-24 md:pb-32 px-3 sm:px-4 md:px-8">
       <div className="relative overflow-hidden bg-[#050505] rounded-xl sm:rounded-2xl md:rounded-[32px] shadow-2xl min-h-[140px] sm:min-h-[200px] md:min-h-[220px] flex flex-col justify-center items-center border-2 md:border-4 border-white/10 group">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="saber-streak bg-gradient-to-r from-transparent via-[#00f2ff] to-transparent top-[15%] animate-saber-run shadow-[0_0_30px_#00f2ff,0_0_10px_#fff]"></div>
@@ -971,6 +979,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         </div>
       </div>
     </div>
+    </>
   );
 };
 
