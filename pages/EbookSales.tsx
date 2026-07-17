@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+import SEO from '../components/SEO';
 import { Link, useNavigate } from 'react-router-dom';
 import { EbookProduct, UserProfile, WishlistItem, StoreType, GradeConfig, getUserGrade } from '@/types';
 import { EBOOK_CATEGORIES, MARKETING_CATEGORIES } from '@/constants';
@@ -73,7 +74,13 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
+    <>
+      <SEO
+        title="N잡스토어 | 전자책·PDF자료·템플릿·온라인강의·컨설팅 | BESTSNS"
+        description="BESTSNS N잡스토어에서 전자책, PDF 자료, 실무 자료, 템플릿, 노션 자료, 온라인강의, 컨설팅, 마케팅서비스 등 온라인 부업과 수익화에 필요한 디지털상품을 확인할 수 있습니다."
+        image="https://bestsns.com/og-image.jpg"
+      />
+      <div className="max-w-6xl mx-auto pb-20">
       {/* 초거대 대분류 탭 섹션 - 6개 탭 한 줄 배치 */}
       <div className="mb-4 sm:mb-8 md:mb-12">
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4">
@@ -313,6 +320,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         ))}
       </div>
     </div>
+    </>
   );
 };
 
