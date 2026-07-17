@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import App from './App.tsx';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 
@@ -42,12 +43,14 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <HashRouter>
-        <ConfirmProvider>
-          <App />
-        </ConfirmProvider>
-      </HashRouter>
-    </ErrorBoundary>
+    <HelmetProvider>
+      <ErrorBoundary>
+        <HashRouter>
+          <ConfirmProvider>
+            <App />
+          </ConfirmProvider>
+        </HashRouter>
+      </ErrorBoundary>
+    </HelmetProvider>
   </React.StrictMode>
 );
