@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
+import { SITEMAP_ROUTES } from './sitemapRoutes'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname)
@@ -35,10 +37,42 @@ function resolveProfileUtilsPlugin() {
   }
 }
 
+// 빌드 시 dist/sitemap.xml 자동 생성 — sitemapRoutes.ts를 수정하면 자동 반영
+function sitemapPlugin(baseUrl: string) {
+  return {
+    name: 'vite-plugin-sitemap',
+    closeBundle() {
+      const today = new Date().toISOString().slice(0, 10);
+      const urls = SITEMAP_ROUTES.map(({ path: routePath, priority = 0.8, changefreq = 'weekly' }) => {
+        const loc = routePath === '/' ? baseUrl : `${baseUrl}${routePath}`;
+        return [
+          '  <url>',
+          `    <loc>${loc}</loc>`,
+          `    <lastmod>${today}</lastmod>`,
+          `    <changefreq>${changefreq}</changefreq>`,
+          `    <priority>${priority.toFixed(1)}</priority>`,
+          '  </url>',
+        ].join('\n');
+      }).join('\n');
+
+      const xml = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        urls,
+        '</urlset>',
+      ].join('\n');
+
+      const outPath = path.resolve(__dirname, 'dist/sitemap.xml');
+      fs.writeFileSync(outPath, xml, 'utf-8');
+      console.log(`[sitemap] dist/sitemap.xml 생성 완료 (${SITEMAP_ROUTES.length}개 URL)`);
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/', // 이 부분을 추가해서 경로를 명확하게 잡아줍니다.
-  plugins: [resolveTypesPlugin(), resolveProfileUtilsPlugin(), react()],
+  plugins: [resolveTypesPlugin(), resolveProfileUtilsPlugin(), react(), sitemapPlugin('https://bestsns.com')],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
