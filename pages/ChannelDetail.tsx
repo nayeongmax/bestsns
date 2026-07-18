@@ -156,10 +156,12 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
         brand="BESTSNS"
         category={channel.platform}
         url={currentUrl}
+        productId={`channel-${channel.id}`}
       />
       <WebPageSchema
         name={`${channel.title} | ${channel.platform} 채널 판매 | BESTSNS`}
         url={currentUrl}
+        mainEntityId={`https://bestsns.com/#product-channel-${channel.id}`}
       />
       <BreadcrumbSchema
         items={[
