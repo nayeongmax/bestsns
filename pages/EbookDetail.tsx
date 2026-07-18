@@ -2,6 +2,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import SEO from '../components/SEO';
 import ProductSchema from '../components/SEO/ProductSchema';
+import WebPageSchema from '../components/SEO/WebPageSchema';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade, NotificationType } from '@/types';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -344,6 +345,10 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
         seller={displayAuthor}
         brand="BESTSNS"
         category={ebook.category || ebook.subCategory}
+        url={currentUrl}
+      />
+      <WebPageSchema
+        name={`${ebook.title} | N잡스토어 디지털상품 | BESTSNS`}
         url={currentUrl}
       />
       <div className="max-w-[1400px] mx-auto pb-36 lg:pb-24 px-4 lg:px-8 animate-in fade-in duration-500">

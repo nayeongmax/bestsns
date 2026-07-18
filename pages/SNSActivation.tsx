@@ -4,6 +4,7 @@ import SEO from '../components/SEO';
 import OrganizationSchema from '../components/SEO/OrganizationSchema';
 import WebSiteSchema from '../components/SEO/WebSiteSchema';
 import ServiceSchema from '../components/SEO/ServiceSchema';
+import WebPageSchema from '../components/SEO/WebPageSchema';
 
 const MOCK_REVIEWS: import('@/types').SMMReview[] = [
   { id: 'm01', userId: 'mock', userNickname: '(주)미도**', rating: 5, platform: '인스타그램', productName: '팔로워 1,000명', content: '주문 후 2시간도 안 됐는데 완료됐어요! 팔로워도 안 빠지고 너무 만족스럽습니다. 다음에도 이용할게요.', createdAt: '2025-10-12' },
@@ -504,6 +505,11 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         serviceType="SMM 마케팅 및 SNS 활성화 서비스"
         areaServed="대한민국"
         serviceId="smm"
+      />
+      <WebPageSchema
+        name="SMM 마케팅 서비스 | BESTSNS"
+        url="https://bestsns.com"
+        mainEntityId="https://bestsns.com#service-smm"
       />
       <div className="max-w-[1440px] mx-auto space-y-4 sm:space-y-6 md:space-y-10 pb-24 sm:pb-24 md:pb-32 px-3 sm:px-4 md:px-8">
       <div className="relative overflow-hidden bg-[#050505] rounded-xl sm:rounded-2xl md:rounded-[32px] shadow-2xl min-h-[140px] sm:min-h-[200px] md:min-h-[220px] flex flex-col justify-center items-center border-2 md:border-4 border-white/10 group">

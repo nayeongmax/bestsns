@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '@/components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
+import WebPageSchema from '@/components/SEO/WebPageSchema';
 import { getMarketingConsultation } from '../services/geminiService';
 import { supabase } from '../supabase';
 import type { UserProfile, Notice } from '@/types';
@@ -140,6 +141,11 @@ const AIConsulting: React.FC<Props> = ({ user, notices = [] }) => {
         serviceType="AI 마케팅 컨설팅"
         areaServed="대한민국"
         serviceId="ai"
+      />
+      <WebPageSchema
+        name="AI 마케팅 컨설팅 | BESTSNS"
+        url="https://bestsns.com"
+        mainEntityId="https://bestsns.com#service-ai"
       />
     <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-20 sm:pb-24 space-y-6">
       {/* 공지사항 배너 */}
