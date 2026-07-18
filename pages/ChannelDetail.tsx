@@ -8,6 +8,7 @@ import { upsertChannelOrder } from '../channelDb';
 import SEO from '@/components/SEO';
 import ProductSchema from '@/components/SEO/ProductSchema';
 import BreadcrumbSchema from '@/components/SEO/BreadcrumbSchema';
+import WebPageSchema from '@/components/SEO/WebPageSchema';
 
 interface Props {
   channels: ChannelProduct[];
@@ -154,6 +155,10 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
         seller={channel.sellerNickname}
         brand="BESTSNS"
         category={channel.platform}
+        url={currentUrl}
+      />
+      <WebPageSchema
+        name={`${channel.title} | ${channel.platform} 채널 판매 | BESTSNS`}
         url={currentUrl}
       />
       <BreadcrumbSchema

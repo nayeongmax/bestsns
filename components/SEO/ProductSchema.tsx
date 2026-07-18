@@ -13,6 +13,7 @@ interface ProductSchemaProps {
   brand?: string;
   category?: string;
   url?: string;
+  productId?: string;
 }
 
 function resolveImage(value?: string): string | undefined {
@@ -20,6 +21,11 @@ function resolveImage(value?: string): string | undefined {
   if (value.startsWith('https://') || value.startsWith('http://')) return value;
   if (value.startsWith('/')) return `${SITE_BASE}${value}`;
   return undefined;
+}
+
+function resolveString(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
 }
 
 function omitEmpty(obj: Record<string, unknown>): Record<string, unknown> {
@@ -39,8 +45,11 @@ export default function ProductSchema({
   brand,
   category,
   url,
+  productId,
 }: ProductSchemaProps) {
   const resolvedImage = resolveImage(image);
+  const resolvedProductId = resolveString(productId);
+  const resolvedId = resolvedProductId ? `${SITE_BASE}/#product-${resolvedProductId}` : undefined;
 
   const offers = omitEmpty({
     '@type': 'Offer',
@@ -54,6 +63,7 @@ export default function ProductSchema({
   const schema = omitEmpty({
     '@context': 'https://schema.org',
     '@type': 'Product',
+    '@id': resolvedId,
     name,
     description: description || undefined,
     image: resolvedImage,

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ChannelProduct, WishlistItem, ChannelReview } from '@/types';
 import SEO from '@/components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
+import WebPageSchema from '@/components/SEO/WebPageSchema';
 
 interface Props {
   channels: ChannelProduct[];
@@ -132,6 +133,11 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, c
         serviceType="SNS 채널 거래 서비스"
         areaServed="대한민국"
         serviceId="channel"
+      />
+      <WebPageSchema
+        name="유튜브·SNS 채널 판매 | BESTSNS"
+        url="https://bestsns.com"
+        mainEntityId="https://bestsns.com#service-channel"
       />
     <div className="max-w-6xl mx-auto pb-20 sm:pb-24 px-3 sm:px-4 md:px-6">
       {/* 모바일/태블릿 전용: 헤더 + 간단 필터 + 목록형 */}

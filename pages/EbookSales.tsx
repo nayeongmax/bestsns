@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import SEO from '../components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
+import WebPageSchema from '@/components/SEO/WebPageSchema';
 import { Link, useNavigate } from 'react-router-dom';
 import { EbookProduct, UserProfile, WishlistItem, StoreType, GradeConfig, getUserGrade } from '@/types';
 import { EBOOK_CATEGORIES, MARKETING_CATEGORIES } from '@/constants';
@@ -89,6 +90,11 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         serviceType="디지털상품 마켓플레이스"
         areaServed="대한민국"
         serviceId="njobs"
+      />
+      <WebPageSchema
+        name="N잡스토어 | 전자책 · 템플릿 · 온라인강의 · 컨설팅 | BESTSNS"
+        url="https://bestsns.com"
+        mainEntityId="https://bestsns.com#service-njobs"
       />
       <div className="max-w-6xl mx-auto pb-20">
       {/* 초거대 대분류 탭 섹션 - 6개 탭 한 줄 배치 */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import SEO from '@/components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
+import WebPageSchema from '@/components/SEO/WebPageSchema';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock, Notice } from '@/types';
 import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '@/constants';
@@ -190,6 +191,11 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
         serviceType="온라인 부업 플랫폼"
         areaServed="대한민국"
         serviceId="parttime"
+      />
+      <WebPageSchema
+        name="누구나알바 | 온라인 부업 · 재택알바 플랫폼 | BESTSNS"
+        url="https://bestsns.com"
+        mainEntityId="https://bestsns.com#service-parttime"
       />
     <div className="max-w-6xl mx-auto py-2 md:py-12 px-3 md:px-6 animate-in fade-in duration-700 space-y-3 md:space-y-6">
       {/* 공지사항 배너 */}
