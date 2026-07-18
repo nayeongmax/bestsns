@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import SEO from '../components/SEO';
 import OrganizationSchema from '../components/SEO/OrganizationSchema';
 import WebSiteSchema from '../components/SEO/WebSiteSchema';
+import ServiceSchema from '../components/SEO/ServiceSchema';
 
 const MOCK_REVIEWS: import('@/types').SMMReview[] = [
   { id: 'm01', userId: 'mock', userNickname: '(주)미도**', rating: 5, platform: '인스타그램', productName: '팔로워 1,000명', content: '주문 후 2시간도 안 됐는데 완료됐어요! 팔로워도 안 빠지고 너무 만족스럽습니다. 다음에도 이용할게요.', createdAt: '2025-10-12' },
@@ -493,6 +494,16 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
         url="https://bestsns.com"
         description="BESTSNS는 SMM 마케팅 주문, SNS 채널 거래, N잡스토어, 온라인 부업 및 AI 마케팅 컨설팅을 제공하는 종합 마케팅 플랫폼입니다."
         inLanguage="ko-KR"
+      />
+      <ServiceSchema
+        name="SMM 마케팅 서비스"
+        description="BESTSNS는 인스타그램, 유튜브, 페이스북, 틱톡, 네이버 등 다양한 플랫폼의 팔로워, 좋아요, 조회수, 댓글, 공유와 저장 관련 SMM 마케팅 서비스를 제공합니다."
+        url="https://bestsns.com"
+        image="https://bestsns.com/og-image.jpg"
+        providerName="더베스트(THEBEST)"
+        serviceType="SMM 마케팅 및 SNS 활성화 서비스"
+        areaServed="대한민국"
+        serviceId="smm"
       />
       <div className="max-w-[1440px] mx-auto space-y-4 sm:space-y-6 md:space-y-10 pb-24 sm:pb-24 md:pb-32 px-3 sm:px-4 md:px-8">
       <div className="relative overflow-hidden bg-[#050505] rounded-xl sm:rounded-2xl md:rounded-[32px] shadow-2xl min-h-[140px] sm:min-h-[200px] md:min-h-[220px] flex flex-col justify-center items-center border-2 md:border-4 border-white/10 group">
