@@ -5,6 +5,8 @@ import { ChannelProduct, WishlistItem, Review, UserProfile, ChannelOrder, Notifi
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { usePortonePayment } from '@/hooks/usePortonePayment';
 import { upsertChannelOrder } from '../channelDb';
+import SEO from '@/components/SEO';
+import ProductSchema from '@/components/SEO/ProductSchema';
 
 interface Props {
   channels: ChannelProduct[];
@@ -47,6 +49,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
     return <div className="text-center py-20 font-black">상품을 찾을 수 없습니다.</div>;
   }
 
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : undefined;
   const isWishlisted = wishlist.some(w => w.data.id === channel.id);
   const income = channel.income || 0;
   const expense = channel.expense || 0;
@@ -134,6 +137,24 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
   };
 
   return (
+    <>
+      <SEO
+        title={`${channel.title} | ${channel.platform} 채널 판매 | BESTSNS`}
+        description={`${channel.description ?? ''}\n\n${channel.platform} 채널\n구독자 ${channel.subscribers.toLocaleString()}명\n판매가 ₩${channel.price.toLocaleString()}\nBESTSNS에서 안전하게 거래할 수 있습니다.`}
+        image={channel.thumbnail || 'https://bestsns.com/og-image.jpg'}
+      />
+      <ProductSchema
+        name={channel.title}
+        description={channel.description}
+        image={channel.thumbnail}
+        price={channel.price}
+        currency="KRW"
+        availability={channel.isSoldOut ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock'}
+        seller={channel.sellerNickname}
+        brand="BESTSNS"
+        category={channel.platform}
+        url={currentUrl}
+      />
     <div className="max-w-[1400px] mx-auto pb-36 sm:pb-40 lg:pb-24 px-3 sm:px-4 lg:px-8 animate-in fade-in duration-500">
       <button onClick={() => navigate(-1)} className="mb-4 sm:mb-6 flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 transition-colors group text-sm sm:text-base">
         <svg className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -344,6 +365,7 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
         </div>
       )}
     </div>
+    </>
   );
 };
 
