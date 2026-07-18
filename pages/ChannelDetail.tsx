@@ -7,6 +7,7 @@ import { usePortonePayment } from '@/hooks/usePortonePayment';
 import { upsertChannelOrder } from '../channelDb';
 import SEO from '@/components/SEO';
 import ProductSchema from '@/components/SEO/ProductSchema';
+import BreadcrumbSchema from '@/components/SEO/BreadcrumbSchema';
 
 interface Props {
   channels: ChannelProduct[];
@@ -154,6 +155,13 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
         brand="BESTSNS"
         category={channel.platform}
         url={currentUrl}
+      />
+      <BreadcrumbSchema
+        items={[
+          { name: '홈', url: 'https://bestsns.com' },
+          { name: '채널판매', url: 'https://bestsns.com/#/channels' },
+          { name: channel.title },
+        ]}
       />
     <div className="max-w-[1400px] mx-auto pb-36 sm:pb-40 lg:pb-24 px-3 sm:px-4 lg:px-8 animate-in fade-in duration-500">
       <button onClick={() => navigate(-1)} className="mb-4 sm:mb-6 flex items-center gap-2 text-gray-400 font-bold hover:text-gray-900 transition-colors group text-sm sm:text-base">
