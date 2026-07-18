@@ -12,6 +12,7 @@ interface ServiceSchemaProps {
   serviceType?: string;
   areaServed?: string;
   sameAs?: string[];
+  serviceId?: string;
 }
 
 function resolveString(value?: string): string | undefined {
@@ -43,9 +44,13 @@ export default function ServiceSchema({
   serviceType,
   areaServed,
   sameAs,
+  serviceId,
 }: ServiceSchemaProps) {
   const resolvedUrl = url.trim().replace(/\/+$/, '');
-  const resolvedId = `${resolvedUrl}#service`;
+  const resolvedServiceId = resolveString(serviceId);
+  const resolvedId = resolvedServiceId
+    ? `${resolvedUrl}#service-${resolvedServiceId}`
+    : `${resolvedUrl}#service`;
   const resolvedImage = resolveImage(image);
   const resolvedSameAs = resolveSameAs(sameAs);
 
