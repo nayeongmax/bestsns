@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 
 const SITE_BASE = 'https://bestsns.com';
+const DEFAULT_ID = `${SITE_BASE}/#organization`;
 
 interface OrganizationSchemaProps {
   name: string;
@@ -28,7 +29,9 @@ function resolveString(value?: string): string | undefined {
 
 function resolveSameAs(values?: string[]): string[] | undefined {
   if (!values) return undefined;
-  const filtered = values.map(v => v?.trim()).filter((v): v is string => !!v);
+  const filtered = [...new Set(
+    values.map(v => v?.trim()).filter((v): v is string => !!v)
+  )];
   return filtered.length > 0 ? filtered : undefined;
 }
 
@@ -43,19 +46,23 @@ export default function OrganizationSchema({
   alternateName,
   foundingDate,
 }: OrganizationSchemaProps) {
+  const resolvedUrl = resolveString(url);
   const resolvedLogo = resolveLogo(logo);
   const resolvedSameAs = resolveSameAs(sameAs);
+  const resolvedId = resolvedUrl ? `${resolvedUrl}#organization` : DEFAULT_ID;
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': resolvedId,
     name: name.trim(),
   };
 
-  const resolvedUrl = resolveString(url);
   if (resolvedUrl) schema.url = resolvedUrl;
-
-  if (resolvedLogo) schema.logo = resolvedLogo;
+  if (resolvedLogo) {
+    schema.logo = resolvedLogo;
+    schema.image = resolvedLogo;
+  }
 
   const resolvedDescription = resolveString(description);
   if (resolvedDescription) schema.description = resolvedDescription;
