@@ -1,7 +1,5 @@
 import { Helmet } from 'react-helmet-async';
 
-const SITE_BASE = 'https://bestsns.com';
-
 interface BreadcrumbItem {
   name: string;
   url?: string;
@@ -19,10 +17,7 @@ function resolveName(value: string): string | undefined {
 function resolveUrl(value?: string): string | undefined {
   if (!value) return undefined;
   const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  if (trimmed.startsWith('https://') || trimmed.startsWith('http://')) return trimmed;
-  if (trimmed.startsWith('/')) return `${SITE_BASE}${trimmed}`;
-  return undefined;
+  return trimmed || undefined;
 }
 
 export default function BreadcrumbSchema({ items }: BreadcrumbSchemaProps) {
