@@ -2,6 +2,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChannelProduct, WishlistItem, ChannelReview } from '@/types';
+import SEO from '@/components/SEO';
+import ServiceSchema from '@/components/SEO/ServiceSchema';
 
 interface Props {
   channels: ChannelProduct[];
@@ -115,6 +117,22 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, c
   const topics = ['전체', '게임', '비즈니스', '뷰티/패션', '음식/맛집', '정보/뉴스', '스포츠', '유머/엔터', '라이프스타일', '기타'];
 
   return (
+    <>
+      <SEO
+        title="유튜브·SNS 채널 판매 | BESTSNS"
+        description="BESTSNS에서 유튜브, 인스타그램, 틱톡 등 다양한 SNS 채널의 구독자 수, 수익화 여부, 가격 정보를 확인하고 안전하게 거래할 수 있습니다."
+        canonical="https://bestsns.com"
+        image="https://bestsns.com/og-image.jpg"
+      />
+      <ServiceSchema
+        name="유튜브·SNS 채널 판매 서비스"
+        description="BESTSNS는 유튜브, 인스타그램, 틱톡 등 다양한 SNS 채널의 안전한 거래 서비스를 제공합니다."
+        url="https://bestsns.com"
+        providerName="더베스트(THEBEST)"
+        serviceType="SNS 채널 거래 서비스"
+        areaServed="대한민국"
+        serviceId="channel"
+      />
     <div className="max-w-6xl mx-auto pb-20 sm:pb-24 px-3 sm:px-4 md:px-6">
       {/* 모바일/태블릿 전용: 헤더 + 간단 필터 + 목록형 */}
       <section className="lg:hidden bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 mb-4 sm:mb-6 overflow-hidden">
@@ -332,6 +350,7 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, c
       </div>
 
     </div>
+    </>
   );
 };
 
