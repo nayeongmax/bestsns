@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import SEO from '../components/SEO';
+import ServiceSchema from '@/components/SEO/ServiceSchema';
 import { Link, useNavigate } from 'react-router-dom';
 import { EbookProduct, UserProfile, WishlistItem, StoreType, GradeConfig, getUserGrade } from '@/types';
 import { EBOOK_CATEGORIES, MARKETING_CATEGORIES } from '@/constants';
@@ -76,9 +77,18 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
   return (
     <>
       <SEO
-        title="N잡스토어 | 전자책·PDF자료·템플릿·온라인강의·컨설팅 | BESTSNS"
-        description="BESTSNS N잡스토어에서 전자책, PDF 자료, 실무 자료, 템플릿, 노션 자료, 온라인강의, 컨설팅, 마케팅서비스 등 온라인 부업과 수익화에 필요한 디지털상품을 확인할 수 있습니다."
+        title="N잡스토어 | 전자책 · 템플릿 · 온라인강의 · 컨설팅 | BESTSNS"
+        description="BESTSNS N잡스토어에서는 전자책, PDF 자료, 템플릿, 온라인 강의, 컨설팅, 마케팅 서비스를 안전하게 구매하고 판매할 수 있습니다."
         image="https://bestsns.com/og-image.jpg"
+      />
+      <ServiceSchema
+        name="N잡 디지털상품 스토어"
+        description="BESTSNS는 전자책, 템플릿, 온라인 강의, 컨설팅, 마케팅 서비스 등 다양한 디지털 상품을 판매하고 구매할 수 있는 N잡 플랫폼을 제공합니다."
+        url="https://bestsns.com"
+        providerName="더베스트(THEBEST)"
+        serviceType="디지털상품 마켓플레이스"
+        areaServed="대한민국"
+        serviceId="njobs"
       />
       <div className="max-w-6xl mx-auto pb-20">
       {/* 초거대 대분류 탭 섹션 - 6개 탭 한 줄 배치 */}
