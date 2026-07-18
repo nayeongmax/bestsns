@@ -346,10 +346,12 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
         brand="BESTSNS"
         category={ebook.category || ebook.subCategory}
         url={currentUrl}
+        productId={`njobs-${ebook.id}`}
       />
       <WebPageSchema
         name={`${ebook.title} | N잡스토어 디지털상품 | BESTSNS`}
         url={currentUrl}
+        mainEntityId={`https://bestsns.com/#product-njobs-${ebook.id}`}
       />
       <div className="max-w-[1400px] mx-auto pb-36 lg:pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
       {/* 결제창 쿨다운 안내 모달 */}
