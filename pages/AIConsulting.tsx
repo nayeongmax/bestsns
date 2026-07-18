@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '@/components/SEO';
+import ServiceSchema from '@/components/SEO/ServiceSchema';
 import { getMarketingConsultation } from '../services/geminiService';
 import { supabase } from '../supabase';
 import type { UserProfile, Notice } from '@/types';
@@ -124,6 +126,21 @@ const AIConsulting: React.FC<Props> = ({ user, notices = [] }) => {
   ];
 
   return (
+    <>
+      <SEO
+        title="AI 마케팅 컨설팅 | BESTSNS"
+        description="BESTSNS AI 컨설팅은 AI 기반 마케팅 전략, 자동화, 콘텐츠 기획, 검색 최적화(AEO·SEO) 등 다양한 AI 마케팅 컨설팅 서비스를 제공합니다."
+        image="https://bestsns.com/og-image.jpg"
+      />
+      <ServiceSchema
+        name="AI 마케팅 컨설팅"
+        description="BESTSNS는 AI 기반 마케팅 전략, 콘텐츠 제작, 업무 자동화, 검색 최적화(AEO·SEO) 컨설팅 서비스를 제공합니다."
+        url="https://bestsns.com"
+        providerName="더베스트(THEBEST)"
+        serviceType="AI 마케팅 컨설팅"
+        areaServed="대한민국"
+        serviceId="ai"
+      />
     <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-20 sm:pb-24 space-y-6">
       {/* 공지사항 배너 */}
       {latestNotice && (
@@ -231,6 +248,7 @@ const AIConsulting: React.FC<Props> = ({ user, notices = [] }) => {
       </div>
     </div>
     </div>
+    </>
   );
 };
 
