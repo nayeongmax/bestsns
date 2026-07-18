@@ -327,6 +327,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
   };
 
   const isServiceType = ['marketing', 'lecture', 'consulting'].includes(currentStoreType);
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : undefined;
 
   return (
     <>
@@ -343,7 +344,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
         seller={displayAuthor}
         brand="BESTSNS"
         category={ebook.category || ebook.subCategory}
-        url={window.location.href}
+        url={currentUrl}
       />
       <div className="max-w-[1400px] mx-auto pb-36 lg:pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
       {/* 결제창 쿨다운 안내 모달 */}
