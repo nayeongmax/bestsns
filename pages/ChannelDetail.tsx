@@ -142,7 +142,6 @@ const ChannelDetail: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, 
         title={`${channel.title} | ${channel.platform} 채널 판매 | BESTSNS`}
         description={`${channel.description ?? ''}\n\n${channel.platform} 채널\n구독자 ${channel.subscribers.toLocaleString()}명\n판매가 ₩${channel.price.toLocaleString()}\nBESTSNS에서 안전하게 거래할 수 있습니다.`}
         image={channel.thumbnail || 'https://bestsns.com/og-image.jpg'}
-        canonical={currentUrl}
       />
       <ProductSchema
         name={channel.title}
