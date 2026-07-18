@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import SEO from '@/components/SEO';
+import ServiceSchema from '@/components/SEO/ServiceSchema';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock, Notice } from '@/types';
 import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '@/constants';
@@ -174,6 +176,21 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
   const latestNotice = notices.filter(n => !n.isHidden)[0];
 
   return (
+    <>
+      <SEO
+        title="누구나알바 | 온라인 부업 · 재택알바 플랫폼 | BESTSNS"
+        description="BESTSNS 누구나알바에서는 온라인 부업, 재택근무, SNS 홍보, 콘텐츠 등록 등 다양한 디지털 아르바이트를 안전하게 찾고 지원할 수 있습니다."
+        image="https://bestsns.com/og-image.jpg"
+      />
+      <ServiceSchema
+        name="온라인 부업 플랫폼"
+        description="BESTSNS 누구나알바는 온라인 부업과 디지털 아르바이트를 등록하고 지원할 수 있는 플랫폼입니다."
+        url="https://bestsns.com"
+        providerName="더베스트(THEBEST)"
+        serviceType="온라인 부업 플랫폼"
+        areaServed="대한민국"
+        serviceId="parttime"
+      />
     <div className="max-w-6xl mx-auto py-2 md:py-12 px-3 md:px-6 animate-in fade-in duration-700 space-y-3 md:space-y-6">
       {/* 공지사항 배너 */}
       {latestNotice && (
@@ -461,6 +478,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
         </button>
       </div>
     </div>
+    </>
   );
 };
 
