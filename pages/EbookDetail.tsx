@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import SEO from '../components/SEO';
+import ProductSchema from '../components/SEO/ProductSchema';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { EbookProduct, WishlistItem, UserProfile, StoreType, Review, StoreOrder, GradeConfig, getUserGrade, NotificationType } from '@/types';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -326,6 +327,7 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
   };
 
   const isServiceType = ['marketing', 'lecture', 'consulting'].includes(currentStoreType);
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : undefined;
 
   return (
     <>
@@ -333,6 +335,16 @@ const EbookDetail: React.FC<Props> = ({ ebooks, ebooksLoaded = false, wishlist, 
         title={`${ebook.title} | N잡스토어 디지털상품 | BESTSNS`}
         description={`${ebook.description}\n\nBESTSNS N잡스토어에서 구매할 수 있는 디지털상품입니다.`}
         image={ebook.thumbnail || 'https://bestsns.com/og-image.jpg'}
+      />
+      <ProductSchema
+        name={ebook.title}
+        description={ebook.description}
+        image={ebook.thumbnail}
+        price={ebook.price}
+        seller={displayAuthor}
+        brand="BESTSNS"
+        category={ebook.category || ebook.subCategory}
+        url={currentUrl}
       />
       <div className="max-w-[1400px] mx-auto pb-36 lg:pb-24 px-4 lg:px-8 animate-in fade-in duration-500">
       {/* 결제창 쿨다운 안내 모달 */}
