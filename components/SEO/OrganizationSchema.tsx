@@ -13,6 +13,7 @@ interface OrganizationSchemaProps {
   sameAs?: string[];
   alternateName?: string;
   foundingDate?: string;
+  knowsAbout?: string[];
 }
 
 function resolveLogo(value?: string): string | undefined {
@@ -45,6 +46,7 @@ export default function OrganizationSchema({
   sameAs,
   alternateName,
   foundingDate,
+  knowsAbout,
 }: OrganizationSchemaProps) {
   const resolvedUrl = resolveString(url);
   const resolvedLogo = resolveLogo(logo);
@@ -80,6 +82,9 @@ export default function OrganizationSchema({
 
   const resolvedFoundingDate = resolveString(foundingDate);
   if (resolvedFoundingDate) schema.foundingDate = resolvedFoundingDate;
+
+  const resolvedKnowsAbout = resolveSameAs(knowsAbout);
+  if (resolvedKnowsAbout) schema.knowsAbout = resolvedKnowsAbout;
 
   return (
     <Helmet>
