@@ -123,7 +123,7 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, c
       <SEO
         title="유튜브·SNS 채널 판매 | BESTSNS"
         description="BESTSNS에서 유튜브, 인스타그램, 틱톡 등 다양한 SNS 채널의 구독자 수, 수익화 여부, 가격 정보를 확인하고 안전하게 거래할 수 있습니다."
-        canonical="https://bestsns.com"
+        canonical="https://bestsns.com/channels"
         image="https://bestsns.com/og-image.jpg"
       />
       <OrganizationSchema

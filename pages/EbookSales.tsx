@@ -82,6 +82,7 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         title="N잡스토어 | 전자책 · 템플릿 · 온라인강의 · 컨설팅 | BESTSNS"
         description="BESTSNS N잡스토어에서는 전자책, PDF 자료, 템플릿, 온라인 강의, 컨설팅, 마케팅 서비스를 안전하게 구매하고 판매할 수 있습니다."
         image="https://bestsns.com/og-image.jpg"
+        canonical="https://bestsns.com/ebooks"
       />
       <OrganizationSchema
         name="더베스트(THEBEST)"

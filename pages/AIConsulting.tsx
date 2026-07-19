@@ -133,6 +133,7 @@ const AIConsulting: React.FC<Props> = ({ user, notices = [] }) => {
         title="AI 마케팅 컨설팅 | BESTSNS"
         description="BESTSNS AI 컨설팅은 AI 기반 마케팅 전략, 자동화, 콘텐츠 기획, 검색 최적화(AEO·SEO) 등 다양한 AI 마케팅 컨설팅 서비스를 제공합니다."
         image="https://bestsns.com/og-image.jpg"
+        canonical="https://bestsns.com/ai"
       />
       <OrganizationSchema
         name="더베스트(THEBEST)"

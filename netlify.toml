@@ -79,6 +79,30 @@
   force = true
 
 [[redirects]]
+  from = "/channels"
+  to = "/channels.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/ebooks"
+  to = "/ebooks.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/part-time"
+  to = "/part-time.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/ai"
+  to = "/ai.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/knowledge"
   to = "/knowledge.html"
   status = 200

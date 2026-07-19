@@ -183,6 +183,7 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
         title="누구나알바 | 온라인 부업 · 재택알바 플랫폼 | BESTSNS"
         description="BESTSNS 누구나알바에서는 온라인 부업, 재택근무, SNS 홍보, 콘텐츠 등록 등 다양한 디지털 아르바이트를 안전하게 찾고 지원할 수 있습니다."
         image="https://bestsns.com/og-image.jpg"
+        canonical="https://bestsns.com/part-time"
       />
       <OrganizationSchema
         name="더베스트(THEBEST)"
