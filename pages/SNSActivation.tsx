@@ -469,7 +469,7 @@ const SNSActivation: React.FC<Props> = ({ smmProducts, providers, user, notices,
       <SEO
         title="BESTSNS | SMM 마케팅·유튜브 채널 거래·마케팅서비스 판매·온라인 부업 플랫폼"
         description="BESTSNS는 SMM 마케팅 주문, 유튜브·SNS 채널 거래, 마케팅 상품 판매, 온라인 부업 수익화, AI 마케팅 컨설팅을 한곳에서 이용할 수 있는 종합 마케팅 플랫폼입니다."
-        canonical="https://bestsns.com"
+        canonical="https://bestsns.com/sns"
         image="https://bestsns.com/og-image.jpg"
       />
       <OrganizationSchema
