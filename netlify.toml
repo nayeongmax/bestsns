@@ -73,6 +73,12 @@
   force = true
 
 [[redirects]]
+  from = "/sns"
+  to = "/sns.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/knowledge"
   to = "/knowledge.html"
   status = 200
