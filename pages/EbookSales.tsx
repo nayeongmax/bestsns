@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import SEO from '../components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
 import WebPageSchema from '@/components/SEO/WebPageSchema';
+import OrganizationSchema from '@/components/SEO/OrganizationSchema';
 import { Link, useNavigate } from 'react-router-dom';
 import { EbookProduct, UserProfile, WishlistItem, StoreType, GradeConfig, getUserGrade } from '@/types';
 import { EBOOK_CATEGORIES, MARKETING_CATEGORIES } from '@/constants';
@@ -81,6 +82,14 @@ const EbookSales: React.FC<Props> = ({ ebooks, setEbooks, user, wishlist, onTogg
         title="N잡스토어 | 전자책 · 템플릿 · 온라인강의 · 컨설팅 | BESTSNS"
         description="BESTSNS N잡스토어에서는 전자책, PDF 자료, 템플릿, 온라인 강의, 컨설팅, 마케팅 서비스를 안전하게 구매하고 판매할 수 있습니다."
         image="https://bestsns.com/og-image.jpg"
+      />
+      <OrganizationSchema
+        name="더베스트(THEBEST)"
+        alternateName="BESTSNS"
+        url="https://bestsns.com"
+        logo="https://bestsns.com/og-image.jpg"
+        description="더베스트(THEBEST)는 전문·과학 및 기술서비스업을 기반으로 광고·광고대행·디자인과 디지털 마케팅 플랫폼 BESTSNS를 운영합니다."
+        knowsAbout={['전문, 과학 및 기술서비스업', '광고', '광고대행', '디자인', 'SMM 마케팅', 'SNS 채널 거래', '디지털상품', 'AI 마케팅 컨설팅', 'AEO', 'GEO', 'SEO']}
       />
       <ServiceSchema
         name="N잡 디지털상품 스토어"
