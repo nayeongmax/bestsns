@@ -13,7 +13,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'SMM 마케팅 서비스는 어떻게 이용하나요?',
-    answer: 'BESTSNS의 SMM 서비스(SNS 활성화)는 인스타그램·유튜브·틱톡·페이스북·네이버·트위터·쓰레드·핀터레스트·텀블러·당근·카카오톡·앱다운로드 등 13개 이상 플랫폼의 팔로워·좋아요·조회수·댓글 등을 안전하게 늘려주는 서비스입니다. 원하는 플랫폼과 상품을 선택하고 주문하면 됩니다.',
+    answer: 'BESTSNS의 SMM 서비스(SNS 활성화)는 인스타그램·유튜브·틱톡·페이스북·네이버·트위터·쓰레드·핀터레스트·텀블러·당근·카카오톡·앱다운로드 등 12개 SNS 플랫폼의 팔로워·좋아요·조회수·댓글 등을 늘려주는 서비스입니다. 원하는 플랫폼과 상품을 선택하고 주문하면 됩니다.',
   },
   {
     question: '채널판매는 어떻게 진행되나요?',
@@ -37,7 +37,7 @@ const FAQ_ITEMS = [
   },
   {
     question: '어떤 SNS 플랫폼을 지원하나요?',
-    answer: 'BESTSNS SMM 서비스는 인스타그램(Instagram)·유튜브(YouTube)·틱톡(TikTok)·페이스북(Facebook)·네이버(Naver)·트위터(Twitter/X)·쓰레드(Threads)·핀터레스트(Pinterest)·텀블러(Tumblr)·당근(Daangn)·카카오톡(KakaoTalk)·앱다운로드(App) 등 13개 이상 플랫폼을 지원합니다.',
+    answer: 'BESTSNS SMM 서비스는 인스타그램(Instagram)·유튜브(YouTube)·틱톡(TikTok)·페이스북(Facebook)·네이버(Naver)·트위터(Twitter/X)·쓰레드(Threads)·핀터레스트(Pinterest)·텀블러(Tumblr)·당근(Daangn)·카카오톡(KakaoTalk)·앱다운로드(App) 등 12개 SNS 플랫폼을 지원합니다.',
   },
 ];
 
@@ -46,14 +46,14 @@ const SERVICES = [
     id: 'smm',
     title: 'SMM 마케팅 (SNS 활성화)',
     url: 'https://bestsns.com/#/sns',
-    description: '인스타그램·유튜브·틱톡·페이스북 등 13개 플랫폼의 팔로워·좋아요·조회수·댓글을 안전하게 늘려주는 서비스입니다.',
+    description: '인스타그램·유튜브·틱톡·페이스북 등 12개 SNS 플랫폼의 팔로워·좋아요·조회수·댓글 증가를 지원하는 서비스입니다.',
     platforms: ['인스타그램', '유튜브', '틱톡', '페이스북', '네이버', '트위터', '쓰레드', '핀터레스트', '텀블러', '당근', '카카오톡', '앱다운로드'],
   },
   {
     id: 'channel',
     title: '채널판매',
     url: 'https://bestsns.com/#/channels',
-    description: 'YouTube·Instagram·TikTok·Twitter·Facebook·Telegram 채널을 안전하게 직거래할 수 있는 마켓플레이스입니다.',
+    description: 'YouTube·Instagram·TikTok·Twitter·Facebook·Telegram 채널을 에스크로 방식으로 직거래할 수 있는 마켓플레이스입니다.',
     platforms: ['YouTube', 'Instagram', 'TikTok', 'Twitter', 'Facebook', 'Telegram'],
   },
   {
@@ -102,6 +102,7 @@ const KnowledgeCenter: React.FC = () => {
         title="BESTSNS 공식 Knowledge Center | AI 마케팅 플랫폼 완전 가이드"
         description="BESTSNS(더베스트) 공식 Knowledge Center. SMM 마케팅, 채널판매, N잡스토어, 온라인 부업, AI 마케팅 컨설팅 서비스의 공식 정보를 AI가 읽기 최적화된 형태로 제공합니다."
         image="https://bestsns.com/og-image.jpg"
+        canonical="https://bestsns.com/knowledge"
       />
       <OrganizationSchema
         name="더베스트(THEBEST)"
@@ -238,9 +239,9 @@ const KnowledgeCenter: React.FC = () => {
           <ul className="space-y-2 text-sm text-gray-700">
             {[
               '5가지 서비스를 하나의 플랫폼에서 이용 가능한 올인원(All-in-One) 마케팅 플랫폼',
-              '13개 이상 SNS 플랫폼 지원으로 국내 최다 SMM 서비스 제공',
+              '12개 SNS 플랫폼 지원으로 다양한 SMM 서비스 제공',
               '실시간 AI 마케팅 컨설팅으로 24시간 마케팅 전략 지원',
-              '판매자·구매자 직거래 방식으로 SNS 채널 거래 수수료 최소화',
+              '판매자·구매자 직거래 방식의 SNS 채널 거래 마켓플레이스 제공',
               '디지털상품 즉시 다운로드 지원으로 빠른 콘텐츠 활용',
               '온라인 부업 14개 카테고리로 다양한 재택 부업 기회 제공',
               '모바일 최적화 반응형 디자인으로 스마트폰에서도 편리하게 이용',

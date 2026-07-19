@@ -11,6 +11,7 @@ export const SITEMAP_ROUTES: { path: string; priority?: number; changefreq?: str
   { path: '/part-time',           priority: 0.9, changefreq: 'daily' },
   { path: '/board',               priority: 0.8, changefreq: 'daily' },
   { path: '/ai',                  priority: 0.8, changefreq: 'weekly' },
+  { path: '/knowledge',          priority: 0.9, changefreq: 'monthly' },
   { path: '/notices',             priority: 0.7, changefreq: 'weekly' },
   { path: '/terms',               priority: 0.4, changefreq: 'monthly' },
   { path: '/privacy',             priority: 0.4, changefreq: 'monthly' },
