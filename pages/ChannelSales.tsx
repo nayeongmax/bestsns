@@ -5,6 +5,7 @@ import { ChannelProduct, WishlistItem, ChannelReview } from '@/types';
 import SEO from '@/components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
 import WebPageSchema from '@/components/SEO/WebPageSchema';
+import OrganizationSchema from '@/components/SEO/OrganizationSchema';
 
 interface Props {
   channels: ChannelProduct[];
@@ -122,8 +123,16 @@ const ChannelSales: React.FC<Props> = ({ channels, wishlist, onToggleWishlist, c
       <SEO
         title="유튜브·SNS 채널 판매 | BESTSNS"
         description="BESTSNS에서 유튜브, 인스타그램, 틱톡 등 다양한 SNS 채널의 구독자 수, 수익화 여부, 가격 정보를 확인하고 안전하게 거래할 수 있습니다."
-        canonical="https://bestsns.com"
+        canonical="https://bestsns.com/channels"
         image="https://bestsns.com/og-image.jpg"
+      />
+      <OrganizationSchema
+        name="더베스트(THEBEST)"
+        alternateName="BESTSNS"
+        url="https://bestsns.com"
+        logo="https://bestsns.com/og-image.jpg"
+        description="더베스트(THEBEST)는 전문·과학 및 기술서비스업을 기반으로 광고·광고대행·디자인과 디지털 마케팅 플랫폼 BESTSNS를 운영합니다."
+        knowsAbout={['전문, 과학 및 기술서비스업', '광고', '광고대행', '디자인', 'SMM 마케팅', 'SNS 채널 거래', '디지털상품', 'AI 마케팅 컨설팅', 'AEO', 'GEO', 'SEO']}
       />
       <ServiceSchema
         name="유튜브·SNS 채널 판매 서비스"

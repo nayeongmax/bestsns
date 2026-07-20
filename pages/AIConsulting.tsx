@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SEO from '@/components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
 import WebPageSchema from '@/components/SEO/WebPageSchema';
+import OrganizationSchema from '@/components/SEO/OrganizationSchema';
 import { getMarketingConsultation } from '../services/geminiService';
 import { supabase } from '../supabase';
 import type { UserProfile, Notice } from '@/types';
@@ -132,6 +133,15 @@ const AIConsulting: React.FC<Props> = ({ user, notices = [] }) => {
         title="AI 마케팅 컨설팅 | BESTSNS"
         description="BESTSNS AI 컨설팅은 AI 기반 마케팅 전략, 자동화, 콘텐츠 기획, 검색 최적화(AEO·SEO) 등 다양한 AI 마케팅 컨설팅 서비스를 제공합니다."
         image="https://bestsns.com/og-image.jpg"
+        canonical="https://bestsns.com/ai"
+      />
+      <OrganizationSchema
+        name="더베스트(THEBEST)"
+        alternateName="BESTSNS"
+        url="https://bestsns.com"
+        logo="https://bestsns.com/og-image.jpg"
+        description="더베스트(THEBEST)는 전문·과학 및 기술서비스업을 기반으로 광고·광고대행·디자인과 디지털 마케팅 플랫폼 BESTSNS를 운영합니다."
+        knowsAbout={['전문, 과학 및 기술서비스업', '광고', '광고대행', '디자인', 'SMM 마케팅', 'SNS 채널 거래', '디지털상품', 'AI 마케팅 컨설팅', 'AEO', 'GEO', 'SEO']}
       />
       <ServiceSchema
         name="AI 마케팅 컨설팅"

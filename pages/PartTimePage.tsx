@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import SEO from '@/components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
 import WebPageSchema from '@/components/SEO/WebPageSchema';
+import OrganizationSchema from '@/components/SEO/OrganizationSchema';
 import { UserProfile } from '@/types';
 import type { PartTimeTask, PartTimeJobRequest, PartTimeTaskSections, PartTimePostBlock, Notice } from '@/types';
 import { MIN_WITHDRAW_FREELANCER, compressImageForStorage } from '@/constants';
@@ -182,6 +183,15 @@ const PartTimePage: React.FC<Props> = ({ user, notices = [] }) => {
         title="누구나알바 | 온라인 부업 · 재택알바 플랫폼 | BESTSNS"
         description="BESTSNS 누구나알바에서는 온라인 부업, 재택근무, SNS 홍보, 콘텐츠 등록 등 다양한 디지털 아르바이트를 안전하게 찾고 지원할 수 있습니다."
         image="https://bestsns.com/og-image.jpg"
+        canonical="https://bestsns.com/part-time"
+      />
+      <OrganizationSchema
+        name="더베스트(THEBEST)"
+        alternateName="BESTSNS"
+        url="https://bestsns.com"
+        logo="https://bestsns.com/og-image.jpg"
+        description="더베스트(THEBEST)는 전문·과학 및 기술서비스업을 기반으로 광고·광고대행·디자인과 디지털 마케팅 플랫폼 BESTSNS를 운영합니다."
+        knowsAbout={['전문, 과학 및 기술서비스업', '광고', '광고대행', '디자인', 'SMM 마케팅', 'SNS 채널 거래', '디지털상품', 'AI 마케팅 컨설팅', 'AEO', 'GEO', 'SEO']}
       />
       <ServiceSchema
         name="온라인 부업 플랫폼"
