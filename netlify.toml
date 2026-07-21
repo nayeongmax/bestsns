@@ -109,6 +109,12 @@
   force = true
 
 [[redirects]]
+  from = "/knowledge/*"
+  to = "/knowledge/:splat.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
