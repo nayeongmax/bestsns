@@ -1,11 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import SEO from '@/components/SEO';
-import ServiceSchema from '@/components/SEO/ServiceSchema';
-import WebPageSchema from '@/components/SEO/WebPageSchema';
-import OrganizationSchema from '@/components/SEO/OrganizationSchema';
-import type { UserProfile } from '@/types';
-import { generateShortsScript, type ShortsScenario, type ShortsScene } from '../services/shortsService';
+import { generateShortsScript, type ShortsScene } from './shortsService';
 import {
   renderShortsVideo,
   renderPreviewFrame,
@@ -13,11 +7,8 @@ import {
   SHORTS_PALETTES,
   paletteForGenre,
   type ShortsPalette,
-} from '../services/shortsRenderer';
-
-interface Props {
-  user?: UserProfile | null;
-}
+} from './shortsRenderer';
+import type { ShortsScenario } from './shortsService';
 
 const TOPIC_SUGGESTIONS = [
   '월급 200으로 1년 안에 1000 모으는 법',
@@ -27,8 +18,7 @@ const TOPIC_SUGGESTIONS = [
   '집에서 하는 초간단 홈트 3가지',
 ];
 
-const ShortsStudio: React.FC<Props> = ({ user }) => {
-  const navigate = useNavigate();
+export default function App() {
   const [genreKey, setGenreKey] = useState<string>('info');
   const [topic, setTopic] = useState('');
   const [loadingScript, setLoadingScript] = useState(false);
@@ -138,7 +128,6 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
     setLoadingScript(true);
     setScriptError('');
     setRenderError('');
-    // 이전 결과 정리
     if (videoUrl) URL.revokeObjectURL(videoUrl);
     setVideoUrl(null);
     setScenario(null);
@@ -167,6 +156,11 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
     });
   };
 
+  const stopTts = () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+    setTtsPlaying(false);
+  };
+
   const handleRender = async () => {
     if (!scenario || !canvasRef.current || rendering) return;
     stopTts();
@@ -193,13 +187,6 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
     }
   };
 
-  const stopTts = () => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-    setTtsPlaying(false);
-  };
-
   const handleTtsPreview = () => {
     if (!scenario) return;
     if (typeof window === 'undefined' || !window.speechSynthesis) {
@@ -218,9 +205,7 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
       const u = new SpeechSynthesisUtterance(line);
       u.lang = 'ko-KR';
       u.rate = 1.05;
-      if (i === lines.length - 1) {
-        u.onend = () => setTtsPlaying(false);
-      }
+      if (i === lines.length - 1) u.onend = () => setTtsPlaying(false);
       window.speechSynthesis.speak(u);
     });
   };
@@ -241,40 +226,23 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
   }, [scenario, videoExt]);
 
   return (
-    <>
-      <SEO
-        title="AI 유튜브 쇼츠 자동 생성기 | BESTSNS"
-        description="주제만 입력하면 Claude AI가 장르별 쇼츠 대본을 만들고, 세로형(9:16) 영상 파일까지 자동으로 생성합니다. 유튜브 쇼츠에 바로 업로드하세요."
-        image="https://bestsns.com/og-image.jpg"
-        canonical="https://bestsns.com/shorts"
-      />
-      <OrganizationSchema
-        name="더베스트(THEBEST)"
-        alternateName="BESTSNS"
-        url="https://bestsns.com"
-        logo="https://bestsns.com/og-image.jpg"
-        description="AI 기반 마케팅·콘텐츠 자동화 플랫폼 BESTSNS."
-        knowsAbout={['AI 쇼츠 생성', '유튜브 쇼츠', '숏폼 콘텐츠', 'AI 콘텐츠 자동화', 'SNS 마케팅']}
-      />
-      <ServiceSchema
-        name="AI 유튜브 쇼츠 자동 생성"
-        description="Claude AI로 장르별 쇼츠 대본과 세로형 영상 파일을 자동 생성하는 서비스."
-        url="https://bestsns.com"
-        providerName="더베스트(THEBEST)"
-        serviceType="AI 숏폼 콘텐츠 생성"
-        areaServed="대한민국"
-        serviceId="shorts"
-      />
-      <WebPageSchema name="AI 유튜브 쇼츠 자동 생성기 | BESTSNS" url="https://bestsns.com" mainEntityId="https://bestsns.com#service-shorts" />
+    <div className="min-h-screen">
+      {/* 상단 브랜드 바 */}
+      <header className="bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2">
+          <span className="text-xl">🎬</span>
+          <span className="font-black text-gray-900 tracking-tight">AI 쇼츠 스튜디오</span>
+          <span className="ml-2 text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
+            Powered by Claude
+          </span>
+        </div>
+      </header>
 
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-24 space-y-6">
-        {/* 헤더 */}
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-6 pb-24 space-y-6">
+        {/* 히어로 */}
         <div className="bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 rounded-[28px] sm:rounded-[36px] p-6 sm:p-8 text-white relative overflow-hidden">
           <div className="absolute -right-10 -top-10 text-[160px] opacity-10 select-none">🎬</div>
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest mb-3">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /> Powered by Claude AI
-            </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight leading-tight">
               AI 유튜브 쇼츠 자동 생성기
             </h1>
@@ -287,7 +255,8 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
 
         {!supported && (
           <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl px-5 py-4 text-sm font-bold">
-            ⚠️ 현재 브라우저는 영상 파일 생성을 지원하지 않습니다. 대본 생성은 가능하며, 영상 만들기는 최신 <b>Chrome / Edge</b>(PC 권장)에서 이용해 주세요.
+            ⚠️ 현재 브라우저는 영상 파일 생성을 지원하지 않습니다. 대본 생성은 가능하며, 영상 만들기는 최신{' '}
+            <b>Chrome / Edge</b>(PC 권장)에서 이용해 주세요.
           </div>
         )}
 
@@ -298,7 +267,6 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
             <h2 className="text-lg sm:text-xl font-black text-gray-900">장르와 주제 선택</h2>
           </div>
 
-          {/* 장르 */}
           <div>
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2.5">장르</label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
@@ -319,7 +287,6 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
             </div>
           </div>
 
-          {/* 주제 */}
           <div>
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2.5">주제 / 아이디어</label>
             <div className="flex flex-col sm:flex-row gap-2.5">
@@ -437,7 +404,6 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
                 <h2 className="text-lg sm:text-xl font-black text-gray-900">영상 만들기</h2>
               </div>
 
-              {/* 캔버스 미리보기 */}
               <div className="flex justify-center">
                 <div className="relative rounded-2xl overflow-hidden shadow-lg bg-slate-900" style={{ width: 216, height: 384 }}>
                   <canvas ref={canvasRef} className="w-full h-full block" />
@@ -454,20 +420,8 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
 
               {/* 꾸미기: 배경 이미지 / 로고 업로드 */}
               <div className="space-y-2">
-                <input
-                  ref={bgInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => loadImageFile(e.target.files?.[0], 'bg')}
-                />
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => loadImageFile(e.target.files?.[0], 'logo')}
-                />
+                <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => loadImageFile(e.target.files?.[0], 'bg')} />
+                <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => loadImageFile(e.target.files?.[0], 'logo')} />
                 <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-50">
                   <span className="text-lg">🖼️</span>
                   <div className="min-w-0 flex-1">
@@ -496,7 +450,6 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
                 </div>
               </div>
 
-              {/* 옵션 */}
               <label className="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-50 cursor-pointer select-none">
                 <input type="checkbox" checked={withAudio} onChange={(e) => setWithAudio(e.target.checked)} className="w-4 h-4 accent-indigo-600" />
                 <span className="text-sm font-bold text-gray-700">배경 앰비언트 사운드 넣기</span>
@@ -526,7 +479,6 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
                 <div className="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-4 py-3 text-sm font-bold">{renderError}</div>
               )}
 
-              {/* 완성 영상 */}
               {videoUrl && (
                 <div className="space-y-3 pt-1">
                   <div className="rounded-2xl overflow-hidden bg-black">
@@ -540,8 +492,8 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
                     ⬇️ 영상 파일 다운로드 (.{videoExt})
                   </a>
                   <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-[12px] text-blue-700 font-medium leading-relaxed">
-                    다운로드한 파일을 <b>YouTube {'>'} 만들기 {'>'} 동영상 업로드</b>에서 올리고,
-                    복사한 제목·해시태그를 붙여넣으면 쇼츠 업로드 완료! (세로 영상 60초 미만은 자동으로 쇼츠 처리됩니다)
+                    다운로드한 파일을 <b>YouTube {'>'} 만들기 {'>'} 동영상 업로드</b>에서 올리고, 복사한 제목·해시태그를
+                    붙여넣으면 쇼츠 업로드 완료! (세로 영상 60초 미만은 자동으로 쇼츠 처리됩니다)
                   </div>
                 </div>
               )}
@@ -552,20 +504,16 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
         {!scenario && !loadingScript && (
           <div className="text-center py-10 text-gray-400">
             <div className="text-5xl mb-3">🎬</div>
-            <p className="text-sm font-bold">위에서 장르와 주제를 고르고 <b className="text-indigo-500">AI 대본 생성</b>을 눌러보세요.</p>
+            <p className="text-sm font-bold">
+              위에서 장르와 주제를 고르고 <b className="text-indigo-500">AI 대본 생성</b>을 눌러보세요.
+            </p>
           </div>
         )}
 
-        {!user && (
-          <div className="text-center">
-            <button onClick={() => navigate('/login')} className="text-xs font-bold text-gray-400 hover:text-indigo-500 underline underline-offset-2">
-              로그인하고 더 많은 기능 이용하기
-            </button>
-          </div>
-        )}
+        <footer className="text-center text-[11px] text-gray-400 font-medium pt-4">
+          AI 쇼츠 스튜디오 · 브라우저에서 바로 영상 파일 생성 · Powered by Claude
+        </footer>
       </div>
-    </>
+    </div>
   );
-};
-
-export default ShortsStudio;
+}
