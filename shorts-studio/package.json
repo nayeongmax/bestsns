@@ -1,0 +1,23 @@
+{
+  "name": "bestsns-shorts-studio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AI 유튜브 쇼츠 자동 생성기 (독립 실행형)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

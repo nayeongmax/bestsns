@@ -1,0 +1,23 @@
+# AI 쇼츠 스튜디오 - 독립 Netlify 사이트 설정
+# 이 폴더(shorts-studio)를 "Base directory"로 지정해 별도 사이트로 배포하세요.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# AI 대본 생성 함수 라우팅
+[[redirects]]
+  from = "/api/shorts-script"
+  to = "/.netlify/functions/shorts-script"
+  status = 200
+  force = true
+
+# SPA 폴백
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
