@@ -90,6 +90,7 @@ import PartTimeTaskDetail from '@/pages/PartTimeTaskDetail';
 import PartTimeJobRequestPage from '@/pages/PartTimeJobRequestPage';
 import FranchisePanel from '@/pages/FranchisePanel';
 import KnowledgeCenter from '@/pages/KnowledgeCenter';
+import ShortsStudio from '@/pages/ShortsStudio';
 
 /** pathname이 /ebooks일 때 항상 EbookSales만 렌더 (다른 라우트 간섭 방지) */
 function ContainerRoutes(props: {
@@ -138,6 +139,7 @@ function ContainerRoutes(props: {
       <Route path="/part-time/request" element={props.user ? <PartTimeJobRequestPage user={props.user} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/part-time/:taskId" element={<PartTimeTaskDetail user={props.user} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} addNotif={props.addNotif} />} />
       <Route path="/ai" element={<AIConsulting user={props.user} notices={props.notices} />} />
+      <Route path="/shorts" element={<ShortsStudio user={props.user} />} />
       <Route path="/board" element={<FreeBoard posts={props.posts} notices={props.notices} members={props.members} gradeConfigs={props.gradeConfigs} />} />
       <Route path="/board/:id" element={props.user ? <FreeBoardDetail user={props.user} posts={props.posts} setPosts={props.setPosts} members={props.members} gradeConfigs={props.gradeConfigs} /> : <Navigate to="/login" />} />
       <Route path="/board/write" element={props.user ? <FreeBoardWrite user={props.user} posts={props.posts} setPosts={props.setPosts} /> : <Navigate to="/login" />} />
