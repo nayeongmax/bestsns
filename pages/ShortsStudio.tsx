@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '@/components/SEO';
 import ServiceSchema from '@/components/SEO/ServiceSchema';
@@ -8,6 +8,7 @@ import type { UserProfile } from '@/types';
 import { generateShortsScript, type ShortsScenario, type ShortsScene } from '../services/shortsService';
 import {
   renderShortsVideo,
+  renderPreviewFrame,
   isRenderSupported,
   SHORTS_PALETTES,
   paletteForGenre,
@@ -43,7 +44,17 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [copied, setCopied] = useState('');
 
+  // 배경 이미지 / 로고 에셋
+  const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
+  const [bgName, setBgName] = useState('');
+  const [logoImage, setLogoImage] = useState<HTMLImageElement | null>(null);
+  const [logoName, setLogoName] = useState('');
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const bgUrlRef = useRef<string | null>(null);
+  const logoUrlRef = useRef<string | null>(null);
+  const bgInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const palette: ShortsPalette = useMemo(
     () => SHORTS_PALETTES.find((p) => p.key === genreKey) || SHORTS_PALETTES[0],
@@ -61,6 +72,66 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
   );
 
   const supported = isRenderSupported();
+
+  // 대본/에셋 변경 시 정지 미리보기 갱신
+  useEffect(() => {
+    if (!scenario || rendering || !canvasRef.current) return;
+    renderPreviewFrame(canvasRef.current, scenario, scenarioPalette, { background: bgImage, logo: logoImage });
+  }, [scenario, scenarioPalette, bgImage, logoImage, rendering]);
+
+  // 언마운트 시 objectURL 정리
+  useEffect(
+    () => () => {
+      if (bgUrlRef.current) URL.revokeObjectURL(bgUrlRef.current);
+      if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
+    },
+    [],
+  );
+
+  const loadImageFile = (file: File | undefined | null, kind: 'bg' | 'logo') => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setRenderError('이미지 파일만 업로드할 수 있습니다.');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      if (kind === 'bg') {
+        if (bgUrlRef.current) URL.revokeObjectURL(bgUrlRef.current);
+        bgUrlRef.current = url;
+        setBgImage(img);
+        setBgName(file.name);
+      } else {
+        if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
+        logoUrlRef.current = url;
+        setLogoImage(img);
+        setLogoName(file.name);
+      }
+      setRenderError('');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      setRenderError('이미지를 불러오지 못했습니다. 다른 파일로 시도해 주세요.');
+    };
+    img.src = url;
+  };
+
+  const clearBg = () => {
+    if (bgUrlRef.current) URL.revokeObjectURL(bgUrlRef.current);
+    bgUrlRef.current = null;
+    setBgImage(null);
+    setBgName('');
+    if (bgInputRef.current) bgInputRef.current.value = '';
+  };
+
+  const clearLogo = () => {
+    if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
+    logoUrlRef.current = null;
+    setLogoImage(null);
+    setLogoName('');
+    if (logoInputRef.current) logoInputRef.current.value = '';
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim() || loadingScript) return;
@@ -109,6 +180,8 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
     try {
       const out = await renderShortsVideo(canvasRef.current, scenario, scenarioPalette, {
         withAudio,
+        background: bgImage,
+        logo: logoImage,
         onProgress: (r) => setRenderProgress(r),
       });
       setVideoUrl(out.url);
@@ -368,12 +441,6 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
               <div className="flex justify-center">
                 <div className="relative rounded-2xl overflow-hidden shadow-lg bg-slate-900" style={{ width: 216, height: 384 }}>
                   <canvas ref={canvasRef} className="w-full h-full block" />
-                  {!videoUrl && !rendering && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 text-xs font-bold gap-2 pointer-events-none">
-                      <span className="text-3xl">{scenarioPalette.emoji}</span>
-                      <span>9:16 미리보기</span>
-                    </div>
-                  )}
                   {rendering && (
                     <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white gap-2">
                       <span className="text-xs font-black">녹화 중… {Math.round(renderProgress * 100)}%</span>
@@ -381,6 +448,50 @@ const ShortsStudio: React.FC<Props> = ({ user }) => {
                         <div className="h-full bg-white transition-all" style={{ width: `${renderProgress * 100}%` }} />
                       </div>
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 꾸미기: 배경 이미지 / 로고 업로드 */}
+              <div className="space-y-2">
+                <input
+                  ref={bgInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => loadImageFile(e.target.files?.[0], 'bg')}
+                />
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => loadImageFile(e.target.files?.[0], 'logo')}
+                />
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-50">
+                  <span className="text-lg">🖼️</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-gray-700 leading-tight">배경 이미지</p>
+                    <p className="text-[11px] text-gray-400 font-medium truncate">{bgName || '없음 (장르 색상 배경 사용)'}</p>
+                  </div>
+                  <button onClick={() => bgInputRef.current?.click()} className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100">
+                    {bgImage ? '변경' : '업로드'}
+                  </button>
+                  {bgImage && (
+                    <button onClick={clearBg} className="shrink-0 text-[11px] font-black text-gray-400 hover:text-red-500" aria-label="배경 제거">✕</button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-50">
+                  <span className="text-lg">🏷️</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-gray-700 leading-tight">브랜드 로고 워터마크</p>
+                    <p className="text-[11px] text-gray-400 font-medium truncate">{logoName || '없음 (BESTSNS 로고 표시)'}</p>
+                  </div>
+                  <button onClick={() => logoInputRef.current?.click()} className="shrink-0 text-[11px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100">
+                    {logoImage ? '변경' : '업로드'}
+                  </button>
+                  {logoImage && (
+                    <button onClick={clearLogo} className="shrink-0 text-[11px] font-black text-gray-400 hover:text-red-500" aria-label="로고 제거">✕</button>
                   )}
                 </div>
               </div>

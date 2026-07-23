@@ -114,11 +114,38 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const FONT_STACK = "'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif";
 
+// #rrggbb + alpha → rgba() 문자열
+function hexA(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// 이미지를 영역에 꽉 채워(cover) 중앙 정렬로 그림. zoom>1 이면 살짝 확대.
+function drawImageCover(ctx: CanvasRenderingContext2D, img: CanvasImageSource, w: number, h: number, zoom = 1) {
+  const iw = (img as HTMLImageElement).naturalWidth || (img as HTMLVideoElement).videoWidth || w;
+  const ih = (img as HTMLImageElement).naturalHeight || (img as HTMLVideoElement).videoHeight || h;
+  if (!iw || !ih) return;
+  const scale = Math.max(w / iw, h / ih) * zoom;
+  const dw = iw * scale;
+  const dh = ih * scale;
+  ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+}
+
+export interface ShortsAssets {
+  background?: HTMLImageElement | null;
+  logo?: HTMLImageElement | null;
+}
+
 interface FrameCtx {
   scenario: ShortsScenario;
   palette: ShortsPalette;
   times: number[]; // 각 장면 시작 시각(누적)
   total: number;
+  background?: HTMLImageElement | null;
+  logo?: HTMLImageElement | null;
 }
 
 function drawFrame(ctx: CanvasRenderingContext2D, elapsed: number, f: FrameCtx) {
@@ -135,13 +162,26 @@ function drawFrame(ctx: CanvasRenderingContext2D, elapsed: number, f: FrameCtx) 
   const sceneDur = scene.seconds;
   const local = elapsed - sceneStart;
 
-  // ---- 배경 그라디언트 (은은하게 움직임) ----
-  const shift = Math.sin(elapsed * 0.35) * 120;
-  const grad = ctx.createLinearGradient(0, shift, W, H - shift);
-  grad.addColorStop(0, palette.bgFrom);
-  grad.addColorStop(1, palette.bgTo);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
+  // ---- 배경: 업로드 이미지가 있으면 이미지 + 가독성 오버레이, 없으면 그라디언트 ----
+  const bg = f.background;
+  if (bg && bg.complete && bg.naturalWidth > 0) {
+    const zoom = 1.04 + Math.sin(elapsed * 0.2) * 0.02; // 은은한 켄 번즈 효과
+    drawImageCover(ctx, bg, W, H, zoom);
+    // 팔레트 틴트 + 상하 암부로 자막 가독성 확보
+    const ov = ctx.createLinearGradient(0, 0, 0, H);
+    ov.addColorStop(0, hexA(palette.bgFrom, 0.72));
+    ov.addColorStop(0.5, hexA(palette.bgTo, 0.4));
+    ov.addColorStop(1, hexA(palette.bgFrom, 0.84));
+    ctx.fillStyle = ov;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const shift = Math.sin(elapsed * 0.35) * 120;
+    const grad = ctx.createLinearGradient(0, shift, W, H - shift);
+    grad.addColorStop(0, palette.bgFrom);
+    grad.addColorStop(1, palette.bgTo);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
 
   // ---- 떠다니는 장식 원 ----
   ctx.save();
@@ -230,13 +270,29 @@ function drawFrame(ctx: CanvasRenderingContext2D, elapsed: number, f: FrameCtx) 
     ctx.fill();
   });
 
-  // ---- 하단: 워터마크 ----
+  // ---- 하단: 워터마크 (로고 업로드 시 로고, 없으면 BESTSNS 텍스트) ----
+  const logo = f.logo;
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `800 40px ${FONT_STACK}`;
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.fillText('BESTSNS', W / 2, H - 150);
+  if (logo && logo.complete && logo.naturalWidth > 0) {
+    const targetH = 96;
+    const ratio = logo.naturalWidth / logo.naturalHeight;
+    let lw = targetH * ratio;
+    let lh = targetH;
+    const maxW = 560;
+    if (lw > maxW) {
+      lw = maxW;
+      lh = maxW / ratio;
+    }
+    ctx.globalAlpha = 0.95;
+    ctx.drawImage(logo, W / 2 - lw / 2, H - 150 - lh / 2, lw, lh);
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.font = `800 40px ${FONT_STACK}`;
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText('BESTSNS', W / 2, H - 150);
+  }
   ctx.font = `600 30px ${FONT_STACK}`;
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.fillText('made with AI 쇼츠 스튜디오', W / 2, H - 100);
@@ -316,7 +372,38 @@ function buildAmbientAudio(): { dest: MediaStreamAudioDestinationNode; stop: () 
 
 export interface RenderOptions {
   withAudio?: boolean;
+  background?: HTMLImageElement | null;
+  logo?: HTMLImageElement | null;
   onProgress?: (ratio: number) => void;
+}
+
+/** 편집 화면에서 현재 대본/에셋으로 정지 미리보기 한 프레임을 그립니다. */
+export function renderPreviewFrame(
+  canvas: HTMLCanvasElement,
+  scenario: ShortsScenario,
+  palette: ShortsPalette,
+  assets: ShortsAssets = {},
+) {
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const scenes = scenario.scenes || [];
+  if (scenes.length === 0) return;
+  const times: number[] = [];
+  let acc = 0;
+  for (const s of scenes) {
+    times.push(acc);
+    acc += s.seconds;
+  }
+  drawFrame(ctx, 0, {
+    scenario,
+    palette,
+    times,
+    total: acc || 1,
+    background: assets.background || null,
+    logo: assets.logo || null,
+  });
 }
 
 export interface RenderOutput {
@@ -364,7 +451,14 @@ export function renderShortsVideo(
       acc += s.seconds;
     }
     const total = acc;
-    const frameCtx: FrameCtx = { scenario, palette, times, total };
+    const frameCtx: FrameCtx = {
+      scenario,
+      palette,
+      times,
+      total,
+      background: options.background || null,
+      logo: options.logo || null,
+    };
 
     // 첫 프레임 즉시 그려서 미리보기 표시
     drawFrame(ctx, 0, frameCtx);
