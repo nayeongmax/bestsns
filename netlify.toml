@@ -19,6 +19,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/shorts-script"
+  to = "/.netlify/functions/shorts-script"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/delete-user"
   to = "/.netlify/functions/delete-user"
   status = 200

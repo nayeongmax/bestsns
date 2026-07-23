@@ -41,6 +41,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
     { label: 'N잡스토어', path: '/ebooks', icon: '📖', badge: '누구나 판매OK' },
     { label: '누구나알바', path: '/part-time', icon: '👷', badge: '누구나 지원OK' },
     { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
+    { label: 'AI쇼츠', path: '/shorts', icon: '🎬', badge: 'NEW' },
     { label: '자유게시판', path: '/board', icon: '🗨️' },
   ];
 

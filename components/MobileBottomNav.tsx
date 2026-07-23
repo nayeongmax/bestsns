@@ -7,6 +7,7 @@ const navItems = [
   { label: 'N잡스토어', path: '/ebooks', icon: '📖', badge: '판매OK' },
   { label: '누구나알바', path: '/part-time', icon: '👷', badge: '지원OK' },
   { label: 'AI컨설팅', path: '/ai', icon: '🤖' },
+  { label: 'AI쇼츠', path: '/shorts', icon: '🎬', badge: 'NEW' },
   { label: '자유게시판', path: '/board', icon: '🗨️' },
 ];
 
