@@ -1,0 +1,11 @@
+# 커뮤니티 플랫폼 · Netlify 배포 설정
+[build]
+  base = "community"
+  command = "npm install && npm run build"
+  publish = "community/dist"
+
+# SPA 라우팅: 모든 경로를 index.html 로
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
