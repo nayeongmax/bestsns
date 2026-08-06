@@ -52,6 +52,10 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const [workConfirmModal, setWorkConfirmModal] = useState<{ task: PartTimeTask; isAdvertiserView: boolean } | null>(null);
   const [estimateViewJr, setEstimateViewJr] = useState<PartTimeJobRequest | null>(null);
   const [zoomedExampleImage, setZoomedExampleImage] = useState<string | null>(null);
+  const [bulkPayDate, setBulkPayDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -233,6 +237,20 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
   const hasWorkLink = (a: { workLink?: string; workLinks?: string[]; videoUrl?: string }) =>
     (a.workLinks?.length ?? 0) > 0 || !!a.workLink?.trim() || !!a.videoUrl;
 
+  const bulkPayEligible = (() => {
+    const pairs: { task: PartTimeTask; applicant: PartTimeTask['applicants'][number] }[] = [];
+    for (const task of tasks) {
+      if (task.category === '영상제공') continue;
+      const taskDate = task.workPeriod?.start || task.applicationPeriod?.start;
+      if (taskDate !== bulkPayDate) continue;
+      const paidIds = task.paidUserIds ?? [];
+      task.applicants
+        .filter((a) => a.selected && hasWorkLink(a) && !paidIds.includes(a.userId))
+        .forEach((a) => pairs.push({ task, applicant: a }));
+    }
+    return pairs;
+  })();
+
   const handleApprovePass = (task: PartTimeTask, userId: string) => {
     const a = task.applicants.find((ap) => ap.userId === userId && ap.selected && hasWorkLink(ap));
     if (!a) return;
@@ -303,6 +321,62 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       console.error(err);
       const msg = err instanceof Error ? err.message : String(err);
       alert(`지급 처리 중 오류가 발생했습니다.\n${msg}`);
+    }
+  };
+
+  const handleBulkPayByDate = async () => {
+    if (bulkPayEligible.length === 0) {
+      alert(`${bulkPayDate} 날짜에 지급 가능한 인원이 없습니다.`);
+      return;
+    }
+    const taskCount = new Set(bulkPayEligible.map((e) => e.task.id)).size;
+    if (!confirm(`${bulkPayDate} 기준 ${taskCount}개 업무, 총 ${bulkPayEligible.length}명에게 알바비를 일괄 지급할까요?`)) return;
+    try {
+      const paidAtIso = new Date().toISOString();
+      let nextTasks = [...tasks];
+      for (const { task, applicant } of bulkPayEligible) {
+        const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
+        const cur = await fetchFreelancerBalance(applicant.userId);
+        await setFreelancerBalance(applicant.userId, cur + netAmount);
+        await addFreelancerEarningToDb(
+          applicant.userId,
+          `earn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          'task',
+          task.reward,
+          task.title,
+          task.id
+        );
+        if (addNotif) {
+          addNotif(
+            applicant.userId,
+            'freelancer',
+            '알바비 지급 완료',
+            `[${task.title}] 작업 확인 후 ${task.reward.toLocaleString()}원이 수익통장에 적립되었습니다.`,
+            `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`
+          );
+        }
+        nextTasks = nextTasks.map((t) => {
+          if (t.id !== task.id) return t;
+          const allPaid = [...(t.paidUserIds ?? []), applicant.userId];
+          const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
+          const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
+          return {
+            ...t,
+            pointPaid,
+            paidUserIds: allPaid,
+            applicants: t.applicants.map((ap) =>
+              ap.userId === applicant.userId ? { ...ap, paidAt: paidAtIso } : ap
+            ),
+          };
+        });
+      }
+      setTasks(nextTasks);
+      await upsertPartTimeTasks(nextTasks);
+      alert(`${bulkPayEligible.length}명에게 알바비가 일괄 지급되었습니다.`);
+    } catch (err) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`일괄 지급 중 오류가 발생했습니다.\n${msg}`);
     }
   };
 
@@ -726,6 +800,37 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
 
       {adminTab === 'freelancer' && (
       <div className="space-y-6 md:space-y-10">
+        {/* 일괄 즉시지급 */}
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl md:rounded-[32px] p-4 md:p-6 border border-amber-100 shadow-sm">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-black text-gray-900 mb-0.5">일괄 즉시지급</h3>
+              <p className="text-xs text-gray-500">날짜를 선택하면 해당일 업무의 미지급 인원에게 한번에 알바비를 지급합니다.</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              <input
+                type="date"
+                value={bulkPayDate}
+                onChange={(e) => setBulkPayDate(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-amber-200 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+              />
+              <span className="text-xs text-gray-500 font-bold whitespace-nowrap">
+                {bulkPayEligible.length > 0
+                  ? `${new Set(bulkPayEligible.map((e) => e.task.id)).size}개 업무 · ${bulkPayEligible.length}명`
+                  : '지급 대상 없음'}
+              </span>
+              <button
+                type="button"
+                onClick={handleBulkPayByDate}
+                disabled={bulkPayEligible.length === 0}
+                className={`px-4 py-2 rounded-xl font-black text-sm transition-all whitespace-nowrap ${bulkPayEligible.length > 0 ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+              >
+                일괄 즉시지급
+              </button>
+            </div>
+          </div>
+        </div>
+
         {(freelancerAllTasks.length > 0) ? (
           <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
