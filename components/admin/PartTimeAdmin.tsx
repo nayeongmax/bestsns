@@ -331,9 +331,11 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     }
     const taskCount = new Set(bulkPayEligible.map((e) => e.task.id)).size;
     if (!confirm(`${bulkPayDate} 기준 ${taskCount}개 업무, 총 ${bulkPayEligible.length}명에게 알바비를 일괄 지급할까요?`)) return;
+    const totalCount = bulkPayEligible.length;
+    let nextTasks = [...tasks];
+    let paidCount = 0;
     try {
       const paidAtIso = new Date().toISOString();
-      let nextTasks = [...tasks];
       for (const { task, applicant } of bulkPayEligible) {
         const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
         const cur = await fetchFreelancerBalance(applicant.userId);
@@ -355,6 +357,7 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
             `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`
           );
         }
+        paidCount++;
         nextTasks = nextTasks.map((t) => {
           if (t.id !== task.id) return t;
           const allPaid = [...(t.paidUserIds ?? []), applicant.userId];
@@ -372,11 +375,17 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
       }
       setTasks(nextTasks);
       await upsertPartTimeTasks(nextTasks);
-      alert(`${bulkPayEligible.length}명에게 알바비가 일괄 지급되었습니다.`);
+      alert(`${totalCount}명에게 알바비가 일괄 지급되었습니다.`);
     } catch (err) {
       console.error(err);
+      // 부분 지급된 경우에도 UI에 반영해 이중지급 방지
+      if (paidCount > 0) {
+        setTasks(nextTasks);
+        upsertPartTimeTasks(nextTasks).catch(console.error);
+      }
       const msg = err instanceof Error ? err.message : String(err);
-      alert(`일괄 지급 중 오류가 발생했습니다.\n${msg}`);
+      const prefix = paidCount > 0 ? `${paidCount}/${totalCount}명 지급 후 오류 발생.\n` : '';
+      alert(`${prefix}일괄 지급 중 오류가 발생했습니다.\n${msg}`);
     }
   };
 
