@@ -6,7 +6,9 @@ import { NotificationType } from '@/types';
 import { calcJobRequestFee, FREELANCER_FEE_RATE, FREELANCER_SETTLEMENT_FEE_RATE, FREELANCER_WITHHOLDING_RATE, PAYMENT_GATEWAY_FEE_RATE } from '@/constants';
 import {
   fetchPartTimeTasks,
+  fetchPartTimeTaskById,
   fetchPartTimeJobRequests,
+  upsertPartTimeTask,
   upsertPartTimeTasks,
   upsertPartTimeJobRequest,
   deletePartTimeTask,
@@ -331,10 +333,16 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     }
     const taskCount = new Set(bulkPayEligible.map((e) => e.task.id)).size;
     if (!confirm(`${bulkPayDate} 기준 ${taskCount}개 업무, 총 ${bulkPayEligible.length}명에게 알바비를 일괄 지급할까요?`)) return;
+    const totalCount = bulkPayEligible.length;
+    let nextTasks = [...tasks];
+    let paidCount = 0;
     try {
       const paidAtIso = new Date().toISOString();
-      let nextTasks = [...tasks];
       for (const { task, applicant } of bulkPayEligible) {
+        // DB 최신 paidUserIds 확인 → 이미 지급된 경우 건너뜀 (이중지급 방지)
+        const freshTask = await fetchPartTimeTaskById(task.id);
+        if (freshTask?.paidUserIds?.includes(applicant.userId)) continue;
+
         const netAmount = Math.round(task.reward * (1 - FREELANCER_FEE_RATE));
         const cur = await fetchFreelancerBalance(applicant.userId);
         await setFreelancerBalance(applicant.userId, cur + netAmount);
@@ -355,9 +363,10 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
             `작업이 확인되어 수익통장에 ${task.reward.toLocaleString()}원이 적립되었습니다.`
           );
         }
+        paidCount++;
         nextTasks = nextTasks.map((t) => {
           if (t.id !== task.id) return t;
-          const allPaid = [...(t.paidUserIds ?? []), applicant.userId];
+          const allPaid = [...new Set([...(t.paidUserIds ?? []), ...(freshTask?.paidUserIds ?? []), applicant.userId])];
           const selectedWithLink = t.applicants.filter((a) => a.selected && hasWorkLink(a));
           const pointPaid = selectedWithLink.every((a) => allPaid.includes(a.userId));
           return {
@@ -369,14 +378,18 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
             ),
           };
         });
+        // 지급 즉시 DB 저장 → 재시도 시 이중지급 차단
+        const savedTask = nextTasks.find((t) => t.id === task.id);
+        if (savedTask) await upsertPartTimeTask(savedTask);
+        setTasks([...nextTasks]);
       }
-      setTasks(nextTasks);
-      await upsertPartTimeTasks(nextTasks);
-      alert(`${bulkPayEligible.length}명에게 알바비가 일괄 지급되었습니다.`);
+      alert(`${paidCount}명에게 알바비가 일괄 지급되었습니다.`);
     } catch (err) {
       console.error(err);
+      if (paidCount > 0) setTasks([...nextTasks]);
       const msg = err instanceof Error ? err.message : String(err);
-      alert(`일괄 지급 중 오류가 발생했습니다.\n${msg}`);
+      const prefix = paidCount > 0 ? `${paidCount}/${totalCount}명 지급 후 오류 발생.\n` : '';
+      alert(`${prefix}일괄 지급 중 오류가 발생했습니다.\n${msg}`);
     }
   };
 
