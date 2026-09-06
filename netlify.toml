@@ -43,15 +43,9 @@
   timeout = 26
 
 [functions."smm-sync-initial-count"]
-  schedule = "*/5 * * * *"
+  schedule = "*/30 * * * *"
 
 [functions."smm-hourly-order-check"]
-  schedule = "0 * * * *"
-
-[functions."auto-post-board"]
-  schedule = "*/5 * * * *"
-
-[functions."parttime-auto-approve"]
   schedule = "0 * * * *"
 
 [[redirects]]
