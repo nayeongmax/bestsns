@@ -20,7 +20,10 @@ import {
   adminFetchWithdrawals,
   adminCompleteWithdrawal,
   adminFailWithdrawal,
+  fetchFreelancerHistory,
+  deleteFreelancerEarningFromDb,
 } from '../../parttimeDb';
+import type { FreelancerEarningEntry } from '@/types';
 
 const SECTIONS_ORDER: (keyof NonNullable<PartTimeTask['sections']>)[] = ['제목', '내용', '댓글', '키워드', '이미지', '동영상', 'gif', '작업링크', '작업안내'];
 
@@ -58,6 +61,19 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
+
+  // 수익통장 금액 수정
+  const [balanceSearchQuery, setBalanceSearchQuery] = useState('');
+  const [balanceTargetUser, setBalanceTargetUser] = useState<{ userId: string; nickname: string } | null>(null);
+  const [balanceCurrentValue, setBalanceCurrentValue] = useState<number | null>(null);
+  const [balanceNewValue, setBalanceNewValue] = useState('');
+  const [balanceLoading, setBalanceLoading] = useState(false);
+
+  // 정산내역 삭제
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [historyTargetUser, setHistoryTargetUser] = useState<{ userId: string; nickname: string } | null>(null);
+  const [earningHistory, setEarningHistory] = useState<FreelancerEarningEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -808,6 +824,193 @@ const PartTimeAdmin: React.FC<Props> = ({ addNotif, members = [] }) => {
           </div>
         )}
       </div>
+
+      {/* ── 수익통장 금액 수정 ─────────────────────────────────── */}
+      <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
+        <h3 className="text-xl font-black text-gray-900 mb-1">수익통장 금액 수정</h3>
+        <p className="text-sm text-gray-500 mb-5">회원을 검색해 수익통장 잔액을 직접 수정합니다.</p>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={balanceSearchQuery}
+            onChange={(e) => setBalanceSearchQuery(e.target.value)}
+            placeholder="닉네임 검색"
+            className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+        </div>
+        {balanceSearchQuery.trim().length > 0 && !balanceTargetUser && (
+          <div className="mb-4 border border-gray-100 rounded-xl overflow-hidden">
+            {members
+              .filter((m) => m.nickname?.toLowerCase().includes(balanceSearchQuery.trim().toLowerCase()))
+              .slice(0, 8)
+              .map((m) => (
+                <button
+                  key={m.userId}
+                  type="button"
+                  onClick={async () => {
+                    setBalanceTargetUser({ userId: m.userId, nickname: m.nickname });
+                    setBalanceNewValue('');
+                    setBalanceSearchQuery('');
+                    setBalanceLoading(true);
+                    try {
+                      const cur = await fetchFreelancerBalance(m.userId);
+                      setBalanceCurrentValue(cur);
+                    } catch { setBalanceCurrentValue(null); }
+                    setBalanceLoading(false);
+                  }}
+                  className="w-full px-4 py-3 text-left text-sm font-bold hover:bg-indigo-50 border-b border-gray-50 last:border-0"
+                >
+                  {m.nickname} <span className="text-gray-400 font-normal text-xs ml-1">{m.userId}</span>
+                </button>
+              ))}
+            {members.filter((m) => m.nickname?.toLowerCase().includes(balanceSearchQuery.trim().toLowerCase())).length === 0 && (
+              <div className="px-4 py-3 text-sm text-gray-400">검색 결과 없음</div>
+            )}
+          </div>
+        )}
+        {balanceTargetUser && (
+          <div className="bg-indigo-50 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <span className="font-black text-gray-900">{balanceTargetUser.nickname}</span>
+                <span className="text-xs text-gray-500 ml-2">{balanceTargetUser.userId}</span>
+              </div>
+              <button type="button" onClick={() => { setBalanceTargetUser(null); setBalanceCurrentValue(null); setBalanceNewValue(''); }} className="text-gray-400 hover:text-gray-600 text-xl font-black">×</button>
+            </div>
+            {balanceLoading ? (
+              <p className="text-sm text-gray-500">잔액 조회 중...</p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-3">
+                  현재 수익통장 잔액: <strong className="text-indigo-700">{balanceCurrentValue?.toLocaleString() ?? '?'}원</strong>
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={balanceNewValue}
+                    onChange={(e) => setBalanceNewValue(e.target.value)}
+                    placeholder="새 잔액 입력 (원)"
+                    className="flex-1 px-4 py-2 rounded-xl border border-indigo-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const newVal = parseInt(balanceNewValue, 10);
+                      if (isNaN(newVal) || newVal < 0) { alert('올바른 금액을 입력해 주세요.'); return; }
+                      if (!confirm(`${balanceTargetUser.nickname}의 수익통장 잔액을 ${newVal.toLocaleString()}원으로 변경할까요?`)) return;
+                      setBalanceLoading(true);
+                      try {
+                        await setFreelancerBalance(balanceTargetUser.userId, newVal);
+                        setBalanceCurrentValue(newVal);
+                        setBalanceNewValue('');
+                        alert('수익통장 잔액이 변경되었습니다.');
+                      } catch (e) {
+                        console.error(e);
+                        alert('저장에 실패했습니다.');
+                      }
+                      setBalanceLoading(false);
+                    }}
+                    className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 whitespace-nowrap"
+                  >
+                    저장
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── 정산내역 삭제 ─────────────────────────────────── */}
+      <div className="bg-white rounded-2xl md:rounded-[32px] p-4 md:p-8 shadow-sm border border-gray-100">
+        <h3 className="text-xl font-black text-gray-900 mb-1">정산내역 삭제</h3>
+        <p className="text-sm text-gray-500 mb-5">회원을 검색해 중복·오류 정산내역을 삭제합니다.</p>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={historySearchQuery}
+            onChange={(e) => setHistorySearchQuery(e.target.value)}
+            placeholder="닉네임 검색"
+            className="flex-1 px-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+          />
+        </div>
+        {historySearchQuery.trim().length > 0 && !historyTargetUser && (
+          <div className="mb-4 border border-gray-100 rounded-xl overflow-hidden">
+            {members
+              .filter((m) => m.nickname?.toLowerCase().includes(historySearchQuery.trim().toLowerCase()))
+              .slice(0, 8)
+              .map((m) => (
+                <button
+                  key={m.userId}
+                  type="button"
+                  onClick={async () => {
+                    setHistoryTargetUser({ userId: m.userId, nickname: m.nickname });
+                    setHistorySearchQuery('');
+                    setHistoryLoading(true);
+                    try {
+                      const h = await fetchFreelancerHistory(m.userId);
+                      setEarningHistory(h);
+                    } catch { setEarningHistory([]); }
+                    setHistoryLoading(false);
+                  }}
+                  className="w-full px-4 py-3 text-left text-sm font-bold hover:bg-red-50 border-b border-gray-50 last:border-0"
+                >
+                  {m.nickname} <span className="text-gray-400 font-normal text-xs ml-1">{m.userId}</span>
+                </button>
+              ))}
+            {members.filter((m) => m.nickname?.toLowerCase().includes(historySearchQuery.trim().toLowerCase())).length === 0 && (
+              <div className="px-4 py-3 text-sm text-gray-400">검색 결과 없음</div>
+            )}
+          </div>
+        )}
+        {historyTargetUser && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-black text-gray-900">
+                {historyTargetUser.nickname}
+                <span className="text-xs text-gray-400 font-normal ml-1">정산내역 {earningHistory.length}건</span>
+              </span>
+              <button type="button" onClick={() => { setHistoryTargetUser(null); setEarningHistory([]); }} className="text-gray-400 hover:text-gray-600 text-xl font-black">×</button>
+            </div>
+            {historyLoading ? (
+              <p className="text-sm text-gray-500">내역 불러오는 중...</p>
+            ) : earningHistory.length === 0 ? (
+              <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-xl">정산내역이 없습니다.</div>
+            ) : (
+              <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                {earningHistory.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-xl gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-gray-800 truncate">{entry.label || (entry.type === 'withdraw' ? '출금' : '적립')}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{new Date(entry.at).toLocaleString('ko-KR')}</p>
+                    </div>
+                    <span className={`font-black text-sm whitespace-nowrap ${entry.type === 'withdraw' ? 'text-red-500' : 'text-emerald-600'}`}>
+                      {entry.type === 'withdraw' ? '-' : '+'}{entry.amount.toLocaleString()}원
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm(`"${entry.label || entry.id}" 내역을 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`)) return;
+                        try {
+                          await deleteFreelancerEarningFromDb(entry.id);
+                          setEarningHistory((prev) => prev.filter((e) => e.id !== entry.id));
+                        } catch (e) {
+                          console.error(e);
+                          alert('삭제에 실패했습니다.');
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-red-100 text-red-600 font-black text-xs hover:bg-red-200 whitespace-nowrap shrink-0"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       </div>
       )}
 

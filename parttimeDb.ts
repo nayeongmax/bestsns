@@ -301,6 +301,11 @@ export async function addFreelancerEarningToDb(
   if (error) throw error;
 }
 
+export async function deleteFreelancerEarningFromDb(id: string): Promise<void> {
+  const { error } = await supabase.from('freelancer_earnings_history').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ─── freelancer_withdraw_requests ────────────────────────────────────────
 function rowToWithdrawRequest(row: Record<string, unknown>): FreelancerWithdrawRequest {
   return {
