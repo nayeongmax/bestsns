@@ -495,13 +495,12 @@ export async function adminPayFreelancers(
   await callFreelancerAdmin({ action: 'pay', applicants });
 }
 
-/** 어드민: 출금 신청 목록 조회 */
+/** 어드민: 출금 신청 목록 조회 (RLS 우회 — Supabase RPC security definer) */
 export async function adminFetchWithdrawals(status = 'pending'): Promise<FreelancerWithdrawRequest[]> {
-  let query = supabase.from('freelancer_withdraw_requests').select('*').order('requested_at', { ascending: false });
-  if (status !== 'all') query = query.eq('status', status);
-  const { data, error } = await query;
+  const { data, error } = await supabase.rpc('admin_get_withdrawals', { p_status: status });
   if (error) throw error;
-  return (data ?? []).map((row) => rowToWithdrawRequest(row as Record<string, unknown>));
+  const rows: unknown[] = Array.isArray(data) ? data : [];
+  return rows.map((row) => rowToWithdrawRequest(row as Record<string, unknown>));
 }
 
 /** 어드민: 출금 완료 처리 */
