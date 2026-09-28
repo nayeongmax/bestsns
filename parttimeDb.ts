@@ -503,13 +503,15 @@ export async function adminFetchWithdrawals(status = 'pending'): Promise<Freelan
   return rows.map((row) => rowToWithdrawRequest(row as Record<string, unknown>));
 }
 
-/** 어드민: 출금 완료 처리 */
+/** 어드민: 출금 완료 처리 (RLS 우회 — Supabase RPC security definer) */
 export async function adminCompleteWithdrawal(id: string): Promise<void> {
-  await updateFreelancerWithdrawRequestStatusToDb(id, 'completed');
+  const { error } = await supabase.rpc('admin_complete_withdrawal', { p_id: id });
+  if (error) throw error;
 }
 
-/** 어드민: 출금 실패 + 잔액 환급 */
+/** 어드민: 출금 실패 + 잔액 환급 (RLS 우회 — Supabase RPC security definer) */
 export async function adminFailWithdrawal(id: string, userId: string, amount: number): Promise<void> {
-  await updateFreelancerWithdrawRequestStatusToDb(id, 'failed');
+  const { error } = await supabase.rpc('admin_fail_withdrawal', { p_id: id });
+  if (error) throw error;
   await refundFreelancerWithdrawalInDb(userId, amount, '출금 실패 환급');
 }
