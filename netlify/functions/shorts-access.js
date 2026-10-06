@@ -1,22 +1,10 @@
-const { timingSafeEqual } = require('node:crypto');
 const reply = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) });
 
 exports.handler = async (event) => {
-  if (!['GET', 'POST'].includes(event.httpMethod)) return reply(405, { error: 'Method not allowed' });
+  if (event.httpMethod !== 'GET') return reply(405, { error: 'Method not allowed' });
   // Publication only changes visibility. Production remains disabled until the worker and billing are ready.
   const published = process.env.SHORTS_PUBLIC_ENABLED === 'true';
   let preview = false;
-  if (event.httpMethod === 'POST') {
-    let body;
-    try { body = JSON.parse(event.body || '{}'); } catch { return reply(400, { error: 'Invalid JSON' }); }
-    const expected = process.env.SHORTS_PREVIEW_PASSWORD || process.env.ADMIN_PASSWORD || '';
-    const supplied = typeof body.password === 'string' ? body.password : '';
-    if (expected && supplied && supplied.length <= 256) {
-      const a = Buffer.from(expected), b = Buffer.from(supplied);
-      preview = a.length === b.length && timingSafeEqual(a, b);
-    }
-    return reply(preview ? 200 : 403, { published, preview, productionEnabled: false });
-  }
   const bearer = event.headers?.authorization || event.headers?.Authorization || '';
   const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';

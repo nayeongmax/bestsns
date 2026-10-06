@@ -11,11 +11,8 @@ test('shorts visibility fails closed, authenticates operators, and never enables
     delete process.env.ADMIN_PASSWORD;
     const anonymous = JSON.parse((await handler(event())).body);
     assert.deepEqual(anonymous, { published: false, preview: false, productionEnabled: false });
-    assert.equal((await handler(event('POST', { body: '{' }))).statusCode, 400);
-    assert.equal((await handler(event('POST', { body: '{"password":""}' }))).statusCode, 403);
     process.env.SHORTS_PREVIEW_PASSWORD = 'operator-test-password';
-    assert.equal((await handler(event('POST', { body: '{"password":"wrong"}' }))).statusCode, 403);
-    assert.equal(JSON.parse((await handler(event('POST', { body: '{"password":"operator-test-password"}' }))).body).preview, true);
+    assert.equal((await handler(event('POST', { body: '{"password":"operator-test-password"}' }))).statusCode, 405);
     process.env.SUPABASE_URL = 'https://test.invalid';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-server-key';
     global.fetch = async () => ({ ok: false });
@@ -34,3 +31,4 @@ test('shorts visibility fails closed, authenticates operators, and never enables
     assert.equal((await handler(event('DELETE'))).statusCode, 405);
   } finally { global.fetch = originalFetch; for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key]; Object.assign(process.env, original); }
 });
+

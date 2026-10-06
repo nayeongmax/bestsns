@@ -7,29 +7,16 @@ import './ShortsStudio.css';
 const industries = ['음식점·카페', '뷰티·미용', '운동·피트니스', '쇼핑·브랜드', '교육·학원', '기타 업종'];
 export default function ShortsStudio({ user }: { user: UserProfile | null }) {
   const access = useShortsAccess(user);
-  const [unlocked, setUnlocked] = useState(false);
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
   const [industry, setIndustry] = useState(industries[0]);
   const [style, setStyle] = useState('매장 소개');
   const [length, setLength] = useState('30초');
   const [file, setFile] = useState<File | null>(null);
   const [request, setRequest] = useState('');
   const [tab, setTab] = useState('주문 설정');
-  const allowed = access.published || access.preview || unlocked;
-  async function unlock(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setError('');
-    try {
-      const res = await fetch('/.netlify/functions/shorts-access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
-      const data = await res.json();
-      if (!res.ok || data.preview !== true) throw new Error();
-      setUnlocked(true); setPassword('');
-    } catch { setError('운영자 인증을 확인할 수 없습니다. 비밀번호 또는 서버 설정을 확인해 주세요.'); }
-    finally { setBusy(false); }
-  }
+  const legacyAdmin = user?.role === 'admin' && user?.id?.toLowerCase() === 'admin';
+  const allowed = access.published || access.preview || legacyAdmin;
   if (access.loading) return <div className="shorts-gate" role="status">접근 권한을 확인하고 있습니다.</div>;
-  if (!allowed) return <section className="shorts-gate"><span className="shorts-tag">PRIVATE PREVIEW</span><h1>쇼츠 제작을 준비하고 있어요.</h1><p>개발 중인 페이지는 운영자만 확인할 수 있습니다.</p><form onSubmit={unlock}><label htmlFor="shorts-password">운영자 미리보기 비밀번호</label><input id="shorts-password" type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="off" required maxLength={256}/><button disabled={busy}>{busy ? '확인 중…' : '운영자 미리보기'}</button>{error && <p role="alert">{error}</p>}</form><Link to="/sns">기존 서비스로 돌아가기 →</Link></section>;
+  if (!allowed) return <section className="shorts-gate"><span className="shorts-tag">PRIVATE PREVIEW</span><h1>쇼츠 제작을 준비하고 있어요.</h1><p>개발 중인 페이지는 운영자만 확인할 수 있습니다.</p>{!user && <Link to="/login">운영자 계정으로 로그인 →</Link>}<Link to="/sns">기존 서비스로 돌아가기 →</Link></section>;
   return <div className="shorts-page">
     <div className="shorts-notice" role="status">개발 중 · 화면 미리보기 전용 · 주문 접수, 영상 업로드, 결제 및 크레딧 차감은 진행되지 않습니다.</div>
     <section className="shorts-hero"><div className="shorts-spark" aria-hidden="true">✦</div><span className="shorts-tag">BESTSNS SHORTS STUDIO</span><h1>매장에서 찍은 영상이<br/><em>우리 가게의 홍보</em>가 되도록.</h1><p>원본 영상과 원하는 분위기만 준비하세요.<br/>쇼츠 제작부터 결과 확인, 수정 요청까지 한곳에서.</p><div className="shorts-actions"><a className="shorts-primary" href="#/shorts" onClick={e => { e.preventDefault(); document.getElementById("shorts-workspace")?.scrollIntoView({ behavior: "smooth" }); }}>제작 화면 둘러보기 <span>↗</span></a><a className="shorts-secondary" href="#/shorts" onClick={e => { e.preventDefault(); document.getElementById("shorts-how")?.scrollIntoView({ behavior: "smooth" }); }}>어떻게 만들어지나요?</a></div><div className="shorts-chips"><span>내 영상으로 제작</span><span>업종별 제작 스타일</span><span>구독 크레딧 방식 준비 중</span></div></section>

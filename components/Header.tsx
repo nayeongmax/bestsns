@@ -38,7 +38,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
 
   const shortsAccess = useShortsAccess(user);
   const navItems = [
-    ...(shortsAccess.published || isAdmin ? [{ label: '쇼츠제작', path: '/shorts', icon: '🎬' }] : []),
+    ...(shortsAccess.published || shortsAccess.preview || (user?.role === 'admin' && user?.id?.toLowerCase() === 'admin') ? [{ label: '쇼츠제작', path: '/shorts', icon: '🎬' }] : []),
     { label: '마케팅주문', path: '/sns', icon: '📈' },
     { label: '채널판매', path: '/channels', icon: '📺' },
     { label: 'N잡스토어', path: '/ebooks', icon: '📖', badge: '누구나 판매OK' },

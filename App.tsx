@@ -115,7 +115,7 @@ function ContainerRoutes(props: {
   const location = useLocation();
   const pathname = location.pathname || '';
   const shortsAccess = useShortsAccess(props.user);
-  const showShortsHome = shortsAccess.published || props.user?.role === 'admin';
+  const showShortsHome = shortsAccess.published || shortsAccess.preview || (props.user?.role === 'admin' && props.user?.id?.toLowerCase() === 'admin');
   if (pathname === '/ebooks') {
     return (
       <EbookSales
