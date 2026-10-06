@@ -20,7 +20,7 @@ const showcaseExamples = [
   {"industry":"음식점·카페","title":"재료부터 다른 한 끼","caption":"싱싱한 재료를 가까이 보여 주세요.","image":"","video":"https://assets.mixkit.co/videos/40516/40516-720.mp4","kind":"자막 릴스 예시","color":"#b4a2ed"},
   {"industry":"운동·피트니스","title":"오늘부터 시작하는 루틴","caption":"운동 전 알아두면 좋은 세 가지.","image":"https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#a3b8da"},
   {"industry":"인플루언서","title":"내 일상을 하나의 이야기로","caption":"브이로그를 소개하는 프로필 카드.","image":"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#dcabc0"},
-  {"industry":"교육·학원","title":"하루 10분의 변화","caption":"수업과 학습 습관을 한 장씩.","image":"https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#b5c9a6"},
+  {"industry":"교육·학원","title":"하루 10분의 변화","caption":"수업과 학습 습관을 한 장씩.","image":"https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#b5c9a6"},
   {"industry":"음식점·카페","title":"이번 주에만 만나는 메뉴","caption":"신메뉴 소식을 기억에 남게.","image":"https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#e4aba4"},
 ];
 const reelHooks: Record<string,string> = {'한 입에 반하는 순간':'다이어트 망했어요!!!','커피 한 잔의 여유':'커피 좋아하면 멈춰요','오늘의 시그니처':'한 그릇으로 충분해요','오늘의 피자는 이렇게':'반죽부터 진심인 집','싱그러운 한 끼':'샐러드가 이렇게 맛있다고?','재료부터 다른 한 끼':'신선함은 숨길 수 없죠'};
