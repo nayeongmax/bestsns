@@ -53,6 +53,8 @@ function profileRowToUserProfile(row: Record<string, unknown>): UserProfile {
 
 // Page and Component Imports (루트 기준 @/ 사용 - Netlify 빌드 시 해석 기준 오류 방지)
 import Header from '@/components/Header';
+import ShortsStudio from '@/pages/ShortsStudio';
+import { useShortsAccess } from '@/hooks/useShortsAccess';
 import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import LiveNotification from '@/components/LiveNotification';
@@ -112,6 +114,8 @@ function ContainerRoutes(props: {
 }) {
   const location = useLocation();
   const pathname = location.pathname || '';
+  const shortsAccess = useShortsAccess(props.user);
+  const showShortsHome = shortsAccess.published || shortsAccess.preview || (props.user?.role === 'admin' && props.user?.id?.toLowerCase() === 'admin');
   if (pathname === '/ebooks') {
     return (
       <EbookSales
@@ -161,7 +165,8 @@ function ContainerRoutes(props: {
       <Route path="/marketing-consent" element={<MarketingConsentPage />} />
       <Route path="/knowledge" element={<KnowledgeCenter />} />
       <Route path="/login" element={<AuthPage onLoginSuccess={props.handleLoginSuccess} />} />
-      <Route path="/" element={<Navigate to="/sns" />} />
+      <Route path="/shorts" element={<ShortsStudio user={props.user} />} />
+      <Route path="/" element={shortsAccess.loading ? <div role="status">페이지를 준비하고 있습니다.</div> : showShortsHome ? <ShortsStudio user={props.user} /> : <Navigate to="/sns" replace />} />
     </Routes>
   );
 }
