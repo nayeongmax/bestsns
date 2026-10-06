@@ -300,7 +300,14 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
 
     const adminId = (import.meta.env.VITE_ADMIN_ID || 'admin').trim();
     const adminPw = import.meta.env.VITE_ADMIN_PASSWORD;
-    if (adminPw && loginId === adminId && loginPw === adminPw) {
+    let verifiedContentAdmin = false;
+    if (loginId === adminId) {
+      try {
+        const response = await fetch('/.netlify/functions/content-admin-session', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: loginId, password: loginPw }) });
+        verifiedContentAdmin = response.ok;
+      } catch { /* Actual tests require a verified server session. */ }
+    }
+    if (verifiedContentAdmin || (adminPw && loginId === adminId && loginPw === adminPw)) {
         const adminUser: UserProfile = {
             id: adminId,
             nickname: '홍길동',
