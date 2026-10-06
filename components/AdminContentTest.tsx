@@ -4,11 +4,11 @@ type Media = { name:string; type:string; url:string; path?:string };
 type Settings = { industry:string; style:string; length:string; cardCount:string; request:string; script:string; revision?:string; parentOrderId?:string };
 type Order = { id:string; kind:string; status:string; message:string; created_at:string; results:Media[]; assets:Media[]; settings:Settings };
 const labels:Record<string,string>={uploading:'원본 업로드 중',queued:'작업자 대기',running:'픽셀링 제작 중',completed:'제작 완료',failed:'제작 실패'};
-export default function AdminContentTest({files,kind,settings,setup}:{files:File[];kind:'video'|'cards';settings:Settings;setup:React.ReactNode}) {
+export default function AdminContentTest({files,kind,settings,setup,options}:{files:File[];kind:'video'|'cards';settings:Settings;setup:React.ReactNode;options:React.ReactNode}) {
  const [orders,setOrders]=useState<Order[]>([]),[selected,setSelected]=useState('');
  const [connection,setConnection]=useState('연결 상태 확인 중…'),[ready,setReady]=useState(false);
  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[progress,setProgress]=useState('');
- const [draft,setDraft]=useState(''),[settingsOpen,setSettingsOpen]=useState(true);
+ const [draft,setDraft]=useState(''),[settingsOpen,setSettingsOpen]=useState(false);
  const [localMedia,setLocalMedia]=useState<Media[]>([]),[mediaTab,setMediaTab]=useState<'results'|'inputs'>('inputs'),[mediaIndex,setMediaIndex]=useState(0);
  const mediaCache=useRef(new Map<string,{url:string;at:number}>());
  const pollBusy=useRef(false),alive=useRef(true),chatEnd=useRef<HTMLDivElement>(null);
@@ -57,18 +57,18 @@ export default function AdminContentTest({files,kind,settings,setup}:{files:File
  const media=mediaTab==='results'?(order?.status==='completed'?order.results:[]):order?(order.assets||[]).filter(a=>a.url):localMedia;
  const current=media[mediaIndex]||media[0];
  return <div className="content-chat-workspace">
-  <div className="content-chat-main"><div className="content-chat-toolbar"><strong>콘텐츠 제작 대화</strong><button onClick={()=>{setSelected('');setSettingsOpen(true);setDraft('');setError('');setMediaTab('inputs');}} disabled={busy}>+ 새 주문</button></div>
+  <div className="content-chat-main"><div className="content-chat-toolbar"><strong>콘텐츠 제작 대화</strong><button onClick={()=>{setSelected('');setSettingsOpen(false);setDraft('');setError('');setMediaTab('inputs');}} disabled={busy}>+ 새 주문</button></div>
    <div className="content-chat-scroll">
-    <div className="content-system-message"><span>BESTSNS</span><p>원본과 제작 옵션을 선택한 뒤 테스트 제작을 시작하세요. 완료된 콘텐츠는 오른쪽에서 확인하고, 아래 대화창으로 수정 요청을 보낼 수 있습니다.</p></div>
+    <div className="content-system-message"><span>BESTSNS</span><p>원본을 첨부하고 아래 대화창에 원하는 콘텐츠를 설명해 주세요. 업종·스타일·길이·대본은 필요할 때 선택할 수 있습니다. 완료된 콘텐츠는 오른쪽에서 확인하고, 아래 대화창으로 수정 요청을 보낼 수 있습니다.</p></div>
     <div className="content-connection" role="status"><i className={ready?'is-ready':''}/>{connection}</div>
-    <button className="content-settings-toggle" onClick={()=>setSettingsOpen(!settingsOpen)} aria-expanded={settingsOpen}>{settingsOpen?'제작 설정 접기 ↑':'제작 설정 보기 ↓'} · {kind==='video'?settings.length:settings.cardCount} · 원본 {files.length}개</button>
-    {settingsOpen&&<fieldset disabled={busy} className="content-settings-fieldset">{setup}</fieldset>}
-    {!order&&<div className="content-start"><button className="shorts-test-submit" disabled={busy||!files.length||!!selected} onClick={()=>{void submit();}}>{busy?'접수 중…':kind==='video'?'쇼츠·릴스 테스트 제작':'카드뉴스 테스트 제작'}</button><p>관리자 테스트 · 사이트 크레딧 차감 없음 · 실행 시 실제 AI 비용 발생 가능</p></div>}
+    {!selected&&<fieldset disabled={busy} className="content-settings-fieldset">{setup}</fieldset>}
+    <button className="content-settings-toggle" onClick={()=>setSettingsOpen(!settingsOpen)} aria-expanded={settingsOpen}>{settingsOpen?'선택사항 접기 ↑':'업종·스타일·길이·대본 선택 ↓'} · {kind==='video'?settings.length:settings.cardCount} · 원본 {files.length}개</button>
+    {settingsOpen&&<fieldset disabled={busy} className="content-settings-fieldset">{options}</fieldset>}
     {order&&<><div className="content-user-message"><span>내 제작 요청 · {order.id.slice(0,8)}</span><p>{order.settings.revision||order.settings.request||'선택한 설정으로 제작해 주세요.'}</p><small>{order.settings.industry} · {order.settings.style} · {order.kind==='video'?order.settings.length:order.settings.cardCount}</small>{order.settings.script&&<details><summary>입력한 대본</summary><p>{order.settings.script}</p></details>}</div><div className="content-system-message"><span>BESTSNS · {labels[order.status]||order.status}</span><p>{order.message||labels[order.status]}</p>{order.status==='completed'&&<button onClick={()=>setMediaTab('results')}>오른쪽에서 결과 보기 →</button>}</div></>}
     {orders.length>0&&<div className="content-order-history"><label htmlFor="content-order-history">이전 주문·수정본</label><select id="content-order-history" value={selected} onChange={e=>{setSelected(e.target.value);setSettingsOpen(false);setError('');}}><option value="">새 주문</option>{orders.map(o=><option key={o.id} value={o.id}>{o.settings.parentOrderId?'수정본':'첫 제작'} · {o.id.slice(0,8)} · {labels[o.status]}</option>)}</select></div>}
     {progress&&<div className="content-system-message" role="status"><p>{progress}</p></div>}{error&&<div className="content-chat-error" role="alert">{error}</div>}<div ref={chatEnd}/>
    </div>
-   <form className="content-chat-composer" onSubmit={e=>{e.preventDefault();void(order?revise():submit());}}><label htmlFor="content-chat-draft">{order?'수정 요청':'추가 제작 요청'}</label><textarea id="content-chat-draft" value={draft} onChange={e=>setDraft(e.target.value)} maxLength={10000} rows={3} disabled={busy} placeholder={order?'예: 첫 장면을 음식 클로즈업으로 바꾸고 자막을 더 크게 해 주세요.':'원하는 구성이나 강조할 내용을 적어 주세요.'}/><div><small>{order&&order.status!=='completed'?'제작 완료 후 수정 요청 가능':'전송하면 실제 테스트 주문으로 접수됩니다.'}</small><button type="submit" disabled={busy||(order?order.status!=='completed'||!draft.trim():!files.length||!!selected)}>{busy?'처리 중…':order?'수정 요청 ↑':'제작 시작 ↑'}</button></div></form>
+   <form className="content-chat-composer" onSubmit={e=>{e.preventDefault();void(order?revise():submit());}}><label htmlFor="content-chat-draft">{order?'수정 요청':'제작 요청'}</label><textarea id="content-chat-draft" value={draft} onChange={e=>setDraft(e.target.value)} maxLength={10000} rows={3} disabled={busy} placeholder={order?'예: 첫 장면을 음식 클로즈업으로 바꾸고 자막을 더 크게 해 주세요.':'원하는 구성이나 강조할 내용을 적어 주세요.'}/><div><small>{order&&order.status!=='completed'?'제작 완료 후 수정 요청 가능':'전송하면 실제 테스트 주문으로 접수됩니다.'}</small><button type="submit" disabled={busy||(order?order.status!=='completed'||!draft.trim():!files.length||!!selected)}>{busy?'처리 중…':order?'수정 요청 ↑':'제작 시작 ↑'}</button></div></form>
   </div>
   <aside className="content-result-panel"><div className="content-panel-heading"><strong>미리보기</strong><span>{current?mediaIndex+1:0} / {media.length}</span></div><div className="shorts-tabs">{(['inputs','results'] as const).map(t=><button key={t} aria-pressed={mediaTab===t} onClick={()=>{setMediaTab(t);setMediaIndex(0);}}>{t==='inputs'?'원본 파일':'제작 결과'}</button>)}</div>
    <div className="content-media-stage">{current?current.type.startsWith('video/')?<video key={selected+mediaTab+mediaIndex} src={current.url} controls playsInline/>:<img src={current.url} alt={current.name}/>:<div className="content-panel-empty"><span>▷</span><p>{mediaTab==='results'?'완성된 영상·카드뉴스가 여기에 표시됩니다.':'원본을 선택하면 여기서 바로 확인할 수 있습니다.'}</p></div>}</div>
