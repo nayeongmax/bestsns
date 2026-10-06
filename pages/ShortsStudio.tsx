@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { UserProfile } from '../types';
 import { useShortsAccess } from '../hooks/useShortsAccess';
@@ -7,18 +7,42 @@ import './ShortsStudio.css';
 const industries = ['음식점·카페', '뷰티·미용', '운동·피트니스', '쇼핑·브랜드', '교육·학원', '인플루언서', '맛집', '기타 업종'];
 const foodImage = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=700&q=85';
 const showcaseExamples = [
-  { industry: '맛집', title: '한 입에 반하는 순간', caption: '오늘의 메뉴를, 오늘의 주인공으로.', image: foodImage, kind: '릴스 예시', color: '#d89b56' },
-  { industry: '음식점·카페', title: '커피 한 잔의 여유', caption: '우리 동네에서 찾은 작은 쉼표.', image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=700&q=85', kind: '쇼츠 예시', color: '#b69b79' },
+  { industry: '맛집', title: '한 입에 반하는 순간', caption: '오늘의 메뉴를, 오늘의 주인공으로.', image: foodImage, video: 'https://assets.mixkit.co/videos/4678/4678-720.mp4', kind: '릴스 예시', color: '#d89b56' },
+  { industry: '음식점·카페', title: '커피 한 잔의 여유', caption: '우리 동네에서 찾은 작은 쉼표.', image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=700&q=85', video: 'https://assets.mixkit.co/videos/43941/43941-720.mp4', kind: '쇼츠 예시', color: '#b69b79' },
   { industry: '맛집', title: '꼭 저장해 둘 맛집', caption: '메뉴부터 분위기까지, 한 장씩.', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=700&q=85', kind: '카드뉴스 예시', color: '#a29bbf' },
-  { industry: '인플루언서', title: '일상을 콘텐츠로', caption: '취향이 담긴 나만의 이야기.', image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=700&q=85', kind: '릴스 예시', color: '#98b6a6' },
+  { industry: '맛집', title: '오늘의 시그니처', caption: '맛있는 순간을 짧고 생생하게.', image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=700&q=85', video: 'https://assets.mixkit.co/videos/2430/2430-720.mp4', kind: '릴스 예시', color: '#98b6a6' },
   { industry: '쇼핑·브랜드', title: '새로운 취향의 발견', caption: '보여 주고 싶은 브랜드의 순간.', image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=700&q=85', kind: '카드뉴스 예시', color: '#cba6a0' },
 ];
+function ShowcaseVideo({ src, paused, label }: { src: string; paused: boolean; label: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !paused) video.play().catch(() => {});
+      else video.pause();
+    }, { threshold: 0.15 });
+    observer.observe(video);
+    if (paused) video.pause();
+    return () => { observer.disconnect(); video.pause(); };
+  }, [paused]);
+  return <><video ref={ref} src={src} muted loop playsInline preload="metadata" aria-label={label} onError={() => setFailed(true)} />{failed && <span className="shorts-video-error">영상을 불러오지 못했습니다. 새로고침해 주세요.</span>}</>;
+}
 function ContentShowcase() {
   const [paused, setPaused] = useState(false);
+  const [examples] = useState(() => {
+    const shuffled = [...showcaseExamples];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  });
   return <section className="shorts-showcase" aria-label="콘텐츠 제작 예시">
     <div className="shorts-section shorts-showcase-heading"><div><span className="shorts-eyebrow">MADE FOR YOUR FEED</span><h2>우리 가게도 이렇게.</h2><p>쇼츠·릴스부터 카드뉴스까지, 콘텐츠의 분위기를 둘러보세요.</p></div><button className="shorts-carousel-toggle" onClick={() => setPaused(!paused)} aria-pressed={paused}>{paused ? '자동 넘김 재생 ▷' : '자동 넘김 일시정지 Ⅱ'}</button></div>
-    <div className={'shorts-carousel' + (paused ? ' is-paused' : '')}><div className="shorts-carousel-track">{[0, 1].map(copy => <div className="shorts-carousel-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>{showcaseExamples.map((item, index) => <article className="shorts-result-card" key={item.title} style={{ '--card-accent': item.color } as React.CSSProperties}><div className="shorts-result-photo"><img src={item.image} alt={copy === 0 ? item.industry + ' 콘텐츠 분위기 예시' : ''} loading="lazy"/><span className="shorts-result-kind">{item.kind}</span><div className="shorts-result-overlay"><span>{item.industry}</span><h3>{item.title}</h3>{item.kind.includes('카드뉴스') ? <div className="shorts-card-dots"><i/><i/><i/><span>01 / 05</span></div> : <span className="shorts-result-duration">세로 영상 구성 예시</span>}</div></div><div className="shorts-result-description"><span>CONCEPT 0{index + 1}</span><p>{item.caption}</p></div></article>)}</div>)}</div></div>
-    <p className="shorts-showcase-note">디자인 예시 · 사진으로 구성한 미리보기이며 실제 제작 영상이나 고객 결과물이 아닙니다.</p>
+    <div className={'shorts-carousel' + (paused ? ' is-paused' : '')}><div className="shorts-carousel-track">{[0, 1].map(copy => <div className="shorts-carousel-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>{examples.map((item, index) => <article className="shorts-result-card" key={item.title} style={{ '--card-accent': item.color } as React.CSSProperties}><div className="shorts-result-photo">{'video' in item && item.video ? <ShowcaseVideo src={item.video} paused={paused} label={item.industry + ' 실제 샘플 영상'} /> : <img src={item.image} alt={copy === 0 ? item.industry + ' 카드뉴스 디자인 예시' : ''} loading="lazy"/>}<span className="shorts-result-kind">{item.kind}</span><div className="shorts-result-overlay"><span>{item.industry}</span><h3>{item.title}</h3>{item.kind.includes('카드뉴스') ? <div className="shorts-card-dots"><i/><i/><i/><span>01 / 05</span></div> : <span className="shorts-result-duration">음소거 자동 재생 · 영상 예시</span>}</div></div><div className="shorts-result-description"><span>CONCEPT 0{index + 1}</span><p>{item.caption}</p></div></article>)}</div>)}</div></div>
+    <p className="shorts-showcase-note">쇼츠·릴스는 실제 샘플 영상으로 재생됩니다. 카드뉴스는 디자인 예시이며, 고객 제작 결과물은 아닙니다.</p>
   </section>;
 }
 export default function ShortsStudio({ user }: { user: UserProfile | null }) {
