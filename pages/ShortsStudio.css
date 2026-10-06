@@ -5,3 +5,5 @@
 .shorts-result-photo video{width:100%;height:100%;object-fit:cover;display:block}.shorts-video-error{position:absolute;inset:30% 15px auto;color:#fff;background:#191d2e;padding:14px;font-size:11px;z-index:3}.shorts-result-overlay{pointer-events:none}
 
 .shorts-result-overlay h3{word-break:keep-all}
+
+.shorts-optional{margin-left:7px;font-size:10px;font-weight:400;color:var(--muted)}.shorts-input-help{font-size:11px;color:var(--muted);line-height:1.8;margin:10px 0}
