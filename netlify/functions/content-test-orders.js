@@ -14,9 +14,9 @@ exports.handler = async event => {
       for (const row of rows.filter(row => row.status !== 'uploading')) {
         row.assets = await Promise.all((row.assets || []).map(async item => ({ ...item, url: checked(await client.storage.from(bucket).createSignedUrl(item.path, 600)).signedUrl })));
       }
-      return json(200, { orders: rows, enabled: process.env.CONTENT_TEST_ENABLED === 'true', bridgeReady: process.env.CONTENT_PIXELING_BRIDGE_READY === 'true' });
+      return json(200, { orders: rows, enabled: process.env.CONTENT_TEST_ENABLED !== 'false', bridgeReady: process.env.CONTENT_PIXELING_BRIDGE_READY === 'true' });
     }
-    if (process.env.CONTENT_TEST_ENABLED !== 'true' || process.env.CONTENT_PIXELING_BRIDGE_READY !== 'true') return json(503, { error: '픽셀링 작업자 연결과 테스트 설정을 완료해야 주문을 실행할 수 있습니다.' });
+    if (process.env.CONTENT_TEST_ENABLED === 'false') return json(503, { error: '관리자 테스트 접수가 중지되어 있습니다.' });
     const data = JSON.parse(event.body || '{}');
     if (data.action === 'revise') {
       if (typeof data.id !== 'string' || typeof data.request !== 'string' || !data.request.trim() || data.request.length > 10000) return json(400, { error: '수정 요청을 1~10,000자로 입력해 주세요.' });
@@ -43,7 +43,7 @@ exports.handler = async event => {
       if (order.status !== 'uploading') return json(409, { error: '이미 접수되었거나 실행 중인 주문입니다.' });
       const stored = checked(await client.storage.from(bucket).list(`${order.id}/inputs`, { limit: 100 }));
       if (order.assets.some(a => !stored.some(f => f.name === a.path.split('/').pop() && Number(f.metadata?.size) === a.size))) return json(400, { error: '원본 파일 업로드가 완료되지 않았습니다.' });
-      checked(await client.from('content_test_orders').update({ status: 'queued', message: '픽셀링 작업자 배정 대기' }).eq('id',order.id).eq('status','uploading'));
+      checked(await client.from('content_test_orders').update({ status: 'queued', message: '원본 업로드·주문 접수 완료. 픽셀링 작업자 연결 후 제작이 시작됩니다.' }).eq('id',order.id).eq('status','uploading'));
       return json(200, { id:order.id, status:'queued' });
     }
     return json(400, { error: 'Invalid action' });
