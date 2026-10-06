@@ -304,8 +304,18 @@ const AuthPage: React.FC<Props> = ({ onLoginSuccess, onClose }) => {
     if (loginId === adminId) {
       try {
         const response = await fetch('/.netlify/functions/admin-session', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: loginId, password: loginPw }) });
-        verifiedContentAdmin = response.ok;
-      } catch { /* Actual tests require a verified server session. */ }
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showAlert({ title: '관리자 로그인 실패', description: result.error || '관리자 인증 서버에 연결할 수 없습니다.' });
+          setLoading(false);
+          return;
+        }
+        verifiedContentAdmin = result.authenticated === true;
+      } catch {
+        showAlert({ title: '관리자 로그인 실패', description: '인증 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' });
+        setLoading(false);
+        return;
+      }
     }
     if (verifiedContentAdmin) {
         const adminUser: UserProfile = {
