@@ -138,7 +138,7 @@ async function storeAdminPost(body: Record<string, unknown>): Promise<void> {
   if (!res.ok) throw new Error(await res.text());
 }
 
-/** 어드민 전용: 비밀 상품 포함 전체 상품 목록 조회 (RLS 비활성화 → 직접 Supabase 호출) */
+/** 어드민 전용: 비밀 상품 포함 전체 상품 목록 조회 (서버 관리자 API) */
 export async function fetchStoreProductsAdmin(): Promise<EbookProduct[]> {
   return (await storeAdminGet('products')).map(row => rowToProduct(row as Record<string, unknown>));
 }
@@ -155,8 +155,7 @@ export async function upsertStoreProductsAdmin(list: EbookProduct[]): Promise<vo
 
 /** 어드민 전용: 상품 삭제 */
 export async function deleteStoreProductAdmin(id: string): Promise<void> {
-  const { error } = await supabase.from('store_products').delete().eq('id', id);
-  if (error) throw new Error(error.message || JSON.stringify(error));
+  await storeAdminPost({ action: 'deleteProduct', id });
 }
 
 // ─── store_orders ─────────────────────────────────────────────────────
