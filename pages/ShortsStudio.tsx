@@ -58,7 +58,7 @@ export default function ShortsStudio({ user }: { user: UserProfile | null }) {
   const [request, setRequest] = useState('');
   const [script, setScript] = useState('');
   const [tab, setTab] = useState('주문 설정');
-  const legacyAdmin = user?.role === 'admin' && user?.id?.toLowerCase() === 'admin';
+  const legacyAdmin = false;
   const allowed = access.published || access.preview || legacyAdmin;
   if (access.loading) return <div className="shorts-gate" role="status">접근 권한을 확인하고 있습니다.</div>;
   if (!allowed) return <section className="shorts-gate"><span className="shorts-tag">PRIVATE PREVIEW</span><h1>콘텐츠 제작을 준비하고 있어요.</h1><p>개발 중인 페이지는 운영자만 확인할 수 있습니다.</p>{!user && <Link to="/login">운영자 계정으로 로그인 →</Link>}<Link to="/sns">기존 서비스로 돌아가기 →</Link></section>;

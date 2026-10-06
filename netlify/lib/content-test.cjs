@@ -8,7 +8,7 @@ function db() {
   if (!url || !key) throw Error('관리자 테스트 저장소가 설정되지 않았습니다.');
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
-const secret = () => process.env.CONTENT_ADMIN_SESSION_SECRET || '';
+const secret = () => process.env.ADMIN_SESSION_SECRET || process.env.CONTENT_ADMIN_SESSION_SECRET || '';
 function cookieToken() {
   const body = Buffer.from(JSON.stringify({ id: 'admin', exp: Date.now() + 3600000 })).toString('base64url');
   return body + '.' + crypto.createHmac('sha256', secret()).update(body).digest('base64url');
@@ -20,7 +20,7 @@ function validCookie(event) {
   const [body, sig] = token.split('.');
   if (!body || !sig) return false;
   const expected = crypto.createHmac('sha256', secret()).update(body).digest('base64url');
-  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
+  if (Buffer.byteLength(sig) !== Buffer.byteLength(expected) || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
   try { const data = JSON.parse(Buffer.from(body, 'base64url').toString()); return data.id === 'admin' && data.exp > Date.now(); } catch { return false; }
 }
 async function admin(event, client) {

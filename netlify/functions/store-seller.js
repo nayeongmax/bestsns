@@ -1,16 +1,17 @@
+const { authorized } = require('../lib/admin-auth.cjs');
 /**
  * store-seller.js — 판매자/어드민 상품 저장 (서버사이드 service_role, RLS 우회)
  *
  * 인증 방식 (둘 중 하나):
  *   1. Authorization: Bearer <Supabase JWT>  (일반 판매자)
- *   2. x-admin-key: <VITE_ADMIN_PANEL_PASSWORD>  (어드민)
+ *   2. 서버 검증 관리자 세션  (어드민)
  *
  * POST { action:'upsertProduct', product }
  */
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-key',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json; charset=UTF-8',
 };
@@ -32,20 +33,15 @@ exports.handler = async (event) => {
   }
 
   // ── 인증: 어드민 키 OR 사용자 JWT ──
-  const adminKey = event.headers['x-admin-key'] || event.headers['X-Admin-Key'] || '';
-  const expectedAdminKey =
-    process.env.VITE_ADMIN_PANEL_PASSWORD ||
-    process.env.VITE_ADMIN_PASSWORD ||
-    process.env.ADMIN_PASSWORD ||
-    '';
-
   const authHeader = event.headers['authorization'] || event.headers['Authorization'] || '';
   const userJwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
 
-  let authenticated = false;
+  const isAdmin = await authorized(event);
+  let authenticated = isAdmin;
+  let ownerId = null;
 
   // 방법 1: 어드민 키
-  if (expectedAdminKey && adminKey === expectedAdminKey) {
+  if (isAdmin) {
     authenticated = true;
   }
 
@@ -55,7 +51,7 @@ exports.handler = async (event) => {
       const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
         headers: { Authorization: `Bearer ${userJwt}`, apikey: serviceKey },
       });
-      if (userRes.ok) authenticated = true;
+      if (userRes.ok) { const account = await userRes.json(); ownerId = account.id; authenticated = typeof ownerId === 'string'; }
     } catch (_) { /* network error → authenticated remains false */ }
   }
 
@@ -73,10 +69,28 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || '{}');
     const { action } = body;
 
+    if (action === 'deleteProduct') {
+      if (typeof body.id !== 'string' || !body.id) return resp(400, {error:'Invalid product ID'});
+      const path = supabaseUrl + '/rest/v1/store_products?id=eq.' + encodeURIComponent(body.id);
+      const ownerRes = await fetch(path + '&select=author_id&limit=1', {headers:h});
+      if (!ownerRes.ok) return resp(503,{error:'상품 소유권 확인 실패'});
+      const rows = await ownerRes.json();
+      if (!isAdmin && (!rows[0] || rows[0].author_id !== ownerId)) return resp(403,{error:'본인 상품만 삭제할 수 있습니다.'});
+      const result = await fetch(path, {method:'DELETE', headers:h});
+      return resp(result.ok?200:503, result.ok?{success:true}:{error:'상품 삭제 실패'});
+    }
     if (action === 'upsertProduct') {
       const { product } = body;
       if (!product || !product.id) {
         return resp(400, { error: 'product.id가 필요합니다.' });
+      }
+      if (!isAdmin) {
+        const existingRes = await fetch(supabaseUrl + '/rest/v1/store_products?id=eq.' + encodeURIComponent(product.id) + '&select=author_id&limit=1', { headers: h });
+        if (!existingRes.ok) return resp(503, { error: '상품 소유권 확인 실패' });
+        const existing = await existingRes.json();
+        if (product.author_id !== ownerId || (existing[0] && existing[0].author_id !== ownerId)) return resp(403, { error: '본인 상품만 저장할 수 있습니다.' });
+        product.status = 'pending';
+        product.is_secret = false;
       }
       const res = await fetch(`${supabaseUrl}/rest/v1/store_products`, {
         method: 'POST',

@@ -148,29 +148,12 @@ Supabase는 **가입 확인 메일**이 켜져 있으면 회원가입할 때마�
 
 ## 4. 어드민(운영자) 패널 접속 방법
 
-어드민 패널은 **별도 가입 없이**, 환경 변수로 설정한 계정으로 로그인하면 됩니다. **비밀번호는 코드에 두지 않고** `.env` 및 Netlify 환경 변수로만 설정합니다.
+관리자 인증은 Netlify 서버에서만 수행합니다. 브라우저 번들에 비밀번호를 넣지 않습니다.
 
-### 환경 변수 (필수)
-
-| 변수 | 설명 |
-|------|------|
-| `VITE_ADMIN_ID` | 운영자 로그인 아이디 (미설정 시 `admin`) |
-| `VITE_ADMIN_PASSWORD` | 운영자 로그인 비밀번호 + 패널 2차 인증 비밀번호 |
-| `VITE_ADMIN_PANEL_PASSWORD` | (선택) 패널 2차 인증만 다른 비밀번호로 쓰려면 설정 |
-
-- **로컬:** `.env` 에 위 변수를 넣고, 아이디/비밀번호를 **코드에 적지 않은 값**으로 설정합니다.
-- **Netlify:** Site settings → Environment variables 에 같은 변수를 추가합니다. (빌드 시 적용되므로 배포 후에는 코드만 봐서는 비밀번호를 알 수 없습니다.)
-- **중요:** Netlify에서 `VITE_ADMIN_ID`, `VITE_ADMIN_PASSWORD` 를 추가할 때 **"Contains secret values"를 체크하지 마세요.**  
-  이 값들은 Vite 빌드 시 JS 번들에 포함되는 것이 정상이라, "secret"으로 표시하면 Netlify 시크릿 스캔이 빌드 결과물에서 감지해 **빌드를 실패**시킵니다. 체크 해제해도 값은 환경 변수에만 있고, 빌드는 정상 통과합니다.
-
-### 접속 절차
-
-1. **로그인 페이지**에서 `VITE_ADMIN_ID` 에 설정한 **아이디**와 `VITE_ADMIN_PASSWORD` 에 설정한 **비밀번호**로 로그인합니다.
-2. 로그인 후 **화면 우측 하단** **ADMIN PANEL** 버튼을 누르거나, 주소창에 `/#/admin` 을 입력합니다.
-3. 「관리자 인증 센터」에서 `VITE_ADMIN_PASSWORD`(또는 `VITE_ADMIN_PANEL_PASSWORD`) 비밀번호를 한 번 더 입력하면 운영 대시보드가 표시됩니다.
-
-**보안:** `/admin` 은 **role 이 admin 인 사용자만** 접근 가능합니다.  
-환경 변수는 **빌드된 JS에 포함**되므로, 배포된 사이트를 매우 자세히 분석하면 이론상 노출될 수 있습니다. 금융/의료 등 높은 보안이 필요하면 백엔드(서버)에서만 관리자 인증을 검사하는 방식을 권장합니다.
+- Netlify Functions 범위에 ADMIN_ID=admin, ADMIN_PASSWORD(기존 공개된 비밀번호와 다른 새 값), ADMIN_SESSION_SECRET(32자 이상 무작위 값)을 설정합니다.
+- 기존 VITE_ADMIN_PASSWORD, VITE_ADMIN_PANEL_PASSWORD, VITE_ADMIN_ID는 삭제하고 재배포합니다. 기존 비밀번호는 재사용하지 않습니다.
+- 관리자 API는 서명된 HttpOnly 세션 또는 검증된 Supabase 관리자 JWT만 허용합니다. x-admin-key와 브라우저 저장소 플래그는 인증 수단이 아닙니다.
+- 상세 전환 순서는 ADMIN_SECURITY_SETUP.md를 확인합니다.
 
 ---
 

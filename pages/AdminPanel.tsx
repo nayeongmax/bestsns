@@ -57,12 +57,8 @@ const AdminPanel: React.FC<Props> = ({
   gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
   const { showAlert } = useConfirm();
-  const ADMIN_STORAGE_KEY = 'admin_logged_in';
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!sessionStorage.getItem(ADMIN_STORAGE_KEY));
-  const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime' | 'aiconsult' | 'popup' | 'franchise'>('sns');
 
-  const panelPassword = (import.meta as any).env?.VITE_ADMIN_PANEL_PASSWORD ?? (import.meta as any).env?.VITE_ADMIN_PASSWORD ?? 'admin123';
 
   // 회원 및 권한 관리 탭 열 때마다 profiles에서 회원 목록 재조회 → 판매자 승인 대기 반영
   useEffect(() => {
@@ -77,30 +73,6 @@ const AdminPanel: React.FC<Props> = ({
         .catch((e) => console.warn('채널 주문 재로드 실패:', e));
     }
   }, [activeTab]);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (panelPassword && password === panelPassword) {
-      sessionStorage.setItem(ADMIN_STORAGE_KEY, '1');
-      setIsLoggedIn(true);
-    } else showAlert({ description: '비밀번호가 올바르지 않습니다.' });
-  };
-
-  if (!isLoggedIn) {
-    return (
-      <div className="max-w-md mx-auto py-32 px-4">
-        <div className="bg-white p-10 rounded-[48px] shadow-2xl border border-gray-100 text-center">
-          <div className="w-20 h-20 bg-gray-900 text-white rounded-3xl mx-auto flex items-center justify-center text-3xl mb-8">🔐</div>
-          <h2 className="text-2xl font-black text-gray-900 mb-8 italic uppercase underline decoration-blue-500">관리자 인증 센터</h2>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-5 bg-gray-50 rounded-[24px] text-center font-black outline-none focus:ring-2 focus:ring-blue-50" placeholder="비밀번호를 입력하세요" />
-            <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-[24px] font-black shadow-xl hover:bg-blue-700 transition-all">로그인</button>
-            <p className="text-xs text-gray-500">운영자 전용. .env에 VITE_ADMIN_PASSWORD 설정 시 해당 비밀번호 사용.</p>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-[1400px] mx-auto pb-32 md:space-y-12 md:px-8">

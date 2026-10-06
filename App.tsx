@@ -1,3 +1,5 @@
+import AdminGate from './components/AdminGate';
+import { verifyAdminSession } from './adminSession';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import {
@@ -115,7 +117,7 @@ function ContainerRoutes(props: {
   const location = useLocation();
   const pathname = location.pathname || '';
   const shortsAccess = useShortsAccess(props.user);
-  const showShortsHome = shortsAccess.published || shortsAccess.preview || (props.user?.role === 'admin' && props.user?.id?.toLowerCase() === 'admin');
+  const showShortsHome = shortsAccess.published || shortsAccess.preview;
   if (pathname === '/ebooks') {
     return (
       <EbookSales
@@ -158,7 +160,7 @@ function ContainerRoutes(props: {
       <Route path="/payment/alba" element={props.user ? <AlbaPaymentPage user={props.user} members={props.members} addNotif={props.addNotif} /> : <Navigate to="/login" />} />
       <Route path="/review/write" element={props.user ? <ReviewWritePage user={props.user} onAddReview={(r)=>props.setReviews(prev=>[r,...prev])} /> : <Navigate to="/login" />} />
       <Route path="/franchise" element={props.user ? <FranchisePanel user={props.user} members={props.members} onUpdateUser={props.handleGlobalUserUpdate} /> : <Navigate to="/login" />} />
-      <Route path="/admin" element={props.user ? <AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} onDeleteSmmProducts={props.onDeleteSmmProducts} smmOrders={props.smmOrders} setSmmOrders={props.setSmmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} setChannelOrders={props.setChannelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} onRefreshMembers={props.onRefreshMembers} /> : <Navigate to="/login" />} />
+      <Route path="/admin" element={props.user ? <AdminGate><AdminPanel user={props.user} ebooks={props.ebooks} setEbooks={props.setEbooks} channels={props.channels} setChannels={props.setChannels} setNotifications={props.setNotifications} smmProviders={props.smmProviders} setSmmProviders={props.setSmmProviders} smmProducts={props.smmProducts} setSmmProducts={props.setSmmProducts} onDeleteSmmProducts={props.onDeleteSmmProducts} smmOrders={props.smmOrders} setSmmOrders={props.setSmmOrders} members={props.members} setMembers={props.setMembers} channelOrders={props.channelOrders} setChannelOrders={props.setChannelOrders} storeOrders={props.storeOrders} onIssueCoupons={props.handleMassIssueCoupons} addNotif={props.addNotif} gradeConfigs={props.gradeConfigs} setGradeConfigs={props.setGradeConfigs} reviews={props.reviews} setReviews={props.setReviews} onUpdateUser={props.handleGlobalUserUpdate} onRefreshMembers={props.onRefreshMembers} /></AdminGate> : <Navigate to="/login" />} />
       <Route path="/notices" element={<NoticePage notices={props.notices} setNotices={props.setNotices} user={props.user || { id: '', nickname: 'Guest', role: 'user', profileImage: '', points: 0 }} />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -184,7 +186,17 @@ function safeStorage<T>(key: string, fallback: T): T {
 const App: React.FC = () => {
   const location = useLocation();
   const [members, setMembers] = useState<UserProfile[]>(() => safeStorage('site_members_v2', []));
-  const [user, setUser] = useState<UserProfile | null>(() => safeStorage<UserProfile | null>('user_profile_v2', null));
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    const cached = safeStorage<UserProfile | null>('user_profile_v2', null);
+    return cached?.role === 'admin' ? null : cached;
+  });
+  useEffect(() => {
+    const cached = safeStorage<UserProfile | null>('user_profile_v2', null);
+    if (cached?.role !== 'admin') return;
+    let active = true;
+    verifyAdminSession().then(ok => { if (active && ok) setUser(cached); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   const [notifications, setNotifications] = useState<SiteNotification[]>(() => safeStorage('site_notifications_v2', []));
   const [smmOrders, setSmmOrders] = useState<SMMOrder[]>(() => safeStorage('smm_orders_v2', []));
   const [smmProviders, setSmmProviders] = useState<SMMProvider[]>(() => safeStorage('site_smm_providers_v2', []));
@@ -238,9 +250,10 @@ const App: React.FC = () => {
     let cancelled = false;
     // 새로고침 시 localStorage에서 유저 역할 확인 — 어드민이면 비밀/미승인 상품 포함 전체 로드
     const initialUser = safeStorage<UserProfile | null>('user_profile_v2', null);
-    const isInitialAdmin = initialUser?.role === 'admin';
+    const wantsAdmin = initialUser?.role === 'admin';
     const load = async (isRetry: boolean) => {
       try {
+        const isInitialAdmin = wantsAdmin && await verifyAdminSession();
         const [products, orders, reviewList, channelProducts, channelOrderList, channelReviewList] = await Promise.all([
           isInitialAdmin ? fetchStoreProductsAdmin() : fetchPublicStoreProducts(),
           fetchStoreOrders(),
@@ -869,7 +882,7 @@ const App: React.FC = () => {
   }, [user, addNotif]);
 
   const handleLoginSuccess = async (userData: UserProfile) => {
-    const isAdminLogin = userData.role === 'admin' || userData.id?.toLowerCase() === 'admin';
+    const isAdminLogin = userData.role === 'admin' && await verifyAdminSession();
     const existingMember = members.find(m => m.id.toLowerCase() === userData.id.toLowerCase());
     let targetProfile: UserProfile;
     if (existingMember) {
@@ -880,12 +893,12 @@ const App: React.FC = () => {
         nickname: userData.nickname ?? existingMember.nickname,
         phone: userData.phone ?? existingMember.phone,
         profileImage: userData.profileImage ?? existingMember.profileImage,
-        role: isAdminLogin ? 'admin' : existingMember.role
+        role: isAdminLogin ? 'admin' : userData.role === 'admin' ? 'user' : userData.role
       };
     } else {
       targetProfile = {
         ...userData,
-        role: isAdminLogin ? 'admin' : (userData.role ?? 'user'),
+        role: isAdminLogin ? 'admin' : userData.role === 'admin' ? 'user' : (userData.role ?? 'user'),
         sellerStatus: isAdminLogin ? 'approved' : (userData.sellerStatus ?? 'none'),
         points: userData.id?.toLowerCase() === 'test' ? 12500 : 0,
         joinDate: new Date().toISOString().split('T')[0], coupons: userData.coupons || []
@@ -932,7 +945,7 @@ const App: React.FC = () => {
     }).catch((e) => console.warn('로그인 후 채널/스토어 재로드 실패:', e));
   };
 
-  const handleLogout = () => { setUser(null); setWishlist([]); };
+  const handleLogout = () => { void fetch('/.netlify/functions/admin-session', { method: 'DELETE', credentials: 'same-origin' }); void supabase.auth.signOut(); setUser(null); setWishlist([]); };
 
   // 찜 localStorage 백업 (DB와 별도로 유지, 페이지 리셋 방지)
   useEffect(() => {
