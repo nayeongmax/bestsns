@@ -8,7 +8,7 @@
 ## 서버 설정
 1. Supabase SQL Editor에서 supabase/migrations/20261006_content_test.sql 실행. private content-test bucket과 서비스 전용 테이블/RPC 생성. 기존 콘텐츠에는 영향이 없다.
 2. Netlify 서버 환경변수 SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CONTENT_WORKER_KEY(32자 이상), CONTENT_ADMIN_SESSION_SECRET(32자 이상) 설정. VITE_ 접두사 금지.
-3. 기존 admin 로그인에 ADMIN_ID=admin, ADMIN_PASSWORD(기존 관리자 비밀번호와 동일)를 서버에 설정하고 다시 로그인. 브라우저의 role 값만으로 업로드를 허용하지 않는다. Supabase profiles.role=admin 세션도 지원한다.
+3. 서버 관리자 로그인은 ADMIN_ID=admin, ADMIN_PASSWORD(브라우저에 공개된 VITE_ADMIN_PASSWORD와 다른 새로운 서버 전용 값)로 설정하고 로그인. 기존 브라우저 관리자 로그인은 미리보기만 허용한다. 실제 테스트는 새 서버 로그인 또는 Supabase profiles.role=admin 세션이 필요하다. 비밀번호 설정은 운영자가 수행한다.
 4. 실제 픽셀링 어댑터 검증 후 CONTENT_TEST_ENABLED=true, CONTENT_PIXELING_BRIDGE_READY=true. SHORTS_PUBLIC_ENABLED는 false로 유지한다.
 
 ## 픽셀링 작업자 계약
