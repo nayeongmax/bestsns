@@ -13,16 +13,17 @@ const showcaseExamples = [
   { industry: '맛집', title: '한 입에 반하는 순간', caption: '오늘의 메뉴를, 오늘의 주인공으로.', image: foodImage, video: 'https://assets.mixkit.co/videos/4678/4678-720.mp4', kind: '릴스 예시', color: '#d89b56' },
   { industry: '음식점·카페', title: '커피 한 잔의 여유', caption: '우리 동네에서 찾은 작은 쉼표.', image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=700&q=85', video: 'https://assets.mixkit.co/videos/43941/43941-720.mp4', kind: '쇼츠 예시', color: '#b69b79' },
   { industry: '맛집', title: '꼭 저장해 둘 맛집', caption: '메뉴부터 분위기까지, 한 장씩.', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=700&q=85', kind: '카드뉴스 예시', color: '#a29bbf' },
-  { industry: '맛집', title: '오늘의 시그니처', caption: '맛있는 순간을 짧고 생생하게.', image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=700&q=85', video: 'https://assets.mixkit.co/videos/2430/2430-720.mp4', kind: '릴스 예시', color: '#98b6a6' },
+  { industry: '맛집', title: '오늘의 시그니처', caption: '맛있는 순간을 짧고 생생하게.', image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=700&q=85', video: 'https://assets.mixkit.co/videos/10424/10424-720.mp4', kind: '릴스 예시', color: '#98b6a6' },
   { industry: '쇼핑·브랜드', title: '새로운 취향의 발견', caption: '보여 주고 싶은 브랜드의 순간.', image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=700&q=85', kind: '카드뉴스 예시', color: '#cba6a0' },
   {"industry":"맛집","title":"오늘의 피자는 이렇게","caption":"반죽부터 완성까지, 맛있는 과정.","image":"","video":"https://assets.mixkit.co/videos/42468/42468-720.mp4","kind":"자막 릴스 예시","color":"#efbc78"},
-  {"industry":"음식점·카페","title":"싱그러운 한 끼","caption":"재료의 색감으로 전하는 건강한 메뉴.","image":"","video":"https://assets.mixkit.co/videos/40536/40536-720.mp4","kind":"자막 쇼츠 예시","color":"#a5cf99"},
-  {"industry":"뷰티·미용","title":"분위기를 바꾸는 순간","caption":"매장의 서비스 과정을 짧게 소개.","image":"","video":"https://assets.mixkit.co/videos/40607/40607-720.mp4","kind":"자막 릴스 예시","color":"#b4a2ed"},
+  {"industry":"음식점·카페","title":"싱그러운 한 끼","caption":"재료의 색감으로 전하는 건강한 메뉴.","image":"","video":"https://assets.mixkit.co/videos/40531/40531-720.mp4","kind":"자막 쇼츠 예시","color":"#a5cf99"},
+  {"industry":"음식점·카페","title":"재료부터 다른 한 끼","caption":"싱싱한 재료를 가까이 보여 주세요.","image":"","video":"https://assets.mixkit.co/videos/40516/40516-720.mp4","kind":"자막 릴스 예시","color":"#b4a2ed"},
   {"industry":"운동·피트니스","title":"오늘부터 시작하는 루틴","caption":"운동 전 알아두면 좋은 세 가지.","image":"https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#a3b8da"},
-  {"industry":"인플루언서","title":"내 일상을 하나의 이야기로","caption":"브이로그를 소개하는 프로필 카드.","image":"https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#dcabc0"},
+  {"industry":"인플루언서","title":"내 일상을 하나의 이야기로","caption":"브이로그를 소개하는 프로필 카드.","image":"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#dcabc0"},
   {"industry":"교육·학원","title":"하루 10분의 변화","caption":"수업과 학습 습관을 한 장씩.","image":"https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#b5c9a6"},
   {"industry":"음식점·카페","title":"이번 주에만 만나는 메뉴","caption":"신메뉴 소식을 기억에 남게.","image":"https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=700&q=85","kind":"카드뉴스 예시","color":"#e4aba4"},
 ];
+const reelHooks: Record<string,string> = {'한 입에 반하는 순간':'다이어트 망했어요!!!','커피 한 잔의 여유':'커피 좋아하면 멈춰요','오늘의 시그니처':'한 그릇으로 충분해요','오늘의 피자는 이렇게':'반죽부터 진심인 집','싱그러운 한 끼':'샐러드가 이렇게 맛있다고?','재료부터 다른 한 끼':'신선함은 숨길 수 없죠'};
 function ShowcaseVideo({ src, paused, label, caption }: { src: string; paused: boolean; label: string; caption: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
@@ -37,7 +38,7 @@ function ShowcaseVideo({ src, paused, label, caption }: { src: string; paused: b
     if (paused) video.pause();
     return () => { observer.disconnect(); video.pause(); };
   }, [paused]);
-  return <><video ref={ref} src={src} muted loop playsInline preload="metadata" aria-label={label} onError={() => setFailed(true)} /><span className="shorts-video-subtitle">{caption}</span>{failed && <span className="shorts-video-error">영상을 불러오지 못했습니다. 새로고침해 주세요.</span>}</>;
+  return <><video ref={ref} src={src} muted loop playsInline preload="metadata" aria-label={label} onError={() => setFailed(true)} />{failed && <span className="shorts-video-error">영상을 불러오지 못했습니다. 새로고침해 주세요.</span>}</>;
 }
 function ContentShowcase() {
   const [paused, setPaused] = useState(false);
@@ -51,7 +52,7 @@ function ContentShowcase() {
   });
   return <section className="shorts-showcase" aria-label="콘텐츠 제작 예시">
     <div className="shorts-section shorts-showcase-heading"><div><span className="shorts-eyebrow">MADE FOR YOUR FEED</span><h2>우리 가게도 이렇게.</h2><p>쇼츠·릴스부터 카드뉴스까지, 콘텐츠의 분위기를 둘러보세요.</p></div><button className="shorts-carousel-toggle" onClick={() => setPaused(!paused)} aria-pressed={paused}>{paused ? '자동 넘김 재생 ▷' : '자동 넘김 일시정지 Ⅱ'}</button></div>
-    <div className={'shorts-carousel' + (paused ? ' is-paused' : '')}><div className="shorts-carousel-track">{[0, 1].map(copy => <div className="shorts-carousel-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>{examples.map((item, index) => <article className="shorts-result-card" key={item.title} style={{ '--card-accent': item.color } as React.CSSProperties}><div className="shorts-result-photo">{'video' in item && item.video ? <ShowcaseVideo src={item.video} paused={paused} label={item.industry + ' 샘플 영상'} caption={item.caption} /> : <img src={item.image} alt={copy === 0 ? item.industry + ' 카드뉴스 디자인 예시' : ''} loading="lazy"/>}<span className="shorts-result-kind">{item.kind}</span><div className="shorts-result-overlay"><span>{item.industry}</span><h3>{item.title}</h3>{item.kind.includes('카드뉴스') ? <div className="shorts-card-dots"><i/><i/><i/><span>01 / 05</span></div> : <span className="shorts-result-duration">음소거 자동 재생 · 영상 예시</span>}</div></div><div className="shorts-result-description"><span>CONCEPT {String(index + 1).padStart(2,'0')}</span><p>{item.caption}</p></div></article>)}</div>)}</div></div>
+    <div className={'shorts-carousel' + (paused ? ' is-paused' : '')}><div className="shorts-carousel-track">{[0, 1].map(copy => <div className="shorts-carousel-group" key={copy} aria-hidden={copy === 1 ? true : undefined}>{examples.map((item, index) => <article className="shorts-result-card" key={item.title} style={{ '--card-accent': item.color } as React.CSSProperties}><div className="shorts-result-photo">{'video' in item && item.video ? <ShowcaseVideo src={item.video} paused={paused} label={item.industry + ' 샘플 영상'} caption={item.caption} /> : <img src={item.image} alt={copy === 0 ? item.industry + ' 카드뉴스 디자인 예시' : ''} loading="lazy"/>}<span className="shorts-result-kind">{item.kind}</span><div className={"shorts-result-overlay hook-style-"+(index%3)}><span>{item.industry}</span>{item.video?<h3 className="shorts-reel-hook"><span>{reelHooks[item.title]||item.title}</span><em>{item.title}</em></h3>:<h3>{item.title}</h3>}{item.kind.includes('카드뉴스') ? <div className="shorts-card-dots"><i/><i/><i/><span>01 / 05</span></div> : <span className="shorts-result-duration">음소거 자동 재생 · 영상 예시</span>}</div></div><div className="shorts-result-description"><span>CONCEPT {String(index + 1).padStart(2,'0')}</span><p>{item.caption}</p></div></article>)}</div>)}</div></div>
     <p className="shorts-showcase-note">12가지 콘텐츠 예시 · 영상은 무료 스톡 소재에 자막 디자인을 더한 미리보기입니다. 고객 제작 실적이 아닙니다.</p>
   </section>;
 }
