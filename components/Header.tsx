@@ -38,7 +38,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
 
   const shortsAccess = useShortsAccess(user);
   const navItems = [
-    ...(shortsAccess.published || shortsAccess.preview || (user?.role === 'admin' && user?.id?.toLowerCase() === 'admin') ? [{ label: '콘텐츠 제작', path: '/shorts', icon: '🎬' }] : []),
+    ...(shortsAccess.published || shortsAccess.preview || (user?.role === 'admin' && user?.id?.toLowerCase() === 'admin') ? [{ label: '콘텐츠 제작', path: '/shorts', icon: '🎬', badge: '쇼츠·카드뉴스' }] : []),
     { label: '마케팅주문', path: '/sns', icon: '📈' },
     { label: '채널판매', path: '/channels', icon: '📺' },
     { label: 'N잡스토어', path: '/ebooks', icon: '📖', badge: '누구나 판매OK' },
@@ -97,7 +97,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                     >
                       <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <span className="text-base">{item.icon}</span>
-                        <span className={item.path === '/shorts' ? 'flex flex-col items-center leading-tight whitespace-nowrap' : undefined}><span>{item.label}</span>{item.path === '/shorts' && <span className="text-[9px] font-medium leading-none mt-0.5">쇼츠·카드뉴스</span>}</span>
+                        <span>{item.label}</span>
                       </div>
                       {item.badge && (
                         <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
@@ -122,7 +122,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                   >
                     <div className="flex items-center gap-1.5 whitespace-nowrap">
                       <span className="text-base">{item.icon}</span>
-                      <span className={item.path === '/shorts' ? 'flex flex-col items-center leading-tight whitespace-nowrap' : undefined}><span>{item.label}</span>{item.path === '/shorts' && <span className="text-[9px] font-medium leading-none mt-0.5">쇼츠·카드뉴스</span>}</span>
+                      <span>{item.label}</span>
                     </div>
                     {item.badge && (
                       <div className="absolute top-[48px] left-1/2 -translate-x-1/2 z-[60] animate-float-badge pointer-events-none">
@@ -278,7 +278,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                         className={`w-full flex items-center gap-3 px-5 py-4 sm:py-5 text-left font-black text-base sm:text-[17px] transition-colors ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}
                       >
                         <span className="text-xl sm:text-2xl">{item.icon}</span>
-                        <span className={item.path === '/shorts' ? 'flex flex-col items-center leading-tight whitespace-nowrap' : undefined}><span>{item.label}</span>{item.path === '/shorts' && <span className="text-[9px] font-medium leading-none mt-0.5">쇼츠·카드뉴스</span>}</span>
+                        <span>{item.label}</span>
                         {item.badge && <span className="ml-auto text-[10px] sm:text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">{item.badge}</span>}
                       </button>
                     ) : (
@@ -293,7 +293,7 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
                         }
                       >
                         <span className="text-xl sm:text-2xl">{item.icon}</span>
-                        <span className={item.path === '/shorts' ? 'flex flex-col items-center leading-tight whitespace-nowrap' : undefined}><span>{item.label}</span>{item.path === '/shorts' && <span className="text-[9px] font-medium leading-none mt-0.5">쇼츠·카드뉴스</span>}</span>
+                        <span>{item.label}</span>
                         {item.badge && <span className="ml-auto text-[10px] sm:text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">{item.badge}</span>}
                       </NavLink>
                     )}
