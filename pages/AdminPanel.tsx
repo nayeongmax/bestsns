@@ -1,4 +1,5 @@
 
+import ContentProductionAdmin from '../components/admin/ContentProductionAdmin';
 import React, { useState, useEffect } from 'react';
 /**
  * Fixed: Removed .ts extension from import
@@ -57,7 +58,7 @@ const AdminPanel: React.FC<Props> = ({
   gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
   const { showAlert } = useConfirm();
-  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime' | 'aiconsult' | 'popup' | 'franchise'>('sns');
+  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime' | 'aiconsult' | 'popup' | 'franchise' | 'contentproduction'>('sns');
 
 
   // 회원 및 권한 관리 탭 열 때마다 profiles에서 회원 목록 재조회 → 판매자 승인 대기 반영
@@ -92,7 +93,8 @@ const AdminPanel: React.FC<Props> = ({
               <button onClick={() => setActiveTab('member')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'member' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400'}`}>회원 관리</button>
               <button onClick={() => setActiveTab('marketing')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'marketing' ? 'bg-rose-600 text-white shadow-sm' : 'text-gray-400'}`}>마케팅</button>
               <button onClick={() => setActiveTab('parttime')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'parttime' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-400'}`}>누구나알바</button>
-              <button onClick={() => setActiveTab('aiconsult')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'aiconsult' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-400'}`}>AI 상담</button>
+              <button onClick={() => setActiveTab('contentproduction')} className="shrink-0 whitespace-nowrap px-4 py-3 rounded-xl font-bold text-blue-700 bg-blue-50">콘텐츠 제작 설정</button>
+<button onClick={() => setActiveTab('aiconsult')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'aiconsult' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-400'}`}>AI 상담</button>
               <button onClick={() => setActiveTab('popup')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'popup' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-400'}`}>팝업 관리</button>
               <button onClick={() => setActiveTab('franchise')} className={`shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl font-black text-[11px] transition-all ${activeTab === 'franchise' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-400'}`}>🏢 가맹점설정</button>
             </div>
@@ -114,7 +116,8 @@ const AdminPanel: React.FC<Props> = ({
              <button onClick={() => setActiveTab('member')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'member' ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>회원 및 권한 관리</button>
              <button onClick={() => setActiveTab('marketing')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'marketing' ? 'bg-rose-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>마케팅 캠페인</button>
              <button onClick={() => setActiveTab('parttime')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'parttime' ? 'bg-emerald-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>누구나알바</button>
-             <button onClick={() => setActiveTab('aiconsult')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'aiconsult' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>AI 상담 이력</button>
+             <button onClick={() => setActiveTab('contentproduction')} className="shrink-0 whitespace-nowrap px-4 py-3 rounded-xl font-bold text-blue-700 bg-blue-50">콘텐츠 제작 설정</button>
+<button onClick={() => setActiveTab('aiconsult')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'aiconsult' ? 'bg-purple-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>AI 상담 이력</button>
              <button onClick={() => setActiveTab('popup')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'popup' ? 'bg-orange-500 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>팝업 관리</button>
              <button onClick={() => setActiveTab('franchise')} className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-[22px] font-black text-[13px] transition-all ${activeTab === 'franchise' ? 'bg-indigo-600 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-900'}`}>🏢 가맹점설정</button>
            </div>
@@ -160,6 +163,7 @@ const AdminPanel: React.FC<Props> = ({
         )}
         {activeTab === 'marketing' && <MarketingAdmin user={user} members={members} onIssueCoupons={onIssueCoupons} />}
         {activeTab === 'parttime' && <PartTimeAdmin addNotif={addNotif} members={members} />}
+        {activeTab === 'contentproduction' && <ContentProductionAdmin />}
         {activeTab === 'aiconsult' && <AiConsultAdmin />}
         {activeTab === 'popup' && <PopupAdmin />}
         {activeTab === 'franchise' && <FranchiseAdmin members={members} />}
