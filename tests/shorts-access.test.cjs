@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { handler } = require('./shorts-access.js');
+const { handler } = require('../netlify/functions/shorts-access.js');
 const event = (method='GET', extra={}) => ({ httpMethod: method, headers: {}, ...extra });
 test('shorts visibility fails closed, authenticates operators, and never enables production', async () => {
   const original = { ...process.env };
