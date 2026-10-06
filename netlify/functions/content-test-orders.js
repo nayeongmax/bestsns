@@ -11,10 +11,21 @@ exports.handler = async event => {
       for (const row of rows.filter(row => row.status === 'completed')) {
         row.results = await Promise.all((row.results || []).map(async item => ({ ...item, url: checked(await client.storage.from(bucket).createSignedUrl(item.path, 600)).signedUrl })));
       }
+      for (const row of rows.filter(row => row.status !== 'uploading')) {
+        row.assets = await Promise.all((row.assets || []).map(async item => ({ ...item, url: checked(await client.storage.from(bucket).createSignedUrl(item.path, 600)).signedUrl })));
+      }
       return json(200, { orders: rows, enabled: process.env.CONTENT_TEST_ENABLED === 'true', bridgeReady: process.env.CONTENT_PIXELING_BRIDGE_READY === 'true' });
     }
     if (process.env.CONTENT_TEST_ENABLED !== 'true' || process.env.CONTENT_PIXELING_BRIDGE_READY !== 'true') return json(503, { error: '픽셀링 작업자 연결과 테스트 설정을 완료해야 주문을 실행할 수 있습니다.' });
     const data = JSON.parse(event.body || '{}');
+    if (data.action === 'revise') {
+      if (typeof data.id !== 'string' || typeof data.request !== 'string' || !data.request.trim() || data.request.length > 10000) return json(400, { error: '수정 요청을 1~10,000자로 입력해 주세요.' });
+      const parent = checked(await client.from('content_test_orders').select('*').eq('id',data.id).eq('owner_id',owner).single());
+      if (parent.status !== 'completed') return json(409, { error: '제작이 완료된 주문만 수정 요청할 수 있습니다.' });
+      const id = randomUUID();
+      checked(await client.from('content_test_orders').insert({ id, owner_id:owner, kind:parent.kind, settings:{...parent.settings,parentOrderId:parent.id,revision:data.request.trim()},assets:parent.assets,status:'queued',message:'수정본 픽셀링 작업자 배정 대기' }));
+      return json(200, { id, status:'queued' });
+    }
     if (data.action === 'prepare') {
       if (!['video', 'cards'].includes(data.kind) || !Array.isArray(data.files) || data.files.length < 1 || data.files.length > 10) return json(400, { error: '원본 파일을 1~10개 선택해 주세요.' });
       const settings = data.settings || {};
@@ -36,5 +47,10 @@ exports.handler = async event => {
       return json(200, { id:order.id, status:'queued' });
     }
     return json(400, { error: 'Invalid action' });
-  } catch (error) { console.error('content-test', error.message); return json(503, { error: '테스트 저장소 연결 또는 주문 처리를 확인해 주세요.' }); }
+  } catch (error) {
+    console.error('content-test', error.message);
+    if (/content_test_orders|schema cache|does not exist/i.test(error.message)) return json(503, { error: '관리자 테스트 주문 테이블을 찾을 수 없습니다. Supabase에 20261006_content_test.sql을 적용해 주세요.' });
+    if (/관리자 테스트 저장소가 설정되지/.test(error.message)) return json(503, { error: 'Netlify Functions의 Supabase 서버 설정이 필요합니다.' });
+    return json(503, { error: '테스트 저장소 연결 또는 주문 처리를 확인해 주세요.' });
+  }
 };
