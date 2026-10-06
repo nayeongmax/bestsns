@@ -18,3 +18,6 @@ Confirm Netlify Functions has the existing server-side Supabase URL and service-
 6. Confirm preview and download links. Private original/result links expire after ten minutes; use 새로고침 to renew them.
 
 Credits remain on hold. Approval records the agreed amount without debiting any balance. A production wallet, debit/refund policy, normal-customer access and notifications need separate implementation before public release. This custom request workflow is independent of Pixeling's automatic worker queue.
+
+## Admin queue reception
+Server-verified administrators can upload originals and submit queued test orders without a connected Pixeling worker. CONTENT_TEST_ENABLED=false explicitly disables reception; unset or true permits it. CONTENT_PIXELING_BRIDGE_READY does not control reception or prove a worker is running. No automatic generation occurs until a real worker claims and processes a queued job.
