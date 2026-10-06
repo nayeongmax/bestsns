@@ -1,3 +1,4 @@
+import { adminHeaders } from './adminSession';
 /**
  * SNS활성화 Supabase DB 연동
  * - smm_orders (주문/결제 내역), smm_providers (공급처), smm_products (마스터상품)
@@ -202,15 +203,11 @@ export async function insertSmmReview(review: Omit<SMMReview, 'id' | 'createdAt'
 
 const SMM_ADMIN_URL = '/.netlify/functions/smm-admin';
 
-function getAdminKey(): string {
-  return (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PANEL_PASSWORD
-    ?? (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PASSWORD
-    ?? '';
-}
+
 
 async function smmAdminGet(resource: string): Promise<unknown[]> {
   const res = await fetch(`${SMM_ADMIN_URL}?resource=${resource}`, {
-    headers: { 'x-admin-key': getAdminKey() },
+    headers: { ...await adminHeaders() },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -219,7 +216,7 @@ async function smmAdminGet(resource: string): Promise<unknown[]> {
 async function smmAdminPost(body: Record<string, unknown>): Promise<void> {
   const res = await fetch(SMM_ADMIN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
+    headers: { 'Content-Type': 'application/json', ...await adminHeaders() },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await res.text());

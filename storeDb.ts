@@ -1,3 +1,4 @@
+import { adminHeaders } from './adminSession';
 /**
  * N잡스토어 / 구매자·판매자 워크페이스 Supabase DB 연동
  * - store_products (상품), store_orders (주문), reviews (리뷰), order_buyer_flags (구매확정/리뷰/다운로드)
@@ -100,23 +101,17 @@ export async function fetchPublicStoreProducts(): Promise<EbookProduct[]> {
 }
 
 export async function upsertStoreProduct(p: EbookProduct): Promise<void> {
-  const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
-  if (error) throw new Error(error.message || JSON.stringify(error));
+  const response = await fetch('/.netlify/functions/store-seller', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json', ...await adminHeaders()}, body:JSON.stringify({action:'upsertProduct',product:productToRow(p)}) });
+  if (!response.ok) throw new Error(await response.text());
 }
 
 export async function upsertStoreProducts(list: EbookProduct[]): Promise<void> {
-  if (list.length === 0) return;
-  // 상품별 개별 저장 — 일괄 전송 시 base64 이미지로 인해 payload 한도 초과 방지
-  // 개별 실패 시 경고만 출력하고 나머지 상품은 계속 저장 (한 실패가 전체를 막지 않도록)
-  for (const p of list) {
-    const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
-    if (error) console.warn('store_products 개별 저장 실패:', p.id, error.message);
-  }
+  for (const product of list) await upsertStoreProduct(product);
 }
 
 export async function deleteStoreProduct(id: string): Promise<void> {
-  const { error } = await supabase.from('store_products').delete().eq('id', id);
-  if (error) throw error;
+  const response = await fetch('/.netlify/functions/store-seller',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...await adminHeaders()},body:JSON.stringify({action:'deleteProduct',id})});
+  if (!response.ok) throw new Error(await response.text());
 }
 
 // ─── 어드민 전용: store-admin Netlify 함수(service_role)를 통한 DB 접근 ──────
@@ -124,15 +119,11 @@ export async function deleteStoreProduct(id: string): Promise<void> {
 
 const STORE_ADMIN_URL = '/.netlify/functions/store-admin';
 
-function getAdminKey(): string {
-  return (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PANEL_PASSWORD
-    ?? (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PASSWORD
-    ?? '';
-}
+
 
 async function storeAdminGet(resource: string): Promise<unknown[]> {
   const res = await fetch(`${STORE_ADMIN_URL}?resource=${resource}`, {
-    headers: { 'x-admin-key': getAdminKey() },
+    headers: { ...await adminHeaders() },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -141,7 +132,7 @@ async function storeAdminGet(resource: string): Promise<unknown[]> {
 async function storeAdminPost(body: Record<string, unknown>): Promise<void> {
   const res = await fetch(STORE_ADMIN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
+    headers: { 'Content-Type': 'application/json', ...await adminHeaders() },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -149,24 +140,17 @@ async function storeAdminPost(body: Record<string, unknown>): Promise<void> {
 
 /** 어드민 전용: 비밀 상품 포함 전체 상품 목록 조회 (RLS 비활성화 → 직접 Supabase 호출) */
 export async function fetchStoreProductsAdmin(): Promise<EbookProduct[]> {
-  const { data, error } = await supabase.from('store_products').select('*').order('created_at', { ascending: false });
-  if (error) throw new Error(error.message || JSON.stringify(error));
-  return (data ?? []).map((row) => rowToProduct(row as Record<string, unknown>));
+  return (await storeAdminGet('products')).map(row => rowToProduct(row as Record<string, unknown>));
 }
 
 /** 어드민 전용: 단일 상품 upsert */
 export async function upsertStoreProductAdmin(p: EbookProduct): Promise<void> {
-  const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
-  if (error) throw new Error(error.message || JSON.stringify(error));
+  await storeAdminPost({ action: 'upsertProduct', product: productToRow(p) });
 }
 
 /** 어드민 전용: 복수 상품 upsert */
 export async function upsertStoreProductsAdmin(list: EbookProduct[]): Promise<void> {
-  if (list.length === 0) return;
-  for (const p of list) {
-    const { error } = await supabase.from('store_products').upsert(productToRow(p), { onConflict: 'id' });
-    if (error) console.warn('store_products 어드민 개별 저장 실패:', p.id, error.message);
-  }
+  if (list.length) await storeAdminPost({ action: 'upsertProducts', products: list.map(productToRow) });
 }
 
 /** 어드민 전용: 상품 삭제 */

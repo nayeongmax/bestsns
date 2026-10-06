@@ -1,8 +1,9 @@
+const { authorized } = require('../lib/admin-auth.cjs');
 /**
  * freelancer-admin.js — 프리랜서 수익통장 어드민 관리 (서버사이드)
  *
  * service_role 키를 사용하므로 RLS를 우회합니다.
- * 인증: 요청 헤더 x-admin-key 가 VITE_ADMIN_PANEL_PASSWORD 와 일치해야 합니다.
+ * 인증: 서버 검증 관리자 세션 또는 Supabase 관리자 JWT
  *
  * POST { action:'pay',                applicants:[{userId,reward,taskTitle}] }
  * POST { action:'fetchWithdrawals',   status:'pending' }
@@ -12,7 +13,7 @@
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, x-admin-key',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json; charset=UTF-8',
 };
@@ -29,14 +30,7 @@ exports.handler = async (event) => {
   }
 
   // ── 관리자 인증 ──────────────────────────────────────────────
-  const adminKey = event.headers['x-admin-key'] || event.headers['X-Admin-Key'] || '';
-  const expectedKey =
-    process.env.VITE_ADMIN_PANEL_PASSWORD ||
-    process.env.VITE_ADMIN_PASSWORD ||
-    process.env.ADMIN_PASSWORD ||
-    '';
-
-  if (!expectedKey || adminKey !== expectedKey) {
+  if (!(await authorized(event))) {
     return resp(401, { error: '관리자 인증 실패' });
   }
 

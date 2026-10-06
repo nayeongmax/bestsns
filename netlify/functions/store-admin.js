@@ -1,10 +1,11 @@
+const { authorized } = require('../lib/admin-auth.cjs');
 /**
  * store-admin.js — N잡스토어 어드민 DB 관리 (서버사이드)
  *
  * service_role 키를 사용하므로 RLS를 우회하여 store_products를
  * 조회·수정합니다. 비밀 상품(is_secret=true) 포함 전체 상품에 접근합니다.
  *
- * 인증: 요청 헤더 x-admin-key 가 VITE_ADMIN_PANEL_PASSWORD(또는 VITE_ADMIN_PASSWORD)와 일치해야 합니다.
+ * 인증: 서버 검증 관리자 세션 또는 Supabase 관리자 JWT
  *
  * GET  /.netlify/functions/store-admin?resource=products  → 전체 상품 목록 (비밀 상품 포함)
  * POST /.netlify/functions/store-admin  { action:'upsertProducts', products }
@@ -14,7 +15,7 @@
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, x-admin-key',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Content-Type': 'application/json; charset=UTF-8',
 };
@@ -29,15 +30,7 @@ exports.handler = async (event) => {
   }
 
   // ── 관리자 인증 ──────────────────────────────────────────────
-  const adminKey =
-    event.headers['x-admin-key'] || event.headers['X-Admin-Key'] || '';
-  const expectedKey =
-    process.env.VITE_ADMIN_PANEL_PASSWORD ||
-    process.env.VITE_ADMIN_PASSWORD ||
-    process.env.ADMIN_PASSWORD ||
-    '';
-
-  if (!expectedKey || adminKey !== expectedKey) {
+  if (!(await authorized(event))) {
     return resp(401, { error: '관리자 인증 실패' });
   }
 

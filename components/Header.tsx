@@ -32,13 +32,13 @@ const Header: React.FC<Props> = ({ user, wishlistCount, notifications, unreadCha
     ? notifications.filter(n => n.userId === user.id && !n.isRead).length
     : 0;
 
-  const isAdmin = user?.role === 'admin' || user?.id?.toLowerCase() === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   const isFranchiseUser = user?.isFranchise || isAdmin;
 
   const shortsAccess = useShortsAccess(user);
   const navItems = [
-    ...(shortsAccess.published || shortsAccess.preview || (user?.role === 'admin' && user?.id?.toLowerCase() === 'admin') ? [{ label: '콘텐츠 제작', path: '/shorts', icon: '🎬', badge: '쇼츠·카드뉴스' }] : []),
+    ...(shortsAccess.published || shortsAccess.preview ? [{ label: '콘텐츠 제작', path: '/shorts', icon: '🎬', badge: '쇼츠·카드뉴스' }] : []),
     { label: '마케팅주문', path: '/sns', icon: '📈' },
     { label: '채널판매', path: '/channels', icon: '📺' },
     { label: 'N잡스토어', path: '/ebooks', icon: '📖', badge: '누구나 판매OK' },

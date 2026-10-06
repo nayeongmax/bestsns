@@ -1,3 +1,4 @@
+import { adminHeaders } from './adminSession';
 /**
  * 누구나알바 / 프리랜서 워크페이스 Supabase DB 연동
  * - parttime_tasks, parttime_job_requests, freelancer_balances, freelancer_earnings_history, freelancer_withdraw_requests, parttime_task_completed_checks
@@ -462,16 +463,12 @@ export async function processAutoApprovalsInDb(): Promise<boolean> {
 // ─── 어드민 전용: Netlify freelancer-admin 함수 호출 ────────────────────────
 const ADMIN_FN_URL = '/.netlify/functions/freelancer-admin';
 
-function getAdminKey(): string {
-  return (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PANEL_PASSWORD
-    ?? (import.meta as unknown as { env: Record<string, string> }).env?.VITE_ADMIN_PASSWORD
-    ?? '';
-}
+
 
 async function callFreelancerAdmin(body: Record<string, unknown>): Promise<unknown> {
   const res = await fetch(ADMIN_FN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
+    headers: { 'Content-Type': 'application/json', ...await adminHeaders() },
     body: JSON.stringify(body),
   });
   const text = await res.text();
@@ -497,21 +494,16 @@ export async function adminPayFreelancers(
 
 /** 어드민: 출금 신청 목록 조회 (RLS 우회 — Supabase RPC security definer) */
 export async function adminFetchWithdrawals(status = 'pending'): Promise<FreelancerWithdrawRequest[]> {
-  const { data, error } = await supabase.rpc('admin_get_withdrawals', { p_status: status });
-  if (error) throw error;
-  const rows: unknown[] = Array.isArray(data) ? data : [];
-  return rows.map((row) => rowToWithdrawRequest(row as Record<string, unknown>));
+  const result = await callFreelancerAdmin({action:'fetchWithdrawals',status}) as {data?:unknown[]};
+  return (result.data || []).map(row => rowToWithdrawRequest(row as Record<string,unknown>));
 }
 
 /** 어드민: 출금 완료 처리 (RLS 우회 — Supabase RPC security definer) */
 export async function adminCompleteWithdrawal(id: string): Promise<void> {
-  const { error } = await supabase.rpc('admin_complete_withdrawal', { p_id: id });
-  if (error) throw error;
+  await callFreelancerAdmin({action:'completeWithdrawal',id});
 }
 
 /** 어드민: 출금 실패 + 잔액 환급 (RLS 우회 — Supabase RPC security definer) */
 export async function adminFailWithdrawal(id: string, userId: string, amount: number): Promise<void> {
-  const { error } = await supabase.rpc('admin_fail_withdrawal', { p_id: id });
-  if (error) throw error;
-  await refundFreelancerWithdrawalInDb(userId, amount, '출금 실패 환급');
+  await callFreelancerAdmin({action:'failWithdrawal',id,userId,amount});
 }
