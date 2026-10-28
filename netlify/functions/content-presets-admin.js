@@ -1,4 +1,5 @@
 const presetConfig=require('../lib/content-preset.cjs');
+const references=require('../lib/content-reference.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');const {randomUUID}=require('node:crypto');
 exports.handler=async event=>{
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'Method not allowed'});
@@ -6,6 +7,8 @@ exports.handler=async event=>{
  try{const db=h.db();if(!await h.admin(event,db))return h.json(403,{error:'관리자만 이용할 수 있습니다.'});
  if(event.httpMethod==='GET')return h.json(200,{presets:h.checked(await db.from('content_video_presets').select('*').order('updated_at',{ascending:false}))});
  const d=JSON.parse(event.body||'{}');
+ if(d.action==='reference'){try{return h.json(200,{reference:references.reference(d.url)});}catch{return h.json(400,{error:'유튜브 영상, 인스타그램 릴스/게시물, 네이버 클립의 원본 HTTPS 링크를 입력해 주세요.'});}}
+ if(d.action==='discover'){try{return h.json(200,await references.discover(d));}catch(e){return h.json(503,{error:e.message==='KEY'?'운영자 유튜브 검색 API 키 연결이 필요합니다. 원본 링크 등록은 사용할 수 있습니다.':'유튜브 후보를 불러오지 못했습니다. 검색어와 API 할당량을 확인해 주세요.'});}}
  if(d.action==='draft'){if(!presetConfig.valid(d.productionSettings||{},d.format||'short'))return h.json(400,{error:'제작 설정을 확인해 주세요.'});return h.json(200,{prompt:presetConfig.scaffold(d.productionSettings||{},d.format||'short')});}
  if(d.action==='analyze'){
   if(!m.uuid(d.id)||!h.sharedKey())return h.json(400,{error:'저장된 샘플과 운영자 API 연결을 확인해 주세요.'});
@@ -35,6 +38,8 @@ exports.handler=async event=>{
  if(sample){const files=h.checked(await db.storage.from(h.bucket).list('presets',{search:sample.path.split('/')[1],limit:10}));if(!files.some(f=>f.name===sample.path.split('/')[1]&&Number(f.metadata?.size)===sample.size))return h.json(400,{error:'샘플 업로드를 먼저 완료해 주세요.'});}
  if(d.published&&!sample)return h.json(400,{error:'샘플 영상이 있어야 공개할 수 있습니다.'});
  const row={id:d.id||randomUUID(),name:d.name.trim(),description:d.description.trim(),prompt:d.prompt.trim(),sample:sample?{path:sample.path,type:sample.type,size:sample.size}:null,price:d.price,revision_price:d.revisionPrice,published:d.published,video_format:d.format||'short',production_settings:presetConfig.normalize(d.productionSettings||{},d.format||'short'),updated_at:new Date().toISOString()};
+ try{row.reference=references.reference(d.reference);}catch{return h.json(400,{error:'참고 영상 링크를 확인해 주세요.'});}
+ if(d.id){const previous=h.checked(await db.from('content_video_presets').select('sample,analysis,analysis_status').eq('id',d.id).single());if(['queued','running'].includes(previous.analysis_status))return h.json(409,{error:'분석이 끝난 뒤 저장해 주세요.'});if(previous.sample?.path!==sample?.path){row.analysis=null;row.analysis_status='none';}}
  h.checked(await db.from('content_video_presets').upsert(row));return h.json(200,{saved:true,id:row.id});
  }catch(e){return h.json(503,{error:'설정을 처리하지 못했습니다. 저장소와 관리자 연결을 확인해 주세요.'});}
 };
