@@ -112,3 +112,9 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[functions."content-paid-reconcile"]
+  schedule = "*/10 * * * *"
+
+[functions."content-social-dispatch"]
+  schedule = "*/10 * * * *"

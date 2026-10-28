@@ -1,0 +1,59 @@
+# 회원 콘텐츠 스튜디오 운영 준비
+
+이 변경은 운영 배포나 실계정 제작·게시 성공을 확인한 릴리스가 아닙니다. 가격은 추후 결정이며 기본 요금·샘플·구독 권한을 자동으로 만들지 않습니다. 외부 플랫폼 API는 모의 응답으로 검증했습니다.
+
+## 고객 흐름
+
+공개된 샘플 영상 재생 → 스타일 선택 → 내 영상·사진 첨부 → 요청과 크레딧 확인 → 유료 제작 → MP4 결과 재생·다운로드 → 특정 완성본을 골라 유료 수정. 수정은 선택한 버전과 원본을 작업 공간에 전달하며 기존 결과도 남깁니다. 샘플 재현 품질과 실제 렌더링 시간은 실영상으로 추가 검증해야 합니다.
+
+화이트·다크·기기 설정 모드와 블루·바이올렛·민트·로즈·앰버 강조 색상을 제공합니다. 선택값은 해당 브라우저에 저장합니다. 스튜디오 페이지에만 적용하며 기존 사이트 헤더·다른 서비스 페이지는 바꾸지 않습니다.
+
+## 저장소와 서버 설정
+
+기존 `20261006_content_ai.sql` 적용 후 다음 순서로 SQL을 적용합니다.
+
+1. `supabase/migrations/20261028_content_members.sql`
+2. `supabase/migrations/20261028_content_social.sql`
+3. `supabase/migrations/20261028_content_subscriptions.sql`
+
+이 작업은 아직 운영 Supabase에 실행하지 않았습니다. 세 마이그레이션은 최초 한 번 적용하는 용도입니다. 기존 `content-test` 비공개 버킷, Supabase 서비스 역할 키, `CONTENT_AI_KEY_SECRET`(32자 이상), `CONTENT_OPENAI_API_KEY`와 기존 제작 실행 설정이 필요합니다. 회원 API는 운영자 공용 키를 사용합니다.
+
+`CONTENT_MEMBERS_ENABLED=true`는 회원 제작 API를 활성화합니다. 페이지 공개에는 기존 `SHORTS_PUBLIC_ENABLED=true`도 필요합니다. 검증 전에는 두 값을 켜지 않습니다. 모델·실행 권한과 실제 MP4 출력 성공은 별도로 확인해야 합니다.
+
+운영자 화면의 샘플 관리에서 직접 재생 가능한 MP4 샘플, 회원용 설명, 비공개 제작 프롬프트, 신규·수정 크레딧을 등록합니다. 요금은 양수만 허용하며 미설정 시 샘플은 공개할 수 있지만 유료 제작은 차단합니다. 운영에 사용할 샘플 파일이나 요금은 이번 변경에 포함되지 않았습니다.
+
+## 프롬프트 보관
+
+운영자 프롬프트는 서버 전용 테이블에 저장합니다. 회원·비회원 API에는 명시적으로 고른 공개 필드만 반환합니다. 회원에게 작업 스냅샷·운영 지침·모델 응답 원문을 반환하지 않으며, 결과 파일명과 완료 문구도 서버에서 정합니다. 데이터베이스의 익명·회원 역할에는 테이블과 내부 함수 접근 권한이 없습니다.
+
+프롬프트는 제작을 위해 OpenAI에 전달됩니다. 영상과 사용자의 입력은 신뢰하지 않는 자료로 처리하도록 지시합니다. 이러한 접근 통제는 출력 영상에서 스타일을 추론하거나 모델이 지침을 잘못 반영하는 가능성까지 완전히 없앤다는 보장은 아닙니다. 공개 전 공격성 입력과 영상 내 지시문을 포함한 실제 결과 검수도 필요합니다.
+
+## 제작비·수정비
+
+별도 콘텐츠 지갑을 사용하며 기존 마케팅 포인트와 섞지 않습니다. 서버의 PostgreSQL 함수가 현재 요금·스타일 버전·소유권·선택한 부모 결과를 확인하고 잔액 차감·원장 기록·작업 접수를 한 트랜잭션으로 처리합니다. 요청 UUID를 재사용한 통신 재시도는 다시 차감하지 않습니다. 실패·접수 중단은 환급하며, 20분 이상 남은 작업은 10분마다 정리합니다. 완료 작업은 실패 정리로 환급되지 않습니다.
+
+카드 결제에 따른 자동 충전·구독 청구는 아직 연결하지 않았습니다. 운영자 화면에서 결제·입금을 확인한 고유 번호로 수동 크레딧 지급을 할 수 있습니다. 같은 결제 번호는 중복 지급하지 않습니다. 실제 결제를 확인하지 않은 크레딧 지급은 하지 않아야 합니다. 크레딧과 원화의 환산율도 별도로 정해야 합니다.
+
+구독은 서버 전용 `content_subscriptions`에서 관리합니다. 운영자는 확인한 구독 결제에 대해 회원 ID·스타터/프로/비즈니스·만료일을 지정합니다. 이는 결제 게이트웨이 자동 연동을 대신하지 않습니다. 구독 갱신 저장 시 자동 업로드 사용 동의는 꺼지며 고객이 다시 켭니다.
+
+## SNS 자동 업로드
+
+유효한 프로·비즈니스 구독 + 고객의 사용 설정 + SNS 계정 연결 + 개별 전송 확인이 모두 필요합니다. 스타터·만료 구독·사용 설정이 꺼진 계정은 연결·게시 API를 직접 호출해도 차단합니다. 전송 작업자도 구독·동의·연결 상태를 다시 확인합니다. 제작 완료나 수정 완료만으로 게시하지 않습니다. 세 플랫폼은 각각 선택해 전송하며 예약 게시와 세 채널 일괄 전송은 이번 변경에 포함하지 않았습니다.
+
+OAuth 비밀값은 Netlify Functions 범위에 설정하며 브라우저용 접두사를 사용하지 않습니다. 토큰은 서버에서 암호화합니다. 서버 `URL`은 신뢰하는 운영 사이트의 HTTPS 주소여야 합니다. 아래 콜백 주소를 각 플랫폼 앱에 등록합니다.
+
+| 플랫폼 | 서버 설정 | 콜백 경로 |
+| --- | --- | --- |
+| 유튜브 | `CONTENT_YOUTUBE_ENABLED=true`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET` | `/.netlify/functions/content-youtube-callback` |
+| 인스타그램 | `CONTENT_INSTAGRAM_ENABLED=true`, `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET`, `INSTAGRAM_GRAPH_VERSION`(앱에서 사용하는 `v숫자.숫자`) | `/.netlify/functions/content-social-callback` |
+| 틱톡 | `CONTENT_TIKTOK_ENABLED=true`, `TIKTOK_CLIENT_ID`(TikTok의 client key), `TIKTOK_CLIENT_SECRET` | `/.netlify/functions/content-social-callback` |
+
+유튜브는 업로드·채널 조회 권한을, 인스타그램은 Instagram Login의 비즈니스 기본·게시 권한을, 틱톡은 기본 사용자 정보·`video.publish` 권한을 사용합니다. 외부 고객에게 제공하려면 각 플랫폼의 앱 등록·심사·허용된 계정 조건을 충족해야 합니다. 인스타그램은 프로페셔널 계정이 필요합니다. 틱톡에서는 최신 계정 공개 옵션을 불러오고 공개 범위·상호작용·홍보·음악 사용 확인을 받습니다. 비공개/공개 제한은 실제 플랫폼 심사 상태에 따릅니다.
+
+플랫폼에 전송한 샘플이나 고객 파일은 현재 없습니다. 업로드 결과가 불확실하면 `needs_review`로 남기고 자동 재게시하지 않습니다. 중복 업로드를 막기 위해 같은 완성본은 플랫폼별 한 번 접수합니다. 실패 후 고객용 재전송·토큰 권한 철회 콜백·운영자 상태 복구 UI는 추가 작업입니다. 사이트에서 연결 해제하면 저장된 연결을 삭제하고 이후 전송을 막습니다. 이미 플랫폼에 전달된 업로드나 게시물은 플랫폼에서도 확인해야 합니다.
+
+## 검증
+
+`npm run build`, `npm run test:content`를 실행합니다. PostgreSQL(PGlite) 테스트는 요금 변조·동시 작업 상태·중복 차감·환급·부모 결과 소유권·테이블 권한을 확인합니다. SNS 테스트는 구독 제한·동의·메타데이터와 업로드 호스트 제한·MP4 길이 판독·중복 작업자 호출을 모의 API로 확인합니다. 이 테스트가 실제 결제 승인·OpenAI 렌더링·OAuth 연결·플랫폼 게시 성공을 보장하지는 않습니다.
+
+공식 참고: [YouTube 업로드](https://developers.google.com/youtube/data/guides/using_resumable_upload_protocol), [Google OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [Instagram Platform](https://developers.facebook.com/docs/instagram-platform/), [TikTok Direct Post](https://developers.tiktok.com/doc/content-posting-api-reference-direct-post), [TikTok 토큰 관리](https://developers.tiktok.com/doc/oauth-user-access-token-management).

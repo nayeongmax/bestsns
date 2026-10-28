@@ -55,7 +55,7 @@ exports.handler=async event=>{
   }
   if(d.action==='cancel'){
    const jobs=h.checked(await client.from('content_ai_jobs').select('*').eq('chat_id',chat.id).eq('owner_id',owner).in('status',['queued','running']));
-   const stored=await credential(client,owner);for(const job of jobs){if(job.response_id&&stored)await h.apiJSON(await h.executionKey(client,owner),'/responses/'+encodeURIComponent(job.response_id)+'/cancel',{}).catch(()=>{});h.checked(await client.from('content_ai_jobs').update({status:'failed',message:'운영자가 중지했습니다.',updated_at:now()}).eq('id',job.id).eq('owner_id',owner).in('status',['queued','running']));}
+   const stored=await credential(client,owner);for(const job of jobs){if(job.charge!=null){h.checked(await client.rpc('fail_paid_content_job',{p_job:job.id}));continue;}if(job.response_id&&stored)await h.apiJSON(await h.executionKey(client,owner),'/responses/'+encodeURIComponent(job.response_id)+'/cancel',{}).catch(()=>{});h.checked(await client.from('content_ai_jobs').update({status:'failed',message:'운영자가 중지했습니다.',updated_at:now()}).eq('id',job.id).eq('owner_id',owner).in('status',['queued','running']));}
    h.checked(await client.from('content_ai_chats').update({status:'failed',updated_at:now()}).eq('id',chat.id).eq('owner_id',owner));return h.json(200,{cancelled:true});
   }
   if(d.action==='run'){
