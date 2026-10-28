@@ -3,7 +3,7 @@ const h=require('../netlify/lib/content-ai.cjs'),m=require('../netlify/lib/conte
 test('paid generation transactions enforce prices, parent ownership, idempotent debits and refunds',async()=>{
  const db=new PGlite();try{
  await db.exec('create role anon; create role authenticated; create role service_role;');
- for(const name of ['20261006_content_ai.sql','20261028_content_members.sql','20261028_content_social.sql','20261028_content_subscriptions.sql'])await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/migrations',name),'utf8'));
+ for(const name of ['20261006_content_ai.sql','20261028_content_members.sql','20261028_content_social.sql','20261028_content_subscriptions.sql','20261028_content_preset_detail.sql'])await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/migrations',name),'utf8'));
  const preset=randomUUID(),project=randomUUID(),chat=randomUUID(),otherChat=randomUUID(),parent=randomUUID(),version='2026-10-28T00:00:00.000Z';
  await db.query("insert into content_video_presets(id,name,prompt,sample,price,revision_price,published,updated_at) values($1,'style','SECRET_OPERATOR_PROMPT','{}',100,30,true,$2)",[preset,version]);
  await db.query("insert into content_ai_projects(id,owner_id,name) values($1,'owner','test')",[project]);

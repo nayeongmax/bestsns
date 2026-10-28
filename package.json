@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:content": "node --test tests/content-ai.test.cjs tests/content-members.test.cjs tests/content-social.test.cjs tests/shorts-access.test.cjs"
+    "test:content": "node --test tests/content-ai.test.cjs tests/content-members.test.cjs tests/content-social.test.cjs tests/content-preset.test.cjs tests/shorts-access.test.cjs"
   },
   "dependencies": {
     "@google/genai": "^1.40.0",

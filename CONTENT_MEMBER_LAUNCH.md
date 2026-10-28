@@ -57,3 +57,14 @@ OAuth 비밀값은 Netlify Functions 범위에 설정하며 브라우저용 접�
 `npm run build`, `npm run test:content`를 실행합니다. PostgreSQL(PGlite) 테스트는 요금 변조·동시 작업 상태·중복 차감·환급·부모 결과 소유권·테이블 권한을 확인합니다. SNS 테스트는 구독 제한·동의·메타데이터와 업로드 호스트 제한·MP4 길이 판독·중복 작업자 호출을 모의 API로 확인합니다. 이 테스트가 실제 결제 승인·OpenAI 렌더링·OAuth 연결·플랫폼 게시 성공을 보장하지는 않습니다.
 
 공식 참고: [YouTube 업로드](https://developers.google.com/youtube/data/guides/using_resumable_upload_protocol), [Google OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [Instagram Platform](https://developers.facebook.com/docs/instagram-platform/), [TikTok Direct Post](https://developers.tiktok.com/doc/content-posting-api-reference-direct-post), [TikTok 토큰 관리](https://developers.tiktok.com/doc/oauth-user-access-token-management).
+
+
+## 영상별 프리셋 상세 설정 추가
+
+기존 세 마이그레이션 다음에 `20261028_content_preset_detail.sql`을 적용합니다. 숏폼·롱폼 분류, 목표 길이, 컷 길이 범위, 자막, 흔들림 보정, TTS·목소리·속도·말투, 의도하지 않은 음성 여백 상한을 비공개 설정으로 저장합니다. 실제 제작 스냅샷에도 저장되며 회원 API에는 분류·목표 길이·AI 목소리 사용 안내만 공개합니다.
+
+샘플 분석 버튼은 실제 저장한 MP4에서 장면 보드와 ffprobe/컷 후보/무음 측정을 준비한 뒤 Astra에 시각 자료와 측정값을 전달합니다. 영상·설정이 없는 이미지 스크린샷만으로 분석 완료 처리하지 않습니다. 결과는 관리자 전용 초안이며 운영자가 검토해 프롬프트 편집창에 가져오고 저장해야 적용됩니다. 오디오의 대사 전사·화자 고유 목소리 분석은 포함되지 않습니다. 임의 컷 검출은 후보이며 실제 모든 프레임의 경계를 보증하지 않습니다. 분석은 별도 API 비용이 발생합니다. 분석 상태가 실행 중 남는 경우 운영자 복구가 추가로 필요할 수 있습니다.
+
+나레이션은 원본 장면 보드로 한국어 대본을 만든 다음 서버의 Speech API로 MP3를 생성해 편집 작업 공간에 전달합니다. 예제 TTS 어댑터는 `gpt-4o-mini-tts`를 사용하며 이 모델은 공식 문서상 2027-01-06 종료 예정이므로 그 전에 제공자 어댑터를 교체해야 합니다. 운영 출시 전 실제 계정에서 가용성·발음·렌더링을 검증해야 합니다. 문장별 긴 여백·흔들림은 측정·검토 후 줄이도록 지시하는 목표이며, 모든 상황에서 완전 무음/무흔들림을 보장하지 않습니다.
+
+롱폼은 샘플 탐색을 지원하지만 `CONTENT_LONGFORM_ENABLED=true`를 별도로 설정하기 전까지 제작을 거부합니다. 현재 12분 실행 제한·100MB 원본/150MB 결과 제한이 있으므로 10~30분 제작 성공을 검증하지 않고 공개하지 않습니다. 이번 작업에서도 실제 MP4 샘플이나 운영용 프롬프트를 분석 완료 상태로 등록하지 않았습니다.

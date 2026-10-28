@@ -7,7 +7,7 @@ exports.handler=async event=>{
  if(!m.enabled())return h.json(503,{error:'회원 영상 제작을 준비하고 있습니다.'});
  try{const db=h.db(),owner=await m.member(event,db);if(!owner)return h.json(401,{error:'로그인 후 이용해 주세요.'});
  if(event.httpMethod==='GET'){
-  const presets=h.checked(await db.from('content_video_presets').select('id,name,description,price,revision_price,updated_at,sample').eq('published',true).order('updated_at',{ascending:false}));
+  const presets=h.checked(await db.from('content_video_presets').select('id,name,description,price,revision_price,updated_at,sample,video_format,production_settings').eq('published',true).order('updated_at',{ascending:false}));
   const catalog=[];for(const p of presets){if(!p.sample)continue;const url=h.checked(await db.storage.from(h.bucket).createSignedUrl(p.sample.path,600)).signedUrl;catalog.push({...m.publicPreset(p),sampleUrl:url});}
   const wallet=h.checked(await db.from('content_wallets').select('balance').eq('owner_id',owner).maybeSingle());
   const chats=h.checked(await db.from('content_ai_chats').select('id,title,status,updated_at').eq('owner_id',owner).eq('member',true).order('updated_at',{ascending:false}).limit(50));
@@ -48,13 +48,13 @@ exports.handler=async event=>{
  // Resolve a replay before source validation; it must never trigger another charge or dispatch.
  const prior=h.checked(await db.from('content_ai_jobs').select('id,owner_id,chat_id,charge,status,billing_state').eq('id',d.requestId).maybeSingle());
  if(prior){if(prior.owner_id!==owner||prior.chat_id!==chat.id)throw Error('REQUEST_CONFLICT');return h.json(200,{id:prior.id,created:false,amount:prior.charge,status:prior.status,billingState:prior.billing_state});}
- const preset=h.checked(await db.from('content_video_presets').select('id,sample').eq('id',d.presetId).eq('published',true).single());if(!preset?.sample)throw Error('PRESET_UNAVAILABLE');
+ const preset=h.checked(await db.from('content_video_presets').select('id,sample,video_format,production_settings').eq('id',d.presetId).eq('published',true).single());if(!preset?.sample)throw Error('PRESET_UNAVAILABLE');if(preset.video_format==='long'&&process.env.CONTENT_LONGFORM_ENABLED!=='true')return h.json(503,{error:'롱폼은 샘플을 볼 수 있으며 제작 실행은 검증 후 활성화됩니다.'});
  if(!chat.assets.some(a=>a.role==='source'))return h.json(400,{error:'원본 영상 또는 사진을 첨부해 주세요.'});
  const stored=h.checked(await db.storage.from(h.bucket).list('ai/'+chat.id+'/inputs',{limit:100}));
  if(chat.assets.some(a=>!stored.some(f=>f.name===a.path.split('/').pop()&&Number(f.metadata?.size)===a.size)))return h.json(400,{error:'업로드가 끝나지 않았습니다. 실패한 첨부를 제거하고 다시 첨부해 주세요.'});
  let previousResults=[];
  if(d.parentJobId){previousResults=chat.results.filter(r=>r.jobId===d.parentJobId);if(!previousResults.length)throw Error('INVALID_PARENT');}
- const snapshot={member:true,presetId:preset.id,assets:[...chat.assets,{...preset.sample,name:'style-sample.mp4',role:'reference'}],previousResults,messages:[],text:d.text.trim(),kind:'video',settings:{...h.defaults},options:{length:['15초','30초','60초'].includes(d.length)?d.length:'30초'}};
+ const snapshot={member:true,presetId:preset.id,assets:[...chat.assets,{...preset.sample,name:'style-sample.mp4',role:'reference'}],previousResults,messages:[],text:d.text.trim(),kind:'video',settings:{...h.defaults},format:preset.video_format||'short',productionSettings:preset.production_settings||{},options:{length:String(preset.production_settings?.duration||(preset.video_format==='long'?300:30))+'초'}};
  const queued=h.checked(await db.rpc('enqueue_paid_content_job',{p_id:d.requestId,p_owner:owner,p_chat:chat.id,p_preset:preset.id,p_version:d.version,p_expected:d.expectedPrice,p_parent:d.parentJobId||null,p_snapshot:snapshot}));
  if(queued.created){try{await m.dispatch(db,queued.id);}catch(e){h.checked(await db.rpc('fail_paid_content_job',{p_job:queued.id}));return h.json(503,{error:'제작을 시작하지 못해 크레딧을 돌려드렸습니다.'});}}
  return h.json(200,queued);
