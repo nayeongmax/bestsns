@@ -1,0 +1,31 @@
+const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs'),s=require('../lib/content-short-social.cjs');
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+exports.handler=async event=>{
+ let db,post;
+ try{const d=JSON.parse(event.body||'{}');if(event.httpMethod!=='POST'||!h.validSignature('short-social:'+d.id,d.signature))return h.json(403,{error:'Forbidden'});
+ db=h.db();const rows=h.checked(await db.from('content_social_posts').update({status:'running',updated_at:new Date().toISOString()}).eq('id',d.id).eq('status','queued').in('provider',['instagram','tiktok']).select('*'));if(!rows.length)return h.json(200,{ignored:true});post=rows[0];
+ if(!m.enabled()||!s.config(post.provider).enabled)throw Error('DISABLED');const deadline=Date.now()+9*60000;
+ async function check(){if(Date.now()>deadline||!(await m.subscription(db,post.owner_id)).canPublish)throw Error('STOP');const c=h.checked(await db.from('content_social_connections').select('channel_id').eq('owner_id',post.owner_id).eq('provider',post.provider).maybeSingle());if(c?.channel_id!==post.channel_id)throw Error('DISCONNECTED');h.checked(await db.from('content_social_posts').update({updated_at:new Date().toISOString()}).eq('id',post.id));}
+ await check();const connection=h.checked(await db.from('content_social_connections').select('*').eq('owner_id',post.owner_id).eq('provider',post.provider).single());const token=await s.access(db,connection);
+ const chat=h.checked(await db.from('content_ai_chats').select('results').eq('id',post.chat_id).eq('owner_id',post.owner_id).eq('member',true).single());const result=chat?.results.find(r=>r.path===post.result_path&&r.type==='video/mp4');if(!result)throw Error('RESULT');
+ if(post.provider==='instagram'){
+  const account=await s.ig(token,'me?fields=user_id,username');if(String(account.user_id)!==post.channel_id)throw Error('CHANNEL');
+  if(!post.provider_publish_id){const url=h.checked(await db.storage.from(h.bucket).createSignedUrl(result.path,1800)).signedUrl;
+   const container=await s.ig(token,post.channel_id+'/media',{media_type:'REELS',video_url:url,caption:post.metadata.caption,share_to_feed:'true'});if(!container.id)throw Error('CONTAINER');post.provider_publish_id=container.id;h.checked(await db.from('content_social_posts').update({provider_publish_id:container.id}).eq('id',post.id));}
+  while(true){await check();const status=await s.ig(token,post.provider_publish_id+'?fields=status_code');if(status.status_code==='FINISHED')break;if(['ERROR','EXPIRED','PUBLISHED'].includes(status.status_code))throw Error('CONTAINER_STATE');await pause(4000);}
+  await check();const published=await s.ig(token,post.channel_id+'/media_publish',{creation_id:post.provider_publish_id});if(!published.id)throw Error('PUBLISH');
+  const detail=await s.ig(token,published.id+'?fields=permalink').catch(()=>({}));let url=null;try{const u=new URL(detail.permalink);if(u.protocol==='https:'&&['www.instagram.com','instagram.com'].includes(u.hostname))url=u.href;}catch{}
+  h.checked(await db.from('content_social_posts').update({status:'uploaded',video_id:published.id,public_url:url,privacy:'public',message:'인스타그램 릴스 게시 완료',updated_at:new Date().toISOString()}).eq('id',post.id));
+ }else{
+  const info=(await s.tik(token,'post/publish/creator_info/query/',{})).data;if(!s.validMetadata('tiktok',{title:post.metadata.caption,description:'',...post.metadata,musicConsent:true},info))throw Error('CREATOR_CHANGED');
+  const blob=h.checked(await db.storage.from(h.bucket).download(result.path));if(blob.size!==result.size||blob.size>150*1024*1024)throw Error('SIZE');const duration=s.mp4Duration(Buffer.from(await blob.arrayBuffer()));if(!duration||duration>info.max_video_post_duration_sec)throw Error('DURATION');
+  const size=Math.min(10*1024*1024,blob.size),count=Math.floor(blob.size/size);
+  if(!post.provider_publish_id){const started=await s.tik(token,'post/publish/video/init/',{post_info:{title:post.metadata.caption,privacy_level:post.metadata.privacy,disable_comment:!post.metadata.comments||info.comment_disabled,disable_duet:!post.metadata.duet||info.duet_disabled,disable_stitch:!post.metadata.stitch||info.stitch_disabled,brand_organic_toggle:post.metadata.ownBrand,brand_content_toggle:post.metadata.paidBrand,is_aigc:post.metadata.synthetic},source_info:{source:'FILE_UPLOAD',video_size:blob.size,chunk_size:size,total_chunk_count:count}});
+   const u=new URL(started.data.upload_url);if(u.protocol!=='https:'||u.hostname!=='open-upload.tiktokapis.com')throw Error('UPLOAD_HOST');post.provider_publish_id=started.data.publish_id;post.session_url=u.href;h.checked(await db.from('content_social_posts').update({provider_publish_id:post.provider_publish_id,session_url:post.session_url}).eq('id',post.id));
+   for(let i=0;i<count;i++){await check();const start=i*size,end=i===count-1?blob.size:(i+1)*size;const response=await fetch(u.href,{method:'PUT',headers:{'Content-Type':'video/mp4','Content-Range':`bytes ${start}-${end-1}/${blob.size}`},body:blob.slice(start,end),signal:AbortSignal.timeout(90000),redirect:'error'});if(!response.ok)throw Error('UPLOAD');}
+  }
+  while(true){await check();const status=(await s.tik(token,'post/publish/status/fetch/',{publish_id:post.provider_publish_id})).data;if(status.status==='FAILED')throw Error('PUBLISH');if(status.status==='PUBLISH_COMPLETE'){const id=status.publicaly_available_post_id?.[0];const url=id?'https://www.tiktok.com/@'+encodeURIComponent(info.creator_username)+'/video/'+encodeURIComponent(String(id)):null;h.checked(await db.from('content_social_posts').update({status:'uploaded',video_id:id?String(id):null,public_url:url,privacy:post.metadata.privacy,message:'틱톡 게시 처리 완료. 공개 상태는 틱톡에서 확인해 주세요.',updated_at:new Date().toISOString()}).eq('id',post.id));break;}await pause(4000);}
+ }
+ return h.json(200,{uploaded:true});
+ }catch(e){if(db&&post)await db.from('content_social_posts').update({status:post.provider_publish_id?'needs_review':'failed',message:post.provider_publish_id?'SNS 처리 상태 확인이 필요합니다. 중복 게시를 막기 위해 자동 재게시하지 않습니다.':'SNS 전송을 시작하지 못했습니다. 계정·구독·연결 상태를 확인해 주세요.',updated_at:new Date().toISOString()}).eq('id',post.id);return h.json(503,{error:'SNS 업로드를 완료하지 못했습니다.'});}
+};

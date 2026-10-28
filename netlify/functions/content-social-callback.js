@@ -1,0 +1,8 @@
+const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs'),y=require('../lib/content-youtube.cjs'),s=require('../lib/content-short-social.cjs');
+const clear='content_short_oauth=; Path=/.netlify/functions/content-social-callback; Max-Age=0; Secure; HttpOnly; SameSite=Lax';
+exports.handler=async event=>{
+ if(event.httpMethod!=='GET')return h.json(405,{error:'Method not allowed'});
+ try{const q=event.queryStringParameters||{},cookie=(event.headers?.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('content_short_oauth='))?.slice('content_short_oauth='.length);if(!q.state||!cookie||q.state.length>200||cookie.length>200)throw Error('STATE');const db=h.db(),rows=h.checked(await db.from('content_social_oauth').delete().eq('state_hash',y.digest(q.state)).eq('cookie_hash',y.digest(cookie)).gt('expires_at',new Date().toISOString()).select('*'));if(rows.length!==1||!q.code||q.error)throw Error('STATE');const row=rows[0],c=s.config(row.provider);if(!c.enabled||!(await m.subscription(db,row.owner_id)).canPublish)throw Error('PLAN');
+ const account=await s.exchange(row.provider,q.code);h.checked(await db.from('content_social_connections').upsert({owner_id:row.owner_id,provider:row.provider,channel_id:account.id,channel_name:account.name,tokens:h.encrypt(JSON.stringify(account.tokens)),updated_at:new Date().toISOString()}));return{statusCode:302,headers:{Location:c.base+'/#/shorts','Set-Cookie':clear,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'},body:''};
+ }catch{return h.json(400,{error:'SNS 연결을 완료하지 못했습니다. 사이트에서 계정과 구독을 확인한 뒤 다시 연결해 주세요.'},{'Set-Cookie':clear,'Referrer-Policy':'no-referrer'});}
+};
