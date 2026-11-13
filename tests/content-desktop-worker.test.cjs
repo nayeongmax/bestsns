@@ -44,3 +44,19 @@ test('completion verifies thread, exact bytes and idempotent delivery',async()=>
  assert.equal((await post({})).statusCode,200);assert.equal((await post({sha256:'b'.repeat(64)})).statusCode,409);
  }finally{Object.assign(h,old);}
 });
+
+test('automatic upload retries keep the same artifact and deduplicate progress',async()=>{
+ const crypto=require('node:crypto'),old={db:h.db};
+ const worker='11111111-1111-4111-8111-111111111111',id='22222222-2222-4222-8222-222222222222',token='desktop_'+worker+'.'+'a'.repeat(64);
+ const row={id,desktop_worker_id:worker,state:'working',desktop_thread_id:'native:thread',desktop_stage:'submitted',progress_events:[],updated_at:'2026-01-01'};
+ const tables={content_desktop_workers:[{id:worker,token_hash:crypto.createHash('sha256').update(token).digest('hex'),expires_at:'2099-01-01'}],content_pixeling_requests:[row]};
+ const paths=[];
+ try{h.db=()=>({...database(tables),storage:{from(){return{createSignedUploadUrl:async(path,options)=>{assert.equal(options.upsert,true);paths.push(path);return {data:{signedUrl:'https://storage.example/upload'},error:null};}};}}});
+ const {handler}=require('../netlify/functions/content-desktop-worker.js');const post=d=>handler({httpMethod:'POST',headers:{authorization:'Bearer '+token},body:JSON.stringify({id,...d})});
+ assert.equal((await post({action:'stage',stage:'submitted',threadId:'native:thread'})).statusCode,200);assert.equal(row.progress_events.length,0);
+ assert.equal((await post({action:'stage',stage:'submitted',threadId:'other'})).statusCode,409);
+ const upload={action:'upload',size:20,sha256:'a'.repeat(64)};
+ assert.equal((await post(upload)).statusCode,200);assert.equal((await post(upload)).statusCode,200);assert.equal(paths[0],paths[1]);
+ assert.equal((await post({...upload,sha256:'b'.repeat(64)})).statusCode,409);assert.equal(paths.length,2);
+ }finally{Object.assign(h,old);}
+});

@@ -1,7 +1,7 @@
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');
 const {randomUUID,randomBytes,createHash,timingSafeEqual}=require('node:crypto');
 const hash=s=>createHash('sha256').update(s).digest('hex');
-const stages={prepared:'제작 자료를 PC에서 확인했습니다.',submitted:'제작 프로그램에 요청을 전달했습니다.',review:'완성 파일을 확인하고 있습니다.',attention:'운영자 확인이 필요합니다. 중복 제작을 방지하기 위해 자동 재실행하지 않습니다.'};
+const stages={prepared:'제작 자료를 PC에서 확인했습니다.',submitted:'제작 프로그램에 요청을 전달했습니다.',review:'완성 영상의 파일 무결성과 재생 가능 여부를 자동 검사하고 있습니다.',attention:'운영자 확인이 필요합니다. 중복 제작을 방지하기 위해 자동 재실행하지 않습니다.'};
 async function payload(db,row){
  let base=row;const references=[],seen=new Set([row.id]);
  while(base.reference_result_id||base.parent_id){
@@ -11,7 +11,7 @@ async function payload(db,row){
  }
  const q=db.from('content_studio_presets').select('private_prompt');
  const custom=h.checked(await (base.preset_id.startsWith('studio_')?q.eq('id',base.preset_id.slice(7)):q.eq('source_preset_id',base.preset_id)).maybeSingle());
- return {id:row.id,state:row.state,stage:row.desktop_stage,threadId:row.desktop_thread_id,presetId:base.preset_id,presetName:base.preset_name,presetVersion:base.preset_version,message:row.text,privateInstructions:custom?.private_prompt||'',references,attachments:await Promise.all((row.attachments||[]).map(async f=>({id:f.id,name:f.name,type:f.type,size:f.size,url:h.checked(await db.storage.from('content-studio-input').createSignedUrl(f.path,600)).signedUrl})))};
+ return {id:row.id,state:row.state,stage:row.desktop_stage,threadId:row.desktop_thread_id,resultSha256:row.result_sha256,presetId:base.preset_id,presetName:base.preset_name,presetVersion:base.preset_version,message:row.text,privateInstructions:custom?.private_prompt||'',references,attachments:await Promise.all((row.attachments||[]).map(async f=>({id:f.id,name:f.name,type:f.type,size:f.size,url:h.checked(await db.storage.from('content-studio-input').createSignedUrl(f.path,600)).signedUrl})))};
 }
 exports.handler=async event=>{
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'METHOD_NOT_ALLOWED'});
@@ -52,15 +52,17 @@ exports.handler=async event=>{
   if(d.action==='stage'){
    if(!stages[d.stage])return h.json(400,{error:'INVALID_STAGE'});
    if(d.threadId&&(!/^[a-zA-Z0-9:_-]{1,160}$/.test(d.threadId)||(row.desktop_thread_id&&row.desktop_thread_id!==d.threadId)))return h.json(409,{error:'THREAD_MISMATCH'});
+   if(row.desktop_stage===d.stage&&(!d.threadId||row.desktop_thread_id===d.threadId))return h.json(200,{saved:true});
    const entry={id:randomUUID(),text:stages[d.stage],at:new Date().toISOString()};
    const changed=h.checked(await db.from('content_pixeling_requests').update({desktop_stage:d.stage,...(d.threadId?{desktop_thread_id:d.threadId}:{}),progress_events:[...(row.progress_events||[]).slice(-98),entry],updated_at:entry.at}).eq('id',row.id).eq('state','working').eq('updated_at',row.updated_at).select('id'));
    return changed.length?h.json(200,{saved:true}):h.json(409,{error:'JOB_CHANGED'});
   }
   if(d.action==='upload'){
    if(!row.desktop_thread_id||!Number.isSafeInteger(d.size)||d.size<12||d.size>150*1024*1024||!/^[a-f0-9]{64}$/.test(d.sha256||''))return h.json(400,{error:'INVALID_OUTPUT'});
+   if(row.result_sha256&&row.result_sha256!==d.sha256)return h.json(409,{error:'OUTPUT_CHANGED'});
    // Stable content-addressed path: retry cannot substitute a different file unnoticed.
    const path='desktop/'+row.id+'/'+d.sha256+'.mp4';
-   const signed=h.checked(await db.storage.from(h.bucket).createSignedUploadUrl(path));
+   const signed=h.checked(await db.storage.from(h.bucket).createSignedUploadUrl(path,{upsert:true}));
    h.checked(await db.from('content_pixeling_requests').update({result_path:path,result_size:d.size,result_sha256:d.sha256}).eq('id',row.id).eq('state','working'));
    return h.json(200,{url:signed.signedUrl});
   }

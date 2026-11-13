@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = (Join-Path $PSScriptRoot 'release'))
+﻿param([string]$OutputDirectory = (Join-Path $PSScriptRoot 'release'))
 $ErrorActionPreference = 'Stop'
 $outPath = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $outPath -Force | Out-Null
@@ -10,7 +10,7 @@ $argsList = @('/nologo','/target:winexe',('/out:' + (Join-Path $outPath 'BESTSNS
  ('/reference:' + (Join-Path $framework 'WPF\UIAutomationClient.dll')),
  ('/reference:' + (Join-Path $framework 'WPF\UIAutomationTypes.dll')),
  ('/reference:' + (Join-Path $framework 'WPF\WindowsBase.dll')),
- (Join-Path $PSScriptRoot 'StudioBridge.cs'))
+ (Join-Path $PSScriptRoot 'StudioBridge.cs'),(Join-Path $PSScriptRoot 'AutomaticFlow.cs'),(Join-Path $PSScriptRoot 'OutputVerifier.cs'),(Join-Path $PSScriptRoot 'AutomaticChecks.cs'))
 & $compiler @argsList
 if ($LASTEXITCODE -ne 0) { throw '컴파일에 실패했습니다.' }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '사용안내.txt') -Destination $outPath -Force
