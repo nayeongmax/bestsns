@@ -7,7 +7,7 @@ test('preview requires server admin and publication never enables production',as
  assert.deepEqual(JSON.parse((await handler({httpMethod:'GET'})).body),{published:false,preview:false,productionEnabled:false});
  allowed=true;assert.equal(JSON.parse((await handler({httpMethod:'GET'})).body).preview,true);
  process.env.SHORTS_PUBLIC_ENABLED='true';allowed=false;
- assert.deepEqual(JSON.parse((await handler({httpMethod:'GET'})).body),{published:true,preview:false,productionEnabled:false});
+ assert.deepEqual(JSON.parse((await handler({httpMethod:'GET'})).body),{published:false,preview:false,productionEnabled:false});
  assert.equal((await handler({httpMethod:'POST'})).statusCode,405);
  }finally{if(original===undefined)delete process.env.SHORTS_PUBLIC_ENABLED;else process.env.SHORTS_PUBLIC_ENABLED=original;}
 });
