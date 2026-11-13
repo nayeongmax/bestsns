@@ -1,3 +1,5 @@
+// Exercise future member workflows separately from the locked deployment gate.
+Object.assign(require('../netlify/lib/content-studio-release.cjs'),{adminOnly:false,productionEnabled:true});
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const h=require('../netlify/lib/content-ai.cjs'),m=require('../netlify/lib/content-members.cjs');
 const catalog=require('../netlify/data/content-pixeling-catalog.json');

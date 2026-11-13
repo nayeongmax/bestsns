@@ -1,3 +1,4 @@
+const release=require('../lib/content-studio-release.cjs');
 const h=require('../lib/content-ai.cjs'),p=require('../lib/content-studio-presets.cjs'),f=require('../lib/content-studio-files.cjs');
 const {randomUUID}=require('node:crypto');
 const catalog=require('../data/content-pixeling-catalog.json');
@@ -6,6 +7,7 @@ exports.handler=async event=>{
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'지원하지 않는 요청입니다.'});
  try{
   const db=h.db(),admin=!!await h.admin(event,db);
+  if(release.adminOnly&&!admin)return h.json(403,{error:"운영자 전용 테스트 페이지입니다."});
   if(event.httpMethod==='GET'){
    let items=[],rows=[],ready=true;
    try{items=await p.list(db);if(admin)rows=h.checked(await db.from('content_studio_presets').select('id,source_preset_id,name,description,format,published,created_at').order('created_at',{ascending:false}));}catch{ready=false;}

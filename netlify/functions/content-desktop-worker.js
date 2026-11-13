@@ -1,3 +1,4 @@
+const release=require('../lib/content-studio-release.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');
 const {randomUUID,randomBytes,createHash,timingSafeEqual}=require('node:crypto');
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -36,10 +37,10 @@ exports.handler=async event=>{
   const worker=h.checked(await db.from('content_desktop_workers').select('*').eq('id',match[1]).maybeSingle());
   if(!worker||worker.revoked||Date.parse(worker.expires_at)<=Date.now()||!worker.token_hash||worker.token_hash.length!==64||!timingSafeEqual(Buffer.from(worker.token_hash),Buffer.from(hash(token))))return h.json(401,{error:'WORKER_UNAUTHORIZED'});
   h.checked(await db.from('content_desktop_workers').update({last_seen_at:new Date().toISOString()}).eq('id',worker.id));
-  if(event.httpMethod==='GET')return h.json(200,{connected:true,name:worker.name,enabled:process.env.CONTENT_DESKTOP_WORKER_ENABLED==='true'});
+  if(event.httpMethod==='GET')return h.json(200,{connected:true,name:worker.name,enabled:release.productionEnabled&&process.env.CONTENT_DESKTOP_WORKER_ENABLED==='true'});
   const d=JSON.parse(event.body||'{}');
   if(d.action==='claim'){
-   if(process.env.CONTENT_DESKTOP_WORKER_ENABLED!=='true')return h.json(503,{error:'WORKER_DISABLED'});
+   if(!release.productionEnabled||process.env.CONTENT_DESKTOP_WORKER_ENABLED!=='true')return h.json(503,{error:'WORKER_DISABLED'});
    const row=h.checked(await db.rpc('content_desktop_claim',{worker:worker.id}));
    return h.json(200,{job:row?await payload(db,row):null});
   }

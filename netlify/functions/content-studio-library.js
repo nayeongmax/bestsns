@@ -1,3 +1,4 @@
+const release=require('../lib/content-studio-release.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');
 const {randomUUID}=require('node:crypto');
 exports.handler=async event=>{
@@ -5,6 +6,7 @@ exports.handler=async event=>{
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'지원하지 않는 요청입니다.'});
  try{
   const db=h.db(),owner=await m.member(event,db);
+  if(release.adminOnly&&!await h.admin(event,db))return h.json(403,{error:"운영자 전용 테스트 페이지입니다."});
   if(!owner)return h.json(401,{error:'로그인 후 이용해 주세요.'});
   if(event.httpMethod==='GET'){
    const projects=h.checked(await db.from('content_studio_projects').select('id,title,deleted_at').eq('owner_id',owner));

@@ -1,16 +1,18 @@
+const release=require('../lib/content-studio-release.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');
 const catalog=require('../data/content-pixeling-catalog.json');
 const {randomUUID}=require('node:crypto');
 const files=require('../lib/content-studio-files.cjs');
 const presets=require('../lib/content-studio-presets.cjs');
 const inputBucket='content-studio-input';
-const enabled=()=>process.env.CONTENT_PIXELING_REQUESTS_ENABLED==='true';
+const enabled=()=>release.productionEnabled&&process.env.CONTENT_PIXELING_REQUESTS_ENABLED==='true';
 const safe=row=>({id:row.id,presetId:row.preset_id,presetName:row.preset_name,presetVersion:row.preset_version,text:row.text,parentId:row.parent_id,state:row.state,resultDeleted:!!row.result_deleted_at,projectId:row.project_id||row.parent_id||row.id,createdAt:row.created_at,updatedAt:row.updated_at,attachments:(row.attachments||[]).map(f=>({id:f.id,name:f.name,type:f.type,size:f.size})),events:row.progress_events||[]});
 exports.handler=async event=>{
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'지원하지 않는 요청입니다.'});
  if(!h.originAllowed(event))return h.json(403,{error:'허용되지 않은 요청입니다.'});
  try{
-  const db=h.db(),owner=await m.member(event,db),admin=owner?!!await h.admin(event,db):false;
+  const db=h.db(),owner=await m.member(event,db),admin=!!await h.admin(event,db);
+  if(release.adminOnly&&!admin)return h.json(403,{error:'운영자 전용 테스트 페이지입니다.'});
   if(event.httpMethod==='GET'){
    const manage=admin&&event.queryStringParameters?.manage==='1';let requests=[],storageReady=true;
    if(owner){let q=db.from('content_pixeling_requests').select('*').order('created_at',{ascending:false}).limit(100);if(!manage)q=q.eq('owner_id',owner);const result=await q;if(result.error){storageReady=false;}else{requests=await Promise.all(result.data.map(async row=>({...safe(row),attachments:await Promise.all((row.attachments||[]).map(async f=>({id:f.id,name:f.name,type:f.type,size:f.size,...(row.state!=='uploading'?{url:h.checked(await db.storage.from(inputBucket).createSignedUrl(f.path,600,{download:f.name})).signedUrl}:{})}))),...(row.state==='completed'&&!row.result_deleted_at&&row.result_path?{url:h.checked(await db.storage.from(h.bucket).createSignedUrl(row.result_path,600)).signedUrl}:{})})));}}
@@ -101,7 +103,7 @@ exports.handler=async event=>{
  }catch{
   // Public browsing remains available when authentication or order storage is unavailable.
   // Never return private orders, admin access, or accepting=true on this fallback.
-  if(event.httpMethod==='GET')return h.json(200,{catalog,requests:[],admin:false,accepting:false,storageReady:false,execution:'operator',billing:'not_connected'});
+  if(event.httpMethod==='GET'&&!release.adminOnly)return h.json(200,{catalog,requests:[],admin:false,accepting:false,storageReady:false,execution:'operator',billing:'not_connected'});
   return h.json(503,{error:'콘텐츠 제작 저장소 연결을 확인해 주세요. 입력한 내용은 지우지 말고 다시 시도해 주세요.'});
  }
 };

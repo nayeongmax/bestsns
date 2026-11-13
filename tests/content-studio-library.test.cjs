@@ -1,3 +1,5 @@
+// Exercise future member workflows separately from the locked deployment gate.
+Object.assign(require('../netlify/lib/content-studio-release.cjs'),{adminOnly:false,productionEnabled:true});
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const h=require('../netlify/lib/content-ai.cjs'),m=require('../netlify/lib/content-members.cjs'),f=require('../netlify/lib/content-studio-files.cjs');
 function database(tables){return{from(table){const rows=tables[table]||=[];let filters=[],one=false,patch,insert;const q={select(){return q;},order(){return q;},limit(){return q;},eq(k,v){filters.push(r=>r[k]===v);return q;},in(k,v){filters.push(r=>v.includes(r[k]));return q;},maybeSingle(){one=true;return q;},single(){one=true;return q;},insert(x){insert=x;return q;},update(x){patch=x;return q;},then(resolve){if(insert)rows.push({...insert,created_at:new Date().toISOString()});const found=insert?[rows.at(-1)]:rows.filter(r=>filters.every(fn=>fn(r)));if(patch)found.forEach(r=>Object.assign(r,patch));resolve({data:one?found[0]||null:found,error:null});}};return q;}};}
