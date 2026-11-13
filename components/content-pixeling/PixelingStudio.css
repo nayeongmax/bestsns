@@ -30,3 +30,19 @@
 .pixel-modal input,.pixel-modal select{display:block;max-width:100%;width:100%;padding:12px;margin:12px 0;color:inherit;background:transparent;border:1px solid #64748b;border-radius:8px}
 
 .pixel-admin-footer{grid-column:1/-1;max-height:200px;overflow:auto;font-size:11px}.pixel-desktop-admin{padding:8px 0}.pixel-desktop-admin summary{cursor:pointer}.pixel-desktop-admin input,.pixel-desktop-admin textarea{box-sizing:border-box;width:100%;color:inherit;background:var(--surface,#fff);border:1px solid var(--line,#dce4ef);padding:8px}.pixel-desktop-admin button{margin:4px 4px 4px 0}.pixel-desktop-admin small{display:block}
+/* Wide conversation, compact library, aligned filters. */
+.studio-page .pixel-studio{width:100%;max-width:none;margin:0;border:0;border-radius:0;box-shadow:none;height:calc(100dvh - 190px);max-height:none}
+.studio-page .pixel-main{padding:16px 20px;min-width:0}
+.studio-page .pixel-chat{border:0;border-radius:0;background:transparent;padding:0;box-shadow:none}
+.studio-page .pixel-heading{margin-bottom:12px}
+.studio-page .pixel-side{padding:16px 12px;gap:12px}
+.pixel-browser-panel .pixel-filters [role=group]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.pixel-browser-panel .pixel-filters [role=group] button{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:36px;margin:0;padding:8px;border-radius:8px;font-size:11px;white-space:nowrap}
+.pixel-browser-panel .pixel-filters [role=group] button:first-child{grid-column:1/-1}
+.pixel-browser-panel .pixel-filters small{margin:0;flex-shrink:0}
+.pixel-browser-panel .pixel-favorites-filter{width:100%;margin:8px 0;border:1px solid var(--line,#dce4ef);border-radius:8px;padding:9px;font-size:12px;text-align:left;background:var(--surface,#fff);color:inherit}
+.pixel-browser-panel .pixel-local-note{display:block;margin:0;font-size:10px}
+.pixel-side>a.pixel-admin-footer{padding:10px;border-top:1px solid var(--line,#dce4ef);text-align:center;font-size:12px;text-decoration:none}
+@media(min-width:681px){.studio-page .pixel-studio{grid-template-columns:268px minmax(0,1fr)}}
+@media(min-width:1300px){.studio-page .pixel-studio{grid-template-columns:280px minmax(0,1fr)}}
+@media(max-width:680px){.studio-page .pixel-studio{height:calc(100dvh - 160px);min-height:580px}.studio-page .pixel-main{padding:12px}.studio-page .pixel-side{padding:10px}.pixel-side>a.pixel-admin-footer{display:none}}
