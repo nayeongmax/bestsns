@@ -1,0 +1,4 @@
+import {supabase} from '../../supabase';
+export type StudioSettings={title:string;intro:string;videoPrice:number|null;revisionPrice:number|null;plans:{id:string;name:string;description:string;monthlyPrice:number|null;includedVideos:number|null;autoUpload:boolean}[]};
+export async function studioAdminApi(endpoint:string,body?:object){const {data}=await supabase.auth.getSession();const r=await fetch('/.netlify/functions/'+endpoint,{method:body?'POST':'GET',credentials:'same-origin',headers:{'Content-Type':'application/json',...(data.session?{Authorization:'Bearer '+data.session.access_token}:{})},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();if(!r.ok)throw Error(d.error||'연결을 확인해 주세요.');return d;}
+export const money=(value:number|null)=>value===null?'요금 준비 중':value.toLocaleString('ko-KR')+'원';

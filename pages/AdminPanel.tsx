@@ -58,7 +58,7 @@ const AdminPanel: React.FC<Props> = ({
   gradeConfigs, setGradeConfigs, reviews = [], setReviews, onUpdateUser
 }) => {
   const { showAlert } = useConfirm();
-  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime' | 'aiconsult' | 'popup' | 'franchise' | 'contentproduction'>('sns');
+  const [activeTab, setActiveTab] = useState<'sns' | 'channel' | 'ebook' | 'member' | 'marketing' | 'parttime' | 'aiconsult' | 'popup' | 'franchise' | 'contentproduction'>(()=>new URLSearchParams(window.location.hash.split('?')[1]||'').get('tab')==='contentproduction'?'contentproduction':'sns');
 
 
   // 회원 및 권한 관리 탭 열 때마다 profiles에서 회원 목록 재조회 → 판매자 승인 대기 반영
