@@ -28,3 +28,5 @@
 .pixel-favorites-filter{margin:8px 0;padding:8px 12px;border-radius:18px}
 .pixel-favorites-filter[aria-pressed=true]{color:#ff678a;border-color:currentColor}
 .pixel-modal input,.pixel-modal select{display:block;max-width:100%;width:100%;padding:12px;margin:12px 0;color:inherit;background:transparent;border:1px solid #64748b;border-radius:8px}
+
+.pixel-admin-footer{grid-column:1/-1;max-height:200px;overflow:auto;font-size:11px}.pixel-desktop-admin{padding:8px 0}.pixel-desktop-admin summary{cursor:pointer}.pixel-desktop-admin input,.pixel-desktop-admin textarea{box-sizing:border-box;width:100%;color:inherit;background:var(--surface,#fff);border:1px solid var(--line,#dce4ef);padding:8px}.pixel-desktop-admin button{margin:4px 4px 4px 0}.pixel-desktop-admin small{display:block}
