@@ -15,3 +15,16 @@
 
 
 @media(min-width:681px) and (max-height:740px){.pixel-main{padding:12px}.pixel-heading{display:none}.pixel-chat{padding:12px}.pixel-chat-title{padding-bottom:8px}.pixel-messages{min-height:35px;padding:8px 0}.pixel-composer textarea{height:58px;min-height:45px;max-height:85px}.pixel-welcome{padding:12px 4px}.pixel-welcome strong{font-size:15px}.pixel-welcome p{font-size:11px}.pixel-file-help{margin:5px 0}.pixel-side{gap:10px;padding:12px}.pixel-side .pixel-workspace-nav button{padding:7px}.pixel-new{padding:10px}}
+
+/* Keep the conversation dominant; library and results scroll independently. */
+@media(min-width:681px){.pixel-studio{grid-template-columns:260px minmax(0,1fr)}}
+@media(min-width:1300px){.pixel-studio{grid-template-columns:290px minmax(0,1fr)}}
+.pixel-result-card{display:grid;gap:10px;padding:14px 0;border-bottom:1px solid var(--studio-border,#344155)}
+.pixel-result-card video{width:100%;max-height:260px;background:#080d16;border-radius:12px}
+.pixel-row-actions{display:flex;flex-wrap:wrap;gap:6px}
+.pixel-side .pixel-row-actions button{width:auto;padding:6px 9px;font-size:11px;margin:0}
+.pixel-project-row{margin-bottom:12px}
+.pixel-save-style[aria-pressed=true]{color:#ff678a}
+.pixel-favorites-filter{margin:8px 0;padding:8px 12px;border-radius:18px}
+.pixel-favorites-filter[aria-pressed=true]{color:#ff678a;border-color:currentColor}
+.pixel-modal input,.pixel-modal select{display:block;max-width:100%;width:100%;padding:12px;margin:12px 0;color:inherit;background:transparent;border:1px solid #64748b;border-radius:8px}

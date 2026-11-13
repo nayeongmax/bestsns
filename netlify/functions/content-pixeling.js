@@ -5,7 +5,7 @@ const files=require('../lib/content-studio-files.cjs');
 const presets=require('../lib/content-studio-presets.cjs');
 const inputBucket='content-studio-input';
 const enabled=()=>process.env.CONTENT_PIXELING_REQUESTS_ENABLED==='true';
-const safe=row=>({id:row.id,presetId:row.preset_id,presetName:row.preset_name,presetVersion:row.preset_version,text:row.text,parentId:row.parent_id,state:row.state,projectId:row.project_id||row.parent_id||row.id,createdAt:row.created_at,updatedAt:row.updated_at,attachments:(row.attachments||[]).map(f=>({id:f.id,name:f.name,type:f.type,size:f.size})),events:row.progress_events||[]});
+const safe=row=>({id:row.id,presetId:row.preset_id,presetName:row.preset_name,presetVersion:row.preset_version,text:row.text,parentId:row.parent_id,state:row.state,resultDeleted:!!row.result_deleted_at,projectId:row.project_id||row.parent_id||row.id,createdAt:row.created_at,updatedAt:row.updated_at,attachments:(row.attachments||[]).map(f=>({id:f.id,name:f.name,type:f.type,size:f.size})),events:row.progress_events||[]});
 exports.handler=async event=>{
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'지원하지 않는 요청입니다.'});
  if(!h.originAllowed(event))return h.json(403,{error:'허용되지 않은 요청입니다.'});
@@ -13,28 +13,29 @@ exports.handler=async event=>{
   const db=h.db(),owner=await m.member(event,db),admin=owner?!!await h.admin(event,db):false;
   if(event.httpMethod==='GET'){
    const manage=admin&&event.queryStringParameters?.manage==='1';let requests=[],storageReady=true;
-   if(owner){let q=db.from('content_pixeling_requests').select('*').order('created_at',{ascending:false}).limit(100);if(!manage)q=q.eq('owner_id',owner);const result=await q;if(result.error){storageReady=false;}else{requests=await Promise.all(result.data.map(async row=>({...safe(row),attachments:await Promise.all((row.attachments||[]).map(async f=>({id:f.id,name:f.name,type:f.type,size:f.size,...(row.state!=='uploading'?{url:h.checked(await db.storage.from(inputBucket).createSignedUrl(f.path,600,{download:f.name})).signedUrl}:{})}))),...(row.state==='completed'&&row.result_path?{url:h.checked(await db.storage.from(h.bucket).createSignedUrl(row.result_path,600)).signedUrl}:{})})));}}
+   if(owner){let q=db.from('content_pixeling_requests').select('*').order('created_at',{ascending:false}).limit(100);if(!manage)q=q.eq('owner_id',owner);const result=await q;if(result.error){storageReady=false;}else{requests=await Promise.all(result.data.map(async row=>({...safe(row),attachments:await Promise.all((row.attachments||[]).map(async f=>({id:f.id,name:f.name,type:f.type,size:f.size,...(row.state!=='uploading'?{url:h.checked(await db.storage.from(inputBucket).createSignedUrl(f.path,600,{download:f.name})).signedUrl}:{})}))),...(row.state==='completed'&&!row.result_deleted_at&&row.result_path?{url:h.checked(await db.storage.from(h.bucket).createSignedUrl(row.result_path,600)).signedUrl}:{})})));}}
    return h.json(200,{catalog,requests,admin,accepting:enabled()&&storageReady,storageReady,execution:'operator',billing:'not_connected'});
   }
   if(!owner)return h.json(401,{error:'로그인 후 이용해 주세요.'});
   const d=JSON.parse(event.body||'{}');
   if(d.action==='request'){
    if(!enabled())return h.json(503,{error:'영상 제작 연결을 준비하고 있습니다. 아직 주문·결제는 접수하지 않습니다.'});
-   const p=catalog.items.find(p=>p.id===d.presetId)||await presets.find(db,d.presetId||'');
+   const p=catalog.items.find(p=>p.id===d.presetId)||await presets.find(db,d.presetId||'',owner);
    if(d.projectId&&!m.uuid(d.projectId))return h.json(400,{error:'프로젝트 번호를 확인해 주세요.'});
    const incoming=d.files||[];if(!files.valid(incoming))return h.json(400,{error:'첨부파일은 최대 8개, 파일당 100MB, 합계 300MB까지 지원합니다.'});
    if(!p||!m.uuid(d.id)||typeof d.text!=='string'||!d.text.trim()||d.text.length>5000||d.confirmed!==true)return h.json(400,{error:'프리셋과 요청 내용을 확인해 주세요.'});
    const prior=h.checked(await db.from('content_pixeling_requests').select('*').eq('id',d.id).maybeSingle());
    if(prior){if(prior.owner_id!==owner||prior.text!==d.text||prior.preset_id!==p.id||prior.parent_id!==(d.parentId||null)||(d.projectId&&prior.project_id!==d.projectId)||JSON.stringify((prior.attachments||[]).map(({name,type,size})=>({name,type,size})))!==JSON.stringify(incoming.map(({name,type,size})=>({name,type,size}))))return h.json(409,{error:'다른 요청과 번호가 겹쳤습니다. 다시 시도해 주세요.'});return h.json(200,{request:safe(prior)});}
-   if(d.parentId){if(!m.uuid(d.parentId))return h.json(400,{error:'수정할 완성본을 확인해 주세요.'});const parent=h.checked(await db.from('content_pixeling_requests').select('*').eq('id',d.parentId).eq('owner_id',owner).eq('state','completed').eq('preset_id',p.id).maybeSingle());if(parent&&d.projectId&&(parent.project_id||parent.id)!==d.projectId)return h.json(400,{error:'같은 프로젝트의 완성본만 수정할 수 있습니다.'});if(!parent)return h.json(400,{error:'내 완성본만 수정할 수 있습니다.'});}
+   if(d.parentId){if(!m.uuid(d.parentId))return h.json(400,{error:'수정할 완성본을 확인해 주세요.'});const parent=h.checked(await db.from('content_pixeling_requests').select('*').eq('id',d.parentId).eq('owner_id',owner).eq('state','completed').eq('preset_id',p.id).maybeSingle());if(parent&&d.projectId&&(parent.project_id||parent.id)!==d.projectId)return h.json(400,{error:'같은 프로젝트의 완성본만 수정할 수 있습니다.'});if(parent?.result_deleted_at)return h.json(400,{error:'삭제한 결과물은 수정할 수 없습니다.'});if(!parent)return h.json(400,{error:'내 완성본만 수정할 수 있습니다.'});}
    // Preserve the exact customer's text. Do not execute it as code or add secret instructions.
    if(d.projectId){
-    const project=h.checked(await db.from('content_studio_projects').select('id,owner_id').eq('id',d.projectId).maybeSingle());
+    const project=h.checked(await db.from('content_studio_projects').select('id,owner_id,deleted_at').eq('id',d.projectId).maybeSingle());
+    if(project?.deleted_at)return h.json(409,{error:'삭제한 프로젝트에는 새 요청을 추가할 수 없습니다.'});
     if(project&&project.owner_id!==owner)return h.json(403,{error:'내 프로젝트만 이용할 수 있습니다.'});
     if(!project)h.checked(await db.from('content_studio_projects').insert({id:d.projectId,owner_id:owner,title:d.text.trim().slice(0,100)}));
    }
    const attachments=incoming.map(f=>{const id=randomUUID();return{id,name:f.name,type:f.type,size:f.size,path:'studio-input/'+d.id+'/'+id+'.'+files.types[f.type]};});
-   const row=h.checked(await db.from('content_pixeling_requests').insert({...(d.projectId?{project_id:d.projectId}:{}),attachments,state:attachments.length?'uploading':'submitted',id:d.id,owner_id:owner,preset_id:p.id,preset_name:p.name,preset_version:p.version,text:d.text,parent_id:d.parentId||null}).select('*').single());
+   const row=h.checked(await db.from('content_pixeling_requests').insert({...(d.projectId?{project_id:d.projectId}:{}),...(p.referenceId?{reference_result_id:p.referenceId}:{}),attachments,state:attachments.length?'uploading':'submitted',id:d.id,owner_id:owner,preset_id:p.id,preset_name:p.name,preset_version:p.version,text:d.text,parent_id:d.parentId||null}).select('*').single());
    return h.json(200,{request:safe(row)});
   }
   if(['attachment-upload','attachments-ready'].includes(d.action)){
@@ -62,11 +63,19 @@ exports.handler=async event=>{
    const changed=h.checked(await db.from('content_pixeling_requests').update({progress_events:[...(row.progress_events||[]),entry],updated_at:entry.at}).eq('id',row.id).eq('state','working').eq('updated_at',row.updated_at).select('id'));
    return changed.length?h.json(200,{saved:true}):h.json(409,{error:'다른 작업 기록이 갱신되었습니다. 다시 보내주세요.'});
   }
-  let customPrompt=null;
   if(d.action==='handoff'){
-   try{const q=db.from('content_studio_presets').select('private_prompt');const custom=h.checked(await (row.preset_id.startsWith('studio_')?q.eq('id',row.preset_id.slice(7)):q.eq('source_preset_id',row.preset_id)).maybeSingle());customPrompt=custom?.private_prompt||null;}catch{}
+   let source=row;const references=[],seen=new Set([row.id]);
+   while(source.reference_result_id||source.parent_id){
+    const id=source.reference_result_id||source.parent_id;
+    if(seen.has(id)||references.length>=30)throw Error('invalid reference chain');seen.add(id);
+    source=h.checked(await db.from('content_pixeling_requests').select('*').eq('id',id).eq('owner_id',row.owner_id).eq('state','completed').single());
+    references.push({orderId:source.id,presetId:source.preset_id,presetVersion:source.preset_version,message:source.text,url:h.checked(await db.storage.from(h.bucket).createSignedUrl(source.result_path,600)).signedUrl});
+   }
+   let customPrompt=null;
+   const q=db.from('content_studio_presets').select('private_prompt');
+   const custom=h.checked(await (source.preset_id.startsWith('studio_')?q.eq('id',source.preset_id.slice(7)):q.eq('source_preset_id',source.preset_id)).maybeSingle());customPrompt=custom?.private_prompt||null;
+   return h.json(200,{job:{privateProductionInstructions:customPrompt,references,orderId:row.id,preset:{id:source.preset_id,name:source.preset_name,version:source.preset_version},selectedPreset:{id:row.preset_id,name:row.preset_name,version:row.preset_version},message:row.text,parentOrderId:row.parent_id,attachments:await Promise.all((row.attachments||[]).map(async f=>({name:f.name,type:f.type,url:h.checked(await db.storage.from(inputBucket).createSignedUrl(f.path,600,{download:f.name})).signedUrl}))),instructions:'원본 프리셋 ID·버전을 확인하고 고객 message를 그대로 전달하세요. references가 있으면 해당 완성본과 이전 요청을 함께 참고하여 수정하세요. 이것은 실행 완료 확인이 아닌 작업 전달 파일입니다.'}});
   }
-  if(d.action==='handoff')return h.json(200,{job:{privateProductionInstructions:customPrompt,orderId:row.id,preset:{id:row.preset_id,name:row.preset_name,version:row.preset_version},message:row.text,parentOrderId:row.parent_id,attachments:await Promise.all((row.attachments||[]).map(async f=>({name:f.name,type:f.type,url:h.checked(await db.storage.from(inputBucket).createSignedUrl(f.path,600,{download:f.name})).signedUrl}))),instructions:customPrompt?'등록된 샘플과 비공개 제작 지침에 따라 고객 요청과 첨부 자료로 제작하세요.':'제작 도구에서 동일 ID·버전의 프리셋을 선택하고 message를 그대로 입력하세요. 실행 완료 확인이 아닌 작업 전달 파일입니다.'}});
   if(d.action==='working'||d.action==='failed'){
    const allowed=d.action==='working'?['submitted']:['submitted','working'];
    const changed=h.checked(await db.from('content_pixeling_requests').update({state:d.action,updated_at:new Date().toISOString()}).eq('id',row.id).in('state',allowed).select('id'));
