@@ -23,8 +23,11 @@ for row in rows:
                 if hashlib.sha256(data).hexdigest()==ref.get('thumbnail_sha256'):
                     item['thumbnail']='data:image/jpeg;base64,'+base64.b64encode(data).decode()
                     break
+    preview=target.resolve().parents[2]/'public'/'content-previews'/(row['saved_id']+'.mp4')
+    if preview.is_file(): item['previewUrl']='/content-previews/'+preview.name
     items.append(item)
 items.sort(key=lambda x:(x['group']!='pixeling',x['name']))
 target.parent.mkdir(parents=True,exist_ok=True)
 target.write_text(json.dumps({'source':'Pixeling Desktop','exportedAt':'2026-11-13','items':items},ensure_ascii=False,separators=(',',':')),encoding='utf-8')
 print(json.dumps({'presets':len(items),'thumbnails':sum(bool(x['thumbnail']) for x in items)}))
+
