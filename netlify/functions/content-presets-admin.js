@@ -32,7 +32,9 @@ exports.handler=async event=>{
   const profile=h.checked(await db.from('profiles').select('id').eq('id',d.owner).single());if(!profile)return h.json(404,{error:'회원을 찾을 수 없습니다.'});
   return h.json(200,{balance:h.checked(await db.rpc('grant_content_credits',{p_owner:d.owner,p_amount:d.amount,p_reference:d.reference.trim()}))});
  }
- if(d.action!=='save'||(d.id&&!m.uuid(d.id))||typeof d.name!=='string'||!d.name.trim()||d.name.length>100||typeof d.description!=='string'||d.description.length>1000||typeof d.prompt!=='string'||!d.prompt.trim()||d.prompt.length>20000||typeof d.published!=='boolean'||![d.price,d.revisionPrice].every(n=>n===null||Number.isSafeInteger(n)&&n>0&&n<=1000000))return h.json(400,{error:'이름·설명·비공개 프롬프트·양수 요금을 확인해 주세요.'});
+ if(d.action==='save'&&(typeof d.name!=='string'||!d.name.trim()))return h.json(400,{error:'스타일 이름을 입력해 주세요. 예: 일상 브이로그'});
+ if(d.action==='save'&&d.published&&(!d.sample||typeof d.prompt!=='string'||!d.prompt.trim()))return h.json(400,{error:'회원 공개에는 MP4 샘플과 제작 프롬프트가 필요합니다. 공개를 끄면 비공개 초안으로 저장할 수 있습니다.'});
+ if(d.action!=='save'||(d.id&&!m.uuid(d.id))||typeof d.name!=='string'||!d.name.trim()||d.name.length>100||typeof d.description!=='string'||d.description.length>1000||typeof d.prompt!=='string'||d.prompt.length>20000||typeof d.published!=='boolean'||![d.price,d.revisionPrice].every(n=>n===null||Number.isSafeInteger(n)&&n>0&&n<=1000000))return h.json(400,{error:'입력 길이와 요금을 확인해 주세요. 요금은 비워 두거나 1 이상의 정수로 입력하세요.'});
  if(!presetConfig.valid(d.productionSettings||{},d.format||'short'))return h.json(400,{error:'컷·길이·음성·자막 설정 범위를 확인해 주세요.'});
  const sample=d.sample;if(sample&&(!/^presets\/[0-9a-f-]+\.mp4$/.test(sample.path)||sample.type!=='video/mp4'||!Number.isSafeInteger(sample.size)||sample.size<1||sample.size>100*1024*1024))return h.json(400,{error:'유효한 MP4 샘플을 첨부해 주세요.'});
  if(sample){const files=h.checked(await db.storage.from(h.bucket).list('presets',{search:sample.path.split('/')[1],limit:10}));if(!files.some(f=>f.name===sample.path.split('/')[1]&&Number(f.metadata?.size)===sample.size))return h.json(400,{error:'샘플 업로드를 먼저 완료해 주세요.'});}
