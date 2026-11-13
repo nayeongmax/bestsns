@@ -1,4 +1,5 @@
 const release=require('../lib/content-studio-release.cjs');
+const smoke=require('../lib/content-studio-smoke.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');
 const catalog=require('../data/content-pixeling-catalog.json');
 const {randomUUID}=require('node:crypto');
@@ -16,12 +17,15 @@ exports.handler=async event=>{
   if(event.httpMethod==='GET'){
    const manage=admin&&event.queryStringParameters?.manage==='1';let requests=[],storageReady=true;
    if(owner||manage){let q=db.from('content_pixeling_requests').select('*').order('created_at',{ascending:false}).limit(100);if(!manage)q=q.eq('owner_id',owner);const result=await q;if(result.error){storageReady=false;}else{requests=await Promise.all(result.data.map(async row=>({...safe(row),attachments:await Promise.all((row.attachments||[]).map(async f=>({id:f.id,name:f.name,type:f.type,size:f.size,...(row.state!=='uploading'?{url:h.checked(await db.storage.from(inputBucket).createSignedUrl(f.path,600,{download:f.name})).signedUrl}:{})}))),...(row.state==='completed'&&!row.result_deleted_at&&row.result_path?{url:h.checked(await db.storage.from(h.bucket).createSignedUrl(row.result_path,600)).signedUrl}:{})})));}}
-   return h.json(200,{catalog,requests,admin,accepting:enabled()&&storageReady,storageReady,execution:'operator',billing:'not_connected'});
+   return h.json(200,{catalog,requests,admin,accepting:!!(enabled()||admin&&owner&&smoke.active())&&storageReady,storageReady,execution:'operator',billing:'not_connected'});
   }
   if(!owner)return h.json(401,{error:'로그인 후 이용해 주세요.'});
   const d=JSON.parse(event.body||'{}');
   if(d.action==='request'){
-   if(!enabled())return h.json(503,{error:'영상 제작 연결을 준비하고 있습니다. 아직 주문·결제는 접수하지 않습니다.'});
+   if(!enabled()){
+    if(!smoke.permits(admin,d))return h.json(503,{error:'지정된 운영자 연결 테스트 한 건만 실행할 수 있습니다. 일반 제작·결제는 비활성화 상태입니다.'});
+    d.id=smoke.orderId;
+   }
    const p=catalog.items.find(p=>p.id===d.presetId)||await presets.find(db,d.presetId||'',owner);
    if(d.projectId&&!m.uuid(d.projectId))return h.json(400,{error:'프로젝트 번호를 확인해 주세요.'});
    const incoming=d.files||[];if(!files.valid(incoming))return h.json(400,{error:'첨부파일은 최대 8개, 파일당 100MB, 합계 300MB까지 지원합니다.'});

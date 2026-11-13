@@ -1,4 +1,5 @@
 const release=require('../lib/content-studio-release.cjs');
+const smoke=require('../lib/content-studio-smoke.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');
 const {randomUUID,randomBytes,createHash,timingSafeEqual}=require('node:crypto');
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -37,10 +38,19 @@ exports.handler=async event=>{
   const worker=h.checked(await db.from('content_desktop_workers').select('*').eq('id',match[1]).maybeSingle());
   if(!worker||worker.revoked||Date.parse(worker.expires_at)<=Date.now()||!worker.token_hash||worker.token_hash.length!==64||!timingSafeEqual(Buffer.from(worker.token_hash),Buffer.from(hash(token))))return h.json(401,{error:'WORKER_UNAUTHORIZED'});
   h.checked(await db.from('content_desktop_workers').update({last_seen_at:new Date().toISOString()}).eq('id',worker.id));
-  if(event.httpMethod==='GET')return h.json(200,{connected:true,name:worker.name,enabled:release.productionEnabled&&process.env.CONTENT_DESKTOP_WORKER_ENABLED==='true'});
+  const smokeWorker=smoke.active()&&worker.id===smoke.workerId;
+  if(event.httpMethod==='GET')return h.json(200,{connected:true,name:worker.name,enabled:smokeWorker||release.productionEnabled&&process.env.CONTENT_DESKTOP_WORKER_ENABLED==='true'});
   const d=JSON.parse(event.body||'{}');
   if(d.action==='claim'){
-   if(!release.productionEnabled||process.env.CONTENT_DESKTOP_WORKER_ENABLED!=='true')return h.json(503,{error:'WORKER_DISABLED'});
+   if(!release.productionEnabled||process.env.CONTENT_DESKTOP_WORKER_ENABLED!=='true'){
+    if(!smokeWorker)return h.json(503,{error:'WORKER_DISABLED'});
+    let row=h.checked(await db.from('content_pixeling_requests').select('*').eq('id',smoke.orderId).maybeSingle());
+    if(!row||['completed','failed'].includes(row.state))return h.json(200,{job:null});
+    if(row.text!==smoke.message||row.preset_id!==smoke.presetId)return h.json(409,{error:'TEST_ORDER_MISMATCH'});
+    if(row.state==='submitted'&&!row.desktop_worker_id)row=h.checked(await db.from('content_pixeling_requests').update({desktop_worker_id:worker.id,desktop_stage:'claimed',state:'working',updated_at:new Date().toISOString()}).eq('id',smoke.orderId).eq('state','submitted').is('desktop_worker_id',null).select('*').maybeSingle());
+    if(!row||row.desktop_worker_id!==worker.id)return h.json(200,{job:null});
+    return h.json(200,{job:await payload(db,row)});
+   }
    const row=h.checked(await db.rpc('content_desktop_claim',{worker:worker.id}));
    return h.json(200,{job:row?await payload(db,row):null});
   }
