@@ -52,5 +52,11 @@ exports.handler=async event=>{
    return h.json(200,{saved:true});
   }
   return h.json(400,{error:'지원하지 않는 작업입니다.'});
- }catch{return h.json(503,{error:'콘텐츠 제작 저장소 연결을 확인해 주세요. 입력한 내용은 지우지 말고 다시 시도해 주세요.'});}
+ }catch{
+  // Public browsing remains available when authentication or order storage is unavailable.
+  // Never return private orders, admin access, or accepting=true on this fallback.
+  if(event.httpMethod==='GET')return h.json(200,{catalog,requests:[],admin:false,accepting:false,storageReady:false,execution:'operator',billing:'not_connected'});
+  return h.json(503,{error:'콘텐츠 제작 저장소 연결을 확인해 주세요. 입력한 내용은 지우지 말고 다시 시도해 주세요.'});
+ }
 };
+
