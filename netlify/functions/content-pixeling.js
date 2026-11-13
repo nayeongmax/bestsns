@@ -12,7 +12,9 @@ exports.handler=async event=>{
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'지원하지 않는 요청입니다.'});
  if(!h.originAllowed(event))return h.json(403,{error:'허용되지 않은 요청입니다.'});
  try{
-  const db=h.db(),owner=await m.member(event,db),admin=!!await h.admin(event,db);
+  const db=h.db(),member=await m.member(event,db),admin=!!await h.admin(event,db);
+  // The existing operator login uses a signed admin cookie, not a member JWT.
+  const owner=member||(admin?'__operator_smoke__':null);
   if(release.adminOnly&&!admin)return h.json(403,{error:'운영자 전용 테스트 페이지입니다.'});
   if(event.httpMethod==='GET'){
    const manage=admin&&event.queryStringParameters?.manage==='1';let requests=[],storageReady=true;

@@ -12,8 +12,9 @@ test('test deployment denies guests and members even with public environment fla
    }
   }
   h.admin=async()=>true;m.member=async()=>null;
+  const query={select(){return this},order(){return this},limit(){return this},eq(){return this},then(resolve){return Promise.resolve({data:[],error:null}).then(resolve)}};h.db=()=>({from:()=>query});
   const result=await require('../netlify/functions/content-pixeling.js').handler({httpMethod:'GET',headers:{}});
-  assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).admin,true);assert.equal(JSON.parse(result.body).accepting,false);
+  assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).admin,true);assert.equal(JSON.parse(result.body).accepting,require('../netlify/lib/content-studio-smoke.cjs').active());
   m.member=async()=>'admin';const blocked=await require('../netlify/functions/content-pixeling.js').handler({httpMethod:'POST',headers:{},body:'{"action":"request"}'});assert.equal(blocked.statusCode,503);
  }finally{h.db=old.db;h.admin=old.admin;h.originAllowed=old.origin;m.member=old.member;if(flag===undefined)delete process.env.CONTENT_PIXELING_REQUESTS_ENABLED;else process.env.CONTENT_PIXELING_REQUESTS_ENABLED=flag;}
 });
