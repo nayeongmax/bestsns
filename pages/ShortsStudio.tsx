@@ -11,20 +11,23 @@ function scrollToSection(event:React.MouseEvent<HTMLAnchorElement>,id:string){ev
 function saved(key:string,fallback:string){try{return localStorage.getItem(key)||fallback;}catch{return fallback;}}
 export default function ShortsStudio({user}:{user:UserProfile|null}){
  const access=useShortsAccess(user);
+ const deployPreview=/^deploy-preview-\d+--bestsns\.netlify\.app$/.test(window.location.hostname);
  const [mode,setMode]=useState(()=>saved('bestsns.content.mode','light')),[accent,setAccent]=useState(()=>saved('bestsns.content.accent','blue'));
  const [systemDark,setSystemDark]=useState(()=>window.matchMedia('(prefers-color-scheme: dark)').matches);
  const [kind,setKind]=useState('video'),[industry,setIndustry]=useState('음식점·카페'),[length,setLength]=useState('30초'),[script,setScript]=useState('');
  useEffect(()=>{const query=window.matchMedia('(prefers-color-scheme: dark)');const update=()=>setSystemDark(query.matches);query.addEventListener('change',update);return()=>query.removeEventListener('change',update);},[]);
  useEffect(()=>{try{localStorage.setItem('bestsns.content.mode',mode);localStorage.setItem('bestsns.content.accent',accent);}catch{}},[mode,accent]);
  const dark=mode==='dark'||mode==='system'&&systemDark;
- if(access.loading)return <section className="studio-loading" role="status">콘텐츠 스튜디오를 준비하고 있어요.</section>;
- if(!access.published&&!access.preview)return <section className="studio-loading"><span>BESTSNS CONTENT STUDIO</span><h1>더 쉬운 영상 제작을 준비하고 있어요.</h1><p>샘플을 고르고, 내 영상으로 만들고, 말로 수정하는 공간.</p>{!user&&<Link to="/login">로그인</Link>}<Link to="/sns">기존 서비스로 돌아가기</Link></section>;
+ if(access.loading&&!deployPreview)return <section className="studio-loading" role="status">콘텐츠 스튜디오를 준비하고 있어요.</section>;
+ if(!access.published&&!access.preview&&!deployPreview)return <section className="studio-loading"><span>BESTSNS CONTENT STUDIO</span><h1>더 쉬운 영상 제작을 준비하고 있어요.</h1><p>샘플을 고르고, 내 영상으로 만들고, 말로 수정하는 공간.</p>{!user&&<Link to="/login">로그인</Link>}<Link to="/sns">기존 서비스로 돌아가기</Link></section>;
  return <div className="studio-page" data-mode={dark?'dark':'light'} data-accent={accents.some(a=>a[0]===accent)?accent:'blue'}>
  <div className="studio-toolbar"><a href="#studio-create" onClick={e=>scrollToSection(e,'studio-create')} className="studio-wordmark"><span>✦</span> Content studio <small>by BESTSNS</small></a><div className="studio-appearance"><label>화면<select aria-label="화면 모드" value={mode} onChange={e=>setMode(e.target.value)}><option value="light">화이트</option><option value="dark">다크</option><option value="system">기기 설정</option></select></label><div className="studio-swatches" role="group" aria-label="강조 색상">{accents.map(([id,name])=><button key={id} data-color={id} aria-label={name} aria-pressed={accent===id} title={name} onClick={()=>setAccent(id)}>{accent===id?'✓':''}</button>)}</div></div></div>
  {access.preview&&<div className="studio-development">운영자 미리보기 · 회원 공개·실제 제작·결제 연결은 검증 후 활성화합니다.</div>}
+ {deployPreview&&!access.preview&&<div className="studio-development">디자인 미리보기 · 프리셋과 대화 화면을 둘러보세요. 운영자 설정 권한은 별도로 확인합니다.</div>}
  <section className="studio-create" id="studio-create"><PixelingStudio signedIn={!!user}/></section>
  <section className="studio-plans" id="content-pricing"><div className="studio-section-title"><span className="studio-kicker">나에게 맞는 이용 방식</span><h2>제작부터 게시까지, 필요한 만큼.</h2><p>정식 서비스 요금은 추후 확정됩니다. 아래는 예정된 요금제이며, 현재 픽셀링 시범 접수에는 결제·크레딧 차감·SNS 게시가 연결되지 않았습니다.</p></div><div className="studio-plan-grid">{[['starter','스타터','영상 제작을 시작하는 분','다운로드하여 직접 게시'],['pro','프로','제작과 게시를 한곳에서','유튜브·인스타그램·틱톡 자동 업로드 선택 가능'],['business','비즈니스','콘텐츠를 꾸준히 운영하는 팀','프로의 자동 업로드 기능 포함']].map(([id,name,desc,feature])=><article key={id} className={id==='pro'?'featured':''}>{id==='pro'&&<small className="studio-plan-badge">제작 + 자동 업로드</small>}<h3>{name}</h3><p>{desc}</p><strong>요금 준비 중</strong><ul><li>영상 샘플 선택과 제작</li><li>완성본 기반 유료 수정</li><li>결과 다운로드·버전 보관</li><li className={id==='starter'?'excluded':''}>{feature}</li></ul><span>{id==='starter'?'자동 업로드 미포함':'원하는 고객만 SNS 연결 후 사용'}</span></article>)}</div><p className="studio-plan-note">자동 업로드는 유효한 프로·비즈니스 구독에서만 제공됩니다. 플랫폼별 계정 조건·앱 승인·연결 상태에 따라 이용 범위가 달라집니다. SNS 게시에는 별도의 고객 확인이 필요합니다.</p></section>
  {access.preview&&<section className="studio-admin"><details><summary>운영자 · 샘플·프롬프트·요금 관리</summary><ContentProductionAdmin/></details><details><summary>운영자 · 기존 AI 제작 테스트</summary><ContentAIStudio kind={kind} onKindChange={setKind} settings={{industry,length,script,style:'매장 소개',cardCount:'5장'}} options={<div className="studio-admin-options"><label>업종<input value={industry} onChange={e=>setIndustry(e.target.value)}/></label><label>길이<select value={length} onChange={e=>setLength(e.target.value)}>{['15초','30초','60초'].map(v=><option key={v}>{v}</option>)}</select></label><label>대본<textarea value={script} onChange={e=>setScript(e.target.value)} maxLength={10000}/></label></div>}/></details></section>}
  <footer className="studio-footer"><strong>BESTSNS CONTENT STUDIO</strong><span>내 가게와 채널을 위한 콘텐츠 작업실.</span><Link to="/sns">마케팅 서비스 보기 ↗</Link></footer>
  </div>;
 }
+
