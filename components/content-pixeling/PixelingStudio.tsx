@@ -23,6 +23,13 @@ export default function PixelingStudio({signedIn,userId,isAdmin=false,displaySet
  const [panel,setPanel]=useState<'presets'|'saved'|'projects'>('presets');
  const savedKey='bestsns.studio.saved.v1.'+(userId||'guest');
  const [savedPresets,setSavedPresets]=useState<string[]>(()=>{try{const ids=JSON.parse(localStorage.getItem(savedKey)||'[]');return Array.isArray(ids)?ids.filter(id=>typeof id==='string'):[];}catch{return [];}});
+ const playbackUrls=useRef(new Map<string,{url:string;until:number}>());
+ function stableRequests(rows:Request[]){return rows.map(row=>{
+  if(!row.url||row.resultDeleted){playbackUrls.current.delete(row.id);return row;}
+  const cached=playbackUrls.current.get(row.id);
+  if(cached&&cached.until>Date.now())return {...row,url:cached.url};
+  playbackUrls.current.set(row.id,{url:row.url,until:Date.now()+8*60*1000});return row;
+ });}
  useEffect(()=>{try{localStorage.setItem(savedKey,JSON.stringify(savedPresets));}catch{}},[savedPresets,savedKey]);
  function toggleSaved(id:string){setSavedPresets(ids=>ids.includes(id)?ids.filter(x=>x!==id):[id,...ids]);}
  const projects=useStudioProjects(userId||'guest');
@@ -34,8 +41,8 @@ export default function PixelingStudio({signedIn,userId,isAdmin=false,displaySet
  const selected=allPresets.find(p=>p.id===chosen);const visible=allPresets.filter(p=>(!favoriteOnly||savedPresets.includes(p.id))&&(includeMissing||!!p.previewUrl)&&(group==='all'||p.group===group)&&(format==='all'||p.format===format)&&p.name.toLowerCase().includes(query.toLowerCase()));
  async function refreshPresets(){const d=await presetApi();setCustomPresets(d.items||[]);}
  useEffect(()=>{void refreshPresets().catch(()=>{});},[]);
- async function refresh(){const d=await api(undefined,manage);setPresets(d.catalog.items);setRequests(d.requests);setAdmin(d.admin);setAccepting(d.accepting);}
- useEffect(()=>{let alive=true;async function load(){try{const d=await api(undefined,manage);if(!alive)return;setPresets(d.catalog.items);setRequests(d.requests);setAdmin(d.admin);setAccepting(d.accepting);}catch(e){if(alive)setError((e as Error).message);}finally{if(alive)setLoading(false);}}void load();const timer=setInterval(()=>void load(),15000);return()=>{alive=false;clearInterval(timer);};},[signedIn,manage]);
+ async function refresh(){const d=await api(undefined,manage);setPresets(d.catalog.items);setRequests(stableRequests(d.requests));setAdmin(d.admin);setAccepting(d.accepting);}
+ useEffect(()=>{let alive=true;async function load(){try{const d=await api(undefined,manage);if(!alive)return;setPresets(d.catalog.items);setRequests(stableRequests(d.requests));setAdmin(d.admin);setAccepting(d.accepting);}catch(e){if(alive)setError((e as Error).message);}finally{if(alive)setLoading(false);}}void load();const timer=setInterval(()=>void load(),15000);return()=>{alive=false;clearInterval(timer);};},[signedIn,manage]);
  function newProject(){setBrowserOpen(false);setPanel('projects');projects.start();setChosen('');setSelectedOrder('');setParent('');setText('');setAttachments([]);setError('');setNotice('새 프로젝트를 시작했습니다.');requestId.current=null;requestAnimationFrame(()=>composer.current?.focus());}
  function openProject(id:string){setBrowserOpen(false);projects.select(id);const draft=projects.projects.find(p=>p.id===id),order=requests.find(r=>(r.projectId||r.parentId||r.id)===id);setChosen(draft?.presetId||order?.presetId||'');setText(draft?.draft||'');setSelectedOrder('');setParent('');setAttachments([]);setError('');setNotice('');requestId.current=null;requestAnimationFrame(()=>composer.current?.focus());}
  function choose(p:Preset){setBrowserOpen(false);projects.save({presetId:p.id,title:text.trim().slice(0,36)||p.name,draft:text});setChosen(p.id);setSelectedOrder('');setParent('');requestId.current=null;setNotice('');composer.current?.focus();}
