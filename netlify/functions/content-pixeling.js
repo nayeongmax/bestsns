@@ -1,7 +1,13 @@
 const release=require('../lib/content-studio-release.cjs');
 const smoke=require('../lib/content-studio-smoke.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');
-const catalog=require('../data/content-pixeling-catalog.json');
+const sourceCatalog=require('../data/content-pixeling-catalog.json');
+const youtubePreviews=require('../data/content-youtube-previews.json');
+const catalog={...sourceCatalog,items:sourceCatalog.items.map(p=>{
+ const youtube=youtubePreviews[p.id];
+ return !p.previewUrl&&youtube?.embeddable===true&&/^[A-Za-z0-9_-]{11}$/.test(youtube.videoId)
+  ?{...p,youtube,thumbnail:'https://i.ytimg.com/vi/'+youtube.videoId+'/hqdefault.jpg'}:p;
+})};
 const {randomUUID}=require('node:crypto');
 const files=require('../lib/content-studio-files.cjs');
 const presets=require('../lib/content-studio-presets.cjs');
