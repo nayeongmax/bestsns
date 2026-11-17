@@ -7,7 +7,9 @@
     "duration": 27,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "channel-reference"
+    "kind": "channel-reference",
+    "width": 2160,
+    "height": 3840
   },
   "cloud_2b69b8a1-4a86-461f-823a-e5c2fc89b91d_1": {
     "videoId": "X4xOSvcREyI",
@@ -17,7 +19,9 @@
     "duration": 83,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "channel-reference"
+    "kind": "channel-reference",
+    "width": 1080,
+    "height": 1920
   },
   "cloud_5d18e41d-d02e-41c5-afc5-76d027f0efe1_1": {
     "videoId": "JOs-aD63BoY",
@@ -27,7 +31,9 @@
     "duration": 59,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "channel-reference"
+    "kind": "channel-reference",
+    "width": 1080,
+    "height": 1920
   },
   "cloud_3c0ae459-ced8-48b2-a33a-23c941f7f834_1": {
     "videoId": "JRUQFKztwdg",
@@ -37,7 +43,9 @@
     "duration": 58,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "channel-reference"
+    "kind": "channel-reference",
+    "width": 1080,
+    "height": 1920
   },
   "cloud_3018da10-2252-4cf2-959c-882a48ad913e_1": {
     "videoId": "eVeXcmwhT44",
@@ -47,7 +55,9 @@
     "duration": 180,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "channel-reference"
+    "kind": "channel-reference",
+    "width": 1080,
+    "height": 1920
   },
   "cloud_cf52ab1f-e480-4b9f-baf6-4a745eff1d26_1": {
     "videoId": "sjS3jIDdIUs",
@@ -57,7 +67,9 @@
     "duration": 25,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "channel-reference"
+    "kind": "channel-reference",
+    "width": 1080,
+    "height": 1920
   },
   "cloud_b49070ff-7e51-4f8e-8c97-f6750ca95afd_1": {
     "videoId": "YVOkgXbMDOA",
@@ -67,55 +79,9 @@
     "duration": 76,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "channel-reference"
-  },
-  "cloud_a66744c2-7e8d-4c3e-9d1d-7c9776b45e32_1": {
-    "videoId": "daz-FWSrqdw",
-    "title": "졸라맨 가족이 타이타닉호에 타다. 1화",
-    "channel": "졸라맨이TV(거침 없이 초딩 애니)",
-    "channelUrl": "https://www.youtube.com/channel/UC_bTz75Z3cf3nTk_iP4yMBg",
-    "duration": 158,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
-  },
-  "cloud_f7bd73b4-4359-417d-814b-210db15df641_1": {
-    "videoId": "SJfcb7Wjptg",
-    "title": "파인만도 끝내 못 풀었다… 내 안의 ‘의식’은 대체 무엇인가? | 과학다큐",
-    "channel": "과학탐구",
-    "channelUrl": "https://www.youtube.com/channel/UCCmiXonhODu8IqpGAoV2OjA",
-    "duration": 2893,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
     "kind": "channel-reference",
-    "width": 3840,
-    "height": 2160
-  },
-  "cloud_11f60b18-a172-4d96-ad4f-ee47f90b8dba_1": {
-    "videoId": "WNZU0mk35L8",
-    "title": "[3부작 풀버전] 별난 동물 생태계! 야생의 인도네시아ㅣWILD INDONESIA",
-    "channel": "KBS 동물의 왕국",
-    "channelUrl": "https://www.youtube.com/channel/UCAoj1O_pb7N12tFtzwGu21w",
-    "duration": 8558,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_f8f646c6-7e30-4faf-96fd-932351896644_1": {
-    "videoId": "6lfttusfoms",
-    "title": "수컷이 새끼를 낳는 동물이 있다?",
-    "channel": "신기한 사실",
-    "channelUrl": "https://www.youtube.com/channel/UCTaXDxz-EkBI70ZTXY4KQ8g",
-    "duration": 33,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1226,
-    "height": 1080
+    "width": 1080,
+    "height": 1920
   },
   "cloud_8b8534a7-3a87-453d-b774-471c2ce84c41_1": {
     "videoId": "0LPsx-TAB08",
@@ -165,30 +131,6 @@
     "width": 1080,
     "height": 1920
   },
-  "cloud_688eb3d0-f57d-4224-a2c8-07ce2eb4baca_1": {
-    "videoId": "eD0rsAiEvhg",
-    "title": "한동훈 \"민주당, 용혜인 일찌감치 버려…억울해 말라\"｜지금 이 쇼츠",
-    "channel": "JTBC News",
-    "channelUrl": "https://www.youtube.com/channel/UCsU-I-vHLiaMfV_ceaYz5rQ",
-    "duration": 61,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_5b6ea1d4-5e9d-4ce5-984a-7c32ec746b25_1": {
-    "videoId": "XLO0DDzjyiQ",
-    "title": "똥이 네모난 이유가 '이것' 때문이라고?! 자연계 최강의 생체 방패 웜뱃",
-    "channel": "비스트 코드",
-    "channelUrl": "https://www.youtube.com/channel/UCOQkb5FuIk7XOu25yBjGqMw",
-    "duration": 72,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
   "cloud_138dc70e-8a91-464b-aced-503804f64f16_1": {
     "videoId": "YQspATVSg3g",
     "title": "Nice Military! (@travelwithevora)",
@@ -213,18 +155,6 @@
     "width": 1080,
     "height": 1920
   },
-  "cloud_23954aea-b44a-46d7-b674-f753a0dc4309_1": {
-    "videoId": "VCHqbKb-Vao",
-    "title": "손흥민 해트트릭에 놀라버린 일본 중계진 반응",
-    "channel": "스포츠 코멘터리",
-    "channelUrl": "https://www.youtube.com/channel/UCLtPq5YHnHCO-1RG92UPg0w",
-    "duration": 69,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
   "cloud_4cbfaccb-262b-4d10-98db-6a185c379752_1": {
     "videoId": "Uw2N2fDv8TQ",
     "title": "지금 당장 *#0*# 눌러서 강아지 나오는지 확인하세요 (삼성폰이면 사자마자 해야됩니다)",
@@ -237,66 +167,6 @@
     "width": 1080,
     "height": 1920
   },
-  "cloud_a6cd7460-ed14-49bd-8a77-8014a1ff1927_1": {
-    "videoId": "wIPdQNL64n4",
-    "title": "Grunge Typography Stories After Effects Templates",
-    "channel": "Motion Array",
-    "channelUrl": "https://www.youtube.com/channel/UCBx9f7d09FPisLL9yKTba8A",
-    "duration": 25,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
-  },
-  "cloud_dc00b690-3713-48aa-bded-dd81ce95bf72_1": {
-    "videoId": "Yka61xlRWJc",
-    "title": "Thermal Camera Effect (Most Realistic)",
-    "channel": "fredpelletv",
-    "channelUrl": "https://www.youtube.com/channel/UCvl6hLw3Ns8Dp384JP0-fZw",
-    "duration": 93,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 3840,
-    "height": 2160
-  },
-  "cloud_852a133b-14bc-4994-adc1-14a2f3b07246_1": {
-    "videoId": "y0ffkUGKghw",
-    "title": "새벽 알바생 무시한 부부, 월요일 담임 상담에서 얼어붙었다",
-    "channel": "시니어 비타민",
-    "channelUrl": "https://www.youtube.com/channel/UCBLhVRO2OmAzxO72xV-4DCw",
-    "duration": 176,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
-  },
-  "cloud_6f211a0e-e4eb-499a-b23d-2a8e86d533a0_1": {
-    "videoId": "qLs5tcgsFUE",
-    "title": "송하영 브이앱  말 실수..",
-    "channel": "창피해",
-    "channelUrl": "https://www.youtube.com/channel/UCMdnPLa8b1pouzKajJw5fWQ",
-    "duration": 24,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
-  },
-  "cloud_200a1fca-4489-4d0a-8279-f39a955ac96f_1": {
-    "videoId": "rKzIQlMWSVY",
-    "title": "우주 역사를 바꾼 위대한 항법 '스윙바이' 태양계 티키타카",
-    "channel": "Cosmoswag",
-    "channelUrl": "https://www.youtube.com/channel/UClBX3bgRAdA9VafrpRUj1LA",
-    "duration": 129,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
   "cloud_481b5ec4-ce9c-48d7-9e37-41ea508faafd_1": {
     "videoId": "R09esa5Jmk4",
     "title": "목 쉬었을 때 절대 하면 안 되는 3가지  (thevoiceclinic)",
@@ -308,30 +178,6 @@
     "kind": "preset-reference",
     "width": 1080,
     "height": 1920
-  },
-  "cloud_88e68f7b-513d-4c2d-9224-918a70998270_1": {
-    "videoId": "9ZfDNYeX-e8",
-    "title": "닭강정 재밌는 씬 (사장 나오라 그래)!!! #넷플릭스 #쇼츠",
-    "channel": "권비밀",
-    "channelUrl": "https://www.youtube.com/channel/UCRqRUhuVR_TuBKRuihtTsDw",
-    "duration": 71,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
-  },
-  "cloud_6b132426-da88-4a34-aa42-34361dbc60ae_1": {
-    "videoId": "MdeRBD8CPcs",
-    "title": "2023 롤드컵에서 나온 역사에 남을 페이커 명장면 #shorts",
-    "channel": "잡학박사",
-    "channelUrl": "https://www.youtube.com/channel/UCg7VHDze8si-wpavPVT9x9g",
-    "duration": 56,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
   },
   "cloud_6b4ef994-c6b3-4529-8458-2f6b48e865ab_1": {
     "videoId": "lHUvfIBLIUE",
@@ -381,30 +227,6 @@
     "width": 1080,
     "height": 1920
   },
-  "cloud_ca3e589c-8f07-445b-9403-b4898a9d7370_1": {
-    "videoId": "y0ffkUGKghw",
-    "title": "새벽 알바생 무시한 부부, 월요일 담임 상담에서 얼어붙었다",
-    "channel": "시니어 비타민",
-    "channelUrl": "https://www.youtube.com/channel/UCBLhVRO2OmAzxO72xV-4DCw",
-    "duration": 176,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
-  },
-  "cloud_9b0c5122-9b3b-4ee9-90cd-3b27e47065f3_1": {
-    "videoId": "16RfOon7X5U",
-    "title": "[MV] YENA(최예나) _ Dime Girl(보기 드문 여자) (Feat. NOWIMYOUNG (나우아임영))",
-    "channel": "1theK (원더케이)",
-    "channelUrl": "https://www.youtube.com/channel/UCweOkPb1wVVH0Q0Tlj4a5Pw",
-    "duration": 150,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 3840,
-    "height": 2160
-  },
   "cloud_fa5d14a9-b7c6-4222-957f-94ae02e12a6a_1": {
     "videoId": "e8JEQgKe1_E",
     "title": "아들 인생보다 금배지가 먼저였던 부장판사",
@@ -416,18 +238,6 @@
     "kind": "preset-reference",
     "width": 1080,
     "height": 1920
-  },
-  "cloud_8994a002-1669-4a3d-8083-bb44a775eb8f_1": {
-    "videoId": "EbNP_zR1xjI",
-    "title": "Rowan Atkinson Chair Scene | Johnny English Reborn | Screen Bites",
-    "channel": "Screen Bites",
-    "channelUrl": "https://www.youtube.com/channel/UCB4VaK5rjEZb5rfU-nptTvw",
-    "duration": 149,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "preset-reference",
-    "width": 1280,
-    "height": 720
   },
   "cloud_064b4b6c-4bb7-4e66-8dad-f91e00a07499_1": {
     "videoId": "jz-WLlyfVjY",
@@ -441,30 +251,6 @@
     "width": 1080,
     "height": 1920
   },
-  "cloud_04156afd-1e06-479f-8917-9c0dc73ca8e9_1": {
-    "videoId": "5PO13eJOPxg",
-    "title": "좋은친구들 비교체험 극과극 (동자 장용진의 야자타임)",
-    "channel": "나뿐뇨자",
-    "channelUrl": "https://www.youtube.com/channel/UCMXt9BfaTOmwHqgaLmz0PgA",
-    "duration": 29,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 644,
-    "height": 480
-  },
-  "cloud_da361e65-6d2c-4897-a162-dfcae5e69f5b_1": {
-    "videoId": "5PO13eJOPxg",
-    "title": "좋은친구들 비교체험 극과극 (동자 장용진의 야자타임)",
-    "channel": "나뿐뇨자",
-    "channelUrl": "https://www.youtube.com/channel/UCMXt9BfaTOmwHqgaLmz0PgA",
-    "duration": 29,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 644,
-    "height": 480
-  },
   "cloud_a02c5155-e590-49e5-8167-3912dc29f3da_1": {
     "videoId": "7wEsB3qxy0k",
     "title": "한국말 할수록 웃긴 강남 TOP5",
@@ -476,42 +262,6 @@
     "kind": "preset-reference",
     "width": 1080,
     "height": 1920
-  },
-  "cloud_2ee8d6c2-e9f3-47aa-8914-4108367383a1_1": {
-    "videoId": "yqJwu9qPUak",
-    "title": "[공부가 머니?] 전국 1등의 과목별 꿀TIP! 나만의 학습지를 만들어라?! 20200103",
-    "channel": "MBCentertainment",
-    "channelUrl": "https://www.youtube.com/channel/UCiBr0bK06imaMbLc8sAEz0A",
-    "duration": 154,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_935237b9-c8e4-4e5e-ab0b-b25cf6dce43c_1": {
-    "videoId": "yqJwu9qPUak",
-    "title": "[공부가 머니?] 전국 1등의 과목별 꿀TIP! 나만의 학습지를 만들어라?! 20200103",
-    "channel": "MBCentertainment",
-    "channelUrl": "https://www.youtube.com/channel/UCiBr0bK06imaMbLc8sAEz0A",
-    "duration": 154,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_2ea322a5-7bea-4661-bb62-4f640bc15383_1": {
-    "videoId": "yqJwu9qPUak",
-    "title": "[공부가 머니?] 전국 1등의 과목별 꿀TIP! 나만의 학습지를 만들어라?! 20200103",
-    "channel": "MBCentertainment",
-    "channelUrl": "https://www.youtube.com/channel/UCiBr0bK06imaMbLc8sAEz0A",
-    "duration": 154,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
   },
   "cloud_e7f1e923-a529-4574-a95e-eb2238b9e82d_1": {
     "videoId": "Sb0oqISIxj8",
@@ -548,78 +298,6 @@
     "kind": "similar-style",
     "width": 1080,
     "height": 1920
-  },
-  "cloud_b8b0540e-60eb-428e-9d51-1949cf4cc6bd_1": {
-    "videoId": "mumQ-n9-2zo",
-    "title": "이건희 회장님의 연설",
-    "channel": "별바라기",
-    "channelUrl": "https://www.youtube.com/channel/UC2LUgx56xbF92fub8xJghXw",
-    "duration": 43,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 640,
-    "height": 360
-  },
-  "cloud_c6c64b10-695f-4edf-9667-c41d00593a97_1": {
-    "videoId": "4MC_-lmj6W8",
-    "title": "하나쯤은 갖고 싶은 기발한 아이디어 생활꿀템 Top5",
-    "channel": "거꾸로쓰는집",
-    "channelUrl": "https://www.youtube.com/channel/UC4tUtiu0WvfL9o6czNyp-ew",
-    "duration": 157,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 3840,
-    "height": 2160
-  },
-  "cloud_dae9a030-3348-4176-855c-059fcb3bf38f_1": {
-    "videoId": "m15XYUqwY9s",
-    "title": "식당 진상손님썰 몰아보기",
-    "channel": "김켈리 Kellyfornia",
-    "channelUrl": "https://www.youtube.com/channel/UCmjjgsm51PYMPf5REDylbSA",
-    "duration": 137,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_211c1904-ff7e-4759-be03-147d9d6cc9a6_1": {
-    "videoId": "YybyEL5yhxI",
-    "title": "드랍더비트나간 소코도모ㅋㅋㅋ",
-    "channel": "축구튜브",
-    "channelUrl": "https://www.youtube.com/channel/UCuClZrUUuCs63vcMnXStZcg",
-    "duration": 70,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_2f2ba390-1288-4e60-bfbd-23df6747dd1d_1": {
-    "videoId": "QWeipOttTKs",
-    "title": "Rolling Giant Cocacola on stairs ⚠️🔥 #bottles #Experiment #cocacola #fanta",
-    "channel": "PotPote",
-    "channelUrl": "https://www.youtube.com/channel/UCMjlv60h1_Ts96RnGO41cqw",
-    "duration": 82,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_bbdae62e-76b5-450d-af08-e5e3d609e28e_1": {
-    "videoId": "MWRxEWOyn8w",
-    "title": "커버링 테이프 커팅기 카트리지",
-    "channel": "아이베란다",
-    "channelUrl": "https://www.youtube.com/channel/UC7y-MFALNmSapRI_YgRI9RQ",
-    "duration": 31,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 854,
-    "height": 476
   },
   "cloud_8591e97a-69f2-49f6-a6fa-515e875fa28b_1": {
     "videoId": "8E8l2TAnPdo",
@@ -825,30 +503,6 @@
     "width": 1080,
     "height": 1920
   },
-  "cloud_af2cea25-2091-4c85-a8e7-f177c70ce9e8_1": {
-    "videoId": "DP8SXyffWcM",
-    "title": "정말 신기한 세계의 발명품 모음",
-    "channel": "뿜뿜TV",
-    "channelUrl": "https://www.youtube.com/channel/UC1Sz4cej9TA_74U7Dd7ldOA",
-    "duration": 125,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_0afde10e-59f9-4efc-8677-143345a920a3_1": {
-    "videoId": "pLhEd91K0CM",
-    "title": "Dog reunited with owner after 5 years",
-    "channel": "WQAD News 8",
-    "channelUrl": "https://www.youtube.com/channel/UCRlWXcripH3oV_v6uSb9ASw",
-    "duration": 114,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
   "cloud_c98eaa59-ad03-44a8-87db-a3d354151cf1_1": {
     "videoId": "pvIKj2TsyN8",
     "title": "\"나보고 미친 여자라 했죠?\" 강선우 의원 질문에 임현택 의협회장 '웃참' #복지위 #청문회 #shorts",
@@ -860,54 +514,6 @@
     "kind": "similar-style",
     "width": 1080,
     "height": 1920
-  },
-  "cloud_e7cffdd7-75a3-4c3b-acde-31b1531bac73_1": {
-    "videoId": "htJt_xBIs44",
-    "title": "[트로트의 민족] 트로트 원석 김소연 - ＜나이야 가라＞ ♬ MBC 201023 방송",
-    "channel": "MBCentertainment",
-    "channelUrl": "https://www.youtube.com/channel/UCiBr0bK06imaMbLc8sAEz0A",
-    "duration": 150,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_27c9e260-a717-417d-b56b-0b5bf7fc7cbc_1": {
-    "videoId": "htJt_xBIs44",
-    "title": "[트로트의 민족] 트로트 원석 김소연 - ＜나이야 가라＞ ♬ MBC 201023 방송",
-    "channel": "MBCentertainment",
-    "channelUrl": "https://www.youtube.com/channel/UCiBr0bK06imaMbLc8sAEz0A",
-    "duration": 150,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_72319c93-8d80-4069-9a7d-7868806fd09f_1": {
-    "videoId": "Rc16P0Zg-Kk",
-    "title": "비투비 이창섭 육성재한테 머리채잡힘ㅋㅋㅋㅋㅋ",
-    "channel": "언제나,끝나지않을",
-    "channelUrl": "https://www.youtube.com/channel/UCex2ML13WBQfjd3gKAfYeig",
-    "duration": 54,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
-  },
-  "cloud_accc1c77-2252-47f1-b9ca-f67e0da9ac36_1": {
-    "videoId": "Rc16P0Zg-Kk",
-    "title": "비투비 이창섭 육성재한테 머리채잡힘ㅋㅋㅋㅋㅋ",
-    "channel": "언제나,끝나지않을",
-    "channelUrl": "https://www.youtube.com/channel/UCex2ML13WBQfjd3gKAfYeig",
-    "duration": 54,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
   },
   "cloud_768773e3-bb52-4cb4-8226-e7979716d7c9_1": {
     "videoId": "Sb0oqISIxj8",
@@ -944,18 +550,6 @@
     "kind": "similar-style",
     "width": 1080,
     "height": 1920
-  },
-  "cloud_40b40fa8-7e3e-44e7-badc-475c5e2957e8_1": {
-    "videoId": "EbNP_zR1xjI",
-    "title": "Rowan Atkinson Chair Scene | Johnny English Reborn | Screen Bites",
-    "channel": "Screen Bites",
-    "channelUrl": "https://www.youtube.com/channel/UCB4VaK5rjEZb5rfU-nptTvw",
-    "duration": 149,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
   },
   "cloud_50e165b2-77cf-47a7-89a6-0c7c3970f3b6_1": {
     "videoId": "7wEsB3qxy0k",
@@ -1029,88 +623,64 @@
     "width": 1080,
     "height": 1920
   },
-  "cloud_d20e476e-c299-4f99-96be-9f5476a3bf1e_1": {
-    "videoId": "5MQ4ULQH_DQ",
-    "title": "평생 자식만 위해 살았는데… 돌아온 말은 '엄마, 오지 마'였습니다 😭",
-    "channel": "가상영화관",
-    "channelUrl": "https://www.youtube.com/channel/UCoqI4XVWErmS4pYr6bZAE_g",
-    "duration": 60,
+  "cloud_8bcba183-65ca-436e-9e83-19b5aae564ae_1": {
+    "videoId": "icOO3aByOC0",
+    "title": "아이유의 미친 애드립에 영혼까지 털린 조정석ㅋㅋㅋ",
+    "channel": "봄날에Climax",
+    "channelUrl": "https://www.youtube.com/channel/UCgJ-S282I6KoPHJf9QJqcuw",
+    "duration": 29,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
     "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
+    "width": 1080,
+    "height": 1920
   },
-  "cloud_2bae0a4f-1a47-435f-80a5-567dc780efe9_1": {
-    "videoId": "5MQ4ULQH_DQ",
-    "title": "평생 자식만 위해 살았는데… 돌아온 말은 '엄마, 오지 마'였습니다 😭",
-    "channel": "가상영화관",
-    "channelUrl": "https://www.youtube.com/channel/UCoqI4XVWErmS4pYr6bZAE_g",
-    "duration": 60,
+  "cloud_accc1c77-2252-47f1-b9ca-f67e0da9ac36_1": {
+    "videoId": "k2XHw7PGEjw",
+    "title": "마동석에게 배운 애드립 바로 써먹는 오대환",
+    "channel": "B하인드S토리",
+    "channelUrl": "https://www.youtube.com/channel/UCYjenNZMGE5NMQBRFFcQFgg",
+    "duration": 30,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
+    "kind": "channel-reference",
+    "width": 1080,
+    "height": 1920
   },
-  "cloud_e5fe2fd3-1c94-4074-b4a0-542742cb01cc_1": {
-    "videoId": "5MQ4ULQH_DQ",
-    "title": "평생 자식만 위해 살았는데… 돌아온 말은 '엄마, 오지 마'였습니다 😭",
-    "channel": "가상영화관",
-    "channelUrl": "https://www.youtube.com/channel/UCoqI4XVWErmS4pYr6bZAE_g",
-    "duration": 60,
+  "cloud_68573367-6f2e-4a9b-ad31-117b1e8bebf9_1": {
+    "videoId": "KmDKS8oh1VU",
+    "title": "이동휘 참고 참다가 지른 애드립ㅋㅋ",
+    "channel": "B하인드S토리",
+    "channelUrl": "https://www.youtube.com/channel/UCYjenNZMGE5NMQBRFFcQFgg",
+    "duration": 30,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
     "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
+    "width": 1080,
+    "height": 1920
   },
-  "cloud_0a58cec7-346f-40ba-a36b-a69a96b760e7_1": {
-    "videoId": "5MQ4ULQH_DQ",
-    "title": "평생 자식만 위해 살았는데… 돌아온 말은 '엄마, 오지 마'였습니다 😭",
-    "channel": "가상영화관",
-    "channelUrl": "https://www.youtube.com/channel/UCoqI4XVWErmS4pYr6bZAE_g",
-    "duration": 60,
+  "cloud_72319c93-8d80-4069-9a7d-7868806fd09f_1": {
+    "videoId": "PG2UUlBbfOA",
+    "title": "마동석 애드립의 또 다른 피해자 김종수",
+    "channel": "B하인드S토리",
+    "channelUrl": "https://www.youtube.com/channel/UCYjenNZMGE5NMQBRFFcQFgg",
+    "duration": 30,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
+    "kind": "channel-reference",
+    "width": 1080,
+    "height": 1920
   },
-  "cloud_eeadb0b9-ace3-4d15-90e0-a67ea6b8716c_1": {
-    "videoId": "nqJ96JQhq_k",
-    "title": "“어젯밤 기억이 안 나는데… 마지막 반전 ㄷㄷ” #숏드라마 #로맨틱코미디 #반전드라마 #썸타는중 #유튜브쇼츠",
-    "channel": "숏플릭스",
-    "channelUrl": "https://www.youtube.com/channel/UCmOI7jhtWyVaDaSrUur4ZZw",
-    "duration": 176,
+  "cloud_6f211a0e-e4eb-499a-b23d-2a8e86d533a0_1": {
+    "videoId": "zGOWMlRAVV8",
+    "title": "라이브가 더 쫀득한, 딩고 접수한 베스티 '연애의 조건' #베스티 #BESTie #연애의조건 #혜연 #다혜 #Shorts",
+    "channel": "enterpocket",
+    "channelUrl": "https://www.youtube.com/channel/UC8SwIdxLBhzACO684GwVq4w",
+    "duration": 31,
     "embeddable": true,
     "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
-  },
-  "cloud_11d20696-8aa8-4ee6-83a7-999d5c69f929_1": {
-    "videoId": "X_ijtPJEBXU",
-    "title": "9회말 홈런에 울어버린 꼬마 팬…SK 정의윤, 방망이 선물",
-    "channel": "JTBC News",
-    "channelUrl": "https://www.youtube.com/channel/UCsU-I-vHLiaMfV_ceaYz5rQ",
-    "duration": 93,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1280,
-    "height": 720
-  },
-  "cloud_9872ec08-2df3-4b73-8531-d79c2be67d5d_1": {
-    "videoId": "T13vhrA-JvU",
-    "title": "- 진짜 수험생은 누구지? -  (컬투쇼 레전드사연 애니메이션) by YOUTOO(유투)",
-    "channel": "YOUTOO~episode animation~",
-    "channelUrl": "https://www.youtube.com/channel/UCvH22CTIo6UYsroNXe6CPtA",
-    "duration": 119,
-    "embeddable": true,
-    "verifiedAt": "2026-11-17",
-    "kind": "similar-style",
-    "width": 1920,
-    "height": 1080
+    "kind": "channel-reference",
+    "width": 1440,
+    "height": 2560
   }
 }
