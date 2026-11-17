@@ -5,8 +5,9 @@ exports.handler=async event=>{
  if(!h.originAllowed(event))return h.json(403,{error:'허용되지 않은 요청입니다.'});
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'지원하지 않는 요청입니다.'});
  try{
-  const db=h.db(),owner=await m.member(event,db);
-  if(release.adminOnly&&!await h.admin(event,db))return h.json(403,{error:"운영자 전용 테스트 페이지입니다."});
+  const db=h.db(),member=await m.member(event,db),admin=(release.adminOnly||!member)?!!await h.admin(event,db):false;
+  const owner=member||(admin?'__operator_smoke__':null);
+  if(release.adminOnly&&!admin)return h.json(403,{error:"운영자 인증이 만료되었습니다. 다시 로그인해 주세요."});
   if(!owner)return h.json(401,{error:'로그인 후 이용해 주세요.'});
   if(event.httpMethod==='GET'){
    const projects=h.checked(await db.from('content_studio_projects').select('id,title,deleted_at').eq('owner_id',owner));
@@ -21,9 +22,14 @@ exports.handler=async event=>{
   const d=JSON.parse(event.body||'{}');
   if(!m.uuid(d.id))return h.json(400,{error:'항목 번호를 확인해 주세요.'});
   if(['rename-project','delete-project'].includes(d.action)){
-   const project=h.checked(await db.from('content_studio_projects').select('id').eq('id',d.id).eq('owner_id',owner).maybeSingle());
-   if(!project)return h.json(404,{error:'내 프로젝트만 변경할 수 있습니다.'});
    if(d.action==='rename-project'&&(typeof d.name!=='string'||!d.name.trim()||d.name.length>100))return h.json(400,{error:'이름을 100자 이내로 입력하세요.'});
+   const project=h.checked(await db.from('content_studio_projects').select('id').eq('id',d.id).eq('owner_id',owner).maybeSingle());
+   if(!project){
+    // Older conversations predate the project table. Only migrate an owned request.
+    const legacy=h.checked(await db.from('content_pixeling_requests').select('id,project_id,parent_id').eq('id',d.id).eq('owner_id',owner).maybeSingle());
+    if(!legacy||(legacy.project_id&&legacy.project_id!==d.id)||(legacy.parent_id&&legacy.parent_id!==d.id))return h.json(404,{error:'내 프로젝트만 변경할 수 있습니다.'});
+    h.checked(await db.from('content_studio_projects').insert({id:d.id,owner_id:owner,title:'새 영상 '+d.id.slice(0,6)}));
+   }
    h.checked(await db.from('content_studio_projects').update(d.action==='delete-project'?{deleted_at:new Date().toISOString()}:{title:d.name.trim()}).eq('id',d.id).eq('owner_id',owner));
    return h.json(200,{saved:true});
   }
