@@ -17,6 +17,7 @@ test('library mutations isolate owners and keep presets private after result del
  assert.equal((await send({action:'personal-preset',id,name:'mine',format:'short'})).statusCode,200);assert.equal(tables.content_studio_personal_presets.length,1);
  const personalId='personal_'+tables.content_studio_personal_presets[0].id;
  const presets=require('../netlify/lib/content-studio-presets.cjs');assert.equal(await presets.find(db,personalId,'other'),null);assert.equal((await presets.find(db,personalId,'me')).referenceId,id);
+ assert.equal((await send({action:'rename-project',id,name:'기존 대화'})).statusCode,200);assert.equal(tables.content_studio_projects.find(p=>p.id===id).title,'기존 대화');
  assert.equal((await send({action:'rename-project',id:pid,name:'renamed'})).statusCode,200);assert.equal(tables.content_studio_projects[0].title,'renamed');
  assert.equal((await send({action:'delete-project',id:pid})).statusCode,200);assert.ok(tables.content_studio_projects[0].deleted_at);assert.equal(tables.content_pixeling_requests[0].state,'completed');
  assert.equal((await send({action:'delete-result',id})).statusCode,200);assert.ok(tables.content_pixeling_requests[0].result_deleted_at);
@@ -31,4 +32,26 @@ test('personal preset migration denies direct member reads',async()=>{
  for(const name of ['20261113_content_pixeling.sql','20261113_content_studio_attachments.sql','20261113_content_studio_projects_presets.sql','20261113_content_studio_library.sql'])await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/migrations',name),'utf8'));
  assert.equal((await db.query("select has_table_privilege('authenticated','content_studio_personal_presets','SELECT') as allowed")).rows[0].allowed,false);
  }finally{await db.close();}
+});
+
+test('cookie-only operator can rename and soft-delete their project',async()=>{
+ const release=require('../netlify/lib/content-studio-release.cjs');const old={db:h.db,admin:h.admin,member:m.member,origin:h.originAllowed,locked:release.adminOnly};
+ const id='33333333-3333-4333-8333-333333333333';const tables={content_studio_projects:[{id,owner_id:'__operator_smoke__',title:'새 영상'}]};
+ try{release.adminOnly=true;h.db=()=>database(tables);h.admin=async()=>true;m.member=async()=>null;h.originAllowed=()=>true;
+ const handler=require('../netlify/functions/content-studio-library.js').handler;
+ for(const action of ['rename-project','delete-project'])assert.equal((await handler({httpMethod:'POST',body:JSON.stringify({action,id,name:'운영자 프로젝트'})})).statusCode,200);
+ assert.equal(tables.content_studio_projects[0].title,'운영자 프로젝트');assert.ok(tables.content_studio_projects[0].deleted_at);
+ }finally{release.adminOnly=old.locked;h.db=old.db;h.admin=old.admin;m.member=old.member;h.originAllowed=old.origin;}
+});
+
+test('operator test intake preserves text, generic title and request idempotency',async()=>{
+ const release=require('../netlify/lib/content-studio-release.cjs');const old={db:h.db,admin:h.admin,member:m.member,origin:h.originAllowed,locked:release.adminOnly,production:release.productionEnabled};
+ const id='44444444-4444-4444-8444-444444444444',projectId='55555555-5555-4555-8555-555555555555';const tables={};
+ try{release.adminOnly=true;release.productionEnabled=false;h.db=()=>database(tables);h.admin=async()=>true;m.member=async()=>null;h.originAllowed=()=>true;
+ const handler=require('../netlify/functions/content-pixeling.js').handler;
+ const presetId=require('../netlify/data/content-pixeling-catalog.json').items[0].id;
+ const body={action:'request',id,projectId,presetId,text:'이 문장은 제목에 노출하지 않습니다.',files:[],confirmed:true};
+ for(let i=0;i<2;i++)assert.equal((await handler({httpMethod:'POST',body:JSON.stringify(body)})).statusCode,200);
+ assert.equal(tables.content_pixeling_requests.length,1);assert.equal(tables.content_pixeling_requests[0].text,body.text);assert.equal(tables.content_pixeling_requests[0].state,'submitted');assert.equal(tables.content_studio_projects[0].title,'새 영상 555555');
+ }finally{release.adminOnly=old.locked;release.productionEnabled=old.production;h.db=old.db;h.admin=old.admin;m.member=old.member;h.originAllowed=old.origin;}
 });
