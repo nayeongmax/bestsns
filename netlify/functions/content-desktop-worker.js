@@ -1,5 +1,6 @@
 const release=require('../lib/content-studio-release.cjs');
 const smoke=require('../lib/content-studio-smoke.cjs');
+const operatorExecution=require('../lib/content-operator-execution.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs');
 const {randomUUID,randomBytes,createHash,timingSafeEqual}=require('node:crypto');
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -39,9 +40,11 @@ exports.handler=async event=>{
   if(!worker||worker.revoked||Date.parse(worker.expires_at)<=Date.now()||!worker.token_hash||worker.token_hash.length!==64||!timingSafeEqual(Buffer.from(worker.token_hash),Buffer.from(hash(token))))return h.json(401,{error:'WORKER_UNAUTHORIZED'});
   h.checked(await db.from('content_desktop_workers').update({last_seen_at:new Date().toISOString()}).eq('id',worker.id));
   const smokeWorker=smoke.active()&&worker.id===smoke.workerId;
-  if(event.httpMethod==='GET')return h.json(200,{connected:true,name:worker.name,enabled:smokeWorker||release.productionEnabled&&process.env.CONTENT_DESKTOP_WORKER_ENABLED==='true'});
+  const operatorWorker=release.adminOnly&&operatorExecution.enabled(worker);
+  if(event.httpMethod==='GET')return h.json(200,{connected:true,name:worker.name,enabled:operatorWorker||smokeWorker||release.productionEnabled&&process.env.CONTENT_DESKTOP_WORKER_ENABLED==='true'});
   const d=JSON.parse(event.body||'{}');
   if(d.action==='claim'){
+   if(operatorWorker){const row=await operatorExecution.claim(db,worker,h.checked);return h.json(200,{job:row?await payload(db,row):null});}
    if(!release.productionEnabled||process.env.CONTENT_DESKTOP_WORKER_ENABLED!=='true'){
     if(!smokeWorker)return h.json(503,{error:'WORKER_DISABLED'});
     let row=h.checked(await db.from('content_pixeling_requests').select('*').eq('id',smoke.orderId).maybeSingle());
