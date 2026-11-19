@@ -55,3 +55,13 @@ test('social publish text contains only the member title and description, withou
  assert.equal(s.caption({...input,description:''}),input.title);
  assert.equal(s.caption(input).includes('BESTSNS'),false);
 });
+
+test('provider errors retain only a safe error code, never response secrets',async()=>{
+ const saved=global.fetch;
+ try{
+  global.fetch=async()=>Response.json({error:{code:'spam_risk_too_many_posts',message:'secret-token'}},{status:403});
+  await assert.rejects(()=>s.json('https://open.tiktokapis.com/test'),e=>e.message==='PROVIDER_ERROR'&&e.providerCode==='spam_risk_too_many_posts'&&!JSON.stringify(e).includes('secret-token'));
+  global.fetch=async()=>Response.json({error:{code:'https://secret.example/token?key=private'}},{status:403});
+  await assert.rejects(()=>s.json('https://open.tiktokapis.com/test'),e=>e.providerCode==='unknown');
+ }finally{global.fetch=saved;}
+});
