@@ -1,13 +1,14 @@
+const studioSocial=require('../lib/content-social-studio.cjs');
 const h=require('../lib/content-ai.cjs'),m=require('../lib/content-members.cjs'),s=require('../lib/content-short-social.cjs');
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 exports.handler=async event=>{
  let db,post;
  try{const d=JSON.parse(event.body||'{}');if(event.httpMethod!=='POST'||!h.validSignature('short-social:'+d.id,d.signature))return h.json(403,{error:'Forbidden'});
  db=h.db();const rows=h.checked(await db.from('content_social_posts').update({status:'running',updated_at:new Date().toISOString()}).eq('id',d.id).eq('status','queued').in('provider',['instagram','tiktok']).select('*'));if(!rows.length)return h.json(200,{ignored:true});post=rows[0];
- if(!m.enabled()||!s.config(post.provider).enabled)throw Error('DISABLED');const deadline=Date.now()+9*60000;
- async function check(){if(Date.now()>deadline||!(await m.subscription(db,post.owner_id)).canPublish)throw Error('STOP');const c=h.checked(await db.from('content_social_connections').select('channel_id').eq('owner_id',post.owner_id).eq('provider',post.provider).maybeSingle());if(c?.channel_id!==post.channel_id)throw Error('DISCONNECTED');h.checked(await db.from('content_social_posts').update({updated_at:new Date().toISOString()}).eq('id',post.id));}
+ if(!s.config(post.provider).enabled)throw Error('DISABLED');const deadline=Date.now()+9*60000;
+ async function check(){if(Date.now()>deadline||!await studioSocial.canPublish(db,post))throw Error('STOP');const c=h.checked(await db.from('content_social_connections').select('channel_id').eq('owner_id',post.owner_id).eq('provider',post.provider).maybeSingle());if(c?.channel_id!==post.channel_id)throw Error('DISCONNECTED');h.checked(await db.from('content_social_posts').update({updated_at:new Date().toISOString()}).eq('id',post.id));}
  await check();const connection=h.checked(await db.from('content_social_connections').select('*').eq('owner_id',post.owner_id).eq('provider',post.provider).single());const token=await s.access(db,connection);
- const chat=h.checked(await db.from('content_ai_chats').select('results').eq('id',post.chat_id).eq('owner_id',post.owner_id).eq('member',true).single());const result=chat?.results.find(r=>r.path===post.result_path&&r.type==='video/mp4');if(!result)throw Error('RESULT');
+ const result=await studioSocial.result(db,post);if(!result)throw Error('RESULT');
  if(post.provider==='instagram'){
   const account=await s.ig(token,'me?fields=user_id,username');if(String(account.user_id)!==post.channel_id)throw Error('CHANNEL');
   if(!post.provider_publish_id){const url=h.checked(await db.storage.from(h.bucket).createSignedUrl(result.path,1800)).signedUrl;
