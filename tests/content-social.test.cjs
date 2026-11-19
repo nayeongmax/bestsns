@@ -31,8 +31,8 @@ test('Instagram and TikTok workers publish only owned results and ignore duplica
   let publishes=0;const post={id:provider,owner_id:'owner',chat_id:'chat',provider,channel_id:'channel',result_path:'owned.mp4',status:'queued',metadata:{caption:'caption',privacy:provider==='tiktok'?'SELF_ONLY':'public',synthetic:false,comments:false,duet:false,stitch:false,ownBrand:false,paidBrand:false}};
   const db=memoryDB({content_social_posts:[post],content_social_connections:[{owner_id:'owner',provider,channel_id:'channel'}],content_ai_chats:[{id:'chat',owner_id:'owner',member:true,results:[{path:'owned.mp4',type:'video/mp4',size:video.size}]}]});db.storage={from:()=>({download:async()=>({data:video}),createSignedUrl:async()=>({data:{signedUrl:'https://storage.example/owned'}})})};h.db=()=>db;
   s.ig=async(token,path,body)=>{if(path.startsWith('me?'))return{user_id:'channel'};if(path==='channel/media')return{id:'container'};if(path.startsWith('container?'))return{status_code:'FINISHED'};if(path==='channel/media_publish'){publishes++;assert.deepEqual(body,{creation_id:'container'});return{id:'media'};}return{permalink:'https://www.instagram.com/reel/test/'};};
-  s.tik=async(token,path)=>{if(path==='post/publish/creator_info/query/')return{data:{privacy_level_options:['SELF_ONLY'],max_video_post_duration_sec:60,creator_username:'test',comment_disabled:false,duet_disabled:false,stitch_disabled:false}};if(path==='post/publish/video/init/'){publishes++;return{data:{publish_id:'ticket',upload_url:'https://open-upload.tiktokapis.com/video/?test'}};}return{data:{status:'PUBLISH_COMPLETE',publicaly_available_post_id:['123456']}};};
-  global.fetch=async(url)=>{assert.equal(new URL(url).hostname,'open-upload.tiktokapis.com');return new Response('',{status:201});};
+  s.tik=async(token,path)=>{if(path==='post/publish/creator_info/query/')return{data:{privacy_level_options:['SELF_ONLY'],max_video_post_duration_sec:60,creator_username:'test',comment_disabled:false,duet_disabled:false,stitch_disabled:false}};if(path==='post/publish/video/init/'){publishes++;return{data:{publish_id:'ticket',upload_url:'https://open-upload-sg.tiktokapis.com/video/?test'}};}return{data:{status:'PUBLISH_COMPLETE',publicaly_available_post_id:['123456']}};};
+  global.fetch=async(url)=>{assert.equal(new URL(url).hostname,'open-upload-sg.tiktokapis.com');return new Response('',{status:201});};
   const {handler}=require('../netlify/functions/content-short-upload-background.js');const event={httpMethod:'POST',body:JSON.stringify({id:provider,signature:h.sign('short-social:'+provider)})};assert.equal((await handler(event)).statusCode,200);assert.equal(post.status,'uploaded');assert.equal(publishes,1);assert.equal(JSON.parse((await handler(event)).body).ignored,true);assert.equal(publishes,1);
  }
  }finally{h.db=original.db;m.subscription=original.subscription;s.config=original.config;s.access=original.access;s.ig=original.ig;s.tik=original.tik;global.fetch=original.fetch;flag===undefined?delete process.env.CONTENT_MEMBERS_ENABLED:process.env.CONTENT_MEMBERS_ENABLED=flag;secret===undefined?delete process.env.CONTENT_AI_KEY_SECRET:process.env.CONTENT_AI_KEY_SECRET=secret;}
@@ -64,4 +64,10 @@ test('provider errors retain only a safe error code, never response secrets',asy
   global.fetch=async()=>Response.json({error:{code:'https://secret.example/token?key=private'}},{status:403});
   await assert.rejects(()=>s.json('https://open.tiktokapis.com/test'),e=>e.providerCode==='unknown');
  }finally{global.fetch=saved;}
+});
+
+
+test('TikTok upload URLs permit regional provider hosts but reject redirects and lookalikes',()=>{
+ for(const host of ['open-upload.tiktokapis.com','open-upload-sg.tiktokapis.com','open-upload-us.tiktokapis.com','upload.us.tiktokapis.com'])assert.equal(s.uploadURL('https://'+host+'/video/?upload_token=test')?.hostname,host);
+ for(const url of ['https://open-upload.tiktokapis.com.evil.test/video/','https://evil.test/video/','http://open-upload.tiktokapis.com/video/','https://user:password@open-upload.tiktokapis.com/video/','https://open-upload.tiktokapis.com:444/video/','https://not-upload.tiktokapis.com/video/'])assert.equal(s.uploadURL(url),null);
 });
