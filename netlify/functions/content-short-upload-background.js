@@ -10,7 +10,7 @@ exports.handler=async event=>{
  await check();const connection=h.checked(await db.from('content_social_connections').select('*').eq('owner_id',post.owner_id).eq('provider',post.provider).single());const token=await s.access(db,connection);
  const result=await studioSocial.result(db,post);if(!result)throw Error('RESULT');
  if(post.provider==='instagram'){
-  const account=await s.ig(token,'me?fields=user_id,username');if(String(account.user_id)!==post.channel_id)throw Error('CHANNEL');
+  const unified=s.config('instagram').unified;const account=await s.ig(token,unified?encodeURIComponent(post.channel_id)+'?fields=id,username':'me?fields=user_id,username');if(String(unified?account.id:account.user_id)!==post.channel_id)throw Error('CHANNEL');
   if(!post.provider_publish_id){const url=h.checked(await db.storage.from(h.bucket).createSignedUrl(result.path,1800)).signedUrl;
    const container=await s.ig(token,post.channel_id+'/media',{media_type:'REELS',video_url:url,caption:post.metadata.caption,share_to_feed:'true'});if(!container.id)throw Error('CONTAINER');post.provider_publish_id=container.id;h.checked(await db.from('content_social_posts').update({provider_publish_id:container.id}).eq('id',post.id));}
   while(true){await check();const status=await s.ig(token,post.provider_publish_id+'?fields=status_code');if(status.status_code==='FINISHED')break;if(['ERROR','EXPIRED','PUBLISHED'].includes(status.status_code))throw Error('CONTAINER_STATE');await pause(4000);}
