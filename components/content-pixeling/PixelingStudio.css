@@ -50,3 +50,14 @@
 .pixel-preview-screen iframe{display:block;border:0;width:100%;height: min(62dvh,480px);min-height:200px}.pixel-preview-screen.short iframe{width:min(100%,350px);height:62dvh;min-height:320px}.pixel-youtube-source{padding:16px 0 0;font-size:13px}.pixel-youtube-source p{margin:6px 0}.pixel-youtube-source small{display:block}.pixel-youtube-source a{display:inline-block;margin-top:10px;color:var(--accent,#2865ec)}
 
 .pixel-project-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px;margin-bottom:2px}.pixel-project-row>button{min-width:0;padding:9px 5px!important}.pixel-project-actions{display:flex;gap:2px}.pixel-side nav .pixel-project-actions button{display:grid;place-items:center;width:28px;height:30px;padding:0;font-size:17px;border-radius:6px}.pixel-project-actions button:hover{background:var(--accent-soft,#eaf1ff)}.pixel-title-edit{display:block;max-width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:0;font-size:14px!important;font-weight:700!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pixel-chat-title>div{min-width:0}.pixel-title-edit:hover{color:var(--accent,#2865ec)}
+
+/* SNS settings stay inside the content workspace. */
+.pixel-studio .member-social{margin:0;padding:20px;min-width:0;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.pixel-studio .member-social h4{font-size:20px}.pixel-studio .member-social h4 small{display:block;margin-top:6px;font-size:14px;color:var(--muted)}
+.pixel-studio .member-social p,.pixel-studio .member-social label{font-size:15px;line-height:1.65}
+.pixel-studio .member-social fieldset{display:grid;gap:14px;border:0;padding:12px 0;min-width:0}
+.pixel-studio .member-social label{display:grid;gap:6px}
+.pixel-studio .member-social input:not([type=checkbox]),.pixel-studio .member-social textarea,.pixel-studio .member-social select{box-sizing:border-box;width:100%;min-width:0;padding:11px;border:1px solid var(--line);border-radius:9px;color:var(--text);background:var(--surface-alt);font:inherit}
+.pixel-studio .member-social button{padding:10px 14px;border:1px solid var(--line);border-radius:9px;font:inherit;color:var(--text);background:var(--surface-alt);cursor:pointer}
+.pixel-studio .member-social button:disabled{opacity:.5;cursor:not-allowed}.pixel-studio .member-social .member-primary{background:var(--accent);color:var(--accent-text)}
+.social-setup{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}.social-setup summary{cursor:pointer;font-weight:700}.social-setup>div{margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:10px}.social-setup input{width:100%;box-sizing:border-box}.social-setup small{overflow-wrap:anywhere}
