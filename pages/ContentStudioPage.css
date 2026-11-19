@@ -19,3 +19,8 @@
 .studio-page .studio-create{max-width:none;width:100%;margin:0;padding:0}
 .studio-page .studio-appearance>a{font-size:12px;white-space:nowrap}
 @media(max-width:760px){.studio-page .studio-toolbar{padding:10px 12px;flex-direction:row;align-items:center;flex-wrap:wrap}.studio-page .studio-appearance{width:auto;flex-wrap:wrap}.studio-page .studio-wordmark>span{width:26px;height:26px}}
+.studio-billing-toggle{display:inline-flex;flex-wrap:wrap;gap:6px;padding:5px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.studio-billing-toggle button{border:0;border-radius:8px;padding:11px 16px;background:transparent;color:var(--text);font:inherit;cursor:pointer}
+.studio-billing-toggle button[aria-pressed=true]{background:var(--accent);color:var(--accent-text)}
+.studio-billing-toggle span{margin-left:6px;font-size:12px;font-weight:700}
+.studio-plan-grid .studio-annual-detail{font-size:12px;line-height:1.8;margin:10px 0 0}
