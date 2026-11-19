@@ -20,7 +20,8 @@ exports.handler=async event=>{
  const session=y.uploadURL(post.session_url);if(!session)throw Error('SESSION');
  const deadline=Date.now()+10*60000;let offset=0,finished=null;
  // Probe the same resumable session, including after ambiguous network responses. Never initiate a second upload.
- async function probe(){return fetch(session,{method:'PUT',headers:{...auth,'Content-Range':'bytes */'+blob.size,'Content-Length':'0'},signal:AbortSignal.timeout(30000),redirect:'error'});}
+ // YouTube uses HTTP 308 as Resume Incomplete, not a redirect. Do not follow Location.
+ async function probe(){return fetch(session,{method:'PUT',headers:{...auth,'Content-Range':'bytes */'+blob.size,'Content-Length':'0'},signal:AbortSignal.timeout(30000),redirect:'manual'});}
  function progress(response){const range=response.headers.get('range');return range?Number(range.match(/bytes=0-(\d+)/)?.[1])+1:0;}
  const initial=await probe();if(initial.ok)finished=await initial.json();else if(initial.status===308)offset=progress(initial);else throw Error('UPLOAD_STATE');
  while(!finished&&offset<blob.size){
@@ -28,7 +29,7 @@ exports.handler=async event=>{
   if(Date.now()>deadline)throw Error('TIMEOUT');
   const connected=h.checked(await db.from('content_social_connections').select('channel_id').eq('owner_id',post.owner_id).eq('provider','youtube').maybeSingle());if(connected?.channel_id!==post.channel_id)throw Error('CHANNEL_CHANGED');
   const end=Math.min(offset+8*1024*1024,blob.size);let response;
-  try{response=await fetch(session,{method:'PUT',headers:{...auth,'Content-Type':'video/mp4','Content-Range':`bytes ${offset}-${end-1}/${blob.size}`},body:blob.slice(offset,end),signal:AbortSignal.timeout(90000),redirect:'error'});}catch(e){response=await probe();}
+  try{response=await fetch(session,{method:'PUT',headers:{...auth,'Content-Type':'video/mp4','Content-Range':`bytes ${offset}-${end-1}/${blob.size}`},body:blob.slice(offset,end),signal:AbortSignal.timeout(90000),redirect:'manual'});}catch(e){response=await probe();}
   if(response.ok){finished=await response.json();break;}if(response.status!==308)throw Error('UPLOAD_STATE');const next=progress(response);if(!Number.isSafeInteger(next)||next<=offset||next>blob.size)throw Error('UPLOAD_PROGRESS');offset=next;
   h.checked(await db.from('content_social_posts').update({updated_at:new Date().toISOString()}).eq('id',post.id));
  }
