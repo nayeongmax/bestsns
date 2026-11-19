@@ -46,3 +46,12 @@ test('YouTube worker uses a single resumable session and stores actual provider 
  const {handler}=require('../netlify/functions/content-youtube-upload-background.js');const event={httpMethod:'POST',body:JSON.stringify({id:'job',signature:h.sign('youtube:job')})};assert.equal((await handler(event)).statusCode,200);assert.equal(post.status,'uploaded');assert.equal(post.privacy,'private');assert.equal(sessions,1);assert.equal(uploads,1);assert.equal(JSON.parse((await handler(event)).body).ignored,true);assert.equal(sessions,1);
  }finally{h.db=original.db;h.decrypt=original.decrypt;m.subscription=original.subscription;y.config=original.config;y.token=original.token;y.channel=original.channel;global.fetch=original.fetch;flag===undefined?delete process.env.CONTENT_MEMBERS_ENABLED:process.env.CONTENT_MEMBERS_ENABLED=flag;secret===undefined?delete process.env.CONTENT_AI_KEY_SECRET:process.env.CONTENT_AI_KEY_SECRET=secret;}
 });
+
+test('social publish text contains only the member title and description, without branding',()=>{
+ const input={title:'  오늘의 딸기라떼 🍓  ',description:'첫 번째 줄\n\n#카페 #신메뉴  ',privacy:'private',madeForKids:false,synthetic:true};
+ assert.equal(y.metadata(input).snippet.title,input.title);
+ assert.equal(y.metadata(input).snippet.description,input.description);
+ assert.equal(s.caption(input),input.title+'\n'+input.description);
+ assert.equal(s.caption({...input,description:''}),input.title);
+ assert.equal(s.caption(input).includes('BESTSNS'),false);
+});

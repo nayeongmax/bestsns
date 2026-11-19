@@ -45,7 +45,7 @@ async function shortAction(db,owner,provider,d,{studio,operator}){
  if(d.action!=='publish'||!m.uuid(d.id)||!(studio?m.uuid(d.path):m.uuid(d.chatId))||typeof d.path!=='string'||!s.validMetadata(provider,d,creator)||d.confirmed!==true)return h.json(400,{error:'영상·계정·문구·공개 범위·게시 옵션을 확인해 주세요.'});
  const source=await selectedResult(db,owner,d,studio);const result=source.result;if(!result)return h.json(404,{error:'완성 영상을 찾을 수 없습니다.'});
  const prior=h.checked(await db.from('content_social_posts').select('id,status').eq('owner_id',owner).eq('provider',provider).eq('result_path',result.path).maybeSingle());if(prior)return h.json(200,{...prior,existing:true});
- const metadata={...(operator?{_operatorTest:true}:{}),caption:(d.title+'\n'+d.description).trim(),privacy:d.privacy,synthetic:d.synthetic,comments:d.comments,duet:d.duet,stitch:d.stitch,ownBrand:d.ownBrand,paidBrand:d.paidBrand};
+ const metadata={...(operator?{_operatorTest:true}:{}),caption:s.caption(d),privacy:d.privacy,synthetic:d.synthetic,comments:d.comments,duet:d.duet,stitch:d.stitch,ownBrand:d.ownBrand,paidBrand:d.paidBrand};
  const inserted=await db.from('content_social_posts').insert({id:d.id,owner_id:owner,...source.columns,provider,channel_id:connection.channel_id,result_path:result.path,metadata});if(inserted.error){if(inserted.error.code==='23505')return h.json(409,{error:'이미 접수된 영상입니다. 게시 내역을 확인해 주세요.'});throw Error('INSERT');}
  await s.dispatch(d.id).catch(()=>{});return h.json(202,{id:d.id,status:'queued'});
 }
