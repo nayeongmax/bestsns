@@ -61,3 +61,7 @@
 .pixel-studio .member-social button{padding:10px 14px;border:1px solid var(--line);border-radius:9px;font:inherit;color:var(--text);background:var(--surface-alt);cursor:pointer}
 .pixel-studio .member-social button:disabled{opacity:.5;cursor:not-allowed}.pixel-studio .member-social .member-primary{background:var(--accent);color:var(--accent-text)}
 .social-setup{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}.social-setup summary{cursor:pointer;font-weight:700}.social-setup>div{margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:10px}.social-setup input{width:100%;box-sizing:border-box}.social-setup small{overflow-wrap:anywhere}
+
+.pixel-social-main{height:100%;overflow-y:auto;min-height:0}.pixel-social-main .member-social{max-width:1000px;margin:0 auto}.pixel-studio .social-providers{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+
+@media(max-width:680px){.pixel-side .pixel-workspace-nav{grid-template-columns:repeat(4,minmax(0,1fr))}.pixel-side .pixel-workspace-nav button{font-size:11px}}
