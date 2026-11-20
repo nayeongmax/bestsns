@@ -26,6 +26,7 @@ exports.handler=async event=>{
   if(!owner)return h.json(401,{error:'로그인 후 이용해 주세요.'});
   const d=JSON.parse(event.body||'{}');
   if(d.action==='request'){
+   if(!admin&&!(await m.subscription(db,owner)).active)return h.json(403,{error:'영상 제작은 구독 후 이용할 수 있습니다.'});
    if(!enabled()&&!admin)return h.json(503,{error:'운영자 테스트 접수만 가능합니다. 일반 제작·결제는 비활성화 상태입니다.'});
    if(smoke.permits(admin,d))d.id=smoke.orderId;
    if(typeof d.presetId!=='string'||!m.uuid(d.id)||typeof d.text!=='string'||!d.text.trim()||d.text.length>5000||d.confirmed!==true)return h.json(400,{error:'프리셋과 요청 내용을 확인해 주세요.'});
