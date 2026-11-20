@@ -5,10 +5,10 @@ const source=fs.readFileSync(require('node:path').join(__dirname,'../components/
 const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
 const exportsObject={};new Function('exports',compiled)(exportsObject);
 const {annualTotal,productionCredits}=exportsObject;
-test('annual discounts discard sub-100 KRW amounts and preserve unconfigured prices',()=>{
- assert.equal(annualTotal(29900,13),312100);
+test('annual discounts discard sub-1,000 KRW amounts and preserve unconfigured prices',()=>{
+ assert.equal(annualTotal(29900,13),312000);
  assert.equal(annualTotal(49900,22),467000);
- assert.equal(annualTotal(139900,30),1175100);
+ assert.equal(annualTotal(139900,30),1175000);
  assert.equal(annualTotal(null,13),null);
 });
 test('duration quotes round up the final fractional credit at ten-second boundaries',()=>{

@@ -1,7 +1,7 @@
-// Integer arithmetic: discard amounts below 100 KRW after the annual discount.
+// Integer arithmetic: discard amounts below 1,000 KRW after the annual discount.
 export function annualTotal(monthlyPrice:number|null, discountPercent:number):number|null {
  if(monthlyPrice===null)return null;
- return Math.floor(monthlyPrice*12*(100-discountPercent)/10000)*100;
+ return Math.floor(monthlyPrice*12*(100-discountPercent)/100000)*1000;
 }
 // Display quote only. The studio remains in non-billing operator test mode.
 export function productionCredits(seconds:number):number {
