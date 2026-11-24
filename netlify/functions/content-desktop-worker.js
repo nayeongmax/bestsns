@@ -14,7 +14,7 @@ async function payload(db,row){
  }
  const q=db.from('content_studio_presets').select('private_prompt');
  const custom=h.checked(await (base.preset_id.startsWith('studio_')?q.eq('id',base.preset_id.slice(7)):q.eq('source_preset_id',base.preset_id)).maybeSingle());
- return {id:row.id,state:row.state,stage:row.desktop_stage,threadId:row.desktop_thread_id,resultSha256:row.result_sha256,presetId:base.preset_id,presetName:base.preset_name,presetVersion:base.preset_version,message:row.text,privateInstructions:custom?.private_prompt||'',references,attachments:await Promise.all((row.attachments||[]).map(async f=>({id:f.id,name:f.name,type:f.type,size:f.size,url:h.checked(await db.storage.from('content-studio-input').createSignedUrl(f.path,600)).signedUrl})))};
+ return {id:row.id,slot:row.desktop_slot||1,state:row.state,stage:row.desktop_stage,threadId:row.desktop_thread_id,resultSha256:row.result_sha256,presetId:base.preset_id,presetName:base.preset_name,presetVersion:base.preset_version,message:row.text,privateInstructions:custom?.private_prompt||'',references,attachments:await Promise.all((row.attachments||[]).map(async f=>({id:f.id,name:f.name,type:f.type,size:f.size,url:h.checked(await db.storage.from('content-studio-input').createSignedUrl(f.path,600)).signedUrl})))};
 }
 exports.handler=async event=>{
  if(!['GET','POST'].includes(event.httpMethod))return h.json(405,{error:'METHOD_NOT_ALLOWED'});
@@ -43,6 +43,12 @@ exports.handler=async event=>{
   const operatorWorker=release.adminOnly&&operatorExecution.enabled(worker);
   if(event.httpMethod==='GET')return h.json(200,{connected:true,name:worker.name,enabled:operatorWorker||smokeWorker||release.productionEnabled&&process.env.CONTENT_DESKTOP_WORKER_ENABLED==='true'});
   const d=JSON.parse(event.body||'{}');
+  if(d.action==='claim'&&d.protocol===2){
+   if(!Number.isInteger(d.slot)||d.slot<1||d.slot>3)return h.json(400,{error:'INVALID_SLOT'});
+   if(!operatorWorker&&(!release.productionEnabled||process.env.CONTENT_DESKTOP_WORKER_ENABLED!=='true'))return h.json(503,{error:'WORKER_DISABLED'});
+   const row=h.checked(await db.rpc('content_desktop_claim_slot',{worker:worker.id,slot:d.slot,operator_after:operatorWorker?operatorExecution.config.notBefore:null}));
+   return h.json(200,{job:row?await payload(db,row):null});
+  }
   if(d.action==='claim'){
    if(operatorWorker){const row=await operatorExecution.claim(db,worker,h.checked);return h.json(200,{job:row?await payload(db,row):null});}
    if(!release.productionEnabled||process.env.CONTENT_DESKTOP_WORKER_ENABLED!=='true'){

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -57,13 +57,13 @@ namespace BestSnsBridge {
   readonly TextBox site=new TextBox(),key=new TextBox(),library=new TextBox(),log=new TextBox(),order=new TextBox();
   readonly Button connect=new Button(),pause=new Button(),diagnose=new Button();
   readonly System.Windows.Forms.Timer timer=new System.Windows.Forms.Timer();
-  BridgeApi api;Dictionary<string,object> job,state;bool busy,watching,unreadable;Func<Task> retryAction;int retries;DateTime retryAfter=DateTime.MinValue;string encoder;readonly string settingsPath=Path.Combine(Data.Root,"settings.bin"),statePath=Path.Combine(Data.Root,"active.bin");
-  public BridgeForm(){Text="BESTSNS 제작 연결 · 자동화 검증판 0.2";Width=900;Height=760;MinimumSize=new Size(760,650);Font=new Font("맑은 고딕",10);StartPosition=FormStartPosition.CenterScreen;
+  BridgeApi api;Dictionary<string,object> job,state;bool busy,watching,unreadable;Func<Task> retryAction;int retries;DateTime retryAfter=DateTime.MinValue;string encoder;readonly string settingsPath=Path.Combine(Data.Root,"settings.bin");int currentSlot=1;string statePath{get{return Path.Combine(Data.Root,currentSlot==1?"active.bin":"active-"+currentSlot+".bin");}}
+  public BridgeForm(){Text="BESTSNS 제작 연결 · 자동화 검증판 0.3";Width=900;Height=760;MinimumSize=new Size(760,650);Font=new Font("맑은 고딕",10);StartPosition=FormStartPosition.CenterScreen;
    var panel=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2,RowCount=10,Padding=new Padding(18)};panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,125));panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));Controls.Add(panel);
    AddRow(panel,"사이트 주소",site,0);AddRow(panel,"PC 연결키",key,1);key.UseSystemPasswordChar=true;AddRow(panel,"프리셋 목록 파일",library,2);
    site.Text="https://bestsns.com/";library.Text=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","Pixeling","state","preset_engine","data","native_preset_library.json");
    var buttons=new FlowLayoutPanel{AutoSize=true,Dock=DockStyle.Fill};foreach(var b in new[]{connect,diagnose,pause}){b.AutoSize=true;buttons.Controls.Add(b);}connect.Text="연결 / 자동 처리 시작";diagnose.Text="픽셀링 구조 진단";pause.Text="자동 처리 일시정지";panel.Controls.Add(buttons,0,3);panel.SetColumnSpan(buttons,2);
-   var help=new Label{Text="주문 수신 → 자동 제작 → 파일 검증 → 자동 전달 · 한 번에 1건\n주문별 확인 버튼 없이 처리합니다. 일시정지는 픽셀링의 이미 시작된 제작을 취소하지 않습니다.",AutoSize=true,Dock=DockStyle.Fill};panel.Controls.Add(help,0,4);panel.SetColumnSpan(help,2);
+   var help=new Label{Text="주문 수신 → 자동 제작 → 파일 검증 → 자동 전달 · 최대 3건 동시 감시 · 주문별 분리\n주문별 확인 버튼 없이 처리합니다. 일시정지는 픽셀링의 이미 시작된 제작을 취소하지 않습니다.",AutoSize=true,Dock=DockStyle.Fill};panel.Controls.Add(help,0,4);panel.SetColumnSpan(help,2);
    order.Multiline=true;order.ReadOnly=true;order.ScrollBars=ScrollBars.Vertical;order.Dock=DockStyle.Fill;panel.Controls.Add(order,0,5);panel.SetColumnSpan(order,2);panel.RowStyles.Clear();for(int i=0;i<5;i++)panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));panel.RowStyles.Add(new RowStyle(SizeType.Percent,45));
    log.Multiline=true;log.ReadOnly=true;log.ScrollBars=ScrollBars.Vertical;log.Dock=DockStyle.Fill;panel.Controls.Add(log,0,6);panel.SetColumnSpan(log,2);panel.RowStyles.Add(new RowStyle(SizeType.Percent,55));
    connect.Click+=async(s,e)=>await Guard(Connect);diagnose.Click+=async(s,e)=>await Guard(Diagnose);
@@ -79,21 +79,60 @@ namespace BestSnsBridge {
     try{await action();retries=0;retryAction=null;retryAfter=DateTime.MinValue;}catch(Exception ex){
      Note(ex.Message);var apiError=ex as ApiFailure;var transient=ex is HttpRequestException||ex is TaskCanceledException||(apiError!=null&&(apiError.Status>=500||apiError.Status==429));
      if(transient&&++retries<=5){retryAction=action;if(watching)timer.Start();retryAfter=DateTime.UtcNow.AddSeconds(Math.Min(300,20*Math.Pow(2,retries-1)));Note("통신을 자동 재시도합니다. 제작 요청은 다시 보내지 않습니다.");}
-     else{watching=false;timer.Stop();if(job!=null&&state!=null){state["phase"]="attention";Data.Save(statePath,state);attention=true;}}
+     else{watching=false;timer.Stop();if(action!=Poll&&job!=null&&state!=null){state["phase"]="attention";Data.Save(statePath,state);attention=true;}}
     }
     if(attention&&api!=null){try{await api.Call(new{action="stage",id=Data.Text(job,"id"),stage="attention"});}catch{Note("작업 중단 상태를 서버에 전송하지 못했습니다.");}}
    }finally{busy=false;connect.Enabled=diagnose.Enabled=true;}
   }
-  void ShowJob(){order.Text="주문: "+Data.Text(job,"id")+Environment.NewLine+"프리셋: "+Data.Text(job,"presetName")+" · v"+Data.Text(job,"presetVersion")+Environment.NewLine+Environment.NewLine+Data.Text(job,"message");}
-  async Task Connect(){if(unreadable)throw new Exception("저장된 작업 기록을 복원할 수 없어 자동 시작하지 않습니다.");watching=true;encoder=OutputVerifier.FindEncoder();if(api!=null)api.Dispose();api=new BridgeApi(site.Text.Trim(),key.Text.Trim());var d=await api.Call();Data.Save(settingsPath,new{site=site.Text.Trim(),token=key.Text.Trim(),library=library.Text.Trim(),automatic=true});Note("PC 연결 확인: "+Data.Text(d,"name"));if(job!=null){var remote=await api.Call(new{action="job",id=Data.Text(job,"id")});var latest=Data.Obj(remote["job"]);if(Data.Text(latest,"state")=="completed"){Note("서버에서 이미 전달 완료된 주문입니다.");Data.Save(statePath,new{});job=null;state=null;order.Clear();}else{if(Data.Text(latest,"message")!=Data.Text(job,"message")||Data.Text(latest,"presetId")!=Data.Text(job,"presetId"))throw new Exception("저장된 주문과 서버 주문이 다릅니다.");job=latest;state["job"]=job;Data.Save(statePath,state);ShowJob();}}watching=true;retryAfter=DateTime.MinValue;timer.Start();await Poll();}
+  void ShowJob(){order.Text="슬롯 "+currentSlot+" / 3 · 주문: "+Data.Text(job,"id")+Environment.NewLine+"프리셋: "+Data.Text(job,"presetName")+" · v"+Data.Text(job,"presetVersion")+Environment.NewLine+Environment.NewLine+Data.Text(job,"message");}
+  async Task Connect(){if(unreadable)throw new Exception("저장된 작업 기록을 복원할 수 없어 자동 시작하지 않습니다.");watching=true;encoder=OutputVerifier.FindEncoder();if(api!=null)api.Dispose();api=new BridgeApi(site.Text.Trim(),key.Text.Trim());var d=await api.Call();Data.Save(settingsPath,new{site=site.Text.Trim(),token=key.Text.Trim(),library=library.Text.Trim(),automatic=true});Note("PC 연결 확인: "+Data.Text(d,"name"));watching=true;retryAfter=DateTime.MinValue;timer.Start();await Poll();}
   async Task Poll(){
    if(api==null)return;
    var heartbeat=await api.Call();if(!heartbeat.ContainsKey("enabled")||!Convert.ToBoolean(heartbeat["enabled"]))throw new Exception("사이트에서 PC 작업자가 비활성화되어 있습니다.");
-   if(job==null){var response=await api.Call(new{action="claim"});if(response["job"]==null)return;job=Data.Obj(response["job"]);
-    // Without a durable local record even a remotely claimed job may have been sent before a disk failure.
-    if(Data.Text(job,"stage")!="claimed")throw new Exception("로컬 기록이 없는 진행 중 주문입니다. 재전송하지 않습니다.");
-    state=new Dictionary<string,object>{{"job",job},{"phase","claimed"},{"threadId",""},{"nonce",Guid.NewGuid().ToString("N")},{"startedAt",DateTime.UtcNow.ToString("o")}};Data.Save(statePath,state);ShowJob();Note("새 주문의 자동 제작을 시작합니다.");
+   // UI input is serialized. Submitted threads continue rendering in the background.
+   for(currentSlot=1;currentSlot<=3&&watching;currentSlot++){
+    job=null;state=null;bool reportAttention=false;
+    try{await PollSlot();}
+    catch(Exception ex){
+     var apiError=ex as ApiFailure;
+     if(ex is HttpRequestException||ex is TaskCanceledException||(apiError!=null&&(apiError.Status>=500||apiError.Status==429)))throw;
+     if(job==null||state==null)throw;
+     state["phase"]="attention";Data.Save(statePath,state);
+     Note("슬롯 "+currentSlot+" 확인 필요: "+ex.Message+" · 다른 주문은 계속 감시합니다.");
+     reportAttention=true;
+    }
+    if(reportAttention)await api.Call(new{action="stage",id=Data.Text(job,"id"),stage="attention"});
    }
+   currentSlot=1;job=null;state=null;
+  }
+  async Task PollSlot(){
+   state=Data.Read(statePath);if(state.Count>0)job=Data.Obj(state["job"]);else state=null;
+   if(job!=null){var restored=Data.Obj((await api.Call(new{action="job",id=Data.Text(job,"id")}))["job"]);
+    if(Data.Text(restored,"state")=="completed"){
+     if(Data.Text(restored,"threadId")!=Data.Text(state,"threadId")||Data.Text(restored,"resultSha256")!=Data.Text(state,"sha256"))throw new Exception("완료 기록이 저장된 작업과 다릅니다.");
+     Finish();
+    }
+   }
+   var response=await api.Call(new{action="claim",protocol=2,slot=currentSlot});
+   if(response["job"]==null){
+    if(job!=null){var remote=await api.Call(new{action="job",id=Data.Text(job,"id")});var latest=Data.Obj(remote["job"]);
+     if(Data.Text(latest,"state")=="completed"&&Data.Text(latest,"threadId")==Data.Text(state,"threadId")&&Data.Text(latest,"resultSha256")==Data.Text(state,"sha256")){Finish();return;}
+     throw new Exception("로컬 기록과 서버 작업 슬롯이 다릅니다.");}
+    return;
+   }
+   var claimed=Data.Obj(response["job"]);
+   if(Convert.ToInt32(claimed["slot"])!=currentSlot)throw new Exception("서버 작업 슬롯이 다릅니다.");
+   if(job!=null){
+    if(Data.Text(job,"id")!=Data.Text(claimed,"id")||Data.Text(job,"message")!=Data.Text(claimed,"message")||Data.Text(job,"presetId")!=Data.Text(claimed,"presetId"))throw new Exception("저장된 주문과 서버 주문이 다릅니다.");
+    job=claimed;state["job"]=job;Data.Save(statePath,state);
+   }else{
+    job=claimed;
+    if(Data.Text(job,"stage")!="claimed")throw new Exception("로컬 기록이 없는 진행 중 주문입니다. 재전송하지 않습니다.");
+    state=new Dictionary<string,object>{{"job",job},{"phase","claimed"},{"threadId",""},{"nonce",Guid.NewGuid().ToString("N")},{"startedAt",DateTime.UtcNow.ToString("o")}};
+    Data.Save(statePath,state);Note("슬롯 "+currentSlot+" 새 주문: "+Data.Text(job,"id"));
+   }
+   ShowJob();
+   if(Data.Text(state,"phase")=="attention")return;
    await AutomaticFlow.Tick(state,Prepare,Ready,Deliver);
   }
   async Task<bool> Ready(){

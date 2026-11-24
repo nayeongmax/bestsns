@@ -1,6 +1,6 @@
 // Operator-only validation window; billing and member production stay disabled.
 // The identifier is public metadata, never a worker credential.
-const config={workerId:'a4218222-7fb4-460e-afc4-d55f19bd4ea9',notBefore:'2026-11-18T22:03:00Z',expiresAt:'2026-11-19T22:03:00Z'};
+const config={workerId:'a4218222-7fb4-460e-afc4-d55f19bd4ea9',notBefore:'2026-11-24T02:00:00Z',expiresAt:'2026-11-24T08:00:00Z'};
 function enabled(worker){return !!config.workerId&&worker.id===config.workerId&&Number.isFinite(Date.parse(config.notBefore))&&Date.now()>=Date.parse(config.notBefore)&&Date.now()<Date.parse(config.expiresAt);}
 async function claim(db,worker,checked){
  if(!enabled(worker))return null;
